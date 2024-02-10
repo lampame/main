@@ -4,8 +4,8 @@
     Lampa.Platform.tv();
     Lampa.Storage.set('parser_use', true);
     var proto = location.protocol === "https:" ? 'https://' : 'http://';
-    var parserBase = ['jac.lampa32.ru', 'https://gwynnbleiidd-jackett.elfhosted.com', 'jacred.xyz', 'jacred.ru', 'jacred.viewbox.dev', 'spawn.pp.ua:59118', 'spawn.pp.ua:59117', '188.119.113.252:9117'];
-    var parserName = ['Lampa32', 'LME Jackett', 'Jacred.xyz', 'Jacred.ru', 'Viewbox', 'Spawn Jackett', 'Spawn Jacred', 'Unknown'];
+    var parserBase = ['jac.lampa32.ru', 'jacred.xyz', 'jacred.ru', 'jacred.viewbox.dev', 'spawn.pp.ua:59118', 'spawn.pp.ua:59117', '188.119.113.252:9117'];
+    var parserName = ['Lampa32', 'Jacred.xyz', 'Jacred.ru', 'Viewbox', 'Spawn Jackett', 'Spawn Jacred', 'Unknown'];
     function myRequest(i) {
       setTimeout(function () {
         var myLink;
