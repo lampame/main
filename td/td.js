@@ -173,7 +173,7 @@
           var stateCell = row.insertCell();
           if (item.state === "pausedDL") {
             stateCell.classList.add("simple-button", "selector", "tdAction");
-            stateCell.textContent = Lampa.Lang.translate("qBittorent".concat(item.state));
+            stateCell.innerHTML = Lampa.Lang.translate("qBittorent".concat(item.state));
             stateCell.on("hover:enter", function () {
               action("resume", item);
             });
@@ -184,7 +184,7 @@
               action("pause", item);
             });
           } else {
-            stateCell.classList.add("tdAction");
+            stateCell.classList.add("simple-button", "selector", "tdAction");
             stateCell.textContent = Lampa.Lang.translate("qBittorent".concat(item.state));
           }
           var deleteCell = row.insertCell();
@@ -425,7 +425,7 @@
               action("torrent-stop", item);
             });
           } else {
-            stateCell.classList.add("tdAction");
+            stateCell.classList.add("simple-button", "selector", "tdAction");
             stateCell.textContent = Lampa.Lang.translate("transmission".concat(item.status));
           }
           var deleteCell = row.insertCell();
@@ -1758,28 +1758,28 @@
         zh: "已下载"
       },
       qBittorentqueuedUP: {
-        ru: "В очереди (отдача)",
-        en: "Queued (uploading)",
-        uk: "В черзі (віддача)",
-        zh: "排队中（上传中）"
+        ru: "В очереди",
+        en: "Queued",
+        uk: "В черзі",
+        zh: "排队中"
       },
       qBittorentstalledUP: {
-        ru: "Застопорено (отдача)",
-        en: "Stalled (uploading)",
-        uk: "Зупинено (віддача)",
-        zh: "暂停（上传中）"
+        ru: "Застопорено",
+        en: "Stalled",
+        uk: "Зупинено",
+        zh: "暂停"
       },
       qBittorentcheckingUP: {
-        ru: "Проверка (отдача)",
-        en: "Checking (uploading)",
-        uk: "Перевірка (віддача)",
-        zh: "检查中（上传中）"
+        ru: "Проверка",
+        en: "Checking",
+        uk: "Перевірка",
+        zh: "检查中"
       },
       qBittorentforcedUP: {
-        ru: "Принудительно (отдача)",
-        en: "Forced (uploading)",
-        uk: "Примусово (віддача)",
-        zh: "强制（上传中）"
+        ru: "Отдача",
+        en: "Uploading",
+        uk: "Віддача",
+        zh: "上传中"
       },
       qBittorentallocating: {
         ru: "Выделяется место",
@@ -1806,33 +1806,33 @@
         zh: "已暂停"
       },
       qBittorentqueuedDL: {
-        ru: "В очереди (загрузка)",
-        en: "Queued (downloading)",
-        uk: "В черзі (завантаження)",
-        zh: "排队中（下载中）"
+        ru: "В очереди",
+        en: "Queued",
+        uk: "В черзі",
+        zh: "排队中"
       },
       qBittorentstalledDL: {
-        ru: "Застопорено (загрузка)",
-        en: "Stalled (downloading)",
-        uk: "Зупинено (завантаження)",
-        zh: "停滞（下载中）"
+        ru: "Застопорено",
+        en: "Stalled",
+        uk: "Зупинено",
+        zh: "停滞"
       },
       qBittorentcheckingDL: {
-        ru: "Проверка (загрузка)",
-        en: "Checking (downloading)",
-        uk: "Перевірка (завантаження)",
-        zh: "检查中（下载中）"
+        ru: "Проверка",
+        en: "Checking",
+        uk: "Перевірка",
+        zh: "检查中"
       },
       qBittorentforcedDL: {
-        ru: "Принудительно (загрузка)",
-        en: "Forced (downloading)",
-        uk: "Примусово (завантаження)",
-        zh: "强制（下载中）"
+        ru: "Загрузка",
+        en: "Downloading",
+        uk: "Завантаження",
+        zh: "下载中"
       },
       qBittorentcheckingResumeData: {
-        ru: "Проверка данных возобновления",
-        en: "Checking resume data",
-        uk: "Перевірка даних відновлення",
+        ru: "Проверка данных",
+        en: "Checking resume",
+        uk: "Перевірка даних",
         zh: "检查恢复数据"
       },
       qBittorentmoving: {
