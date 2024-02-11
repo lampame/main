@@ -20,18 +20,6 @@
           en: "Documentaries",
           uk: "Документальні",
           zh: "纪录片" // Chinese translation
-        },
-        nc_addtrue: {
-          ru: "Категория добавлена",
-          en: "Category added",
-          uk: "Категорію додано",
-          zh: "已添加类别" // Chinese translation
-        },
-        nc_addfalse: {
-          ru: "Категория убрана",
-          en: "Category deleted",
-          uk: "Категорію видалено",
-          zh: "删除的类别" // Chinese translation
         }
       });
     }
@@ -157,7 +145,6 @@
         },
         onChange: function onChange(value) {
           if (value === 'true') insert.catAdd('nc_cartoon');else $('body').find('.menu [data-action="nc_cartoon"]').remove();
-          Lampa.Noty.show("nc_add".concat(value));
           Lampa.Settings.update();
         }
       });
@@ -175,7 +162,6 @@
         },
         onChange: function onChange(value) {
           if (value === 'true') insert.catAdd('nc_documentary');else $('body').find('.menu [data-action="nc_documentary"]').remove();
-          Lampa.Noty.show("nc_add".concat(value));
           Lampa.Settings.update();
         }
       });
