@@ -21,12 +21,17 @@
           uk: "Документальні",
           zh: "纪录片" // Chinese translation
         },
-        description: {},
-        nc_reload: {
-          ru: "Категория добавлена, перезапустите приложение",
-          en: "Category added, restart the application",
-          uk: "Категорію додано, перезапустіть програму",
-          zh: "已添加类别，重新启动应用程序" // Chinese translation
+        nc_addtrue: {
+          ru: "Категория добавлена",
+          en: "Category added",
+          uk: "Категорію додано",
+          zh: "已添加类别" // Chinese translation
+        },
+        nc_addfalse: {
+          ru: "Категория убрана",
+          en: "Category deleted",
+          uk: "Категорію видалено",
+          zh: "删除的类别" // Chinese translation
         }
       });
     }
@@ -34,70 +39,7 @@
       data: data
     };
 
-    function setting() {
-      Lampa.SettingsApi.addComponent({
-        component: "addCategory",
-        name: 'Category',
-        icon: '<svg width="800" height="800" viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">\n' + '<path d="M66.6667 215.921C66.6667 170.027 66.6667 147.08 74.056 128.94C84.215 104.002 104.002 84.215 128.94 74.056C147.08 66.6667 170.027 66.6667 215.921 66.6667C261.814 66.6667 284.761 66.6667 302.901 74.056C327.839 84.215 347.627 104.002 357.787 128.94C365.173 147.08 365.173 170.027 365.173 215.921C365.173 261.814 365.173 284.761 357.787 302.901C347.627 327.839 327.839 347.627 302.901 357.787C284.761 365.173 261.814 365.173 215.921 365.173C170.027 365.173 147.08 365.173 128.94 357.787C104.002 347.627 84.215 327.839 74.056 302.901C66.6667 284.761 66.6667 261.814 66.6667 215.921Z" fill="white"/>\n' + '<path d="M66.6667 584.08C66.6667 538.187 66.6667 515.24 74.056 497.1C84.215 472.163 104.002 452.373 128.94 442.217C147.08 434.827 170.027 434.827 215.921 434.827C261.814 434.827 284.761 434.827 302.901 442.217C327.839 452.373 347.627 472.163 357.787 497.1C365.173 515.24 365.173 538.187 365.173 584.08C365.173 629.973 365.173 652.92 357.787 671.06C347.627 696 327.839 715.787 302.901 725.943C284.761 733.333 261.814 733.333 215.921 733.333C170.027 733.333 147.08 733.333 128.94 725.943C104.002 715.787 84.215 696 74.056 671.06C66.6667 652.92 66.6667 629.973 66.6667 584.08Z" fill="white"/>\n' + '<path d="M434.83 584.08C434.83 538.187 434.83 515.24 442.22 497.1C452.38 472.163 472.167 452.373 497.103 442.217C515.243 434.827 538.19 434.827 584.083 434.827C629.98 434.827 652.927 434.827 671.063 442.217C696.003 452.373 715.79 472.163 725.95 497.1C733.34 515.24 733.34 538.187 733.34 584.08C733.34 629.973 733.34 652.92 725.95 671.06C715.79 696 696.003 715.787 671.063 725.943C652.927 733.333 629.98 733.333 584.083 733.333C538.19 733.333 515.243 733.333 497.103 725.943C472.167 715.787 452.38 696 442.22 671.06C434.83 652.92 434.83 629.973 434.83 584.08Z" fill="white"/>\n' + '<path fill-rule="evenodd" clip-rule="evenodd" d="M559.083 315.922C559.083 329.729 570.273 340.923 584.083 340.923C597.89 340.923 609.083 329.729 609.083 315.922V240.922H684.083C697.89 240.922 709.083 229.729 709.083 215.922C709.083 202.115 697.89 190.922 684.083 190.922H609.083V115.922C609.083 102.115 597.89 90.922 584.083 90.922C570.273 90.922 559.083 102.115 559.083 115.922V190.922H484.083C470.273 190.922 459.083 202.115 459.083 215.922C459.083 229.729 470.273 240.922 484.083 240.922H559.083V315.922Z" fill="white"/>\n' + '</svg>'
-      });
-      Lampa.SettingsApi.addParam({
-        component: "addCategory",
-        param: {
-          name: "nc_concert",
-          type: "trigger",
-          //доступно select,input,trigger,title,static
-          "default": false
-        },
-        field: {
-          name: Lampa.Lang.translate('nc_concert'),
-          description: "TMDB"
-        },
-        onChange: function onChange(value) {
-          Lampa.Settings.update();
-          Lampa.Noty.show(Lampa.Lang.translate('nc_reload'));
-        }
-      });
-      Lampa.SettingsApi.addParam({
-        component: "addCategory",
-        param: {
-          name: "nc_cartoon",
-          type: "trigger",
-          //доступно select,input,trigger,title,static
-          "default": false
-        },
-        field: {
-          name: Lampa.Lang.translate('nc_cartoon'),
-          description: "TMDB/CUB"
-        },
-        onChange: function onChange(value) {
-          Lampa.Settings.update();
-          Lampa.Noty.show(Lampa.Lang.translate('nc_reload'));
-        }
-      });
-      Lampa.SettingsApi.addParam({
-        component: "addCategory",
-        param: {
-          name: "nc_documentary",
-          type: "trigger",
-          //доступно select,input,trigger,title,static
-          "default": false
-        },
-        field: {
-          name: Lampa.Lang.translate('nc_documentary'),
-          description: "TMDB/CUB"
-        },
-        onChange: function onChange(value) {
-          Lampa.Settings.update();
-          Lampa.Noty.show(Lampa.Lang.translate('nc_reload'));
-        }
-      });
-      Lampa.Settings.listener.follow("open", function (e) {});
-    }
-    var config = {
-      setting: setting
-    };
-
-    function category() {
+    function catAdd(type) {
       var NEW_ITEM_SOURCES = ["tmdb", "cub"];
       var ITEM_TV_SELECTOR = '[data-action="tv"]';
       var ITEM_MOVE_TIMEOUT = 2000;
@@ -106,7 +48,7 @@
           return $(item).insertAfter($(after));
         }, ITEM_MOVE_TIMEOUT);
       };
-      if (Lampa.Storage.get("nc_concert") === true) {
+      if (type === 'nc_concert') {
         var NEW_ITEM_ATTR = 'data-action="nc_concert"';
         var NEW_ITEM_SELECTOR = "[".concat(NEW_ITEM_ATTR, "]");
         var NEW_ITEM_TEXT = Lampa.Lang.translate('nc_concert');
@@ -127,7 +69,7 @@
         Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(field);
         moveItemAfter(NEW_ITEM_SELECTOR, ITEM_TV_SELECTOR);
       }
-      if (Lampa.Storage.get("nc_cartoon") === true) {
+      if (type === 'nc_cartoon') {
         var _NEW_ITEM_ATTR = 'data-action="nc_cartoon"';
         var _NEW_ITEM_SELECTOR = "[".concat(_NEW_ITEM_ATTR, "]");
         var _NEW_ITEM_TEXT = Lampa.Lang.translate('nc_cartoon');
@@ -150,7 +92,7 @@
         Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field);
         moveItemAfter(_NEW_ITEM_SELECTOR, ITEM_TV_SELECTOR);
       }
-      if (Lampa.Storage.get("nc_documentary") === true) {
+      if (type === 'nc_documentary') {
         var _NEW_ITEM_ATTR2 = 'data-action="nc_documentary"';
         var _NEW_ITEM_SELECTOR2 = "[".concat(_NEW_ITEM_ATTR2, "]");
         var _NEW_ITEM_TEXT2 = Lampa.Lang.translate('nc_documentary');
@@ -175,7 +117,72 @@
       }
     }
     var insert = {
-      category: category
+      catAdd: catAdd
+    };
+
+    function setting() {
+      Lampa.SettingsApi.addComponent({
+        component: "addCategory",
+        name: 'Category',
+        icon: '<svg width="800" height="800" viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">\n' + '<path d="M66.6667 215.921C66.6667 170.027 66.6667 147.08 74.056 128.94C84.215 104.002 104.002 84.215 128.94 74.056C147.08 66.6667 170.027 66.6667 215.921 66.6667C261.814 66.6667 284.761 66.6667 302.901 74.056C327.839 84.215 347.627 104.002 357.787 128.94C365.173 147.08 365.173 170.027 365.173 215.921C365.173 261.814 365.173 284.761 357.787 302.901C347.627 327.839 327.839 347.627 302.901 357.787C284.761 365.173 261.814 365.173 215.921 365.173C170.027 365.173 147.08 365.173 128.94 357.787C104.002 347.627 84.215 327.839 74.056 302.901C66.6667 284.761 66.6667 261.814 66.6667 215.921Z" fill="white"/>\n' + '<path d="M66.6667 584.08C66.6667 538.187 66.6667 515.24 74.056 497.1C84.215 472.163 104.002 452.373 128.94 442.217C147.08 434.827 170.027 434.827 215.921 434.827C261.814 434.827 284.761 434.827 302.901 442.217C327.839 452.373 347.627 472.163 357.787 497.1C365.173 515.24 365.173 538.187 365.173 584.08C365.173 629.973 365.173 652.92 357.787 671.06C347.627 696 327.839 715.787 302.901 725.943C284.761 733.333 261.814 733.333 215.921 733.333C170.027 733.333 147.08 733.333 128.94 725.943C104.002 715.787 84.215 696 74.056 671.06C66.6667 652.92 66.6667 629.973 66.6667 584.08Z" fill="white"/>\n' + '<path d="M434.83 584.08C434.83 538.187 434.83 515.24 442.22 497.1C452.38 472.163 472.167 452.373 497.103 442.217C515.243 434.827 538.19 434.827 584.083 434.827C629.98 434.827 652.927 434.827 671.063 442.217C696.003 452.373 715.79 472.163 725.95 497.1C733.34 515.24 733.34 538.187 733.34 584.08C733.34 629.973 733.34 652.92 725.95 671.06C715.79 696 696.003 715.787 671.063 725.943C652.927 733.333 629.98 733.333 584.083 733.333C538.19 733.333 515.243 733.333 497.103 725.943C472.167 715.787 452.38 696 442.22 671.06C434.83 652.92 434.83 629.973 434.83 584.08Z" fill="white"/>\n' + '<path fill-rule="evenodd" clip-rule="evenodd" d="M559.083 315.922C559.083 329.729 570.273 340.923 584.083 340.923C597.89 340.923 609.083 329.729 609.083 315.922V240.922H684.083C697.89 240.922 709.083 229.729 709.083 215.922C709.083 202.115 697.89 190.922 684.083 190.922H609.083V115.922C609.083 102.115 597.89 90.922 584.083 90.922C570.273 90.922 559.083 102.115 559.083 115.922V190.922H484.083C470.273 190.922 459.083 202.115 459.083 215.922C459.083 229.729 470.273 240.922 484.083 240.922H559.083V315.922Z" fill="white"/>\n' + '</svg>'
+      });
+      Lampa.SettingsApi.addParam({
+        component: "addCategory",
+        param: {
+          name: "nc_concert",
+          type: "trigger",
+          //доступно select,input,trigger,title,static
+          "default": false
+        },
+        field: {
+          name: Lampa.Lang.translate('nc_concert'),
+          description: "TMDB"
+        },
+        onChange: function onChange(value) {
+          if (value === 'true') insert.catAdd('nc_concert');else $('body').find('.menu [data-action="nc_concert"]').remove();
+          Lampa.Settings.update();
+        }
+      });
+      Lampa.SettingsApi.addParam({
+        component: "addCategory",
+        param: {
+          name: "nc_cartoon",
+          type: "trigger",
+          //доступно select,input,trigger,title,static
+          "default": false
+        },
+        field: {
+          name: Lampa.Lang.translate('nc_cartoon'),
+          description: "TMDB/CUB"
+        },
+        onChange: function onChange(value) {
+          if (value === 'true') insert.catAdd('nc_cartoon');else $('body').find('.menu [data-action="nc_cartoon"]').remove();
+          Lampa.Noty.show("nc_add".concat(value));
+          Lampa.Settings.update();
+        }
+      });
+      Lampa.SettingsApi.addParam({
+        component: "addCategory",
+        param: {
+          name: "nc_documentary",
+          type: "trigger",
+          //доступно select,input,trigger,title,static
+          "default": false
+        },
+        field: {
+          name: Lampa.Lang.translate('nc_documentary'),
+          description: "TMDB/CUB"
+        },
+        onChange: function onChange(value) {
+          if (value === 'true') insert.catAdd('nc_documentary');else $('body').find('.menu [data-action="nc_documentary"]').remove();
+          Lampa.Noty.show("nc_add".concat(value));
+          Lampa.Settings.update();
+        }
+      });
+      Lampa.Settings.listener.follow("open", function (e) {});
+    }
+    var config = {
+      setting: setting
     };
 
     var manifest = {
@@ -189,7 +196,9 @@
       Lampa.Manifest.plugins = manifest;
       lang.data();
       config.setting();
-      insert.category();
+      if (Lampa.Storage.get('nc_concert')) insert.catAdd('nc_concert');
+      if (Lampa.Storage.get('nc_cartoon')) insert.catAdd('nc_cartoon');
+      if (Lampa.Storage.get('nc_documentary')) insert.catAdd('nc_documentary');
     };
     if (window.appready) {
       main();
