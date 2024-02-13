@@ -53,41 +53,6 @@
         key: '1'
       }
     }];
-    /**
-    function checkAlive() {
-        for (let i = 0; i <= parsersInfo.length - 1; i++) {
-            setTimeout(function () {
-                let myLink;
-                let myAdder = '';
-                if (parsersInfo[i].settings.url === 'spawn.pp.ua:59117') {
-                    myAdder = '2';
-                }
-                let k = i + 2;
-                let mySelector = 'body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(' + k + ') > div';
-                if ($('body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(1) > div').text() !== 'Не выбран') return;
-                myLink = proto + parsersInfo[i].settings.url + '/api/v2.0/indexers/status:healthy/results?apikey=' + myAdder;
-                let xhr = new XMLHttpRequest();
-                xhr.timeout = 2000;
-                xhr.open("GET", myLink, true);
-                xhr.send();
-                xhr.ontimeout = function () {
-                    if ($(mySelector).text() === parsersInfo[i].name) $(mySelector).css('color', 'ff2e36');
-                }
-                xhr.onerror = function () {
-                    if ($(mySelector).text() === parsersInfo[i].name) $(mySelector).css('color', 'ff2e36');
-                }
-                xhr.onload = function () {
-                    if (xhr.status === 200) {
-                        if ($(mySelector).text() === parsersInfo[i].name) $(mySelector).css('color', '1aff00')
-                    }
-                    if (xhr.status === 401) {
-                        if ($(mySelector).text() === parsersInfo[i].name) $(mySelector).css('color', 'ff2e36')
-                    }
-                }
-            }, 1000)
-        }
-    }
-    */
     function checkAlive() {
       var requests = parsersInfo.map(function (parser, index) {
         var myLink = proto + parser.settings.url + '/api/v2.0/indexers/status:healthy/results?apikey=' + (parser.settings.url === 'spawn.pp.ua:59117' ? '2' : '');
