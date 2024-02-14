@@ -35,15 +35,15 @@
       base: 'spawn_jackett',
       name: 'Spawn Jackett',
       settings: {
-        url: 'spawn.pp.ua:59118',
-        key: ''
+        url: 'spawn.pp.ua:59117',
+        key: '2'
       }
     }, {
       base: 'spawn_jacred',
       name: 'Spawn Jacred',
       settings: {
-        url: 'spawn.pp.ua:59117',
-        key: '2'
+        url: 'spawn.pp.ua:59118',
+        key: ''
       }
     }, {
       base: 'unknown',
