@@ -225,6 +225,12 @@
     }, {
       "name": "Unknown",
       "server": "http://91.107.121.225:8090"
+    }, {
+      "name": "Unknown",
+      "server": "http://185.104.248.102:9099"
+    }, {
+      "name": "Unknown",
+      "server": "http://5.42.83.153:9990"
     }];
     function checkAlive(type) {
       console.log("TDDev", "type");
