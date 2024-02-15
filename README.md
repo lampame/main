@@ -7,6 +7,6 @@ project extensions repository
 
 [Category](https://lampame.github.io/main/newcategory.js) `https://lampame.github.io/main/newcategory.js` [About](https://teletype.in/@lme/newcategory)
 
-[PubTorr](https://lampame.github.io/main/pubtorr.js) `https://lampame.github.io/main/parser.js` [About](https://teletype.in/@lme/pubtorr)
+[PubTorr](https://lampame.github.io/main/pubtorr.js) `https://lampame.github.io/main/pubtorr.js` [About](https://teletype.in/@lme/pubtorr)
 
 Telegram chat - [https://t.me/lme_chat](https://t.me/lme_chat)
