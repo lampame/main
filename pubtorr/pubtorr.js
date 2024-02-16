@@ -22,10 +22,10 @@
           zh: '解析器目录' // Chinese translation
         },
         lme_pubtorr_description: {
-          ru: 'Публичных серверов в базе - ',
-          en: 'Public servers in the base - ',
-          uk: 'Публічних серверів у базі -',
-          zh: '基地内的公共服务器 '
+          ru: 'Бесплатные серверы от проекта LME',
+          en: 'Free servers from the LME project',
+          uk: 'Безкоштовні сервери від проєкту LME',
+          zh: '来自 LME 项目的免费服务器 '
         }
       });
     }
@@ -178,59 +178,8 @@
     };
 
     var trInfo = [{
-      "name": "LME One",
-      "server": "https://lmetrs.onrender.com"
-    }, {
-      "name": "LME Two",
-      "server": "https://trs-gwynnbleiidd.koyeb.app"
-    }, {
-      "name": "Unknown",
-      "server": "http://5.42.82.10:8090"
-    }, {
-      "name": "Unknown",
-      "server": "http://s747397.srvape.com:8090"
-    }, {
-      "name": "Unknown",
-      "server": "http://79.137.195.138:8895"
-    }, {
-      "name": "Unknown",
-      "server": "http://79.137.195.138:8880"
-    }, {
-      "name": "Unknown",
-      "server": "http://95.165.134.227:8090"
-    }, {
-      "name": "Unknot",
-      "server": "http://torr.unknot.ru:8090"
-    }, {
-      "name": "Lexa Sinyak Jactor.ru",
-      "server": "http://lexa-sinyak.jactor.ru:8090"
-    }, {
-      "name": "freetorrserver.duckdns.org",
-      "server": "https://freetorrserver.duckdns.org:8091"
-    }, {
-      "name": "Unknown",
-      "server": "http://5.42.78.113:5555"
-    }, {
-      "name": "Unknown",
-      "server": "http://46.29.237.156:6752"
-    }, {
-      "name": "Unknown",
-      "server": "http://46.29.237.156:6752"
-    }, {
-      "name": "Unknown",
-      "server": "http://185.103.103.14:8090"
-    }, {
-      "name": "Unknown",
-      "server": "http://195.74.86.42:7896"
-    }, {
-      "name": "Unknown",
-      "server": "http://91.107.121.225:8090"
-    }, {
-      "name": "Unknown",
-      "server": "http://185.104.248.102:9099"
-    }, {
-      "name": "Unknown",
-      "server": "http://5.42.83.153:9990"
+      "name": "[DE] Gutsy Gibbon",
+      "server": "https://trs-lme.koyeb.app"
     }];
     function checkAlive(type) {
       console.log("TDDev", "type");
@@ -281,7 +230,7 @@
     var pubTorr_values = trInfo.reduce(function (prev, _ref, index) {
       var server = _ref.server,
         name = _ref.name;
-      prev[server] = "".concat(index + 1, " ").concat(name);
+      prev[server] = "".concat(name);
       return prev;
     }, {
       no_server: 'Не выбран'
@@ -296,8 +245,8 @@
           "default": 'no_server'
         },
         field: {
-          name: '<div class="settings-folder" style="padding:0!important"><div style="font-size:1.0em">Каталог TorrServer</div></div>',
-          description: "\u041F\u0443\u0431\u043B\u0438\u0447\u043D\u044B\u0445 \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u0432 \u0432 \u0431\u0430\u0437\u0435 - ".concat(trInfo.length)
+          name: '<div class="settings-folder" style="padding:0!important"><div style="font-size:1.0em">' + Lampa.Lang.translate('lme_pubtorr') + '</div></div>',
+          description: Lampa.Lang.translate('lme_pubtorr_description')
         },
         onChange: function onChange(value) {
           changeTorr();
@@ -324,7 +273,15 @@
     };
 
     Lampa.Platform.tv();
+    function migration() {
+      if (Lampa.Storage.get("torrserver_url_two") === "https://trs-gwynnbleiidd.koyeb.app") {
+        Lampa.Storage.set("torrserver_url_two", "https://trs-lme.koyeb.app");
+        Lampa.Storage.set("pubTorr", "https://trs-lme.koyeb.app");
+        Lampa.Noty.show("Second torrserver updated");
+      }
+    }
     function add() {
+      migration();
       Lang.translate();
       Parser.parserSetting();
       Torrent.pubSetting();
