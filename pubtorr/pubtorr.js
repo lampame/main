@@ -216,18 +216,7 @@
         }, 10);
       }
     });
-    function changeTorr() {
-      var publicTorr = Lampa.Storage.get("pubTorr");
-      var selectedTorr = trInfo.find(function (sTorr) {
-        return sTorr.server === publicTorr;
-      });
-      if (selectedTorr) {
-        Lampa.Storage.set("torrserver_url_two", selectedTorr.server);
-      } else {
-        console.warn('LME', "TorrServer URL not found");
-      }
-    }
-    var pubTorr_values = trInfo.reduce(function (prev, _ref, index) {
+    trInfo.reduce(function (prev, _ref, index) {
       var server = _ref.server,
         name = _ref.name;
       prev[server] = "".concat(name);
@@ -235,42 +224,6 @@
     }, {
       no_server: 'Не выбран'
     });
-    function pubSetting() {
-      Lampa.SettingsApi.addParam({
-        component: 'server',
-        param: {
-          name: 'pubTorr',
-          type: 'select',
-          values: pubTorr_values,
-          "default": 'no_server'
-        },
-        field: {
-          name: '<div class="settings-folder" style="padding:0!important"><div style="font-size:1.0em">' + Lampa.Lang.translate('lme_pubtorr') + '</div></div>',
-          description: Lampa.Lang.translate('lme_pubtorr_description')
-        },
-        onChange: function onChange(value) {
-          changeTorr();
-          Lampa.Settings.update();
-        },
-        onRender: function onRender(item) {
-          changeTorr();
-          setTimeout(function () {
-            $('div[data-children="parser"]').on('hover:enter', function () {
-              Lampa.Settings.update();
-            });
-            $('.settings-param__name', item).css('color', 'f3d900') & $('div[data-name="pubTorr"]').insertBefore('div[data-name="torrserver_use_link"]');
-          }, 0);
-        }
-      });
-      Lampa.Settings.listener.follow('open', function (e) {
-        if (e.name === 'parser') {
-          e.body.find('[data-name="pubTorr"]').remove();
-        }
-      });
-    }
-    var Torrent = {
-      pubSetting: pubSetting
-    };
 
     Lampa.Platform.tv();
     function migration() {
@@ -279,12 +232,16 @@
         Lampa.Storage.set("pubTorr", "https://trs-lme.koyeb.app");
         Lampa.Noty.show("Second torrserver updated");
       }
+      if (Lampa.Storage.get("torrserver_url_two") === "https://trs-lme.koyeb.app" && !Lampa.Storage.get("lme_torr_notification")) {
+        Lampa.Storage.set("torrserver_url_two", "");
+        Lampa.Storage.set("lme_torr_notification", "True");
+        Lampa.Noty.show("Бесплатный torrserver от проекта LME канул в небытие! В любом случае спасибо за помощь с тестированием");
+      }
     }
     function add() {
       migration();
       Lang.translate();
       Parser.parserSetting();
-      Torrent.pubSetting();
     }
     function startPlugin() {
       window.plugin_lmepublictorr_ready = true;
