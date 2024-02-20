@@ -42,6 +42,13 @@
         key: ''
       }
     }, {
+      base: 'lme_jackett',
+      name: 'LME Jackett',
+      settings: {
+        url: 'jackett-lme.koyeb.app',
+        key: 'gtkzitrf4ifi811q0tyvumz1z3cklo16'
+      }
+    }, {
       base: 'jacred_xyz',
       name: 'Jacred.xyz',
       settings: {
@@ -88,7 +95,8 @@
       console.log("TDDev", "type");
       if (type === 'parser') {
         var requests = parsersInfo.map(function (parser, index) {
-          var myLink = proto + parser.settings.url + '/api/v2.0/indexers/status:healthy/results?apikey=' + (parser.settings.url === 'spawn.pp.ua:59117' ? '2' : '');
+          var protocol = parser.base === "lme_jackett" ? "https://" : proto;
+          var myLink = protocol + parser.settings.url + '/api/v2.0/indexers/status:healthy/results?apikey=' + (parser.settings.url === 'spawn.pp.ua:59117' ? '2' : parser.base === 'lme_jackett' ? 'gtkzitrf4ifi811q0tyvumz1z3cklo16' : '');
           return new Promise(function (resolve) {
             setTimeout(function () {
               var mySelector = "body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(".concat(index + 2, ") > div");
