@@ -45,7 +45,7 @@
       base: 'lme_jackett',
       name: 'LME Jackett',
       settings: {
-        url: 'jackett-lme.koyeb.app',
+        url: 'https://jackett-lme.koyeb.app',
         key: 'gtkzitrf4ifi811q0tyvumz1z3cklo16'
       }
     }, {
@@ -95,7 +95,7 @@
       console.log("TDDev", "type");
       if (type === 'parser') {
         var requests = parsersInfo.map(function (parser, index) {
-          var protocol = parser.base === "lme_jackett" ? "https://" : proto;
+          var protocol = parser.base === "lme_jackett" ? "" : proto;
           var myLink = protocol + parser.settings.url + '/api/v2.0/indexers/status:healthy/results?apikey=' + (parser.settings.url === 'spawn.pp.ua:59117' ? '2' : parser.base === 'lme_jackett' ? 'gtkzitrf4ifi811q0tyvumz1z3cklo16' : '');
           return new Promise(function (resolve) {
             setTimeout(function () {
