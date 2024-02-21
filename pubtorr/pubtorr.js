@@ -46,7 +46,7 @@
       name: 'LME Jackett',
       settings: {
         url: 'https://jackett-lme.koyeb.app',
-        key: 'gtkzitrf4ifi811q0tyvumz1z3cklo16'
+        key: 'dq4cq8mug0emy3mcq9pnuze17jzhok0c'
       }
     }, {
       base: 'jacred_xyz',
