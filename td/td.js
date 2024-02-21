@@ -57,7 +57,7 @@
       Lampa.Select.close();
     }, 10);
   }
-  function getStatus$2() {
+  function getStatus$3() {
     var statusXhr = new XMLHttpRequest();
     statusXhr.withCredentials = false;
     statusXhr.addEventListener("readystatechange", function () {
@@ -262,7 +262,7 @@
   }
   var qBittorent = {
     qBittorrentClient: qBittorrentClient,
-    getStatus: getStatus$2,
+    getStatus: getStatus$3,
     qPanels: qPanels$2
   };
 
@@ -297,7 +297,7 @@
       Lampa.Select.close();
     }, 10);
   }
-  function getStatus$1() {
+  function getStatus$2() {
     var xhr = new XMLHttpRequest();
     xhr.withCredentials = false;
     xhr.addEventListener("readystatechange", function () {
@@ -513,7 +513,7 @@
   }
   var transmission = {
     transmissionClient: transmissionClient,
-    getStatus: getStatus$1,
+    getStatus: getStatus$2,
     qPanels: qPanels$1
   };
 
@@ -664,7 +664,7 @@
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.send(data);
   }
-  function getStatus() {
+  function getStatus$1() {
     var statusXhr = new XMLHttpRequest();
     statusXhr.withCredentials = false;
     var data = JSON.stringify({
@@ -699,7 +699,72 @@
   var pAria2 = {
     aria2Client: aria2Client,
     qPanels: qPanels,
-    getStatus: getStatus
+    getStatus: getStatus$1
+  };
+
+  function getStatus() {
+    var statusXhr = new XMLHttpRequest();
+    statusXhr.withCredentials = false;
+    statusXhr.addEventListener("readystatechange", function () {
+      if (this.readyState === 4) {
+        if (this.status === 200) {
+          console.log("TD", "Status " + this.status);
+          console.log(JSON.parse(this.response));
+          Lampa.Storage.set("synologySID", JSON.parse(this.response).data.sid);
+          $('#synologygetStatus').removeClass('active error wait').addClass('active');
+          $('#synologygetStatusBtn').removeClass('active error wait').addClass('active');
+        } else if (this.status === undefined) {
+          console.log("TD", "Status - undefined");
+          $('#synologygetStatus').removeClass('active error wait').addClass('error');
+          $('#synologygetStatusBtn').removeClass('active error wait').addClass('error');
+        } else {
+          console.log("TD", "Status " + this.response);
+          console.log("TD", "Status " + this.status);
+          console.log("TD", this);
+          $('#synologygetStatus').removeClass('active error wait').addClass('error');
+          $('#synologygetStatusBtn').removeClass('active error wait').addClass('error');
+        }
+      }
+    });
+    if (Lampa.Storage.get("synalogyProxy") && Lampa.Storage.get("synalogyProxy") !== 'no_client') {
+      var serv = "".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/entry.cgi?api=SYNO.API.Auth&version=7&method=login&account=").concat(Lampa.Storage.get("synologyUser"), "&passwd=").concat(Lampa.Storage.get("synologyPass"), "&format=sid");
+      statusXhr.open("GET", "".concat(Lampa.Storage.get("synalogyProxy")).concat(encodeURIComponent(serv)));
+    } else {
+      statusXhr.open("GET", "".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/entry.cgi?api=SYNO.API.Auth&version=7&method=login&account=").concat(Lampa.Storage.get("synologyUser"), "&passwd=").concat(Lampa.Storage.get("synologyPass"), "&format=sid"));
+    }
+    statusXhr.send();
+  }
+  function synologyClient(selectedTorrent) {
+    if (!selectedTorrent) {
+      return;
+    }
+    var addXhr = new XMLHttpRequest();
+    if (Lampa.Storage.get("synalogyProxy") && Lampa.Storage.get("synalogyProxy") !== 'no_client') {
+      addXhr.open("GET", "".concat(Lampa.Storage.get("synalogyProxy")) + encodeURIComponent("".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=create&uri=").concat(selectedTorrent.MagnetUri, "&username=").concat(Lampa.Storage.get("synologyUser"), "&password=").concat(Lampa.Storage.get("synologyPass"), "&destination=").concat(Lampa.Storage.get("synologyPath"), "&_sid=").concat(Lampa.Storage.get("synologySID"))));
+    } else {
+      addXhr.open("GET", "".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=create&uri=").concat(encodeURIComponent(selectedTorrent.MagnetUri), "&username=").concat(Lampa.Storage.get("synologyUser"), "&password=").concat(Lampa.Storage.get("synologyPass"), "&destination=").concat(Lampa.Storage.get("synologyPath"), "&_sid=").concat(Lampa.Storage.get("synologySID")));
+    }
+    addXhr.onreadystatechange = function () {
+      if (addXhr.readyState === 4) {
+        if (addXhr.status !== 200) {
+          console.log("TD", "Server return ".concat(addXhr.status, " when try add torrent"));
+          Lampa.Noty.show(Lampa.Lang.translate('tdAddError'));
+          return;
+        }
+        if (addXhr.response === "Fails.") {
+          console.log("TD", addXhr.response);
+          Lampa.Noty.show(Lampa.Lang.translate('tdExist'));
+          return;
+        }
+        console.log("TD", addXhr.response);
+        Lampa.Noty.show(Lampa.Lang.translate('tdAdded'));
+      }
+    };
+    addXhr.send();
+  }
+  var synology = {
+    getStatus: getStatus,
+    synologyClient: synologyClient
   };
 
   function downloader() {
@@ -708,6 +773,9 @@
     }
     function send2aria2(selectedTorrent) {
       pAria2.aria2Client(selectedTorrent);
+    }
+    function send2synology(selectedTorrent) {
+      synology.synologyClient(selectedTorrent);
     }
     function send2transmission(selectedTorrent) {
       transmission.transmissionClient(selectedTorrent);
@@ -749,6 +817,14 @@
           e.menu.push({
             title: '<div id="aria2StatusBtn" class="btnTD wait"><svg class="download" width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\n' + '<path class="path" d="M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M18 17H12H6" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '<path class="path" d="M22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C21.5093 4.43821 21.8356 5.80655 21.9449 8" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '</svg>Aria2</div>',
             send2app: send2aria2,
+            onSelect: onSelectApp
+          });
+        }
+        if (Lampa.Storage.field("tdClient") === 'synology') {
+          typeof Lampa.Storage.get("synologyUrl") !== 'undefined' && synology.getStatus();
+          e.menu.push({
+            title: '<div id="synologygetStatusBtn" class="btnTD wait"><svg class="download" width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\n' + '<path class="path" d="M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M18 17H12H6" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '<path class="path" d="M22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C21.5093 4.43821 21.8356 5.80655 21.9449 8" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '</svg>Synology</div>',
+            send2app: send2synology,
             onSelect: onSelectApp
           });
         }
@@ -930,14 +1006,14 @@
         Lampa.Settings.main().render().find('[data-component="aria2"]').addClass("hide");
       }
       if (e.name === "main") {
-        if (Lampa.Settings.main().render().find('[data-component="synalogy"]').length === 0) {
+        if (Lampa.Settings.main().render().find('[data-component="synology"]').length === 0) {
           Lampa.SettingsApi.addComponent({
-            component: "synalogy",
-            name: "synalogy"
+            component: "synology",
+            name: "synology"
           });
         }
         Lampa.Settings.main().update();
-        Lampa.Settings.main().render().find('[data-component="synalogy"]').addClass("hide");
+        Lampa.Settings.main().render().find('[data-component="synology"]').addClass("hide");
       }
       if (e.name === "main") {
         if (Lampa.Settings.main().render().find('[data-component="tdInfo"]').length === 0) {
@@ -983,7 +1059,8 @@
           no_client: 'None',
           qBittorent: Lampa.Lang.translate('qBittorent'),
           transmission: Lampa.Lang.translate('transmission'),
-          aria2: Lampa.Lang.translate('aria2')
+          aria2: Lampa.Lang.translate('aria2'),
+          synology: "Synology"
         }
       },
       field: {
@@ -995,8 +1072,155 @@
         Lampa.Settings.update();
       }
     });
-    /* Synalogy */
-    //synalogy.config();
+    /* Synology */
+    Lampa.SettingsApi.addParam({
+      component: "torrentDownloader",
+      param: {
+        name: "synology",
+        type: "static",
+        //доступно select,input,trigger,title,static
+        "default": true
+      },
+      field: {
+        name: "Synology",
+        description: Lampa.Lang.translate('tdConfig')
+      },
+      onRender: function onRender(item) {
+        if (Lampa.Storage.field("tdClient") === "synology") {
+          //typeof Lampa.Storage.get("synologyUrl") !== 'undefined' && typeof Lampa.Storage.get("synologyUser") !== 'undefined' && typeof Lampa.Storage.get("synologyPass") !== 'undefined' && synology.getStatus();
+          synology.getStatus();
+          item.show();
+          $(".settings-param__name", item).before('<div id="synologygetStatus" class="settings-param__status wait"></div>');
+        } else item.hide();
+        item.on("hover:enter", function () {
+          Lampa.Settings.create("synology");
+          Lampa.Controller.enabled().controller.back = function () {
+            Lampa.Settings.create("torrentDownloader");
+          };
+        });
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: "synology",
+      param: {
+        name: "synologyHead",
+        type: "static"
+      },
+      field: {
+        name: Lampa.Lang.translate('tdConfig')
+        //description: `Контроль адреса - ${Lampa.Storage.get("synologyProtocol") || "http://"}${Lampa.Storage.get("synologyUrl") || "127.0.0.1:9090"}`,
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: "synology",
+      param: {
+        name: "synologySSL",
+        type: "trigger",
+        //доступно select,input,trigger,title,static
+        "default": false
+      },
+      field: {
+        name: Lampa.Lang.translate('clientSSL'),
+        description: ""
+      },
+      onChange: function onChange(value) {
+        if (value === "true") Lampa.Storage.set("synologyProtocol", "https://");else Lampa.Storage.set("synologyProtocol", "http://");
+        Lampa.Settings.update();
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: "synology",
+      param: {
+        name: "synologyUrl",
+        type: "input",
+        //доступно select,input,trigger,title,static
+        //values: `${Lampa.Storage.get("synologyUrl") || ""}`,
+        placeholder: '',
+        values: '',
+        "default": ''
+      },
+      field: {
+        name: Lampa.Lang.translate('clientAddress')
+      },
+      onChange: function onChange(item) {
+        Lampa.Storage.set("synologyUrl", item);
+        Lampa.Settings.update();
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: "synology",
+      param: {
+        name: "synologyUser",
+        type: "input",
+        //доступно select,input,trigger,title,static
+        placeholder: '',
+        values: '',
+        "default": ''
+      },
+      field: {
+        name: Lampa.Lang.translate('clientUser')
+      },
+      onChange: function onChange(item) {
+        Lampa.Storage.set("synologyUser", item);
+        Lampa.Settings.update();
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: "synology",
+      param: {
+        name: "synologyPass",
+        type: "input",
+        //доступно select,input,trigger,title,static
+        placeholder: '',
+        values: '',
+        "default": ''
+      },
+      field: {
+        name: Lampa.Lang.translate('clientPassword')
+      },
+      onChange: function onChange(item) {
+        Lampa.Storage.set("synologyPass", item);
+        Lampa.Settings.update();
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: "synology",
+      param: {
+        name: "synologyPath",
+        type: "input",
+        //доступно select,input,trigger,title,static
+        placeholder: '',
+        values: '',
+        "default": ''
+      },
+      field: {
+        name: Lampa.Lang.translate('clientPath')
+      },
+      onChange: function onChange(item) {
+        Lampa.Storage.set("synologyPath", item);
+        Lampa.Settings.update();
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'synology',
+      param: {
+        name: 'synalogyProxy',
+        type: 'select',
+        "default": 'https://api.codetabs.com/v1/proxy?quest=',
+        values: {
+          no_client: 'None',
+          "https://api.codetabs.com/v1/proxy?quest=": "Proxy #1"
+        }
+      },
+      field: {
+        name: "Select proxy"
+      },
+      onChange: function onChange(value) {
+        console.log("TDDev", value);
+        Lampa.Storage.set('synalogyProxy', value);
+        Lampa.Settings.update();
+      }
+    });
     /* qBittorent */
     Lampa.SettingsApi.addParam({
       component: "torrentDownloader",
@@ -1964,6 +2188,12 @@
         en: "Client address and port",
         uk: "Адреса та порт клієнту",
         zh: "客户端地址和端口" // Chinese translation
+      },
+      clientPath: {
+        ru: "Папка",
+        en: "Folder",
+        uk: "Папка",
+        zh: "Folder" // Chinese translation
       },
       clientUser: {
         ru: "Имя пользователя",
