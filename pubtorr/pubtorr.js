@@ -91,12 +91,12 @@
         key: '1'
       }
     }];
-    function checkAlive$1(type) {
+    function checkAlive(type) {
       console.log("TDDev", "type");
       if (type === 'parser') {
         var requests = parsersInfo.map(function (parser, index) {
           var protocol = parser.base === "lme_jackett" ? "" : proto;
-          var myLink = protocol + parser.settings.url + '/api/v2.0/indexers/status:healthy/results?apikey=' + (parser.settings.url === 'spawn.pp.ua:59117' ? '2' : parser.base === 'lme_jackett' ? 'gtkzitrf4ifi811q0tyvumz1z3cklo16' : '');
+          var myLink = protocol + parser.settings.url + '/api/v2.0/indexers/status:healthy/results?apikey=' + (parser.settings.url === 'spawn.pp.ua:59117' ? '2' : parser.base === 'lme_jackett' ? parser.settings.key : '');
           return new Promise(function (resolve) {
             setTimeout(function () {
               var mySelector = "body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(".concat(index + 2, ") > div");
@@ -123,7 +123,7 @@
     Lampa.Controller.listener.follow('toggle', function (e) {
       if (e.name === 'select') {
         setTimeout(function () {
-          checkAlive$1("parser");
+          checkAlive("parser");
         }, 10);
       }
     });
@@ -184,54 +184,6 @@
     var Parser = {
       parserSetting: parserSetting
     };
-
-    var trInfo = [{
-      "name": "[DE] Gutsy Gibbon",
-      "server": "https://trs-lme.koyeb.app"
-    }];
-    function checkAlive(type) {
-      console.log("TDDev", "type");
-      if (type === 'torr') {
-        var requests = trInfo.map(function (torr, index) {
-          return new Promise(function (resolve) {
-            setTimeout(function () {
-              var mySelector = "body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(".concat(index + 2, ") > div");
-              if ($('body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(1) > div').text() !== 'Не выбран') return resolve();
-              var torrAPI = torr.server + '/echo';
-              fetch(torrAPI).then(function (response) {
-                if (response.ok) {
-                  $(mySelector).css('color', '1aff00');
-                } else if (response.status === 401) {
-                  $(mySelector).css('color', 'ff2e36');
-                }
-              })["catch"](function () {
-                $(mySelector).css('color', 'ff2e36');
-              })["finally"](function () {
-                return resolve();
-              });
-            }, 1000);
-          });
-        });
-        if (type === 'torr') return Promise.all(requests).then(function () {
-          return console.log('LME', 'All requests completed');
-        });
-      }
-    }
-    Lampa.Controller.listener.follow('toggle', function (e) {
-      if (e.name === 'select') {
-        setTimeout(function () {
-          checkAlive("torr");
-        }, 10);
-      }
-    });
-    trInfo.reduce(function (prev, _ref, index) {
-      var server = _ref.server,
-        name = _ref.name;
-      prev[server] = "".concat(name);
-      return prev;
-    }, {
-      no_server: 'Не выбран'
-    });
 
     Lampa.Platform.tv();
     function migration() {
