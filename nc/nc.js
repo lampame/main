@@ -28,10 +28,10 @@
           zh: "纪录片" // Chinese translation
         },
         nc_tvnetflix: {
-          ru: "Top Serials",
-          en: "Top Serials",
-          uk: "Top Serials",
-          zh: "Top Serials" // Chinese translation
+          ru: " Top Serials",
+          en: " Top Serials",
+          uk: " Top Serials",
+          zh: " Top Serials" // Chinese translation
         }
       });
     }
