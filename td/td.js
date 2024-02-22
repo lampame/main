@@ -767,6 +767,13 @@
     synologyClient: synologyClient
   };
 
+  function sender(selectedTorrent) {
+    window.location.assign(selectedTorrent.MagnetUri);
+  }
+  var universal = {
+    sender: sender
+  };
+
   function downloader() {
     function send2qBittorrent(selectedTorrent) {
       qBittorent.qBittorrentClient(selectedTorrent);
@@ -779,6 +786,9 @@
     }
     function send2transmission(selectedTorrent) {
       transmission.transmissionClient(selectedTorrent);
+    }
+    function send2universal(selectedTorrent) {
+      universal.sender(selectedTorrent);
     }
     Lampa.Listener.follow('torrent', function (e) {
       if (e.type === 'onlong') {
@@ -825,6 +835,14 @@
           e.menu.push({
             title: '<div id="synologygetStatusBtn" class="btnTD wait"><svg class="download" width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\n' + '<path class="path" d="M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M18 17H12H6" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '<path class="path" d="M22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C21.5093 4.43821 21.8356 5.80655 21.9449 8" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '</svg>Synology</div>',
             send2app: send2synology,
+            onSelect: onSelectApp
+          });
+        }
+        //Universal
+        if (Lampa.Storage.field("tdClient") === 'universalClient') {
+          e.menu.push({
+            title: '<div class="btnTD wait"><svg class="download" width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\n' + '<path class="path" d="M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M18 17H12H6" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '<path class="path" d="M22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C21.5093 4.43821 21.8356 5.80655 21.9449 8" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '</svg>Universal</div>',
+            send2app: send2universal,
             onSelect: onSelectApp
           });
         }
@@ -1057,6 +1075,7 @@
         "default": 'no_client',
         values: {
           no_client: 'None',
+          universalClient: "Universal",
           qBittorent: Lampa.Lang.translate('qBittorent'),
           transmission: Lampa.Lang.translate('transmission'),
           aria2: Lampa.Lang.translate('aria2'),
