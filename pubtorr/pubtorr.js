@@ -42,6 +42,13 @@
         key: ''
       }
     }, {
+      base: 'lme_jackett',
+      name: 'LME Jackett',
+      settings: {
+        url: 'https://gwynnbleiidd-jackett.elfhosted.com',
+        key: 'plsgh9iiijchd8m9010b8cur7xqiq8d2'
+      }
+    }, {
       base: 'jacred_xyz',
       name: 'Jacred.xyz',
       settings: {
