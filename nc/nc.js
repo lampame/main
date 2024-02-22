@@ -233,6 +233,7 @@
       if (Lampa.Storage.get('nc_concert')) insert.catAdd('nc_concert');
       if (Lampa.Storage.get('nc_cartoon')) insert.catAdd('nc_cartoon');
       if (Lampa.Storage.get('nc_documentary')) insert.catAdd('nc_documentary');
+      if (Lampa.Storage.get('nc_tvnetflix')) insert.catAdd('nc_tvnetflix');
     };
     if (window.appready) {
       main();
