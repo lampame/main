@@ -26,6 +26,12 @@
           en: "Documentaries",
           uk: "Документальні",
           zh: "纪录片" // Chinese translation
+        },
+        nc_tvnetflix: {
+          ru: "Top Serials",
+          en: "Top Serials",
+          uk: "Top Serials",
+          zh: "Top Serials" // Chinese translation
         }
       });
     }
@@ -109,6 +115,25 @@
         Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field2);
         moveItemAfter(_NEW_ITEM_SELECTOR2, ITEM_TV_SELECTOR);
       }
+      if (type === 'nc_tvnetflix') {
+        var _NEW_ITEM_ATTR3 = 'data-action="nc_tvnetflix"';
+        var _NEW_ITEM_SELECTOR3 = "[".concat(_NEW_ITEM_ATTR3, "]");
+        var _NEW_ITEM_TEXT3 = Lampa.Lang.translate('nc_tvnetflix');
+        var _field3 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR3, ">\n             <div class=\"menu__ico\">\n                <svg\n                   id=\"Netflix_Symbol_RGB\"\n                   viewBox=\"0 0 551.11109 999.99998\"\n                   xmlns:xlink=\"http://www.w3.org/1999/xlink\"\n                   xmlns=\"http://www.w3.org/2000/svg\"\n                   xmlns:svg=\"http://www.w3.org/2000/svg\"\n                   xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n                   xmlns:cc=\"http://creativecommons.org/ns#\"\n                   xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n                  <metadata\n                     id=\"metadata12\">\n                    <rdf:RDF>\n                      <cc:Work\n                         rdf:about=\"\">\n                        <dc:format>image/svg+xml</dc:format>\n                        <dc:type\n                           rdf:resource=\"http://purl.org/dc/dcmitype/StillImage\" />\n                      </cc:Work>\n                    </rdf:RDF>\n                  </metadata>\n                  <defs\n                     id=\"defs4\">\n                    <linearGradient\n                       id=\"linearGradient35887\">\n                      <stop\n                         style=\"stop-color:#b1060f;stop-opacity:1;\"\n                         offset=\"0\"\n                         id=\"stop35883\" />\n                      <stop\n                         style=\"stop-color:#7b010c;stop-opacity:1\"\n                         offset=\"0.62500739\"\n                         id=\"stop36053\" />\n                      <stop\n                         style=\"stop-color:#b1060f;stop-opacity:0;\"\n                         offset=\"1\"\n                         id=\"stop35885\" />\n                    </linearGradient>\n                    <linearGradient\n                       id=\"linearGradient19332\">\n                      <stop\n                         style=\"stop-color:#b1060f;stop-opacity:1\"\n                         offset=\"0\"\n                         id=\"stop19328\" />\n                      <stop\n                         style=\"stop-color:#7b010c;stop-opacity:1\"\n                         offset=\"0.54607224\"\n                         id=\"stop19560\" />\n                      <stop\n                         style=\"stop-color:#e50914;stop-opacity:0;\"\n                         offset=\"1\"\n                         id=\"stop19330\" />\n                    </linearGradient>\n                    <style\n                       id=\"style2\">.cls-1{fill:#e50914;}</style>\n                    <linearGradient\n                       xlink:href=\"#linearGradient19332\"\n                       id=\"linearGradient13368\"\n                       x1=\"78.23394\"\n                       y1=\"423.76712\"\n                       x2=\"221.66281\"\n                       y2=\"365.09167\"\n                       gradientUnits=\"userSpaceOnUse\" />\n                    <linearGradient\n                       xlink:href=\"#linearGradient35887\"\n                       id=\"linearGradient35889\"\n                       x1=\"456.36462\"\n                       y1=\"521.55957\"\n                       x2=\"309.67599\"\n                       y2=\"583.49475\"\n                       gradientUnits=\"userSpaceOnUse\" />\n                  </defs>\n                  <path\n                     style=\"fill:url(#linearGradient13368);stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1\"\n                     d=\"M -1.1524947,-1.1524946 2.3049893,1002.6704 C 75.577724,988.55904 133.19716,990.10098 198.22908,984.23044 V 0 Z\"\n                     id=\"path6055\" />\n                  <path\n                     style=\"fill:url(#linearGradient35889);stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1\"\n                     d=\"m 353.81586,0 h 199.38158 l 2.30498,1000.3654 -202.83905,-33.42238 z\"\n                     id=\"path678\" />\n                  <path\n                     style=\"fill:#e50914;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n                     d=\"M 1.1524964,-3.6590427e-7 C 5.7624764,11.524946 346.90086,981.92546 346.90086,981.92546 c 56.0558,-0.40033 131.2191,8.75315 205.1441,17.28745 L 197.07656,-3.6590427e-7 Z\"\n                     id=\"path362\" />\n                </svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT3, "</div>\n          </li>\n        "));
+        _field3.on("hover:enter", function () {
+          Lampa.Activity.push({
+            url: "discover/tv",
+            title: "Netflix ".concat(_NEW_ITEM_TEXT3),
+            component: "category_full",
+            networks: 213,
+            source: 'tmdb',
+            card_type: true,
+            page: 1
+          });
+        });
+        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field3);
+        moveItemAfter(_NEW_ITEM_SELECTOR3, ITEM_TV_SELECTOR);
+      }
     }
     var insert = {
       catAdd: catAdd
@@ -168,6 +193,23 @@
         },
         onChange: function onChange(value) {
           if (value === 'true') insert.catAdd('nc_documentary');else $('body').find('.menu [data-action="nc_documentary"]').remove();
+          Lampa.Settings.update();
+        }
+      });
+      Lampa.SettingsApi.addParam({
+        component: "addCategory",
+        param: {
+          name: "nc_tvnetflix",
+          type: "trigger",
+          //доступно select,input,trigger,title,static
+          "default": false
+        },
+        field: {
+          name: "Netflix" + Lampa.Lang.translate('nc_tvnetflix'),
+          description: "TMDB"
+        },
+        onChange: function onChange(value) {
+          if (value === 'true') insert.catAdd('nc_tvnetflix');else $('body').find('.menu [data-action="nc_tvnetflix"]').remove();
           Lampa.Settings.update();
         }
       });
