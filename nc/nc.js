@@ -104,7 +104,7 @@
         var _NEW_ITEM_ATTR2 = 'data-action="nc_documentary"';
         var _NEW_ITEM_SELECTOR2 = "[".concat(_NEW_ITEM_ATTR2, "]");
         var _NEW_ITEM_TEXT2 = Lampa.Lang.translate('nc_documentary');
-        var _field2 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR2, ">\n             <div class=\"menu__ico\">\n                <svg viewBox=\"0 0 512 512\" xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><g data-name=\"Layer 2\" id=\"Layer_2\"> <g data-name=\"E425, History, log, manuscript\" id=\"E425_History_log_manuscript\"> <path class=\"cls-1\" d=\"M75.11,117h0A21.34,21.34,0,0,1,53.83,95.57V31.39A21.34,21.34,0,0,1,75.11,10h0A21.34,21.34,0,0,1,96.39,31.39V95.57A21.34,21.34,0,0,1,75.11,117Z\"></path> <rect class=\"cls-1\" height=\"64.17\" width=\"319.22\" x=\"96.39\" y=\"31.39\"></rect> <rect class=\"cls-1\" height=\"320.87\" width=\"319.22\" x=\"96.39\" y=\"95.57\"></rect> <path class=\"cls-1\" d=\"M34.34,39.08H53.83a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H34.34A24.34,24.34,0,0,1,10,63.54v-.13A24.34,24.34,0,0,1,34.34,39.08Z\"></path> <path class=\"cls-1\" d=\"M436.89,117h0a21.34,21.34,0,0,0,21.28-21.39V31.39A21.34,21.34,0,0,0,436.89,10h0a21.34,21.34,0,0,0-21.28,21.39V95.57A21.34,21.34,0,0,0,436.89,117Z\"></path> <path class=\"cls-1\" d=\"M482.51,39.08H502a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H482.51a24.34,24.34,0,0,1-24.34-24.34v-.13a24.34,24.34,0,0,1,24.34-24.34Z\" transform=\"translate(960.17 126.96) rotate(-180)\"></path> <path class=\"cls-1\" d=\"M75.11,395h0a21.34,21.34,0,0,0-21.28,21.39v64.18A21.34,21.34,0,0,0,75.11,502h0a21.34,21.34,0,0,0,21.28-21.39V416.43A21.34,21.34,0,0,0,75.11,395Z\"></path> <rect class=\"cls-1\" height=\"64.17\" width=\"319.22\" x=\"96.39\" y=\"416.43\"></rect> <path class=\"cls-1\" d=\"M34.34,424.12H53.83a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H34.34A24.34,24.34,0,0,1,10,448.58v-.13A24.34,24.34,0,0,1,34.34,424.12Z\"></path> <path class=\"cls-1\" d=\"M436.89,395h0a21.34,21.34,0,0,1,21.28,21.39v64.18A21.34,21.34,0,0,1,436.89,502h0a21.34,21.34,0,0,1-21.28-21.39V416.43A21.34,21.34,0,0,1,436.89,395Z\"></path> <path class=\"cls-1\" d=\"M482.51,424.12H502a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H482.51a24.34,24.34,0,0,1-24.34-24.34v-.13a24.34,24.34,0,0,1,24.34-24.34Z\" transform=\"translate(960.17 897.04) rotate(-180)\"></path> <line class=\"cls-1\" x1=\"143.41\" x2=\"256\" y1=\"140.11\" y2=\"140.11\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"186.47\" y2=\"186.47\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"232.82\" y2=\"232.82\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"279.18\" y2=\"279.18\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"325.53\" y2=\"325.53\"></line> <line class=\"cls-1\" x1=\"256\" x2=\"371.26\" y1=\"371.89\" y2=\"371.89\"></line> </g> </g> </g></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT2, "</div>\n          </li>\n        "));
+        var _field2 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR2, ">\n             <div class=\"menu__ico\">\n                <?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\" viewBox=\"0 0 128 128\" width=\"64px\" height=\"64px\">    <path d=\"M 24 1 C 16.8 1 11 6.8 11 14 L 11 91 C 11 92.7 12.3 94 14 94 C 15.7 94 17 92.7 17 91 L 17 14 C 17 10.1 20.1 7 24 7 L 103 7 C 101.7 9 101 11.4 101 14 L 101 114 C 101 117.9 97.9 121 94 121 C 90.1 121 87 117.9 87 114 L 87 104 C 87 102.3 85.7 101 84 101 L 4 101 C 2.3 101 1 102.3 1 104 L 1 114 C 1 121.2 6.8 127 14 127 L 94 127 C 101.2 127 107 121.2 107 114 L 107 14 C 107 10.1 110.1 7 114 7 C 117.9 7 121 10.1 121 14 L 121 21 L 114 21 C 112.3 21 111 22.3 111 24 C 111 25.7 112.3 27 114 27 L 124 27 C 125.7 27 127 25.7 127 24 L 127 14 C 127 6.8 121.2 1 114 1 L 24 1 z M 47 21 C 45.3 21 44 22.3 44 24 C 44 25.7 45.3 27 47 27 L 71 27 C 72.7 27 74 25.7 74 24 C 74 22.3 72.7 21 71 21 L 47 21 z M 34 51 C 32.3 51 31 52.3 31 54 C 31 55.7 32.3 57 34 57 L 84 57 C 85.7 57 87 55.7 87 54 C 87 52.3 85.7 51 84 51 L 34 51 z M 34.199219 66 C 32.499219 66 31.199219 67.3 31.199219 69 C 31.199219 70.7 32.499219 72 34.199219 72 L 69.199219 72 C 70.899219 72 72.199219 70.7 72.199219 69 C 72.199219 67.3 70.899219 66 69.199219 66 L 34.199219 66 z M 84 66 A 3 3 0 0 0 81 69 A 3 3 0 0 0 84 72 A 3 3 0 0 0 87 69 A 3 3 0 0 0 84 66 z M 7 107 L 81 107 L 81 114 C 81 116.6 81.8 119 83 121 L 14 121 C 10.1 121 7 117.9 7 114 L 7 107 z\"/></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT2, "</div>\n          </li>\n        "));
         _field2.on("hover:enter", function () {
           var _Lampa$Activity$activ2 = Lampa.Activity.active(),
             currentSource = _Lampa$Activity$activ2.source;
@@ -128,7 +128,7 @@
         var _NEW_ITEM_ATTR3 = 'data-action="nc_movienetflix"';
         var _NEW_ITEM_SELECTOR3 = "[".concat(_NEW_ITEM_ATTR3, "]");
         var _NEW_ITEM_TEXT3 = Lampa.Lang.translate('nc_topmovie');
-        var _field3 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR3, ">\n             <div class=\"menu__ico\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\" viewBox=\"0 0 50 50\" width=\"50px\" height=\"50px\"><path d=\"M27,6v10.75L23.48,6H23h-8.33H14v38.15l9-1.28V32.58l3.24,10.34l6.14,0.72L36,44.15V6H27z M29,8h5v30.13l-5-15.27V8z M17.39,8h4.64L23,10.96l4,12.22l2,6.12l4.06,12.4l-0.54-0.06l-4.76-0.56L27,38.66L23,25.9l-2-6.38L17.39,8z M21,41.13l-5,0.72 V10.24l5,15.96V41.13z\"/></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT3, "</div>\n          </li>\n        "));
+        var _field3 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR3, ">\n             <div class=\"menu__ico\">\n                <svg width=\"32\" height=\"32\" fill=\"currentColor\" viewBox=\"0 0 32 32\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m7.187.005 6.333 17.947v-.009l.501 1.413c2.784 7.877 4.28 12.1 4.288 12.109.005 0 .427.027.936.053 1.541.067 3.453.24 4.901.413.333.04.621.053.64.04l-6.28-17.813-.581-1.64-3.231-9.133c-.613-1.733-1.133-3.211-1.16-3.267L13.493 0h-6.3zm11.344.011-.013 7.075-.011 7.075-.583-1.643v-.003l-.753 15.747c.74 2.089 1.136 3.204 1.14 3.209s.427.032.936.056c1.543.067 3.453.24 4.907.413.333.04.623.053.64.04s.027-7.227.023-16.013L24.805.013H18.53zM7.187.003V15.99c0 8.792.009 15.993.02 16.004s.555-.04 1.209-.115c.653-.08 1.56-.173 2.013-.213a81 81 0 0 1 2.997-.2c.069 0 .075-.36.084-6.773l.011-6.773.507 1.413.173.501.76-15.733-.253-.728L13.535.12l-.04-.116z\" fill=\"white\"/></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT3, "</div>\n          </li>\n        "));
         _field3.on("hover:enter", function () {
           Lampa.Activity.push({
             url: "discover/movie",
@@ -149,7 +149,7 @@
         var _NEW_ITEM_ATTR4 = 'data-action="nc_tvnetflix"';
         var _NEW_ITEM_SELECTOR4 = "[".concat(_NEW_ITEM_ATTR4, "]");
         var _NEW_ITEM_TEXT4 = Lampa.Lang.translate('nc_toptv');
-        var _field4 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR4, ">\n             <div class=\"menu__ico\">\n               <svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\" viewBox=\"0 0 50 50\" width=\"50px\" height=\"50px\"><path d=\"M27,6v10.75L23.48,6H23h-8.33H14v38.15l9-1.28V32.58l3.24,10.34l6.14,0.72L36,44.15V6H27z M29,8h5v30.13l-5-15.27V8z M17.39,8h4.64L23,10.96l4,12.22l2,6.12l4.06,12.4l-0.54-0.06l-4.76-0.56L27,38.66L23,25.9l-2-6.38L17.39,8z M21,41.13l-5,0.72 V10.24l5,15.96V41.13z\"/></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT4, "</div>\n          </li>\n        "));
+        var _field4 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR4, ">\n             <div class=\"menu__ico\">\n               <svg width=\"32\" height=\"32\" fill=\"currentColor\" viewBox=\"0 0 32 32\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m7.187.005 6.333 17.947v-.009l.501 1.413c2.784 7.877 4.28 12.1 4.288 12.109.005 0 .427.027.936.053 1.541.067 3.453.24 4.901.413.333.04.621.053.64.04l-6.28-17.813-.581-1.64-3.231-9.133c-.613-1.733-1.133-3.211-1.16-3.267L13.493 0h-6.3zm11.344.011-.013 7.075-.011 7.075-.583-1.643v-.003l-.753 15.747c.74 2.089 1.136 3.204 1.14 3.209s.427.032.936.056c1.543.067 3.453.24 4.907.413.333.04.623.053.64.04s.027-7.227.023-16.013L24.805.013H18.53zM7.187.003V15.99c0 8.792.009 15.993.02 16.004s.555-.04 1.209-.115c.653-.08 1.56-.173 2.013-.213a81 81 0 0 1 2.997-.2c.069 0 .075-.36.084-6.773l.011-6.773.507 1.413.173.501.76-15.733-.253-.728L13.535.12l-.04-.116z\" fill=\"white\"/></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT4, "</div>\n          </li>\n        "));
         _field4.on("hover:enter", function () {
           Lampa.Activity.push({
             url: "discover/tv",
@@ -168,7 +168,7 @@
         var _NEW_ITEM_ATTR5 = 'data-action="nc_appletv"';
         var _NEW_ITEM_SELECTOR5 = "[".concat(_NEW_ITEM_ATTR5, "]");
         var _NEW_ITEM_TEXT5 = Lampa.Lang.translate('nc_toptv');
-        var _field5 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR5, ">\n             <div class=\"menu__ico\">\n                <?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\" viewBox=\"0 0 50 50\" width=\"50px\" height=\"50px\">    <path d=\"M 9 4 C 6.2504839 4 4 6.2504839 4 9 L 4 41 C 4 43.749516 6.2504839 46 9 46 L 41 46 C 43.749516 46 46 43.749516 46 41 L 46 9 C 46 6.2504839 43.749516 4 41 4 L 9 4 z M 9 6 L 41 6 C 42.668484 6 44 7.3315161 44 9 L 44 41 C 44 42.668484 42.668484 44 41 44 L 9 44 C 7.3315161 44 6 42.668484 6 41 L 6 9 C 6 7.3315161 7.3315161 6 9 6 z M 18.076172 18 C 17.371172 18.097 16.5665 18.483453 16.0625 19.064453 C 15.5585 19.644453 15.255031 20.323 15.457031 21 C 16.262031 21 16.968656 20.61225 17.472656 20.03125 C 17.875656 19.54725 18.177172 18.774 18.076172 18 z M 26.800781 18 L 25 18.5 L 25 21 L 23.5 21 L 23.5 22.375 L 25 22.375 L 25 27.599609 C 25 28.799609 25.199219 29.599219 25.699219 30.199219 C 26.199219 30.699219 26.899219 31 27.699219 31 C 28.399219 31 29.000781 30.900781 29.300781 30.800781 L 29.199219 29.400391 C 28.999219 29.500391 28.699219 29.5 28.199219 29.5 C 27.099219 29.5 26.800781 28.799609 26.800781 27.599609 L 26.800781 22.375 L 29.400391 22.375 L 29.400391 21 L 26.800781 21 L 26.800781 18 z M 13.341797 21 C 12.333797 21 11.326094 21.599609 10.621094 22.599609 C 9.6140938 24.099609 9.8151719 26.899219 11.326172 29.199219 C 11.830172 30.099219 12.535969 31 13.542969 31 C 14.449969 31.1 14.650375 30.5 15.859375 30.5 C 16.967375 30.4 17.169172 31 18.076172 31 C 18.983172 31 19.788578 29.899609 20.392578 29.099609 C 20.695578 28.499609 20.896828 28.2 21.298828 27.5 C 19.082828 26.6 18.680484 23.500781 20.896484 22.300781 C 20.191484 21.500781 19.285906 21 18.378906 21 C 17.170906 21 16.665375 21.599609 15.859375 21.599609 C 15.053375 21.599609 14.349797 21 13.341797 21 z M 30.625 21 L 34.414062 31 L 36.109375 31 L 40 21 L 38.105469 21 L 36.210938 26.599609 C 35.911937 27.599609 35.611109 28.399219 35.412109 29.199219 L 35.3125 29.199219 C 35.1125 28.299219 34.814625 27.499609 34.515625 26.599609 L 32.519531 21 L 30.625 21 z\"/></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT5, "</div>\n          </li>\n        "));
+        var _field5 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR5, ">\n             <div class=\"menu__ico\">\n                <svg width=\"32\" height=\"32\" fill=\"currentColor\" viewBox=\"0 0 32 32\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M27.427 23.647h-2.42l-4.453-12.271h2.177l2.693 7.983c.1.308.364 1.2.781 2.683l.396-1.329.44-1.341 2.792-8.005H32zm-7.125-.088a7.7 7.7 0 0 1-2.067.276c-1.64 0-2.453-.924-2.453-2.783v-8.191h-1.417v-1.485h1.495V9.441l1.968-.803v2.749h2.276v1.484H17.84v7.74c0 .595.099 1 .285 1.243s.528.352 1 .352c.276 0 .66-.055 1.177-.153zm-9.72-7.124c.023 2.352 2.067 3.144 2.089 3.155-.023.056-.331 1.123-1.077 2.211-.649.947-1.32 1.891-2.387 1.913-1.044.021-1.373-.616-2.573-.616-1.187 0-1.56.593-2.551.637-1.011.033-1.792-1.033-2.451-1.979-1.331-1.935-2.353-5.464-.979-7.84.68-1.187 1.901-1.935 3.221-1.947 1-.021 1.957.683 2.573.683s1.769-.836 2.979-.715c.507.021 1.936.209 2.848 1.539-.077.044-1.704.991-1.693 2.959m-1.957-5.784c.539-.66.913-1.573.813-2.485-.78.033-1.725.517-2.297 1.177-.507.583-.947 1.517-.825 2.408.869.067 1.771-.451 2.309-1.1\" fill=\"white\"/></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT5, "</div>\n          </li>\n        "));
         _field5.on("hover:enter", function () {
           Lampa.Activity.push({
             url: "discover/tv",
@@ -222,8 +222,52 @@
         moveItemAfter(_NEW_ITEM_SELECTOR7, ITEM_TV_SELECTOR);
       }
     }
+    function catOpener(type) {
+      var NEW_ITEM_SOURCES = ["tmdb", "cub"];
+      var _Lampa$Activity$activ3 = Lampa.Activity.active(),
+        currentSource = _Lampa$Activity$activ3.source;
+      var source = NEW_ITEM_SOURCES.includes(currentSource) ? currentSource : NEW_ITEM_SOURCES[0];
+      if (type === 'nc_concert') {
+        Lampa.Activity.push({
+          url: "discover/movie",
+          title: "".concat(Lampa.Lang.translate('nc_concert')),
+          component: "category_full",
+          genres: 10402,
+          id: 10402,
+          keywords: "156205-concert-film",
+          source: 'tmdb',
+          card_type: true,
+          page: 1
+        });
+      }
+      if (type === 'nc_cartoon') {
+        Lampa.Activity.push({
+          url: "movie",
+          title: "".concat(Lampa.Lang.translate('nc_cartoon'), " - ").concat(source.toUpperCase()),
+          component: "category",
+          genres: 16,
+          id: 16,
+          source: source,
+          card_type: true,
+          page: 1
+        });
+      }
+      if (type === 'nc_documentary') {
+        Lampa.Activity.push({
+          url: "movie",
+          title: "".concat(Lampa.Lang.translate('nc_documentary'), " - ").concat(source.toUpperCase()),
+          component: "category",
+          genres: 99,
+          id: 99,
+          source: source,
+          card_type: true,
+          page: 1
+        });
+      }
+    }
     var insert = {
-      catAdd: catAdd
+      catAdd: catAdd,
+      catOpener: catOpener
     };
 
     function setting() {
@@ -466,17 +510,23 @@
       Lampa.Manifest.plugins = manifest;
       lang.data();
       config.setting();
-      //universal
-      if (Lampa.Storage.get('nc_concert')) insert.catAdd('nc_concert');
-      if (Lampa.Storage.get('nc_cartoon')) insert.catAdd('nc_cartoon');
-      if (Lampa.Storage.get('nc_documentary')) insert.catAdd('nc_documentary');
-      //movie
-      if (Lampa.Storage.get('nc_movienetflix')) insert.catAdd('nc_movienetflix');
-      //tv
-      if (Lampa.Storage.get('nc_tvnetflix')) insert.catAdd('nc_tvnetflix');
-      if (Lampa.Storage.get('nc_appletv')) insert.catAdd('nc_appletv');
-      if (Lampa.Storage.get('nc_paramountplus')) insert.catAdd('nc_paramountplus');
-      if (Lampa.Storage.get('nc_disneyplus')) insert.catAdd('nc_disneyplus');
+
+      // universal categories
+      var universalCategories = ['nc_concert', 'nc_cartoon', 'nc_documentary'];
+
+      // movie categories
+      var movieCategories = ['nc_movienetflix'];
+
+      // tv categories
+      var tvCategories = ['nc_tvnetflix', 'nc_appletv', 'nc_paramountplus', 'nc_disneyplus'];
+      function addCategory(category) {
+        if (Lampa.Storage.get(category)) {
+          insert.catAdd(category);
+        }
+      }
+      universalCategories.forEach(addCategory);
+      movieCategories.forEach(addCategory);
+      tvCategories.forEach(addCategory);
     };
     if (window.appready) {
       main();
