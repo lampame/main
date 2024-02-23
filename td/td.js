@@ -739,10 +739,12 @@
       return;
     }
     var addXhr = new XMLHttpRequest();
+    var categoryDesc = selectedTorrent.CategoryDesc;
+    var categoryParam = categoryDesc ? Lampa.Storage.get("synologyPath".concat(categoryDesc)) : Lampa.Storage.get('synologyPathMovies');
     if (Lampa.Storage.get("synalogyProxy") && Lampa.Storage.get("synalogyProxy") !== 'no_client') {
-      addXhr.open("GET", "".concat(Lampa.Storage.get("synalogyProxy")) + encodeURIComponent("".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=create&uri=").concat(selectedTorrent.MagnetUri, "&username=").concat(Lampa.Storage.get("synologyUser"), "&password=").concat(Lampa.Storage.get("synologyPass"), "&destination=").concat(Lampa.Storage.get("synologyPath"), "&_sid=").concat(Lampa.Storage.get("synologySID"))));
+      addXhr.open("GET", "".concat(Lampa.Storage.get("synalogyProxy")) + encodeURIComponent("".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=create&uri=").concat(selectedTorrent.MagnetUri, "&username=").concat(Lampa.Storage.get("synologyUser"), "&password=").concat(Lampa.Storage.get("synologyPass"), "&destination=").concat(categoryParam, "&_sid=").concat(Lampa.Storage.get("synologySID"))));
     } else {
-      addXhr.open("GET", "".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=create&uri=").concat(encodeURIComponent(selectedTorrent.MagnetUri), "&username=").concat(Lampa.Storage.get("synologyUser"), "&password=").concat(Lampa.Storage.get("synologyPass"), "&destination=").concat(Lampa.Storage.get("synologyPath"), "&_sid=").concat(Lampa.Storage.get("synologySID")));
+      addXhr.open("GET", "".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=create&uri=").concat(encodeURIComponent(selectedTorrent.MagnetUri), "&username=").concat(Lampa.Storage.get("synologyUser"), "&password=").concat(Lampa.Storage.get("synologyPass"), "&destination=").concat(categoryParam, "&_sid=").concat(Lampa.Storage.get("synologySID")));
     }
     addXhr.onreadystatechange = function () {
       if (addXhr.readyState === 4) {
@@ -1213,10 +1215,28 @@
         "default": ''
       },
       field: {
-        name: Lampa.Lang.translate('clientPath')
+        name: Lampa.Lang.translate('qBittorentCM')
       },
       onChange: function onChange(item) {
-        Lampa.Storage.set("synologyPath", item);
+        Lampa.Storage.set("synologyPathMovies", item);
+        Lampa.Settings.update();
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: "synology",
+      param: {
+        name: "synologyPathTV",
+        type: "input",
+        //доступно select,input,trigger,title,static
+        placeholder: '',
+        values: '',
+        "default": ''
+      },
+      field: {
+        name: Lampa.Lang.translate('qBittorentCS')
+      },
+      onChange: function onChange(item) {
+        Lampa.Storage.set("synologyPathTV", item);
         Lampa.Settings.update();
       }
     });
