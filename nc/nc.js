@@ -221,7 +221,7 @@
           title: "Netflix " + Lampa.Lang.translate('nc_toptv'),
           component: "category_full",
           networks: 213,
-          sort_by: 'vote_average.desc',
+          //sort_by: 'vote_average.desc',
           source: 'tmdb',
           card_type: true,
           page: 1
@@ -231,7 +231,7 @@
           title: "AppleTV " + Lampa.Lang.translate('nc_toptv'),
           component: "category_full",
           networks: 2552,
-          sort_by: 'vote_average.desc',
+          //sort_by: 'vote_average.desc',
           source: 'tmdb',
           card_type: true,
           page: 1
@@ -241,7 +241,7 @@
           title: "Paramount+ " + Lampa.Lang.translate('nc_toptv'),
           component: "category_full",
           networks: 4330,
-          sort_by: 'vote_average.desc',
+          //sort_by: 'vote_average.desc',
           source: 'tmdb',
           card_type: true,
           page: 1
@@ -251,7 +251,7 @@
           title: "Disney+ " + Lampa.Lang.translate('nc_toptv'),
           component: "category_full",
           networks: 2739,
-          sort_by: 'vote_average.desc',
+          //sort_by: 'vote_average.desc',
           source: 'tmdb',
           card_type: true,
           page: 1
