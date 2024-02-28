@@ -16,15 +16,15 @@
           zh: "选择类别" // Chinese translation
         },
         nc_subuniversal: {
-          ru: "Универсальные",
-          en: "Universal",
-          uk: "Універсальні",
-          zh: "通用" // Chinese translation
+          ru: "Общие",
+          en: "General",
+          uk: "Загальні",
+          zh: "一般情况" // Chinese translation
         },
         nc_submovie: {
-          ru: "Movie",
+          ru: "Кино",
           en: "Movie",
-          uk: "Movie",
+          uk: "Кіно",
           zh: "Movie" // Chinese translation
         },
         nc_subtv: {
@@ -52,22 +52,22 @@
           zh: "纪录片" // Chinese translation
         },
         nc_toptv: {
-          ru: " Top serials",
-          en: " Top serials",
-          uk: " Top serials",
-          zh: " Top serials" // Chinese translation
+          ru: " Top",
+          en: " Top",
+          uk: " Top",
+          zh: " Top" // Chinese translation
         },
         nc_newtv: {
-          ru: " New serials",
-          en: " New serials",
-          uk: " New serials",
-          zh: " New serials" // Chinese translation
+          ru: " New",
+          en: " New",
+          uk: " New",
+          zh: " New" // Chinese translation
         },
         nc_topmovie: {
-          ru: " Top movie",
-          en: " Top movie",
-          uk: " Top movie",
-          zh: " Top movie" // Chinese translation
+          ru: " Top",
+          en: " Top",
+          uk: " Top",
+          zh: " Top" // Chinese translation
         }
       });
     }
@@ -373,7 +373,7 @@
     };
     var main = function main() {
       Lampa.Manifest.plugins = manifest;
-      Lampa.Template.add('tdStyle', "\n        <style>\n            @charset 'UTF-8';.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncIcon{margin-right:5px;width:36px;height:36px}\n        </style>\n    ");
+      Lampa.Template.add('ncStyle', "\n        <style>\n            div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}\n        </style>\n    ");
       lang.data();
       config.setting();
       // Menu 2.0
@@ -385,6 +385,7 @@
       }
       //Menu 2.0
       submenuCatalog.forEach(addsubmenu);
+      $('body').append(Lampa.Template.get('ncStyle', {}, true));
     };
     if (window.appready) {
       main();
