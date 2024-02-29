@@ -310,319 +310,56 @@
         $('.menu .menu__list').find(ITEM_TV_SELECTOR).append(_field4);
       }
     }
-    function catOpener(type) {
-      var _Lampa$Activity$activ3 = Lampa.Activity.active();
-        _Lampa$Activity$activ3.source;
-      var categoryMap = {
-        nc_tvnetflix: {
-          url: "discover/tv",
-          title: "Netflix " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: 213,
-          //sort_by: 'vote_average.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_appletv: {
-          url: "discover/tv",
-          title: "AppleTV " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: 2552,
-          //sort_by: 'vote_average.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_paramountplus: {
-          url: "discover/tv",
-          title: "Paramount+ " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: 4330,
-          //sort_by: 'vote_average.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_disneyplus: {
-          url: "discover/tv",
-          title: "Disney+ " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: 2739,
-          //sort_by: 'vote_average.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvhulu: {
-          url: "discover/tv",
-          title: "Hulu " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: '453|1772',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvnbc: {
-          url: "discover/tv",
-          title: "NBC " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: '6|2462',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvabc: {
-          url: "discover/tv",
-          title: "ABC " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: 2,
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvfox: {
-          url: "discover/tv",
-          title: "Fox " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: '6088|19|303|961',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvstarz: {
-          url: "discover/tv",
-          title: "Starz " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: '318|5594|6222|758|6292',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvfx: {
-          url: "discover/tv",
-          title: "FX " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: '1641|88|5628|1035',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvhbo: {
-          url: "discover/tv",
-          title: "HBO Max " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: '5750|5764|5484|5485|5836|5666|3186',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvcbs: {
-          url: "discover/tv",
-          title: "CBS " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: '16|2621',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvcw: {
-          url: "discover/tv",
-          title: "CW " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: 71,
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvamc: {
-          url: "discover/tv",
-          title: "AMC " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: '174|4661',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvsyfy: {
-          url: "discover/tv",
-          title: "SyFy " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: '3701|77|6914',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvshowtime: {
-          url: "discover/tv",
-          title: "ShowTIME " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: '67|6631|1814',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        //New
-        nc_tvnetflixNEW: {
-          url: "discover/tv",
-          title: "Netflix " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: 213,
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_appletvNEW: {
-          url: "discover/tv",
-          title: "AppleTV " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: 2552,
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_paramountplusNEW: {
-          url: "discover/tv",
-          title: "Paramount+ " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: 4330,
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_disneyplusNEW: {
-          url: "discover/tv",
-          title: "Disney+ " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: 2739,
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvhuluNEW: {
-          url: "discover/tv",
-          title: "Hulu " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: '453|1772',
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvnbcNEW: {
-          url: "discover/tv",
-          title: "NBC " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: '6|2462',
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvabcNEW: {
-          url: "discover/tv",
-          title: "ABC " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: 2,
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvfoxNEW: {
-          url: "discover/tv",
-          title: "Fox " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: '6088|19|303|961',
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvstarzNEW: {
-          url: "discover/tv",
-          title: "Starz " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: '318|5594|6222|758|6292',
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvfxNEW: {
-          url: "discover/tv",
-          title: "FX " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: '1641|88|5628|1035',
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvhboNEW: {
-          url: "discover/tv",
-          title: "HBO Max " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: '5750|5764|5484|5485|5836|5666|3186',
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvcbsNEW: {
-          url: "discover/tv",
-          title: "CBS " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: '16|2621',
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvcwNEW: {
-          url: "discover/tv",
-          title: "CW " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: 71,
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvamcNEW: {
-          url: "discover/tv",
-          title: "AMC " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: '174|4661',
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvsyfyNEW: {
-          url: "discover/tv",
-          title: "SyFy " + Lampa.Lang.translate('nc_newtv'),
-          component: "category_full",
-          networks: '3701|77|6914',
-          sort_by: 'first_air_date.desc',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        },
-        nc_tvshowtimeNEW: {
-          url: "discover/tv",
-          title: "ShowTIME " + Lampa.Lang.translate('nc_toptv'),
-          component: "category_full",
-          networks: '67|6631|1814',
-          source: 'tmdb',
-          card_type: true,
-          page: 1
-        }
+    function createCategory(title, networks) {
+      var sortBy = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+      var typeStreamSort = sortBy ? sortBy === 'first_air_date.desc' ? ' New' : ' Top' : ' Top';
+      return {
+        url: "discover/tv",
+        title: title + typeStreamSort,
+        component: "category_full",
+        networks: networks,
+        sort_by: sortBy,
+        source: 'tmdb',
+        card_type: true,
+        page: 1
       };
+    }
+    var categoryMap = {
+      nc_tvnetflix: createCategory('Netflix', 213),
+      nc_appletv: createCategory('AppleTV', 2552),
+      nc_paramountplus: createCategory('Paramount+', 4330),
+      nc_disneyplus: createCategory('Disney+', 2739),
+      nc_tvhulu: createCategory('Hulu', '453|1772'),
+      nc_tvnbc: createCategory('NBC', '6|2462'),
+      nc_tvabc: createCategory('ABC', 2),
+      nc_tvfox: createCategory('Fox', '6088|19|303|961'),
+      nc_tvstarz: createCategory('Starz', '318|5594|6222|758|6292'),
+      nc_tvfx: createCategory('FX', '1641|88|5628|1035'),
+      nc_tvhbo: createCategory('HBO Max', '5750|5764|5484|5485|5836|5666|3186'),
+      nc_tvcbs: createCategory('CBS', '16|2621'),
+      nc_tvcw: createCategory('CW', 71),
+      nc_tvamc: createCategory('AMC', '174|4661'),
+      nc_tvsyfy: createCategory('SyFy', '3701|77|6914'),
+      nc_tvshowtime: createCategory('ShowTIME', '67|6631|1814'),
+      //New
+      nc_tvnetflixNEW: createCategory('Netflix', 213, 'first_air_date.desc'),
+      nc_appletvNEW: createCategory('AppleTV', 2552, 'first_air_date.desc'),
+      nc_paramountplusNEW: createCategory('Paramount+', 4330, 'first_air_date.desc'),
+      nc_disneyplusNEW: createCategory('Disney+', 2739, 'first_air_date.desc'),
+      nc_tvhuluNEW: createCategory('Hulu', '453|1772', 'first_air_date.desc'),
+      nc_tvnbcNEW: createCategory('NBC', '6|2462', 'first_air_date.desc'),
+      nc_tvabcNEW: createCategory('ABC', 2, 'first_air_date.desc'),
+      nc_tvfoxNEW: createCategory('Fox', '6088|19|303|961', 'first_air_date.desc'),
+      nc_tvstarzNEW: createCategory('Starz', '318|5594|6222|758|6292', 'first_air_date.desc'),
+      nc_tvfxNEW: createCategory('FX', '1641|88|5628|1035', 'first_air_date.desc'),
+      nc_tvhboNEW: createCategory('HBO Max', '5750|5764|5484|5485|5836|5666|3186', 'first_air_date.desc'),
+      nc_tvcbsNEW: createCategory('CBS', '16|2621', 'first_air_date.desc'),
+      nc_tvcwNEW: createCategory('CW', 71, 'first_air_date.desc'),
+      nc_tvamcNEW: createCategory('AMC', '174|4661', 'first_air_date.desc'),
+      nc_tvsyfyNEW: createCategory('SyFy', '3701|77|6914', 'first_air_date.desc'),
+      nc_tvshowtimeNEW: createCategory('ShowTIME', '67|6631|1814', 'first_air_date.desc')
+    };
+    function catOpener(type) {
       if (categoryMap[type]) {
         Lampa.Activity.push(categoryMap[type]);
       }
