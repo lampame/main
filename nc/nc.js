@@ -344,7 +344,7 @@
             },
             onLong: function onLong(a) {
               //Loong reaction
-              if (!Lampa.Storage.get(a.catType) || Lampa.Storage.get(a.cat) === false) {
+              if (!Lampa.Storage.get(a.catType) || Lampa.Storage.get(a.catType).available === false) {
                 Lampa.Storage.set(a.catType, {
                   available: true,
                   info: a
