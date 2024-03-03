@@ -349,12 +349,12 @@
       }
       if (type === 'nc_subtv' || type === 'nc_newsubtv') {
         var _NEW_ITEM_ATTR4 = "data-action=\"".concat(type, "\"");
-        var streamField = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR4, ">\n             <div class=\"menu__ico\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\" viewBox=\"0 0 24 24\" id=\"tv\"><path d=\"M18,6H14.41l2.3-2.29a1,1,0,1,0-1.42-1.42L12,5.54l-1.17-2a1,1,0,1,0-1.74,1L10,6H6A3,3,0,0,0,3,9v8a3,3,0,0,0,3,3v1a1,1,0,0,0,2,0V20h8v1a1,1,0,0,0,2,0V20a3,3,0,0,0,3-3V9A3,3,0,0,0,18,6Zm1,11a1,1,0,0,1-1,1H6a1,1,0,0,1-1-1V9A1,1,0,0,1,6,8H18a1,1,0,0,1,1,1Z\"></path></svg>\n             </div>\n             <div class=\"menu__text\">TV ").concat(Lampa.Lang.translate(type === 'nc_subtv' ? 'nc_toptv' : 'nc_newtv'), " </div>\n          </li>\n        "));
+        var streamField = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR4, ">\n             <div class=\"menu__ico\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\" viewBox=\"0 0 24 24\" id=\"tv\"><path d=\"M18,6H14.41l2.3-2.29a1,1,0,1,0-1.42-1.42L12,5.54l-1.17-2a1,1,0,1,0-1.74,1L10,6H6A3,3,0,0,0,3,9v8a3,3,0,0,0,3,3v1a1,1,0,0,0,2,0V20h8v1a1,1,0,0,0,2,0V20a3,3,0,0,0,3-3V9A3,3,0,0,0,18,6Zm1,11a1,1,0,0,1-1,1H6a1,1,0,0,1-1-1V9A1,1,0,0,1,6,8H18a1,1,0,0,1,1,1Z\"></path></svg>\n             </div>\n             <div class=\"menu__text nc_bookmark\"><div class=\"nc_menu\">TV Show</div><div class=\"nc_badge\">").concat(Lampa.Lang.translate(type === 'nc_subtv' ? 'nc_toptv' : 'nc_newtv'), "</div>\n          </li>\n        "));
         var newArrayOfDivs = streamBase(type).map(function (obj) {
           return {
             name: obj.name,
             icon: obj.icon,
-            title: "<div class=\"ncSubmenu\">".concat(obj.icon).concat(obj.name, "</div>"),
+            title: "<div class=\"ncSubmenu\">".concat(obj.icon, "<div class=\"menu__text\">").concat(obj.name, "</div></div>"),
             type: type,
             catType: obj.catType
           };
@@ -457,7 +457,7 @@
       if (!info) return Lampa.Noty.show("Error");
       var NEW_ITEM_ATTR = "data-action=\"".concat(info.catType, "\"");
       var NEW_ITEM_SELECTOR = "[".concat(NEW_ITEM_ATTR, "]");
-      var bookmarks = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                ").concat(info.icon, "\n             </div>\n             <div class=\"menu__text\">").concat(info.name, " ").concat(Lampa.Lang.translate(info.type === 'nc_subtv' ? 'nc_toptv' : 'nc_newtv'), "</div>\n          </li>\n        "));
+      var bookmarks = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                ").concat(info.icon, "\n             </div>\n             <div class=\"menu__text nc_bookmark\"><div class=\"nc_menu\">").concat(info.name, "</div><div class=\"nc_badge\">").concat(Lampa.Lang.translate(info.type === 'nc_subtv' ? 'nc_toptv' : 'nc_newtv'), "</div></div>\n          </li>\n        "));
       bookmarks.on("hover:enter", function () {
         if (categoryMap[info.catType]) {
           Lampa.Activity.push(categoryMap[info.catType]);
@@ -651,7 +651,7 @@
     };
     var main = function main() {
       Lampa.Manifest.plugins = manifest;
-      Lampa.Template.add('ncStyle', "\n        <style>\n            div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}\n        </style>\n    ");
+      Lampa.Template.add('ncStyle', "\n        <style>\n            div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}\n        </style>\n    ");
       lang.data();
       config.setting();
       var submenuCatalogkeys = Object.keys(localStorage).filter(function (key) {
