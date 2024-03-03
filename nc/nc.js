@@ -82,16 +82,16 @@
           zh: "纪录片 2" // Chinese translation
         },
         nc_toptv: {
-          ru: " Top",
-          en: " Top",
-          uk: " Top",
-          zh: " Top" // Chinese translation
+          ru: "Top",
+          en: "Top",
+          uk: "Top",
+          zh: "Top" // Chinese translation
         },
         nc_newtv: {
-          ru: " New",
-          en: " New",
-          uk: " New",
-          zh: " New" // Chinese translation
+          ru: "New",
+          en: "New",
+          uk: "New",
+          zh: "New" // Chinese translation
         },
         nc_topmovie: {
           ru: " Top",
