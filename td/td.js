@@ -15,7 +15,7 @@
 
     // Authentication request
     var authXhr = new XMLHttpRequest();
-    authXhr.open("POST", encodeURIComponent("".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(protocol).concat(url, "/api/v2/auth/login?username=").concat(user, "&password=").concat(pass), true));
+    authXhr.open("POST", "".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(protocol).concat(url, "/api/v2/auth/login?username=").concat(user, "&password=").concat(pass), true);
     authXhr.onreadystatechange = function () {
       if (authXhr.readyState === 4) {
         if (authXhr.status !== 200) {
@@ -26,7 +26,7 @@
 
         // Add torrent request
         var addXhr = new XMLHttpRequest();
-        addXhr.open("POST", encodeURIComponent("".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(protocol).concat(url, "/api/v2/torrents/add"), true));
+        addXhr.open("POST", "".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(protocol).concat(url, "/api/v2/torrents/add"), true);
         addXhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
         addXhr.onreadystatechange = function () {
           if (addXhr.readyState === 4) {
@@ -48,7 +48,7 @@
         //const data = "urls=" + encodeURIComponent(selectedTorrent);
         var categoryDesc = selectedTorrent.CategoryDesc;
         var categoryParam = categoryDesc ? Lampa.Storage.get("qBittorent".concat(categoryDesc)) : '';
-        var data = "urls=".concat(selectedTorrent.MagnetUri, "&sequentialDownload=").concat(sd ? "true" : "false", "&firstLastPiecePrio=").concat(flpp ? "true" : "false", "&category=").concat(categoryParam);
+        var data = "urls=".concat(encodeURIComponent(selectedTorrent.MagnetUri), "&sequentialDownload=").concat(sd ? "true" : "false", "&firstLastPiecePrio=").concat(flpp ? "true" : "false", "&category=").concat(categoryParam);
         addXhr.send(data);
       }
     };
@@ -82,7 +82,7 @@
         }
       }
     });
-    statusXhr.open("POST", encodeURIComponent("".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("qBittorentProtocol") || "http://").concat(Lampa.Storage.get("qBittorentUrl") || "127.0.0.1", "/api/v2/auth/login?username=").concat(Lampa.Storage.get("qBittorentUser") || "1", "&password=").concat(Lampa.Storage.get("qBittorentPass") || "1")));
+    statusXhr.open("POST", "".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("qBittorentProtocol") || "http://").concat(Lampa.Storage.get("qBittorentUrl") || "127.0.0.1", "/api/v2/auth/login?username=").concat(Lampa.Storage.get("qBittorentUser") || "1", "&password=").concat(Lampa.Storage.get("qBittorentPass") || "1"));
     statusXhr.send();
   }
   function qPanels$2() {
@@ -104,7 +104,7 @@
     });
     function action(action, item, deleteFiles) {
       var authXhr = new XMLHttpRequest();
-      authXhr.open("POST", encodeURIComponent("".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(protocol).concat(url, "/api/v2/auth/login?username=").concat(user, "&password=").concat(pass), true));
+      authXhr.open("POST", "".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(protocol).concat(url, "/api/v2/auth/login?username=").concat(user, "&password=").concat(pass), true);
       authXhr.onreadystatechange = function () {
         if (authXhr.readyState === 4) {
           if (authXhr.status !== 200) {
@@ -126,7 +126,7 @@
                 Lampa.Noty.show(Lampa.Lang.translate('tdError') + this.status);
               }
             });
-            _xhr.open("POST", encodeURIComponent("".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("qBittorentProtocol") || "http://").concat(Lampa.Storage.get("qBittorentUrl") || "127.0.0.1", "/api/v2/torrents/").concat(action)));
+            _xhr.open("POST", "".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("qBittorentProtocol") || "http://").concat(Lampa.Storage.get("qBittorentUrl") || "127.0.0.1", "/api/v2/torrents/").concat(action));
             _xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
             _xhr.send(data);
           }
@@ -143,7 +143,7 @@
       // Info block
 
       var settings = {
-        "url": encodeURIComponent("".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("qBittorentProtocol") || "http://").concat(Lampa.Storage.get("qBittorentUrl") || "127.0.0.1", "/api/v2/sync/maindata")),
+        "url": "".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("qBittorentProtocol") || "http://").concat(Lampa.Storage.get("qBittorentUrl") || "127.0.0.1", "/api/v2/sync/maindata"),
         "method": "GET",
         "timeout": 0
       };
@@ -257,7 +257,7 @@
         return error();
       }
     });
-    xhr.open("GET", encodeURIComponent("".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("qBittorentProtocol") || "http://").concat(Lampa.Storage.get("qBittorentUrl") || "127.0.0.1", "/api/v2/torrents/info?limit=10")));
+    xhr.open("GET", "".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("qBittorentProtocol") || "http://").concat(Lampa.Storage.get("qBittorentUrl") || "127.0.0.1", "/api/v2/torrents/info?limit=10"));
     xhr.send();
   }
   var qBittorent = {
@@ -318,7 +318,7 @@
         }
       }
     });
-    xhr.open("POST", encodeURIComponent("".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc")));
+    xhr.open("POST", "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
     xhr.setRequestHeader("Authorization", "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))));
     xhr.send();
   }
@@ -361,7 +361,7 @@
           Lampa.Noty.show(Lampa.Lang.translate('tdError') + this.status);
         }
       });
-      xhr.open("POST", encodeURIComponent("".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc")));
+      xhr.open("POST", "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
       xhr.setRequestHeader("X-Transmission-Session-Id", Lampa.Storage.get("transmissionKey"));
       xhr.setRequestHeader("Authorization", "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))));
       xhr.send(data);
@@ -375,7 +375,7 @@
       var table = document.createElement("table");
       table.id = "tdStatus_table";
       var settings = {
-        "url": encodeURIComponent("".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc")),
+        "url": "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"),
         "method": "POST",
         "timeout": 0,
         "headers": {
@@ -506,7 +506,7 @@
         return error();
       }
     });
-    xhr.open("POST", encodeURIComponent("".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc")));
+    xhr.open("POST", "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
     xhr.setRequestHeader("X-Transmission-Session-Id", Lampa.Storage.get("transmissionKey"));
     xhr.setRequestHeader("Authorization", "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))));
     xhr.send(data);
