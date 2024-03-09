@@ -9,4 +9,6 @@ project extensions repository
 
 [PubTorr](https://lampame.github.io/main/pubtorr.js) `https://lampame.github.io/main/pubtorr.js` [About](https://teletype.in/@lme/pubtorr)
 
+[Radio Record](https://lampame.github.io/main/rradio.js) `https://lampame.github.io/main/rradio.js` [About](https://teletype.in/@lme/re_radiorecord)
+
 Telegram chat - [https://t.me/lme_chat](https://t.me/lme_chat)
