@@ -770,7 +770,7 @@
   };
 
   function sender(selectedTorrent) {
-    window.location.assign(selectedTorrent.MagnetUri);
+    if (Lampa.Platform.is('android')) $('<a href="' + selectedTorrent + '"><a/>')[0].click();else window.location.assign(selectedTorrent.MagnetUri);
   }
   var universal = {
     sender: sender
