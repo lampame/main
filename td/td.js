@@ -770,7 +770,15 @@
   };
 
   function sender(selectedTorrent) {
-    if (Lampa.Platform.is('android')) $('<a href="' + selectedTorrent + '"><a/>')[0].click();else window.location.assign(selectedTorrent.MagnetUri);
+    if (Lampa.Storage.field("universalAction") === "open") {
+      if (Lampa.Platform.is('android')) $('<a href="' + selectedTorrent.MagnetUri + '"><a/>')[0].click();else window.location.assign(selectedTorrent.MagnetUri);
+    } else {
+      Lampa.Utils.copyTextToClipboard(selectedTorrent.MagnetUri, function () {
+        Lampa.Noty.show(Lampa.Lang.translate('copy_secuses'));
+      }, function () {
+        Lampa.Noty.show(Lampa.Lang.translate('copy_error'));
+      });
+    }
   }
   var universal = {
     sender: sender
@@ -1090,6 +1098,31 @@
       onChange: function onChange(value) {
         console.log("TDDev", value);
         Lampa.Storage.set('tdClient', value);
+        Lampa.Settings.update();
+      }
+    });
+    /* Universal */
+    Lampa.SettingsApi.addParam({
+      component: 'torrentDownloader',
+      param: {
+        name: 'universalAction',
+        type: 'select',
+        "default": 'no_client',
+        values: {
+          open: Lampa.Lang.translate('openUniversal'),
+          click: Lampa.Lang.translate('copyUniversal')
+        }
+      },
+      field: {
+        name: Lampa.Lang.translate('universalAction')
+      },
+      onRender: function onRender(item) {
+        if (Lampa.Storage.field("tdClient") === "universalClient") {
+          item.show();
+        } else item.hide();
+      },
+      onChange: function onChange(value) {
+        Lampa.Storage.set('universalAction', value);
         Lampa.Settings.update();
       }
     });
@@ -1964,12 +1997,31 @@
         uk: "Налаштування клієнта",
         zh: "客户端设置" // Chinese translation
       },
+      /* universal */
+      universalAction: {
+        ru: "Действие",
+        en: "Action",
+        uk: "Дія",
+        zh: "行动"
+      },
+      openUniversal: {
+        ru: "Открывать в клиенте",
+        en: "Open in external client",
+        uk: "Відкрити у застосунку",
+        zh: "在外部客户端打开"
+      },
+      copyUniversal: {
+        ru: "Копировать ссылку",
+        en: "Copy link",
+        uk: "Скопіювати посилання",
+        zh: "复制到缓冲区"
+      },
       /* qBittorent */
       qBittorent: {
         ru: "qBittorent",
         en: "qBittorent",
         uk: "qBittorent",
-        zh: "qBittorent" // Chinese translation
+        zh: "qBittorent"
       },
       qBittorentSD: {
         ru: "Последовательная загрузка",
