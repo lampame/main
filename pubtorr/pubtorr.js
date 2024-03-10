@@ -108,7 +108,6 @@
       }
     }];
     function checkAlive(type) {
-      console.log("TDDev", "type");
       if (type === 'parser') {
         var requests = parsersInfo.map(function (parser, index) {
           var protocol = parser.base === "lme_jackett" || parser.base === "lme_prowlarr" ? "" : proto;

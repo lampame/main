@@ -365,7 +365,6 @@
             items: newArrayOfDivs,
             onSelect: function onSelect(a) {
               catOpener(a.catType);
-              console.log("NCDev", a.catType);
             },
             onLong: function onLong(a) {
               //Loong reaction
@@ -453,7 +452,6 @@
       nc_tvshowtimeNEW: createCategory('ShowTIME', '67|6631|1814', 'first_air_date.desc')
     };
     function bookmarks(info) {
-      console.log("NCLog", info);
       if (!info) return Lampa.Noty.show("Error");
       var NEW_ITEM_ATTR = "data-action=\"".concat(info.catType, "\"");
       var NEW_ITEM_SELECTOR = "[".concat(NEW_ITEM_ATTR, "]");
@@ -657,7 +655,6 @@
       var submenuCatalogkeys = Object.keys(localStorage).filter(function (key) {
         return key.startsWith('nc_');
       });
-      console.log(submenuCatalogkeys);
       function addsubmenu(category) {
         switch (category) {
           case 'nc_subtv':

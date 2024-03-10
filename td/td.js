@@ -148,7 +148,6 @@
         "timeout": 0
       };
       $.ajax(settings).done(function (response) {
-        console.log("TDDev", response.server_state);
         var serverInfo = document.createElement("div");
         serverInfo.id = "serverInfo";
         serverInfo.innerHTML = "<b>Free space</b>: ".concat(formatBytes(response.server_state.free_space_on_disk));
@@ -354,7 +353,6 @@
       xhr.withCredentials = false;
       xhr.addEventListener("readystatechange", function () {
         if (this.readyState === 4 && this.status === 200) {
-          console.log("TDDev", item);
           Lampa.Noty.show(Lampa.Lang.translate('tdAction') + item.name + " " + action);
         } else {
           console.log("TD", this.status.text);
@@ -388,7 +386,6 @@
         })
       };
       $.ajax(settings).done(function (response) {
-        console.log("TDDev", response);
         var serverInfo = document.createElement("div");
         serverInfo.id = "serverInfo";
         serverInfo.innerHTML = "<b>Free space</b>: ".concat(formatBytes(response.arguments["download-dir-free-space"]));
@@ -709,7 +706,6 @@
       if (this.readyState === 4) {
         if (this.status === 200) {
           console.log("TD", "Status " + this.status);
-          console.log(JSON.parse(this.response));
           Lampa.Storage.set("synologySID", JSON.parse(this.response).data.sid);
           $('#synologygetStatus').removeClass('active error wait').addClass('active');
           $('#synologygetStatusBtn').removeClass('active error wait').addClass('active');
@@ -1096,7 +1092,6 @@
         name: Lampa.Lang.translate('tdSelect')
       },
       onChange: function onChange(value) {
-        console.log("TDDev", value);
         Lampa.Storage.set('tdClient', value);
         Lampa.Settings.update();
       }
@@ -1288,7 +1283,6 @@
         name: "Select proxy"
       },
       onChange: function onChange(value) {
-        console.log("TDDev", value);
         Lampa.Storage.set('synalogyProxy', value);
         Lampa.Settings.update();
       }
