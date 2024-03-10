@@ -458,63 +458,96 @@
         html.toggleClass('loading', false);
       });
       function prepare() {
-        if (audio.canPlayType('audio/vnd.apple.mpegurl') || url.indexOf('.aacp') > 0) load();else if (Hls.isSupported() && url.indexOf('.aacp') > 0) {
-          try {
-            hls = new Hls();
-            hls.attachMedia(audio);
-            hls.loadSource(url);
-            hls.on(Hls.Events.ERROR, function (event, data) {
-              if (data.details === Hls.ErrorDetails.MANIFEST_PARSING_ERROR) {
-                if (data.reason === "no EXTM3U delimiter") {
-                  Lampa.Noty.show('Ошибка в загрузке потока');
+        return _prepare.apply(this, arguments);
+      }
+      function _prepare() {
+        _prepare = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+          return _regeneratorRuntime().wrap(function _callee$(_context) {
+            while (1) switch (_context.prev = _context.next) {
+              case 0:
+                if (!(audio.canPlayType('audio/vnd.apple.mpegurl') || url.indexOf('.aacp') > 0)) {
+                  _context.next = 5;
+                  break;
                 }
-              }
-            });
-            hls.on(Hls.Events.MANIFEST_LOADED, function () {
-              start();
-            });
-          } catch (e) {
-            Lampa.Noty.show('Ошибка в загрузке потока');
-          }
-        } else load();
+                _context.next = 3;
+                return load();
+              case 3:
+                _context.next = 20;
+                break;
+              case 5:
+                if (!(Hls.isSupported() && url.indexOf('.aacp') > 0)) {
+                  _context.next = 18;
+                  break;
+                }
+                _context.prev = 6;
+                hls = new Hls();
+                hls.attachMedia(audio);
+                hls.loadSource(url);
+                return _context.abrupt("return", new Promise(function (resolve, reject) {
+                  hls.on(Hls.Events.MANIFEST_LOADED, resolve);
+                  hls.on(Hls.Events.ERROR, reject);
+                }));
+              case 13:
+                _context.prev = 13;
+                _context.t0 = _context["catch"](6);
+                Lampa.Noty.show('Ошибка в загрузке потока');
+              case 16:
+                _context.next = 20;
+                break;
+              case 18:
+                _context.next = 20;
+                return load();
+              case 20:
+              case "end":
+                return _context.stop();
+            }
+          }, _callee, null, [[6, 13]]);
+        }));
+        return _prepare.apply(this, arguments);
       }
       function load() {
         audio.src = url;
         audio.load();
-        start();
+        return new Promise(function (resolve) {
+          resolve(start());
+        });
       }
       function start() {
         return _start.apply(this, arguments);
       }
       function _start() {
-        _start = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-          return _regeneratorRuntime().wrap(function _callee$(_context) {
-            while (1) switch (_context.prev = _context.next) {
+        _start = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+          return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+            while (1) switch (_context2.prev = _context2.next) {
               case 0:
-                _context.prev = 0;
-                _context.next = 3;
+                _context2.prev = 0;
+                _context2.next = 3;
                 return audio.play();
               case 3:
                 console.log('Radio', 'start playing');
-                _context.next = 10;
+                _context2.next = 9;
                 break;
               case 6:
-                _context.prev = 6;
-                _context.t0 = _context["catch"](0);
-                console.log('Radio', 'play promise error:', _context.t0.message);
-                Lampa.Noty.show('Play promise error:', _context.t0.message);
-              case 10:
+                _context2.prev = 6;
+                _context2.t0 = _context2["catch"](0);
+                Lampa.Noty.show("Play promise error: ".concat(_context2.t0.message));
+              case 9:
               case "end":
-                return _context.stop();
+                return _context2.stop();
             }
-          }, _callee, null, [[0, 6]]);
+          }, _callee2, null, [[0, 6]]);
         }));
         return _start.apply(this, arguments);
       }
       function play() {
         html.toggleClass('loading', true);
         html.toggleClass('stop', false);
-        prepare();
+        prepare().then(function () {
+          return start();
+        })["catch"](function (error) {
+          Lampa.Noty.show("Prepare promise error: ".concat(error.message));
+        });
+        return Promise.resolve(); // Возвращаем пустой промис для корректной работы цепочки промисов
       }
       function stop() {
         played = false;
