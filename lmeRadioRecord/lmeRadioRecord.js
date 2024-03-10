@@ -36,7 +36,7 @@
       var last = '';
       this.create = function () {
         this.activity.loader(true);
-        network["native"](Lampa.Platform.is('webos') || Lampa.Platform.is('tizen') ? '' : Lampa.Storage.field('proxy_other') === false ? '' : 'https://skaz.tv/stations.json', this.build.bind(this), function () {
+        network["native"](Lampa.Platform.is('webos') || Lampa.Platform.is('tizen') ? '' : Lampa.Storage.field('proxy_other') === false ? '' : 'https://lampaplugins.github.io/store/stations.json', this.build.bind(this), function () {
           var empty = new Lampa.Empty();
           html.append(empty.render());
           this.start = empty.start;
