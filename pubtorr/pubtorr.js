@@ -39,70 +39,87 @@
       name: 'Lampa32',
       settings: {
         url: 'jac.lampa32.ru',
-        key: ''
+        key: '',
+        parser_torrent_type: 'jackett'
       }
     }, {
       base: 'lme_jackett',
       name: 'LME Jackett',
       settings: {
         url: 'https://gwynnbleiidd-jackett.elfhosted.com',
-        key: 'plsgh9iiijchd8m9010b8cur7xqiq8d2'
+        key: 'plsgh9iiijchd8m9010b8cur7xqiq8d2',
+        parser_torrent_type: 'jackett'
+      }
+    }, {
+      base: 'lme_prowlarr',
+      name: 'LME Prowlarr',
+      settings: {
+        url: 'https://prowlarr-gwynnbleiidd.koyeb.app',
+        key: '403aa11c34624659997411ef99aecc30',
+        parser_torrent_type: 'prowlarr'
       }
     }, {
       base: 'jacred_xyz',
       name: 'Jacred.xyz',
       settings: {
         url: 'jacred.xyz',
-        key: ''
+        key: '',
+        parser_torrent_type: 'jackett'
       }
     }, {
       base: 'jacred_ru',
       name: 'Jacred.ru',
       settings: {
         url: 'jacred.ru',
-        key: ''
+        key: '',
+        parser_torrent_type: 'jackett'
       }
     }, {
       base: 'jacred_viewbox_dev',
       name: 'Viewbox',
       settings: {
         url: 'jacred.viewbox.dev',
-        key: 'viewbox'
+        key: 'viewbox',
+        parser_torrent_type: 'jackett'
       }
     }, {
       base: 'spawn_jackett',
       name: 'Spawn Jackett',
       settings: {
         url: 'spawn.pp.ua:59117',
-        key: '2'
+        key: '2',
+        parser_torrent_type: 'jackett'
       }
     }, {
       base: 'spawn_jacred',
       name: 'Spawn Jacred',
       settings: {
         url: 'spawn.pp.ua:59118',
-        key: ''
+        key: '',
+        parser_torrent_type: 'jackett'
       }
     }, {
       base: 'unknown',
       name: 'Unknown',
       settings: {
         url: '188.119.113.252:9117',
-        key: '1'
+        key: '1',
+        parser_torrent_type: 'jackett'
       }
     }];
     function checkAlive(type) {
       console.log("TDDev", "type");
       if (type === 'parser') {
         var requests = parsersInfo.map(function (parser, index) {
-          var protocol = parser.base === "lme_jackett" ? "" : proto;
-          var myLink = protocol + parser.settings.url + '/api/v2.0/indexers/status:healthy/results?apikey=' + (parser.settings.url === 'spawn.pp.ua:59117' ? '2' : parser.base === 'lme_jackett' ? parser.settings.key : '');
+          var protocol = parser.base === "lme_jackett" || parser.base === "lme_prowlarr" ? "" : proto;
+          var endPoint = parser.settings.parser_torrent_type === 'prowlarr' ? '/api/v1/health?apikey=' + parser.settings.key + '' : "/api/v2.0/indexers/status:healthy/results?apikey=".concat(parser.settings.url === 'spawn.pp.ua:59117' ? '2' : parser.base === 'lme_jackett' ? parser.settings.key : '');
+          var myLink = protocol + parser.settings.url + endPoint;
           return new Promise(function (resolve) {
             setTimeout(function () {
               var mySelector = "body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(".concat(index + 2, ") > div");
               if ($('body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(1) > div').text() !== 'Не выбран') return resolve();
               fetch(myLink).then(function (response) {
-                if (response.ok) {
+                if (response.ok || response.status === 200) {
                   $(mySelector).css('color', '1aff00');
                 } else if (response.status === 401) {
                   $(mySelector).css('color', 'ff2e36');
@@ -134,8 +151,9 @@
       });
       if (selectedParser) {
         var settings = selectedParser.settings;
-        Lampa.Storage.set("jackett_url", settings.url);
-        Lampa.Storage.set("jackett_key", settings.key);
+        Lampa.Storage.set(settings.parser_torrent_type === 'prowlarr' ? "prowlarr_url" : "jackett_url", settings.url);
+        Lampa.Storage.set(settings.parser_torrent_type === 'prowlarr' ? "prowlarr_key" : "jackett_key", settings.key);
+        Lampa.Storage.set("parser_torrent_type", settings.parser_torrent_type);
       } else {
         console.warn("Jackett URL not found in parsersInfo");
       }
