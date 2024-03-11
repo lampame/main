@@ -1084,7 +1084,7 @@
           universalClient: "Universal",
           qBittorent: Lampa.Lang.translate('qBittorent'),
           transmission: Lampa.Lang.translate('transmission'),
-          aria2: Lampa.Lang.translate('aria2'),
+          //aria2: Lampa.Lang.translate('aria2'),
           synology: "Synology"
         }
       },
