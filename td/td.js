@@ -57,7 +57,7 @@
       Lampa.Select.close();
     }, 10);
   }
-  function getStatus$3() {
+  function getStatus$2() {
     var statusXhr = new XMLHttpRequest();
     statusXhr.withCredentials = false;
     statusXhr.addEventListener("readystatechange", function () {
@@ -85,7 +85,7 @@
     statusXhr.open("POST", "".concat(Lampa.Storage.get("qBittorentKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("qBittorentProtocol") || "http://").concat(Lampa.Storage.get("qBittorentUrl") || "127.0.0.1", "/api/v2/auth/login?username=").concat(Lampa.Storage.get("qBittorentUser") || "1", "&password=").concat(Lampa.Storage.get("qBittorentPass") || "1"));
     statusXhr.send();
   }
-  function qPanels$2() {
+  function qPanels$1() {
     var protocol = Lampa.Storage.get("qBittorentProtocol") || "http://";
     var url = Lampa.Storage.get("qBittorentUrl");
     var user = Lampa.Storage.get("qBittorentUser");
@@ -261,8 +261,8 @@
   }
   var qBittorent = {
     qBittorrentClient: qBittorrentClient,
-    getStatus: getStatus$3,
-    qPanels: qPanels$2
+    getStatus: getStatus$2,
+    qPanels: qPanels$1
   };
 
   function transmissionClient(selectedTorrent) {
@@ -296,7 +296,7 @@
       Lampa.Select.close();
     }, 10);
   }
-  function getStatus$2() {
+  function getStatus$1() {
     var xhr = new XMLHttpRequest();
     xhr.withCredentials = false;
     xhr.addEventListener("readystatechange", function () {
@@ -321,7 +321,7 @@
     xhr.setRequestHeader("Authorization", "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))));
     xhr.send();
   }
-  function qPanels$1() {
+  function qPanels() {
     Lampa.Storage.get("transmissionProtocol") || "http://";
     Lampa.Storage.get("transmissionUrl");
     Lampa.Storage.get("transmissionPort");
@@ -510,193 +510,8 @@
   }
   var transmission = {
     transmissionClient: transmissionClient,
-    getStatus: getStatus$2,
-    qPanels: qPanels$1
-  };
-
-  function aria2Client(selectedTorrent) {
-    if (!selectedTorrent) {
-      return;
-    }
-    // WARNING: For POST requests, body is set to null by browsers.
-    var data = JSON.stringify({
-      "jsonrpc": "2.0",
-      "id": "qwer",
-      "method": "aria2.addUri",
-      "params": [[selectedTorrent.MagnetUri]]
-    });
-    var xhr = new XMLHttpRequest();
-    xhr.withCredentials = false;
-    xhr.addEventListener("readystatechange", function () {
-      if (this.readyState === 4) {
-        if (xhr.status !== 200) {
-          Lampa.Noty.show(Lampa.Lang.translate('tdAddError'));
-          return;
-        }
-        Lampa.Noty.show(Lampa.Lang.translate('tdAdded'));
-        console.log("TD", this);
-      }
-    });
-    xhr.open("POST", "".concat(Lampa.Storage.get("aria2Protocol") || "http://").concat(Lampa.Storage.get("aria2Url") || "127.0.0.1:9001").concat(Lampa.Storage.get("aria2Path") || "/jsonrpc"));
-    xhr.setRequestHeader("Content-Type", "application/json");
-    xhr.send(data);
-    setTimeout(function () {
-      Lampa.Select.close();
-    }, 10);
-  }
-  function qPanels() {
-    function tabels(data) {
-      // Function implementation
-      response = data.response;
-      // Получить элемент, в который нужно вставить таблицу
-      var parentElement = document.getElementById("tdStatus");
-      // Создать таблицу
-      var table = document.createElement("table");
-      table.id = "tdStatus_table";
-      // Создать заголовок таблицы
-      var headerRow = table.insertRow();
-      var headerCells = ["Название", "Состояние", "Прогресс", "Размер", "Скачано", "Отдано"];
-      headerCells.forEach(function (headerCell) {
-        var th = document.createElement("th");
-        th.id = "header";
-        th.textContent = headerCell;
-        headerRow.appendChild(th);
-      });
-
-      // Добавить строки с данными из переменной response
-      if (response && response.length > 0) {
-        response.forEach(function (item) {
-          var row = table.insertRow();
-          row.id = "td_panel row";
-          // Создать ячейки для каждой строки
-          var nameCell = row.insertCell();
-          nameCell.id = "tName";
-          nameCell.textContent = item.bittorrent.info.name;
-          var stateCell = row.insertCell();
-          if (item.state === "pausedDL") {
-            stateCell.classList.add("simple-button", "selector", "tdAction");
-            stateCell.textContent = Lampa.Lang.translate(item.state);
-            stateCell.on("hover:enter", function () {
-              action("resume", item);
-            });
-          } else if (item.state === "downloading") {
-            stateCell.classList.add("simple-button", "selector", "tdAction");
-            stateCell.textContent = Lampa.Lang.translate(item.state);
-            stateCell.on("hover:enter", function () {
-              action("pause", item);
-            });
-          }
-          var progressCell = row.insertCell();
-          progressCell.id = "percent";
-          progressCell.textContent = formatPercent(item.progress);
-          var sizeCell = row.insertCell();
-          sizeCell.textContent = formatBytes(item.size);
-          var downloadedCell = row.insertCell();
-          downloadedCell.textContent = formatBytes(item.downloaded);
-          var uploadedCell = row.insertCell();
-          uploadedCell.textContent = formatBytes(item.uploaded);
-        });
-      } else {
-        // Если ответ пустой, добавить строку с сообщением
-        var emptyRow = table.insertRow();
-        var emptyCell = emptyRow.insertCell();
-        emptyCell.colSpan = headerCells.length;
-        emptyCell.textContent = "Данные не найдены";
-      }
-      var footer = document.createElement("div");
-      footer.classList.add("simple-button", "selector", "tdReload");
-      footer.textContent = "Reload Lampa";
-      footer.on("hover:enter", function () {
-        location.reload();
-        Lampa.Noty.show(Lampa.Lang.translate('tdPanelReloaded'));
-      });
-      // Вставить созданную таблицу в родительский элемент
-      parentElement.appendChild(table);
-      parentElement.appendChild(footer);
-      function formatPercent(percent) {
-        // Округлить процент до двух знаков после запятой
-        percent = percent * 100;
-        percent = Number(percent.toFixed(2));
-
-        // Добавить процентный знак
-        percent = percent + "%";
-        return percent;
-      }
-      function formatBytes(bytes) {
-        if (bytes >= 1073741824) {
-          return (bytes / 1073741824).toFixed(2) + " GB";
-        } else if (bytes >= 1048576) {
-          return (bytes / 1048576).toFixed(2) + " MB";
-        } else if (bytes >= 1024) {
-          return (bytes / 1024).toFixed(2) + " KB";
-        } else {
-          return bytes + " B";
-        }
-      }
-    }
-    function error() {
-      var tdPanel = document.getElementById("tdStatus");
-      var error = document.createElement("div");
-      error.innerHTML = "<div id='Error'><h2>Data not found</h2></div>";
-      tdPanel.appendChild(error);
-    }
-    // WARNING: For POST requests, body is set to null by browsers.
-    var data = JSON.stringify({
-      "jsonrpc": "2.0",
-      "id": "qwer",
-      "method": "aria2.tellWaiting",
-      "params": [0, 10]
-    });
-    var xhr = new XMLHttpRequest();
-    xhr.withCredentials = false;
-    xhr.addEventListener("readystatechange", function () {
-      if (this.readyState === 4) {
-        console.log("TD", this.responseText);
-        return tabels(JSON.parse(this.responseText));
-      } else if (this.readyState === 4 && this.status !== 200) {
-        return error();
-      }
-    });
-    xhr.open("POST", "".concat(Lampa.Storage.get("aria2Protocol") || "http://").concat(Lampa.Storage.get("aria2Url") || "127.0.0.1:9001").concat(Lampa.Storage.get("aria2Path") || "/jsonrpc"));
-    xhr.setRequestHeader("Content-Type", "application/json");
-    xhr.send(data);
-  }
-  function getStatus$1() {
-    var statusXhr = new XMLHttpRequest();
-    statusXhr.withCredentials = false;
-    var data = JSON.stringify({
-      "jsonrpc": "2.0",
-      "id": "qwer",
-      "method": "aria2.getVersion"
-    });
-    statusXhr.addEventListener("readystatechange", function () {
-      if (this.readyState === 4) {
-        if (this.status === 200) {
-          console.log("TD", "Status " + this.status);
-          $('#aria2Status').removeClass('active error wait').addClass('active');
-          $('#aria2StatusBtn').removeClass('active error wait').addClass('active');
-          //$("#aria2StatusBtn").text(function (i, text) { return "🟢 " + text; });
-        } else if (this.status === undefined) {
-          console.log("TD", "Status - undefined");
-          $('#aria2Status').removeClass('active error wait').addClass('error');
-          $('#aria2StatusBtn').removeClass('active error wait').addClass('error');
-          //$("#aria2StatusBtn").text(function (i, text) { return "🔴 " + text; });
-        } else {
-          console.log("TD", "Status " + this.status);
-          $('#aria2Status').removeClass('active error wait').addClass('error');
-          $('#aria2StatusBtn').removeClass('active error wait').addClass('error');
-          //$("#aria2StatusBtn").text(function (i, text) { return "🔴 " + text; });
-        }
-      }
-    });
-    statusXhr.open("POST", "".concat(Lampa.Storage.get("aria2Protocol") || "http://").concat(Lampa.Storage.get("aria2Url") || "127.0.0.1:9001").concat(Lampa.Storage.get("aria2Path") || "/jsonrpc"));
-    statusXhr.setRequestHeader("Content-Type", "application/json");
-    statusXhr.send(data);
-  }
-  var pAria2 = {
-    aria2Client: aria2Client,
-    qPanels: qPanels,
-    getStatus: getStatus$1
+    getStatus: getStatus$1,
+    qPanels: qPanels
   };
 
   function getStatus() {
@@ -898,7 +713,7 @@
       var clients = {
         'qBittorent': qBittorent,
         'transmission': transmission,
-        'aria2': pAria2
+        'aria2': aria2
       };
       if (tdClient && clients[tdClient]) {
         clients[tdClient].qPanels();

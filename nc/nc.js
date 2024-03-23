@@ -57,6 +57,12 @@
           uk: "TV Новинки",
           zh: "TV New" // Chinese translation
         },
+        nc_networksList: {
+          ru: "TV Networks",
+          en: "TV Networks",
+          uk: "TV Networks",
+          zh: "TV Networks" // Chinese translation
+        },
         nc_concert: {
           ru: "Концерты",
           en: "Concerts",
@@ -105,11 +111,23 @@
           uk: "Вкладка успішно додана",
           zh: "成功添加选项卡" // Chinese translation
         },
+        nc_bookmarkAdd: {
+          "ru": "Добавить в избранное",
+          "en": "Add to favorites",
+          "uk": "Додати до обраного",
+          "zh": "添加到收藏夹" // Chinese translation
+        },
         nc_bookmarkDeleted: {
           ru: "Вкладка успешно удалена",
           en: "The tab has been successfully deleted",
           uk: "Вкладка успішно видалена",
           zh: "标签已成功删除" // Chinese translation
+        },
+        nc_bookmarkMigrate: {
+          "ru": "Если вы видите это сообщение, значит мы удалили вкладки с сериалами стриминговых сервисов. Не беспокойтесь, в настройках вас ждет новый раздел с еще более интересными сервисами ;)",
+          "en": "If you are seeing this message, then we have removed the tabs for streaming service series. Don't worry, in the settings you will find a new section with even more exciting services ;)",
+          "uk": "Якщо ви бачите це повідомлення, це означає, що ми видалили вкладки з серіалами стрімінгових сервісів. Не хвилюйтеся, у налаштуваннях вас чекає новий розділ з ще цікавішими сервісами ;)",
+          "zh": "如果您看到此消息，则我们已删除流媒体服务系列的选项卡。不用担心，在设置中您将找到一个新部分，其中包含更多令人兴奋的服务 ;)" // Chinese translation
         }
       });
     }
@@ -347,9 +365,49 @@
         Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field3);
         moveItemAfter(_NEW_ITEM_SELECTOR3, ITEM_TV_SELECTOR);
       }
+      if (type === 'nc_networksList') {
+        var _NEW_ITEM_ATTR4 = 'data-action="nc_networksList"';
+        var _NEW_ITEM_SELECTOR4 = "[".concat(_NEW_ITEM_ATTR4, "]");
+        var _NEW_ITEM_TEXT4 = Lampa.Lang.translate('nc_networksList');
+        var _field4 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR4, ">\n             <div class=\"menu__ico\">\n                <svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M42.5 23.7505L44.146 22.9275C49.0105 20.4952 51.443 19.279 53.2215 20.3782C55 21.4773 55 24.1968 55 29.6357V30.3652C55 35.8042 55 38.5235 53.2215 39.6227C51.443 40.722 49.0105 39.5057 44.146 37.0735L42.5 36.2505V23.7505Z\" stroke=\"white\" stroke-width=\"3.75\"/>\n                    <path d=\"M5 28.75C5 20.5313 5 16.4219 7.2699 13.6561C7.68545 13.1497 8.14973 12.6854 8.65608 12.2699C11.4219 10 15.5313 10 23.75 10C31.9687 10 36.078 10 38.844 12.2699C39.3502 12.6854 39.8145 13.1497 40.23 13.6561C42.5 16.4219 42.5 20.5313 42.5 28.75V31.25C42.5 39.4687 42.5 43.578 40.23 46.344C39.8145 46.8502 39.3502 47.3145 38.844 47.73C36.078 50 31.9687 50 23.75 50C15.5313 50 11.4219 50 8.65608 47.73C8.14973 47.3145 7.68545 46.8502 7.2699 46.344C5 43.578 5 39.4687 5 31.25V28.75Z\" stroke=\"white\" stroke-width=\"3.75\"/>\n                    <path d=\"M23.75 38.75V21.25M23.75 21.25L30 28.75M23.75 21.25L17.5 28.75\" stroke=\"white\" stroke-width=\"3.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n                </svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT4, "</div>\n          </li>\n        "));
+        _field4.on("hover:enter", function () {
+          Lampa.Activity.push({
+            url: '',
+            title: Lampa.Lang.translate('nc_networksList'),
+            component: 'lmeNetworks',
+            page: 1
+          });
+        });
+        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field4);
+        moveItemAfter(_NEW_ITEM_SELECTOR4, ITEM_TV_SELECTOR);
+      }
+      if (type === Lampa.Storage.get('nc_networkLists') && Lampa.Storage.get('nc_networkLists') !== []) {
+        Lampa.Storage.get('nc_networkLists').forEach(function (item) {
+          var NEW_ITEM_ATTR = "data-action=\"nc_".concat(item.id, "\"");
+          var NEW_ITEM_SELECTOR = "[".concat(NEW_ITEM_ATTR, "]");
+          var NEW_ITEM_TEXT = "".concat(item.card_data.name);
+          var New = "";
+          if (item.type === "new") New = 'first_air_date.desc';
+          var field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <img class='networkLogo' src='").concat(item.card_data.file_path, "' alt=\"img\">\n             </div>\n             <div class=\"menu__text\">").concat(NEW_ITEM_TEXT, "</div> <div class=\"nc_badge\">").concat(Lampa.Lang.translate(item.type === 'top' ? 'nc_toptv' : 'nc_newtv'), "</div></div>\n          </li>\n        "));
+          field.on("hover:enter", function () {
+            Lampa.Activity.push({
+              url: 'discover/tv',
+              title: "".concat(item.type.toUpperCase(), " ").concat(NEW_ITEM_TEXT),
+              component: "category_full",
+              networks: item.card_data.networkId,
+              sort_by: New,
+              source: 'tmdb',
+              card_type: true,
+              page: 1
+            });
+          });
+          Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(field);
+          moveItemAfter(NEW_ITEM_SELECTOR, ITEM_TV_SELECTOR);
+        });
+      }
       if (type === 'nc_subtv' || type === 'nc_newsubtv') {
-        var _NEW_ITEM_ATTR4 = "data-action=\"".concat(type, "\"");
-        var streamField = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR4, ">\n             <div class=\"menu__ico\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\" viewBox=\"0 0 24 24\" id=\"tv\"><path d=\"M18,6H14.41l2.3-2.29a1,1,0,1,0-1.42-1.42L12,5.54l-1.17-2a1,1,0,1,0-1.74,1L10,6H6A3,3,0,0,0,3,9v8a3,3,0,0,0,3,3v1a1,1,0,0,0,2,0V20h8v1a1,1,0,0,0,2,0V20a3,3,0,0,0,3-3V9A3,3,0,0,0,18,6Zm1,11a1,1,0,0,1-1,1H6a1,1,0,0,1-1-1V9A1,1,0,0,1,6,8H18a1,1,0,0,1,1,1Z\"></path></svg>\n             </div>\n             <div class=\"menu__text nc_bookmark\"><div class=\"nc_menu\">TV Show</div><div class=\"nc_badge\">").concat(Lampa.Lang.translate(type === 'nc_subtv' ? 'nc_toptv' : 'nc_newtv'), "</div>\n          </li>\n        "));
+        var _NEW_ITEM_ATTR5 = "data-action=\"".concat(type, "\"");
+        var streamField = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR5, ">\n             <div class=\"menu__ico\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\" viewBox=\"0 0 24 24\" id=\"tv\"><path d=\"M18,6H14.41l2.3-2.29a1,1,0,1,0-1.42-1.42L12,5.54l-1.17-2a1,1,0,1,0-1.74,1L10,6H6A3,3,0,0,0,3,9v8a3,3,0,0,0,3,3v1a1,1,0,0,0,2,0V20h8v1a1,1,0,0,0,2,0V20a3,3,0,0,0,3-3V9A3,3,0,0,0,18,6Zm1,11a1,1,0,0,1-1,1H6a1,1,0,0,1-1-1V9A1,1,0,0,1,6,8H18a1,1,0,0,1,1,1Z\"></path></svg>\n             </div>\n             <div class=\"menu__text nc_bookmark\"><div class=\"nc_menu\">TV Show</div><div class=\"nc_badge\">").concat(Lampa.Lang.translate(type === 'nc_subtv' ? 'nc_toptv' : 'nc_newtv'), "</div>\n          </li>\n        "));
         var newArrayOfDivs = streamBase(type).map(function (obj) {
           return {
             name: obj.name,
@@ -606,32 +664,16 @@
       Lampa.SettingsApi.addParam({
         component: "addCategory",
         param: {
-          name: "nc_subtv",
+          name: "nc_networksList",
           type: "trigger",
           "default": false
         },
         field: {
-          name: Lampa.Lang.translate('nc_subtv'),
+          name: Lampa.Lang.translate('nc_networksList'),
           description: ""
         },
         onChange: function onChange(value) {
-          if (value === 'true') insert.catSubmenu('nc_subtv');else $('body').find('.menu [data-action="nc_subtv"]').remove();
-          Lampa.Settings.update();
-        }
-      });
-      Lampa.SettingsApi.addParam({
-        component: "addCategory",
-        param: {
-          name: "nc_newsubtv",
-          type: "trigger",
-          "default": false
-        },
-        field: {
-          name: Lampa.Lang.translate('nc_newsubtv'),
-          description: ""
-        },
-        onChange: function onChange(value) {
-          if (value === 'true') insert.catSubmenu('nc_newsubtv');else $('body').find('.menu [data-action="nc_newsubtv"]').remove();
+          if (value === 'true') insert.catSubmenu('nc_networksList');else $('body').find('.menu [data-action="nc_networksList"]').remove();
           Lampa.Settings.update();
         }
       });
@@ -639,6 +681,410 @@
     var config = {
       setting: setting
     };
+
+    var network = new Lampa.Reguest();
+    var api_url = 'https://parseapi.back4app.com/parse/classes/networks?limit=12&count=1';
+    var auth = {
+      headers: {
+        "X-Parse-Application-Id": "TmtqnkaSL29ubXN5772zeVPAq5wTb15P8vIMQZPv",
+        "X-Parse-REST-API-Key": "2BJYaJzGmyWd0kNTqHzCUCOYNggAmrtWGhPxHO59"
+      }
+    };
+    function main$1(params, oncomplite, onerror) {
+      var apiUrl = api_url;
+      if (params.searchQuery && params.searchQuery !== "") {
+        apiUrl += "&where=".concat(params.searchQuery);
+      }
+      network.silent(apiUrl, function (data) {
+        data.collection = true;
+        data.total_pages = data.count / 12;
+        data.results.forEach(function (element) {
+          element.poster_path = element.file_path;
+          element.backdrop_path = element.file_path;
+        });
+        oncomplite(data);
+      }, onerror, false, auth);
+    }
+    function full(params, oncomplite, onerror) {
+      network.silent(api_url + "&skip=".concat(params.page * 12), function (data) {
+        //data.total_pages = data.total_pages || 15
+        data.collection = true;
+        data.total_pages = data.count / 12;
+        data.results.forEach(function (element) {
+          element.poster_path = element.file_path;
+        });
+        oncomplite(data);
+      }, onerror, false, auth);
+    }
+    function clear() {
+      network.clear();
+    }
+    var Api = {
+      main: main$1,
+      full: full,
+      clear: clear
+    };
+
+    function _toPrimitive(t, r) {
+      if ("object" != typeof t || !t) return t;
+      var e = t[Symbol.toPrimitive];
+      if (void 0 !== e) {
+        var i = e.call(t, r || "default");
+        if ("object" != typeof i) return i;
+        throw new TypeError("@@toPrimitive must return a primitive value.");
+      }
+      return ("string" === r ? String : Number)(t);
+    }
+    function _toPropertyKey(t) {
+      var i = _toPrimitive(t, "string");
+      return "symbol" == typeof i ? i : String(i);
+    }
+    function _classCallCheck(instance, Constructor) {
+      if (!(instance instanceof Constructor)) {
+        throw new TypeError("Cannot call a class as a function");
+      }
+    }
+    function _defineProperties(target, props) {
+      for (var i = 0; i < props.length; i++) {
+        var descriptor = props[i];
+        descriptor.enumerable = descriptor.enumerable || false;
+        descriptor.configurable = true;
+        if ("value" in descriptor) descriptor.writable = true;
+        Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor);
+      }
+    }
+    function _createClass(Constructor, protoProps, staticProps) {
+      if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+      if (staticProps) _defineProperties(Constructor, staticProps);
+      Object.defineProperty(Constructor, "prototype", {
+        writable: false
+      });
+      return Constructor;
+    }
+
+    var Favorites = /*#__PURE__*/function () {
+      function Favorites() {
+        _classCallCheck(this, Favorites);
+      }
+      _createClass(Favorites, null, [{
+        key: "get",
+        value: function get() {
+          return Lampa.Storage.get('nc_networkLists', '[]');
+        }
+      }, {
+        key: "find",
+        value: function find(favorite) {
+          return this.get().find(function (a) {
+            return a.id === favorite.id;
+          });
+        }
+      }, {
+        key: "remove",
+        value: function remove(favorite) {
+          var list = this.get();
+          var find = this.find(favorite);
+          if (find) {
+            Lampa.Arrays.remove(list, find);
+            Lampa.Storage.set('nc_networkLists', list);
+            Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDeleted') + ' ' + find.card_data.name);
+          }
+        }
+      }, {
+        key: "add",
+        value: function add(favorite) {
+          var list = this.get();
+          var find = this.find(favorite);
+          if (!find) {
+            Lampa.Arrays.extend(favorite, {
+              id: Lampa.Utils.uid(),
+              added: Date.now()
+            });
+            list.push(favorite);
+            Lampa.Storage.set('nc_networkLists', list);
+            Lampa.Noty.show("Add need reboot");
+          }
+        }
+      }, {
+        key: "update",
+        value: function update(favorite) {
+          var list = this.get();
+          var find = this.find(favorite);
+          if (find) {
+            Lampa.Storage.set('nc_networkLists', list);
+          }
+        }
+      }, {
+        key: "toggle",
+        value: function toggle(favorite) {
+          return this.find(favorite) ? this.remove(favorite) : this.add(favorite);
+        }
+      }]);
+      return Favorites;
+    }();
+
+    function component(object) {
+      var network = new Lampa.Reguest();
+      var scroll = new Lampa.Scroll({
+        mask: true,
+        over: true,
+        step: 250,
+        end_ratio: 2
+      });
+      var items = [];
+      var html = document.createElement('div');
+      var body = document.createElement('div');
+      var total_pages = 0;
+      var last;
+      var waitload;
+      var active = 0;
+      this.create = function () {
+        Api.main(object, this.build.bind(this), this.empty.bind(this));
+      };
+      this.empty = function () {
+        var empty = new Empty();
+        html.appendChild(empty.render(true));
+        this.start = empty.start;
+        this.activity.loader(false);
+        this.activity.toggle();
+      };
+      this.next = function () {
+        var _this = this;
+        if (waitload) return;
+        if (object.page < total_pages) {
+          waitload = true;
+          object.page++;
+          this.nextPageReuest(object, function (result) {
+            _this.append(result, true);
+            waitload = false;
+            _this.limit();
+          }, function () {
+            waitload = false;
+          });
+        }
+      };
+      this.nextPageReuest = function (object, resolve, reject) {
+        Api.full(object, resolve.bind(this), reject.bind(this));
+      };
+      this.append = function (data, append) {
+        var _this2 = this;
+        data.results.forEach(function (element) {
+          var card = new Lampa.Card(element, {
+            object: object,
+            card_category: typeof card_category == 'undefined' ? true : data.category,
+            card_wide: data.wide,
+            card_small: data.small,
+            card_broad: data.broad,
+            card_collection: data.collection,
+            card_events: data.card_events
+          });
+          card.create();
+          card.onFocus = function (target, card_data) {
+            last = target;
+            active = items.indexOf(card);
+            scroll.update(card.render(true));
+          };
+          card.onTouch = function (target, card_data) {
+            last = target;
+            active = items.indexOf(card);
+          };
+          card.onMenu = function (target, card_data) {
+            var enabled = Lampa.Controller.enabled().name;
+            var menu = [];
+            menu.push({
+              title: Lampa.Lang.translate('nc_bookmarkAdd') + ' New',
+              card_data: card_data,
+              type: 'new'
+            });
+            menu.push({
+              title: Lampa.Lang.translate('nc_bookmarkAdd') + ' Top',
+              card_data: card_data,
+              type: 'top'
+            });
+            Lampa.Select.show({
+              title: Lampa.Lang.translate('title_action') + ' ' + card_data.name,
+              items: menu,
+              onBack: function onBack() {
+                Lampa.Controller.toggle(enabled);
+              },
+              onSelect: function onSelect(a) {
+                Favorites.add(a);
+              }
+            });
+          };
+          card.onEnter = function (target, card_data) {
+            last = target;
+            Lampa.Activity.push({
+              url: 'discover/tv',
+              title: card_data.title,
+              component: "category_full",
+              networks: card_data.networkId,
+              source: 'tmdb',
+              card_type: true,
+              page: 1
+            });
+          };
+          body.appendChild(card.render(true));
+          items.push(card);
+          if (_this2.cardRender) _this2.cardRender(object, element, card);
+          if (append) Lampa.Controller.collectionAppend(card.render(true));
+        });
+      };
+      this.limit = function () {
+        var limit_view = 12;
+        var lilit_collection = 36;
+        var colection = items.slice(Math.max(0, active - limit_view), active + limit_view);
+        items.forEach(function (item) {
+          if (colection.indexOf(item) === -1) {
+            item.render(true).classList.remove('layer--render');
+          } else {
+            item.render(true).classList.add('layer--render');
+          }
+        });
+        Navigator.setCollection(items.slice(Math.max(0, active - lilit_collection), active + lilit_collection).map(function (c) {
+          return c.render(true);
+        }));
+        Navigator.focused(last);
+        Lampa.Layer.visible(scroll.render(true));
+      };
+      this.build = function (data) {
+        var _this3 = this;
+        var favs = Favorites.get().length;
+        var header = document.createElement('div');
+        header.className = 'lme-catalog lme-header';
+        var favorites = document.createElement('div');
+        favorites.className = 'lme-favorites simple-button simple-button--invisible simple-button--filter selector';
+        favorites.innerHTML = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\" xml:space=\"preserve\">\n                        <path fill=\"currentColor\" d=\"M478.354,146.286H33.646c-12.12,0-21.943,9.823-21.943,21.943v321.829c0,12.12,9.823,21.943,21.943,21.943h444.709\n                            c12.12,0,21.943-9.823,21.943-21.943V168.229C500.297,156.109,490.474,146.286,478.354,146.286z M456.411,468.114H55.589V190.171\n                            h400.823V468.114z\"/>\n                        <path fill=\"currentColor\" d=\"M441.783,73.143H70.217c-12.12,0-21.943,9.823-21.943,21.943c0,12.12,9.823,21.943,21.943,21.943h371.566\n                            c12.12,0,21.943-9.823,21.943-21.943C463.726,82.966,453.903,73.143,441.783,73.143z\"/>\n                        <path fill=\"currentColor\" d=\"M405.211,0H106.789c-12.12,0-21.943,9.823-21.943,21.943c0,12.12,9.823,21.943,21.943,21.943h298.423\n                            c12.12,0,21.943-9.823,21.943-21.943C427.154,9.823,417.331,0,405.211,0z\"/>\n                    </svg>\n                    <div class=\"hide\"></div>";
+        favorites.on('hover:enter', function () {
+          var itemsFavs = [];
+          console.log('favs', favs, Favorites.get());
+          Favorites.get().forEach(function (item) {
+            itemsFavs.push({
+              title: item.type + ' ' + item.card_data.name,
+              id: item.id
+            });
+          });
+          Lampa.Select.show({
+            title: Lampa.Lang.translate('nc_networksList'),
+            items: itemsFavs,
+            onSelect: function onSelect(a) {
+              Favorites.remove(a);
+            },
+            onBack: function onBack() {
+              Lampa.Controller.toggle('content');
+            }
+          });
+        });
+        var baseInfo = document.createElement('div');
+        baseInfo.className = 'lme-baseInfo';
+        baseInfo.innerHTML = "TV Shows networks in TMDB Base: ".concat(data.count);
+        var search = document.createElement('div');
+        search.className = 'lme-search simple-button simple-button--invisible simple-button--filter selector button--search';
+        search.innerHTML = "\n                <svg width=\"23\" height=\"22\" viewBox=\"0 0 23 22\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" xml:space=\"preserve\">\n                    <circle cx=\"9.9964\" cy=\"9.63489\" r=\"8.43556\" stroke=\"currentColor\" stroke-width=\"2.4\"></circle>\n                    <path d=\"M20.7768 20.4334L18.2135 17.8701\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"></path>\n                </svg>\n                <div class=\"hide\"></div>\n        ";
+        var clear = document.createElement('div');
+        clear.className = 'lme-clear simple-button simple-button--invisible selector button--clear';
+        clear.innerHTML = "\n                <svg width=\"48\" height=\"43\" viewBox=\"0 0 48 43\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path d=\"M8.11178 23.9546L7.10608 24.9852L8.137 25.9913L9.1427 24.96L8.11178 23.9546ZM20.9815 29.7729L35.3816 15.3729L33.3449 13.3364L18.945 27.7363L20.9815 29.7729ZM18.945 15.3728L33.3449 29.7729L35.3816 27.7363L20.9815 13.3364L18.945 15.3728ZM44.9232 21.5546C44.9232 31.3632 36.9718 39.3146 27.1632 39.3146V42.1946C38.5623 42.1946 47.8032 32.9537 47.8032 21.5546H44.9232ZM9.40324 21.5546C9.40324 11.746 17.3547 3.79461 27.1632 3.79461V0.914612C15.7641 0.914612 6.52324 10.1555 6.52324 21.5546H9.40324ZM27.1632 3.79461C36.9718 3.79461 44.9232 11.746 44.9232 21.5546H47.8032C47.8032 10.1555 38.5623 0.914612 27.1632 0.914612V3.79461ZM9.54071 23.7765C9.45004 23.0491 9.40324 22.3077 9.40324 21.5546H6.52324C6.52324 22.427 6.57746 23.2877 6.68284 24.1327L9.54071 23.7765ZM27.1632 39.3146C21.0603 39.3146 15.6756 36.2376 12.4764 31.5437L10.0966 33.1656C13.8093 38.6129 20.0678 42.1946 27.1632 42.1946V39.3146ZM9.1427 24.96L14.9942 18.96L12.9323 16.9493L7.08088 22.9493L9.1427 24.96ZM9.1175 22.9241L2.96896 16.9241L0.95752 18.9852L7.10608 24.9852L9.1175 22.9241Z\"/>\n                </svg>\n                <div class=\"hide\"></div>\n        ";
+        clear.on('hover:enter', function () {
+          object.searchQuery = "";
+          Lampa.Activity.replace(object);
+        });
+        header.appendChild(baseInfo);
+        header.appendChild(favorites);
+        header.appendChild(search);
+        header.appendChild(clear);
+        if (data.results.length) {
+          total_pages = data.total_pages;
+          body.classList.add('lme-catalog', 'category-full');
+          scroll.minus();
+          scroll.onEnd = this.next.bind(this);
+          scroll.onScroll = this.limit.bind(this);
+          scroll.onWheel = function (step) {
+            if (!Lampa.Controller.own(_this3)) _this3.start();
+            if (step > 0) Navigator.move('down');else Navigator.move('up');
+          };
+          this.append(data);
+          scroll.append(body);
+          html.addClass('lmeCatalog');
+          html.appendChild(header);
+          html.appendChild(scroll.render(true));
+          this.buildSearch();
+          this.limit();
+          this.activity.loader(false);
+          this.activity.toggle();
+        } else {
+          this.empty();
+        }
+      };
+      this.buildSearch = function () {
+        var _this4 = this;
+        var btn = html.find('.button--search');
+        btn.on('hover:enter', function () {
+          Lampa.Input.edit({
+            free: true,
+            nosave: true,
+            nomic: true,
+            value: ''
+          }, function (val) {
+            if (val) {
+              _this4.clearButtons(false, val);
+              object.searchQuery = "{\"name\":{\"$regex\": \"(?i)".concat(val, "\"}}");
+              Lampa.Activity.replace(object);
+            } else {
+              Lampa.Controller.toggle('content');
+            }
+          });
+        });
+      };
+      this.start = function () {
+        var _this5 = this;
+        Lampa.Controller.add('content', {
+          link: this,
+          toggle: function toggle() {
+            if (_this5.activity.canRefresh()) return false;
+            Lampa.Controller.collectionSet(scroll.render(true));
+            Lampa.Controller.collectionFocus(last || false, scroll.render(true));
+          },
+          left: function left() {
+            if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+          },
+          right: function right() {
+            if (_this5.onRight) {
+              if (Navigator.canmove('right')) Navigator.move('right');else _this5.onRight();
+            } else Navigator.move('right');
+          },
+          up: function up() {
+            if (Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
+          },
+          down: function down() {
+            if (Navigator.canmove('down')) Navigator.move('down');
+          },
+          back: function back() {
+            Lampa.Activity.backward();
+          }
+        });
+        Lampa.Controller.toggle('content');
+      };
+      this.refresh = function () {
+        this.activity.needRefresh();
+      };
+      this.pause = function () {};
+      this.stop = function () {};
+      this.render = function (js) {
+        return js ? html : $(html);
+      };
+      this.clearButtons = function (category, search) {
+        var btn_search = html.find('.button--search');
+        btn_search.find('div').addClass('hide').text('');
+        btn_search.find('div').removeClass('hide').text(search);
+      };
+      this.destroy = function () {
+        network.clear();
+        Lampa.Arrays.destroy(items);
+        scroll.destroy();
+        html.remove();
+        body.remove();
+        items = [];
+      };
+    }
 
     var manifest = {
       type: "other",
@@ -649,26 +1095,41 @@
     };
     var main = function main() {
       Lampa.Manifest.plugins = manifest;
-      Lampa.Template.add('ncStyle', "\n        <style>\n            div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}\n        </style>\n    ");
+      Lampa.Component.add('lmeNetworks', component);
+      Lampa.Template.add('ncStyle', "\n        <style>\n            @charset 'UTF-8';div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}.lme-catalog.lme-header{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-moz-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.lme-baseInfo{-webkit-box-flex:1;-webkit-flex:1;-moz-box-flex:1;-ms-flex:1;flex:1;padding:0 0 0 2%}.lme-search,.lme-clear{margin-left:auto}.lme-catalog.category-full .card__img{-o-object-fit:contain;object-fit:contain;padding:5%}.networkLogo{-o-object-fit:contain;object-fit:contain;padding:2%}\n        </style>\n    ");
       lang.data();
       config.setting();
+      // Menu 2.0
       var submenuCatalogkeys = Object.keys(localStorage).filter(function (key) {
         return key.startsWith('nc_');
       });
       function addsubmenu(category) {
         switch (category) {
-          case 'nc_subtv':
-          case 'nc_newsubtv':
           case 'nc_concert':
           case 'nc_cartoon':
           case 'nc_documentary':
+          case 'nc_networksList':
           case 'nc_documentary2':
             // Вызываем функцию insert.catSubmenu(category)
-            if (Lampa.Storage.get(category) === true) insert.catSubmenu(category);
+            if (Lampa.Storage.get(category) === true) {
+              insert.catSubmenu(category);
+            }
+            break;
+          case 'nc_networkLists':
+            if (Array.isArray(Lampa.Storage.get('nc_networkLists')) && Lampa.Storage.get('nc_networkLists').length > 0) {
+              insert.catSubmenu(Lampa.Storage.get('nc_networkLists'));
+            }
             break;
           default:
             // Вызываем функцию bookmarks(info)
-            if (Lampa.Storage.get(category).available === true) insert.bookmarks(Lampa.Storage.get(category).info);
+            if (Lampa.Storage.get(category).available === true) {
+              if (Lampa.Storage.get(category)) {
+                localStorage.removeItem(category);
+                Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkMigrate'));
+              } else {
+                console.log("\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0441 \u043A\u043B\u044E\u0447\u043E\u043C ".concat(Lampa.Storage.get(category), " \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0432 localStorage."));
+              }
+            }
         }
         //insert.catSubmenu(category);
       }
