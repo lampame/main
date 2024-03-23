@@ -900,6 +900,22 @@
               card_data: card_data,
               type: 'top'
             });
+            //TODO: Исправить костыль
+            menu.push({
+              title: '-----------------'
+            });
+            menu.push({
+              title: 'Favorites',
+              favorites: true
+            });
+            menu.push({
+              title: 'Search',
+              search: true
+            });
+            menu.push({
+              title: 'Reset',
+              reset: true
+            });
             Lampa.Select.show({
               title: Lampa.Lang.translate('title_action') + ' ' + card_data.name,
               items: menu,
@@ -907,7 +923,48 @@
                 Lampa.Controller.toggle(enabled);
               },
               onSelect: function onSelect(a) {
-                Favorites.add(a);
+                if (a.type) {
+                  Favorites.add(a);
+                }
+                if (a.favorites) {
+                  var itemsFavs = [];
+                  Favorites.get().forEach(function (item) {
+                    itemsFavs.push({
+                      title: item.type + ' ' + item.card_data.name,
+                      id: item.id
+                    });
+                  });
+                  Lampa.Select.show({
+                    title: Lampa.Lang.translate('nc_networksList'),
+                    items: itemsFavs,
+                    onSelect: function onSelect(a) {
+                      Favorites.remove(a);
+                    },
+                    onBack: function onBack() {
+                      Lampa.Controller.toggle('content');
+                    }
+                  });
+                }
+                if (a.search) {
+                  Lampa.Input.edit({
+                    free: true,
+                    nosave: true,
+                    nomic: true,
+                    value: ''
+                  }, function (val) {
+                    if (val) {
+                      _this2.clearButtons(false, val);
+                      object.searchQuery = "{\"name\":{\"$regex\": \"(?i)".concat(val, "\"}}");
+                      Lampa.Activity.replace(object);
+                    } else {
+                      Lampa.Controller.toggle('content');
+                    }
+                  });
+                }
+                if (a.reset) {
+                  object.searchQuery = "";
+                  Lampa.Activity.replace(object);
+                }
               }
             });
           };
@@ -948,7 +1005,6 @@
       };
       this.build = function (data) {
         var _this3 = this;
-        var favs = Favorites.get().length;
         var header = document.createElement('div');
         header.className = 'lme-catalog lme-header';
         var favorites = document.createElement('div');
@@ -956,7 +1012,6 @@
         favorites.innerHTML = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\" xml:space=\"preserve\">\n                        <path fill=\"currentColor\" d=\"M478.354,146.286H33.646c-12.12,0-21.943,9.823-21.943,21.943v321.829c0,12.12,9.823,21.943,21.943,21.943h444.709\n                            c12.12,0,21.943-9.823,21.943-21.943V168.229C500.297,156.109,490.474,146.286,478.354,146.286z M456.411,468.114H55.589V190.171\n                            h400.823V468.114z\"/>\n                        <path fill=\"currentColor\" d=\"M441.783,73.143H70.217c-12.12,0-21.943,9.823-21.943,21.943c0,12.12,9.823,21.943,21.943,21.943h371.566\n                            c12.12,0,21.943-9.823,21.943-21.943C463.726,82.966,453.903,73.143,441.783,73.143z\"/>\n                        <path fill=\"currentColor\" d=\"M405.211,0H106.789c-12.12,0-21.943,9.823-21.943,21.943c0,12.12,9.823,21.943,21.943,21.943h298.423\n                            c12.12,0,21.943-9.823,21.943-21.943C427.154,9.823,417.331,0,405.211,0z\"/>\n                    </svg>\n                    <div class=\"hide\"></div>";
         favorites.on('hover:enter', function () {
           var itemsFavs = [];
-          console.log('favs', favs, Favorites.get());
           Favorites.get().forEach(function (item) {
             itemsFavs.push({
               title: item.type + ' ' + item.card_data.name,
@@ -1088,7 +1143,7 @@
 
     var manifest = {
       type: "other",
-      version: "2.5",
+      version: "3.0",
       name: "New category",
       description: "Add new category to mein menu",
       component: "nc"
