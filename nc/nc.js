@@ -683,7 +683,7 @@
     };
 
     var network = new Lampa.Reguest();
-    var api_url = 'https://parseapi.back4app.com/parse/classes/networks?limit=120&count=1';
+    var api_url = 'https://parseapi.back4app.com/parse/classes/networks?limit=24&count=1';
     var auth = {
       headers: {
         "X-Parse-Application-Id": "TmtqnkaSL29ubXN5772zeVPAq5wTb15P8vIMQZPv",
@@ -697,14 +697,14 @@
       }
       network.silent(apiUrl, function (data) {
         data.collection = true;
-        data.total_pages = data.count / 120;
+        data.total_pages = data.count / 24;
         oncomplite(data);
       }, onerror, false, auth);
     }
     function full(params, oncomplite, onerror) {
-      network.silent(api_url + "&skip=".concat(params.page * 120), function (data) {
+      network.silent(api_url + "&skip=".concat(params.page * 24), function (data) {
         data.collection = true;
-        data.total_pages = data.count / 120;
+        data.total_pages = data.count / 24;
         oncomplite(data);
       }, onerror, false, auth);
     }
