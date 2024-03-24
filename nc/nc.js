@@ -703,12 +703,8 @@
     }
     function full(params, oncomplite, onerror) {
       network.silent(api_url + "&skip=".concat(params.page * 120), function (data) {
-        //data.total_pages = data.total_pages || 15
         data.collection = true;
         data.total_pages = data.count / 120;
-        data.results.forEach(function (element) {
-          element.poster_path = element.file_path;
-        });
         oncomplite(data);
       }, onerror, false, auth);
     }
