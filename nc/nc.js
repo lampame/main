@@ -943,7 +943,7 @@
                     value: ''
                   }, function (val) {
                     if (val) {
-                      _this2.clearButtons(false, val);
+                      //this.clearButtons(false, val)
                       object.searchQuery = "{\"name\":{\"$regex\": \"(?i)".concat(val, "\"}}");
                       Lampa.Activity.replace(object);
                     } else {
@@ -1060,7 +1060,6 @@
         }
       };
       this.buildSearch = function () {
-        var _this4 = this;
         var btn = html.find('.button--search');
         btn.on('hover:enter', function () {
           Lampa.Input.edit({
@@ -1070,7 +1069,7 @@
             value: ''
           }, function (val) {
             if (val) {
-              _this4.clearButtons(false, val);
+              //this.clearButtons(false, val)
               object.searchQuery = "{\"name\":{\"$regex\": \"(?i)".concat(val, "\"}}");
               Lampa.Activity.replace(object);
             } else {
@@ -1080,11 +1079,11 @@
         });
       };
       this.start = function () {
-        var _this5 = this;
+        var _this4 = this;
         Lampa.Controller.add('content', {
           link: this,
           toggle: function toggle() {
-            if (_this5.activity.canRefresh()) return false;
+            if (_this4.activity.canRefresh()) return false;
             Lampa.Controller.collectionSet(scroll.render(true));
             Lampa.Controller.collectionFocus(last || false, scroll.render(true));
           },
@@ -1092,8 +1091,8 @@
             if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
           },
           right: function right() {
-            if (_this5.onRight) {
-              if (Navigator.canmove('right')) Navigator.move('right');else _this5.onRight();
+            if (_this4.onRight) {
+              if (Navigator.canmove('right')) Navigator.move('right');else _this4.onRight();
             } else Navigator.move('right');
           },
           up: function up() {
