@@ -58,10 +58,10 @@
           zh: "TV New" // Chinese translation
         },
         nc_networksList: {
-          ru: "TV Networks",
-          en: "TV Networks",
-          uk: "TV Networks",
-          zh: "TV Networks" // Chinese translation
+          ru: "TV Show стриминги",
+          en: "TV Show Networks",
+          uk: "TV Show Networks",
+          zh: "TV Show Networks" // Chinese translation
         },
         nc_concert: {
           ru: "Концерты",
