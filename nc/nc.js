@@ -683,7 +683,7 @@
     };
 
     var network = new Lampa.Reguest();
-    var api_url = 'https://parseapi.back4app.com/parse/classes/networks?limit=12&count=1';
+    var api_url = 'https://parseapi.back4app.com/parse/classes/networks?limit=120&count=1';
     var auth = {
       headers: {
         "X-Parse-Application-Id": "TmtqnkaSL29ubXN5772zeVPAq5wTb15P8vIMQZPv",
@@ -697,7 +697,7 @@
       }
       network.silent(apiUrl, function (data) {
         data.collection = true;
-        data.total_pages = data.count / 12;
+        data.total_pages = data.count / 120;
         data.results.forEach(function (element) {
           element.poster_path = element.file_path;
           element.backdrop_path = element.file_path;
@@ -706,10 +706,10 @@
       }, onerror, false, auth);
     }
     function full(params, oncomplite, onerror) {
-      network.silent(api_url + "&skip=".concat(params.page * 12), function (data) {
+      network.silent(api_url + "&skip=".concat(params.page * 120), function (data) {
         //data.total_pages = data.total_pages || 15
         data.collection = true;
-        data.total_pages = data.count / 12;
+        data.total_pages = data.count / 120;
         data.results.forEach(function (element) {
           element.poster_path = element.file_path;
         });
@@ -873,9 +873,7 @@
             card_category: typeof card_category == 'undefined' ? true : data.category,
             card_wide: data.wide,
             card_small: data.small,
-            card_broad: data.broad,
-            card_collection: data.collection,
-            card_events: data.card_events
+            card_collection: data.collection
           });
           card.create();
           card.onFocus = function (target, card_data) {
@@ -1151,7 +1149,7 @@
     var main = function main() {
       Lampa.Manifest.plugins = manifest;
       Lampa.Component.add('lmeNetworks', component);
-      Lampa.Template.add('ncStyle', "\n        <style>\n            @charset 'UTF-8';div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}.lme-catalog.lme-header{display:none;-webkit-box-pack:justify;-webkit-justify-content:space-between;-moz-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.lme-baseInfo{-webkit-box-flex:1;-webkit-flex:1;-moz-box-flex:1;-ms-flex:1;flex:1;padding:0 0 0 2%}.lme-search,.lme-clear{margin-left:auto}.lme-catalog.category-full .card__img{-o-object-fit:contain;object-fit:contain;padding:5%}.networkLogo{-o-object-fit:contain;object-fit:contain;padding:2%}\n        </style>\n    ");
+      Lampa.Template.add('ncStyle', "\n        <style>\n            @charset 'UTF-8';div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}.lme-catalog.lme-header{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-moz-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.lme-baseInfo{-webkit-box-flex:1;-webkit-flex:1;-moz-box-flex:1;-ms-flex:1;flex:1;padding:0 0 0 2%}.lme-search,.lme-clear{margin-left:auto}.lme-catalog.category-full .card__img{-o-object-fit:contain;object-fit:contain;padding:5%}.networkLogo{-o-object-fit:contain;object-fit:contain;padding:2%}\n        </style>\n    ");
       lang.data();
       config.setting();
       // Menu 2.0
