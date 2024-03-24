@@ -388,7 +388,7 @@
           var NEW_ITEM_TEXT = "".concat(item.card_data.name);
           var New = "";
           if (item.type === "new") New = 'first_air_date.desc';
-          var field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <img class='networkLogo' src='").concat(item.card_data.file_path, "' alt=\"img\">\n             </div>\n             <div class=\"menu__text\">").concat(NEW_ITEM_TEXT, "</div> <div class=\"nc_badge\">").concat(Lampa.Lang.translate(item.type === 'top' ? 'nc_toptv' : 'nc_newtv'), "</div></div>\n          </li>\n        "));
+          var field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <img class='networkLogo' src='").concat(Lampa.TMDB.image(item.card_data.poster_path), "' alt=\"img\">\n             </div>\n             <div class=\"menu__text\">").concat(NEW_ITEM_TEXT, "</div> <div class=\"nc_badge\">").concat(Lampa.Lang.translate(item.type === 'top' ? 'nc_toptv' : 'nc_newtv'), "</div></div>\n          </li>\n        "));
           field.on("hover:enter", function () {
             Lampa.Activity.push({
               url: 'discover/tv',
@@ -698,10 +698,6 @@
       network.silent(apiUrl, function (data) {
         data.collection = true;
         data.total_pages = data.count / 120;
-        data.results.forEach(function (element) {
-          element.poster_path = element.file_path;
-          element.backdrop_path = element.file_path;
-        });
         oncomplite(data);
       }, onerror, false, auth);
     }
@@ -1041,9 +1037,9 @@
           Lampa.Activity.replace(object);
         });
         header.appendChild(baseInfo);
-        header.appendChild(favorites);
-        header.appendChild(search);
-        header.appendChild(clear);
+        //header.appendChild(favorites)
+        //header.appendChild(search)
+        //header.appendChild(clear)
         if (data.results.length) {
           total_pages = data.total_pages;
           body.classList.add('lme-catalog', 'category-full');
@@ -1059,7 +1055,7 @@
           html.addClass('lmeCatalog');
           html.appendChild(header);
           html.appendChild(scroll.render(true));
-          this.buildSearch();
+          //this.buildSearch()
           this.limit();
           this.activity.loader(false);
           this.activity.toggle();
