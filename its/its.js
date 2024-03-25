@@ -109,7 +109,7 @@
       description: "Add save button for torrent",
       component: "its"
     };
-    Lampa.Template.add('infuseSaver', "\n        <style>\n            \n        </style>\n    ");
+    Lampa.Template.add('infuseSaver', "\n        <style>\n            .infuseSaver{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-moz-box-orient:horizontal;-moz-box-direction:normal;-ms-flex-direction:row;flex-direction:row}.infuseSaverLogo{width:24px;height:24px;margin-right:2%}\n        </style>\n    ");
     $('body').append(Lampa.Template.get('infuseSaver', {}, true));
     if (window.appready) add();else {
       Lampa.Listener.follow("app", function (e) {
