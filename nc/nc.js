@@ -388,7 +388,7 @@
           var NEW_ITEM_TEXT = "".concat(item.card_data.name);
           var New = "";
           if (item.type === "new") New = 'first_air_date.desc';
-          var field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <img class='networkLogo' src='").concat(Lampa.TMDB.image(item.card_data.poster_path), "' alt=\"img\">\n             </div>\n             <div class=\"menu__text\">").concat(NEW_ITEM_TEXT, "</div> <div class=\"nc_badge\">").concat(Lampa.Lang.translate(item.type === 'top' ? 'nc_toptv' : 'nc_newtv'), "</div></div>\n          </li>\n        "));
+          var field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <img class='networkLogo' src='").concat(Lampa.TMDB.image("t/p/w200/".concat(item.card_data.poster_path)), "' alt=\"img\">\n             </div>\n             <div class=\"menu__text\">").concat(NEW_ITEM_TEXT, "</div> <div class=\"nc_badge\">").concat(Lampa.Lang.translate(item.type === 'top' ? 'nc_toptv' : 'nc_newtv'), "</div></div>\n          </li>\n        "));
           field.on("hover:enter", function () {
             Lampa.Activity.push({
               url: 'discover/tv',
@@ -683,28 +683,35 @@
     };
 
     var network = new Lampa.Reguest();
-    var api_url = 'https://parseapi.back4app.com/parse/classes/networks?limit=36&count=1';
+    var api_url = 'https://corsproxy.io/?https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/65fd541c268c09686a0e/documents?queries[]=limit(36)';
     var auth = {
       headers: {
-        "X-Parse-Application-Id": "TmtqnkaSL29ubXN5772zeVPAq5wTb15P8vIMQZPv",
-        "X-Parse-REST-API-Key": "2BJYaJzGmyWd0kNTqHzCUCOYNggAmrtWGhPxHO59"
+        "X-Appwrite-Project": "65fd523956f5ca97eaff"
       }
     };
     function main$1(params, oncomplite, onerror) {
       var apiUrl = api_url;
       if (params.searchQuery && params.searchQuery !== "") {
-        apiUrl += "&where=".concat(params.searchQuery);
+        apiUrl += "&queries[]=search(\"name\", \"".concat(params.searchQuery, "\")");
       }
-      network.silent(apiUrl, function (data) {
+      network.silent(encodeURI(apiUrl), function (data) {
         data.collection = true;
         data.total_pages = data.count / 36;
+        data.documents.forEach(function (element) {
+          element.poster_path = element.logo_path;
+          element.name = "".concat(element.name, " ").concat(element.origin_country);
+        });
         oncomplite(data);
       }, onerror, false, auth);
     }
     function full(params, oncomplite, onerror) {
-      network.silent(api_url + "&skip=".concat(params.page * 36), function (data) {
+      network.silent(encodeURI(api_url + "&queries[]=offset(".concat(params.page * 36, ")")), function (data) {
         data.collection = true;
         data.total_pages = data.count / 36;
+        data.documents.forEach(function (element) {
+          element.poster_path = element.logo_path;
+          element.name = "".concat(element.name, " ").concat(element.origin_country);
+        });
         oncomplite(data);
       }, onerror, false, auth);
     }
@@ -860,7 +867,7 @@
       };
       this.append = function (data, append) {
         var _this2 = this;
-        data.results.forEach(function (element) {
+        data.documents.forEach(function (element) {
           var card = new Lampa.Card(element, {
             object: object,
             card_category: typeof card_category == 'undefined' ? true : data.category,
@@ -945,7 +952,7 @@
                   }, function (val) {
                     if (val) {
                       //this.clearButtons(false, val)
-                      object.searchQuery = "{\"name\":{\"$regex\": \"(?i)".concat(val, "\"}}");
+                      object.searchQuery = val;
                       Lampa.Activity.replace(object);
                     } else {
                       Lampa.Controller.toggle('content');
@@ -1021,7 +1028,7 @@
         });
         var baseInfo = document.createElement('div');
         baseInfo.className = 'lme-baseInfo';
-        baseInfo.innerHTML = "TV Shows networks in TMDB Base: ".concat(data.count);
+        baseInfo.innerHTML = "TV Shows networks in TMDB Base: ".concat(data.total);
         var search = document.createElement('div');
         search.className = 'lme-search simple-button simple-button--invisible simple-button--filter selector button--search';
         search.innerHTML = "\n                <svg width=\"23\" height=\"22\" viewBox=\"0 0 23 22\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" xml:space=\"preserve\">\n                    <circle cx=\"9.9964\" cy=\"9.63489\" r=\"8.43556\" stroke=\"currentColor\" stroke-width=\"2.4\"></circle>\n                    <path d=\"M20.7768 20.4334L18.2135 17.8701\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"></path>\n                </svg>\n                <div>Search</div>\n        ";
@@ -1036,7 +1043,7 @@
         header.appendChild(clear);
         header.appendChild(favorites);
         header.appendChild(baseInfo);
-        if (data.results.length) {
+        if (data.documents.length) {
           total_pages = data.total_pages;
           body.classList.add('lme-catalog', 'category-full');
           scroll.minus();
@@ -1070,7 +1077,7 @@
           }, function (val) {
             if (val) {
               //this.clearButtons(false, val)
-              object.searchQuery = "{\"name\":{\"$regex\": \"(?i)".concat(val, "\"}}");
+              object.searchQuery = val;
               Lampa.Activity.replace(object);
             } else {
               Lampa.Controller.toggle('content');
