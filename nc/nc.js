@@ -683,7 +683,7 @@
     };
 
     var network = new Lampa.Reguest();
-    var api_url = 'https://corsproxy.io/?https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/65fd541c268c09686a0e/documents?queries[]=limit(36)';
+    var api_url = 'https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/65fd541c268c09686a0e/documents?queries[]=limit(36)';
     var auth = {
       headers: {
         "X-Appwrite-Project": "65fd523956f5ca97eaff"
