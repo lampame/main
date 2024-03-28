@@ -693,6 +693,8 @@
       var apiUrl = api_url;
       if (params.searchQuery && params.searchQuery !== "") {
         apiUrl += "&queries[]=search(\"name\", \"".concat(params.searchQuery, "\")");
+      } else {
+        apiUrl += "&queries[]=orderDesc(\"rating\")";
       }
       network.silent(encodeURI(apiUrl), function (data) {
         data.collection = true;
