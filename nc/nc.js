@@ -972,7 +972,7 @@
               url: 'discover/tv',
               title: card_data.title,
               component: "category_full",
-              networks: card_data.networkId,
+              networks: card_data.id,
               source: 'tmdb',
               card_type: true,
               page: 1
