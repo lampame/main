@@ -394,7 +394,7 @@
               url: 'discover/tv',
               title: "".concat(item.type.toUpperCase(), " ").concat(NEW_ITEM_TEXT),
               component: "category_full",
-              networks: item.card_data.networkId,
+              networks: item.card_data.id,
               sort_by: New,
               source: 'tmdb',
               card_type: true,
