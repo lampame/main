@@ -698,7 +698,7 @@
       }
       network.silent(encodeURI(apiUrl), function (data) {
         data.collection = true;
-        data.total_pages = data.count / 36;
+        data.total_pages = data.total / 36;
         data.documents.forEach(function (element) {
           element.poster_path = element.logo_path;
           element.name = "".concat(element.name, " ").concat(element.origin_country);
@@ -709,7 +709,7 @@
     function full(params, oncomplite, onerror) {
       network.silent(encodeURI(api_url + "&queries[]=offset(".concat(params.page * 36, ")")), function (data) {
         data.collection = true;
-        data.total_pages = data.count / 36;
+        data.total_pages = data.total / 36;
         data.documents.forEach(function (element) {
           element.poster_path = element.logo_path;
           element.name = "".concat(element.name, " ").concat(element.origin_country);
@@ -981,14 +981,29 @@
           };
           card.onEnter = function (target, card_data) {
             last = target;
-            Lampa.Activity.push({
-              url: 'discover/tv',
-              title: card_data.title,
-              component: "category_full",
-              networks: card_data.id,
-              source: 'tmdb',
-              card_type: true,
-              page: 1
+            Lampa.Select.show({
+              title: Lampa.Lang.translate('title_action'),
+              items: [{
+                title: "New",
+                type: 'first_air_date.desc',
+                card_data: card_data
+              }, {
+                title: "Top",
+                type: '',
+                card_data: card_data
+              }],
+              onSelect: function onSelect(a) {
+                Lampa.Activity.push({
+                  url: 'discover/tv',
+                  title: a.title + " " + a.card_data.title,
+                  component: "category_full",
+                  networks: a.card_data.id,
+                  sort_by: a.type,
+                  source: 'tmdb',
+                  card_type: true,
+                  page: 1
+                });
+              }
             });
           };
           body.appendChild(card.render(true));
@@ -1160,7 +1175,7 @@
     var main = function main() {
       Lampa.Manifest.plugins = manifest;
       Lampa.Component.add('lmeNetworks', component);
-      Lampa.Template.add('ncStyle', "\n        <style>\n            @charset 'UTF-8';div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}.lme-catalog.lme-header{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-moz-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.lme-baseInfo{padding:0 0 0 2%}.empty.simple-button.simple-button--invisible.selector.button--clear{margin:auto}.lme-baseInfo,.lme-favorites,.lme-search,.lme-clear{-webkit-box-flex:1;-webkit-flex:1;-moz-box-flex:1;-ms-flex:1;flex:1;padding-left:1.5em;padding-right:1.5em;margin-left:.5em;margin-right:.5em}.lme-clear div{margin-left:1em}.lme-catalog.category-full .card__img{-o-object-fit:contain;object-fit:contain;padding:5%}.networkLogo{-o-object-fit:contain;object-fit:contain;padding:2%}\n        </style>\n    ");
+      Lampa.Template.add('ncStyle', "\n        <style>\n            @charset 'UTF-8';div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}.lme-catalog.lme-header{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-moz-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.lme-baseInfo{padding:0 0 0 2%}.empty.simple-button.simple-button--invisible.selector.button--clear{margin:auto}.lme-baseInfo,.lme-favorites,.lme-search,.lme-clear,.lme-filter{-webkit-box-flex:1;-webkit-flex:1;-moz-box-flex:1;-ms-flex:1;flex:1;padding-left:1.5em;padding-right:1.5em;margin-left:.5em;margin-right:.5em}.lme-clear div,.lme-filter div{margin-left:1em}.lme-catalog.category-full .card__img{-o-object-fit:contain;object-fit:contain;padding:5%}.networkLogo{-o-object-fit:contain;object-fit:contain;padding:2%}\n        </style>\n    ");
       lang.data();
       config.setting();
       // Menu 2.0
