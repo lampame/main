@@ -382,22 +382,6 @@
       Lampa.SettingsApi.addParam({
         component: "addCategory",
         param: {
-          name: "nc_concert",
-          type: "trigger",
-          "default": false
-        },
-        field: {
-          name: Lampa.Lang.translate('nc_concert'),
-          description: "TMDB"
-        },
-        onChange: function onChange(value) {
-          if (value === 'true') insert.catSubmenu('nc_concert');else $('body').find('.menu [data-action="nc_concert"]').remove();
-          Lampa.Settings.update();
-        }
-      });
-      Lampa.SettingsApi.addParam({
-        component: "addCategory",
-        param: {
           name: "nc_anime",
           type: "trigger",
           "default": false
@@ -968,7 +952,7 @@
       function addsubmenu(category) {
         switch (category) {
           case 'nc_anime':
-          case 'nc_concert':
+          //case 'nc_concert':
           case 'nc_cartoon':
           case 'nc_documentary':
           case 'nc_networksList':
@@ -985,7 +969,7 @@
             break;
           default:
             // Вызываем функцию bookmarks(info)
-            if (Lampa.Storage.get(category).available === true) {
+            if (Lampa.Storage.get(category).available === true || Lampa.Storage.get('nc_concert') === true) {
               if (Lampa.Storage.get(category)) {
                 localStorage.removeItem(category);
                 Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkMigrate'));
@@ -994,7 +978,6 @@
               }
             }
         }
-        //insert.catSubmenu(category);
       }
 
       // Menu 2.0
