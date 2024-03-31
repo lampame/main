@@ -42,23 +42,10 @@
         key: '',
         parser_torrent_type: 'jackett'
       }
-    }, {
-      base: 'lme_jackett',
-      name: 'LME Jackett',
-      settings: {
-        url: 'https://gwynnbleiidd-jackett.elfhosted.com',
-        key: 'plsgh9iiijchd8m9010b8cur7xqiq8d2',
-        parser_torrent_type: 'jackett'
-      }
-    }, {
-      base: 'lme_prowlarr',
-      name: 'LME Prowlarr',
-      settings: {
-        url: 'https://prowlarr-gwynnbleiidd.koyeb.app',
-        key: '403aa11c34624659997411ef99aecc30',
-        parser_torrent_type: 'prowlarr'
-      }
-    }, {
+    },
+    //{base: 'lme_jackett', name: 'LME Jackett', settings: {url: 'https://gwynnbleiidd-jackett.elfhosted.com', key: 'plsgh9iiijchd8m9010b8cur7xqiq8d2', parser_torrent_type: 'jackett'}},
+    //{base: 'lme_prowlarr', name: 'LME Prowlarr', settings: {url: 'https://prowlarr-gwynnbleiidd.koyeb.app', key: '403aa11c34624659997411ef99aecc30', parser_torrent_type: 'prowlarr'}},
+    {
       base: 'jacred_xyz',
       name: 'Jacred.xyz',
       settings: {
@@ -203,20 +190,7 @@
     };
 
     Lampa.Platform.tv();
-    function migration() {
-      if (Lampa.Storage.get("torrserver_url_two") === "https://trs-gwynnbleiidd.koyeb.app") {
-        Lampa.Storage.set("torrserver_url_two", "https://trs-lme.koyeb.app");
-        Lampa.Storage.set("pubTorr", "https://trs-lme.koyeb.app");
-        Lampa.Noty.show("Second torrserver updated");
-      }
-      if (Lampa.Storage.get("torrserver_url_two") === "https://trs-lme.koyeb.app" && !Lampa.Storage.get("lme_torr_notification")) {
-        Lampa.Storage.set("torrserver_url_two", "");
-        Lampa.Storage.set("lme_torr_notification", "True");
-        Lampa.Noty.show("Бесплатный torrserver от проекта LME канул в небытие! В любом случае спасибо за помощь с тестированием");
-      }
-    }
     function add() {
-      migration();
       Lang.translate();
       Parser.parserSetting();
     }
