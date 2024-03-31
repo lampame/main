@@ -160,7 +160,8 @@
       var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
       var onerror = arguments.length > 2 ? arguments[2] : undefined;
       network.timeout(1000 * Lampa.Storage.field('parse_timeout'));
-      var u = url + '/api/v2.0/indexers/' + (Lampa.Storage.field('jackett_interview') === 'healthy' ? 'status:healthy' : 'all') + '/results?apikey=' + Lampa.Storage.field('jackett_key') + '&Tracker%5B%5D=rutracker&Category%5B%5D=3020&Query=' + encodeURIComponent(params.search);
+      //&Category%5B%5D=3020&Category%5B%5D=100048&Tracker%5B%5D=rutracker&Tracker%5B%5D=kinozal-magnet&Query="Madonna"
+      var u = url + '/api/v2.0/indexers/' + (Lampa.Storage.field('jackett_interview') === 'healthy' ? 'status:healthy' : 'all') + '/results?apikey=' + Lampa.Storage.field('jackett_key') + '&Tracker%5B%5D=noname-clubl&Tracker%5B%5D=kinozal-magnet&Tracker%5B%5D=rutracker&Category%5B%5D=3020&Category%5B%5D=100048&Category%5B%5D=100258&Category%5B%5D=100883&Category%5B%5D=100955&Query=' + encodeURIComponent(params.search);
       if (!params.from_search) {
         var genres = params.movie.genres.map(function (a) {
           return a.name;
@@ -716,7 +717,7 @@
         //add('voice',Lampa.Lang.translate('torrent_parser_voice'))
         //add('lang',Lampa.Lang.translate('title_language_short'))
         //add('season', Lampa.Lang.translate('torrent_parser_season'))
-        //add('tracker', Lampa.Lang.translate('torrent_parser_tracker'))
+        add('tracker', Lampa.Lang.translate('torrent_parser_tracker'));
         add('year', Lampa.Lang.translate('torrent_parser_year'));
         filter.set('filter', select);
         this.selectedFilter();
