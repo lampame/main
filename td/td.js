@@ -712,8 +712,7 @@
       var tdClient = Lampa.Storage.get('tdClient');
       var clients = {
         'qBittorent': qBittorent,
-        'transmission': transmission,
-        'aria2': aria2
+        'transmission': transmission
       };
       if (tdClient && clients[tdClient]) {
         clients[tdClient].qPanels();
