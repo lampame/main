@@ -521,7 +521,7 @@
       if (this.readyState === 4) {
         if (this.status === 200) {
           console.log("TD", "Status " + this.status);
-          Lampa.Storage.set("synologySID", JSON.parse(this.response).data.sid);
+          if (JSON.parse(this.response).data.sid) Lampa.Storage.set("synologySID", JSON.parse(this.response).data.sid);
           $('#synologygetStatus').removeClass('active error wait').addClass('active');
           $('#synologygetStatusBtn').removeClass('active error wait').addClass('active');
         } else if (this.status === undefined) {
@@ -619,8 +619,7 @@
             Lampa.Parser.marnet(selectedTorrent, function () {
               a.send2app(selectedTorrent);
             }, function (error) {
-              console.log('TD', "Error loading magnet:", error);
-              console.log("TD", "Проверяем что нам отдает парсер", selectedTorrent);
+              console.log('TD', "Error loading magnet:", error, selectedTorrent);
               Lampa.Noty.show(Lampa.Lang.translate('tdMagnetError'), error);
             });
           } else {
