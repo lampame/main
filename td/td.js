@@ -48,7 +48,7 @@
         //const data = "urls=" + encodeURIComponent(selectedTorrent);
         var categoryDesc = selectedTorrent.CategoryDesc;
         var categoryParam = categoryDesc ? Lampa.Storage.get("qBittorent".concat(categoryDesc)) : '';
-        var data = "urls=".concat(encodeURIComponent(selectedTorrent.MagnetUri), "&sequentialDownload=").concat(sd ? "true" : "false", "&firstLastPiecePrio=").concat(flpp ? "true" : "false", "&category=").concat(categoryParam);
+        var data = "urls=".concat(encodeURIComponent(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link), "&sequentialDownload=").concat(sd ? "true" : "false", "&firstLastPiecePrio=").concat(flpp ? "true" : "false", "&category=").concat(categoryParam);
         addXhr.send(data);
       }
     };
@@ -271,7 +271,7 @@
         method: "torrent-add",
         arguments: {
           paused: Lampa.Storage.get("transmissionAutostart"),
-          filename: selectedTorrent.MagnetUri
+          filename: selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link
         }
       });
       var xhr = new XMLHttpRequest();
@@ -553,9 +553,9 @@
     var categoryDesc = selectedTorrent.CategoryDesc;
     var categoryParam = categoryDesc ? Lampa.Storage.get("synologyPath".concat(categoryDesc)) : Lampa.Storage.get('synologyPathMovies');
     if (Lampa.Storage.get("synalogyProxy") && Lampa.Storage.get("synalogyProxy") !== 'no_client') {
-      addXhr.open("GET", "".concat(Lampa.Storage.get("synalogyProxy")) + encodeURIComponent("".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=create&uri=").concat(selectedTorrent.MagnetUri, "&username=").concat(Lampa.Storage.get("synologyUser"), "&password=").concat(Lampa.Storage.get("synologyPass"), "&destination=").concat(categoryParam, "&_sid=").concat(Lampa.Storage.get("synologySID"))));
+      addXhr.open("GET", "".concat(Lampa.Storage.get("synalogyProxy")) + encodeURIComponent("".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=create&uri=").concat(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link, "&username=").concat(Lampa.Storage.get("synologyUser"), "&password=").concat(Lampa.Storage.get("synologyPass"), "&destination=").concat(categoryParam, "&_sid=").concat(Lampa.Storage.get("synologySID"))));
     } else {
-      addXhr.open("GET", "".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=create&uri=").concat(encodeURIComponent(selectedTorrent.MagnetUri), "&username=").concat(Lampa.Storage.get("synologyUser"), "&password=").concat(Lampa.Storage.get("synologyPass"), "&destination=").concat(categoryParam, "&_sid=").concat(Lampa.Storage.get("synologySID")));
+      addXhr.open("GET", "".concat(Lampa.Storage.get("synologyProtocol") || "http://").concat(Lampa.Storage.get("synologyUrl") || "127.0.0.1", "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=create&uri=").concat(encodeURIComponent(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link), "&username=").concat(Lampa.Storage.get("synologyUser"), "&password=").concat(Lampa.Storage.get("synologyPass"), "&destination=").concat(categoryParam, "&_sid=").concat(Lampa.Storage.get("synologySID")));
     }
     addXhr.onreadystatechange = function () {
       if (addXhr.readyState === 4) {
@@ -582,9 +582,9 @@
 
   function sender(selectedTorrent) {
     if (Lampa.Storage.field("universalAction") === "open") {
-      if (Lampa.Platform.is('android')) $('<a href="' + selectedTorrent.MagnetUri + '"><a/>')[0].click();else window.location.assign(selectedTorrent.MagnetUri);
+      if (Lampa.Platform.is('android')) $('<a href="' + selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link + '"><a/>')[0].click();else window.location.assign(selectedTorrent.MagnetUri);
     } else {
-      Lampa.Utils.copyTextToClipboard(selectedTorrent.MagnetUri, function () {
+      Lampa.Utils.copyTextToClipboard(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link, function () {
         Lampa.Noty.show(Lampa.Lang.translate('copy_secuses'));
       }, function () {
         Lampa.Noty.show(Lampa.Lang.translate('copy_error'));
@@ -599,9 +599,6 @@
     function send2qBittorrent(selectedTorrent) {
       qBittorent.qBittorrentClient(selectedTorrent);
     }
-    function send2aria2(selectedTorrent) {
-      pAria2.aria2Client(selectedTorrent);
-    }
     function send2synology(selectedTorrent) {
       synology.synologyClient(selectedTorrent);
     }
@@ -615,16 +612,7 @@
       if (e.type === 'onlong') {
         var selectedTorrent = e.element;
         var onSelectApp = function onSelectApp(a) {
-          if (!selectedTorrent.MagnetUri) {
-            Lampa.Parser.marnet(selectedTorrent, function () {
-              a.send2app(selectedTorrent);
-            }, function (error) {
-              console.log('TD', "Error loading magnet:", error, selectedTorrent);
-              Lampa.Noty.show(Lampa.Lang.translate('tdMagnetError'), error);
-            });
-          } else {
-            a.send2app(selectedTorrent);
-          }
+          a.send2app(selectedTorrent);
         };
         if (Lampa.Storage.field("tdClient") === 'qBittorent') {
           typeof Lampa.Storage.get("qBittorentUrl") !== 'undefined' && typeof Lampa.Storage.get("qBittorentUser") !== 'undefined' && typeof Lampa.Storage.get("qBittorentPass") !== 'undefined' && qBittorent.getStatus();
@@ -639,14 +627,6 @@
           e.menu.push({
             title: '<div id="transmissionStatusBtn" class="btnTD wait"><svg class="download" width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\n' + '<path class="path" d="M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M18 17H12H6" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '<path class="path" d="M22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C21.5093 4.43821 21.8356 5.80655 21.9449 8" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '</svg>Transmission</div>',
             send2app: send2transmission,
-            onSelect: onSelectApp
-          });
-        }
-        if (Lampa.Storage.field("tdClient") === 'aria2') {
-          typeof Lampa.Storage.get("aria2Url") !== 'undefined' && pAria2.getStatus();
-          e.menu.push({
-            title: '<div id="aria2StatusBtn" class="btnTD wait"><svg class="download" width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\n' + '<path class="path" d="M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M18 17H12H6" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '<path class="path" d="M22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C21.5093 4.43821 21.8356 5.80655 21.9449 8" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '</svg>Aria2</div>',
-            send2app: send2aria2,
             onSelect: onSelectApp
           });
         }
@@ -833,16 +813,6 @@
         Lampa.Settings.main().render().find('[data-component="transmissionTweak"]').addClass("hide");
       }
       if (e.name === "main") {
-        if (Lampa.Settings.main().render().find('[data-component="aria2"]').length === 0) {
-          Lampa.SettingsApi.addComponent({
-            component: "aria2",
-            name: Lampa.Lang.translate('aria2')
-          });
-        }
-        Lampa.Settings.main().update();
-        Lampa.Settings.main().render().find('[data-component="aria2"]').addClass("hide");
-      }
-      if (e.name === "main") {
         if (Lampa.Settings.main().render().find('[data-component="synology"]').length === 0) {
           Lampa.SettingsApi.addComponent({
             component: "synology",
@@ -897,7 +867,6 @@
           universalClient: "Universal",
           qBittorent: Lampa.Lang.translate('qBittorent'),
           transmission: Lampa.Lang.translate('transmission'),
-          //aria2: Lampa.Lang.translate('aria2'),
           synology: "Synology"
         }
       },
@@ -1515,99 +1484,6 @@
         Lampa.Settings.update();
       }
     });
-
-    /* Aria 2 */
-    Lampa.SettingsApi.addParam({
-      component: "torrentDownloader",
-      param: {
-        name: "aria2",
-        type: "static",
-        //доступно select,input,trigger,title,static
-        "default": true
-      },
-      field: {
-        name: Lampa.Lang.translate('aria2'),
-        description: Lampa.Lang.translate('tdConfig')
-      },
-      onRender: function onRender(item) {
-        if (Lampa.Storage.field("tdClient") === "aria2") {
-          typeof Lampa.Storage.get("aria2Url") !== 'undefined' && pAria2.getStatus();
-          item.show();
-          $(".settings-param__name", item).before('<div id="aria2Status" class="settings-param__status wait"></div>');
-        } else item.hide();
-        item.on("hover:enter", function () {
-          Lampa.Settings.create("aria2");
-          Lampa.Controller.enabled().controller.back = function () {
-            Lampa.Settings.create("torrentDownloader");
-          };
-        });
-      }
-    });
-    Lampa.SettingsApi.addParam({
-      component: "aria2",
-      param: {
-        name: "aria2Head",
-        type: "static"
-      },
-      field: {
-        name: Lampa.Lang.translate('tdConfig')
-        //description: `Контроль адреса - ${Lampa.Storage.get("aria2Protocol") || "http://"}${Lampa.Storage.get("aria2Url") || "127.0.0.1:9001"}${Lampa.Storage.get("aria2Path") || "/rpc"}`,
-      }
-    });
-    Lampa.SettingsApi.addParam({
-      component: "aria2",
-      param: {
-        name: "aria2SSL",
-        type: "trigger",
-        //доступно select,input,trigger,title,static
-        "default": false
-      },
-      field: {
-        name: Lampa.Lang.translate('clientSSL'),
-        description: ""
-      },
-      onChange: function onChange(value) {
-        if (value === "true") Lampa.Storage.set("aria2Protocol", "https://");else Lampa.Storage.set("aria2Protocol", "http://");
-        Lampa.Settings.update();
-      }
-    });
-    Lampa.SettingsApi.addParam({
-      component: "aria2",
-      param: {
-        name: "aria2Url",
-        type: "input",
-        //доступно select,input,trigger,title,static
-        placeholder: '',
-        values: '',
-        "default": ''
-      },
-      field: {
-        name: Lampa.Lang.translate('clientAddress')
-      },
-      onChange: function onChange(item) {
-        Lampa.Storage.set("aria2Url", item);
-        Lampa.Settings.update();
-      }
-    });
-    Lampa.SettingsApi.addParam({
-      component: "aria2",
-      param: {
-        name: "aria2Path",
-        type: "input",
-        //доступно select,input,trigger,title,static
-        placeholder: '/jsonrpc',
-        values: '/jsonrpc',
-        "default": '/jsonrpc'
-      },
-      field: {
-        name: Lampa.Lang.translate('aria2RPCRoute'),
-        description: Lampa.Lang.translate('aria2RPCRouteDescription')
-      },
-      onChange: function onChange(item) {
-        Lampa.Storage.set("aria2Path", item);
-        Lampa.Settings.update();
-      }
-    });
     /* Info block */
     Lampa.SettingsApi.addParam({
       component: COMPONENT_NAME,
@@ -2054,25 +1930,6 @@
         en: "Torrent is seeding",
         uk: "Торрент роздається",
         zh: "种子正在做种"
-      },
-      /* Arai2 */
-      aria2: {
-        ru: "Aria2",
-        en: "Aria2",
-        uk: "Aria2",
-        zh: "Aria2" // Chinese translation
-      },
-      aria2RPCRoute: {
-        ru: "RPC Path",
-        en: "RPC Path",
-        uk: "RPC Path",
-        zh: "RPC 路径" // Chinese translation
-      },
-      aria2RPCRouteDescription: {
-        ru: "Изменение пути API. Не трогать без необходимости",
-        en: "Change api route. Do not change without need",
-        uk: "Змінити маршрут API. Не чіпати без нагальної потреби",
-        zh: "更改API路径。如无必要，请勿更改" // Chinese translation
       },
       /* Config */
       clientSSL: {
