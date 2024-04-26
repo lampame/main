@@ -450,7 +450,7 @@
     };
 
     var network = new Lampa.Reguest();
-    var api_url = 'https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/65fd541c268c09686a0e/documents?queries[]=limit(36)';
+    var api_url = 'https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/65fd541c268c09686a0e/documents?queries[0]={"method":"limit","values":[36]}';
     var auth = {
       headers: {
         "X-Appwrite-Project": "65fd523956f5ca97eaff"
@@ -459,9 +459,8 @@
     function main$1(params, oncomplite, onerror) {
       var apiUrl = api_url;
       if (params.searchQuery && params.searchQuery !== "") {
-        apiUrl += "&queries[]=search(\"name\", \"".concat(params.searchQuery, "\")");
-      } else {
-        apiUrl += "&queries[]=orderDesc(\"rating\")";
+        //apiUrl += `&queries[]=search("name", "${params.searchQuery}")`;
+        apiUrl += "&queries[1]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
       }
       network.silent(encodeURI(apiUrl), function (data) {
         data.collection = true;
