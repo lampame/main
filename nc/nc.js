@@ -473,7 +473,7 @@
       }, onerror, false, auth);
     }
     function full(params, oncomplite, onerror) {
-      network.silent(encodeURI(api_url + "&queries[]=offset(".concat(params.page * 36, ")")), function (data) {
+      network.silent(encodeURI(api_url + "&queries[0]={\"method\":\"offset\",\"values\":[".concat(params.page * 36, "]}")), function (data) {
         data.collection = true;
         data.total_pages = data.total / 36;
         data.documents.forEach(function (element) {
