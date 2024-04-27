@@ -105,6 +105,12 @@
           uk: " Top",
           zh: " Top" // Chinese translation
         },
+        nc_openAction: {
+          "ru": "Открыть",
+          "en": "Open",
+          "uk": "Открыть",
+          "zh": "开放" // Chinese translation
+        },
         nc_bookmarkAdded: {
           ru: "Вкладка успешно добавлена",
           en: "Tab successfully added",
@@ -112,10 +118,10 @@
           zh: "成功添加选项卡" // Chinese translation
         },
         nc_bookmarkAdd: {
-          "ru": "Добавить в избранное",
-          "en": "Add to favorites",
-          "uk": "Додати до обраного",
-          "zh": "添加到收藏夹" // Chinese translation
+          "ru": "Добавить в Меню - ",
+          "en": "Add to Menu - ",
+          "uk": "Додати до Меню - ",
+          "zh": "添加到收藏夹 - " // Chinese translation
         },
         nc_bookmarkDeleted: {
           ru: "Вкладка успешно удалена",
@@ -460,7 +466,7 @@
       var apiUrl = api_url;
       if (params.searchQuery && params.searchQuery !== "") {
         //apiUrl += `&queries[]=search("name", "${params.searchQuery}")`;
-        apiUrl += "&queries[1]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
+        apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
       }
       network.silent(encodeURI(apiUrl), function (data) {
         data.collection = true;
@@ -473,7 +479,7 @@
       }, onerror, false, auth);
     }
     function full(params, oncomplite, onerror) {
-      network.silent(encodeURI(api_url + "&queries[0]={\"method\":\"offset\",\"values\":[".concat(params.page * 36, "]}")), function (data) {
+      network.silent(encodeURI(api_url + "&queries[]={\"method\":\"offset\",\"values\":[".concat(params.page * 36, "]}")), function (data) {
         data.collection = true;
         data.total_pages = data.total / 36;
         data.documents.forEach(function (element) {
@@ -664,20 +670,36 @@
             last = target;
             active = items.indexOf(card);
           };
-          card.onMenu = function (target, card_data) {
+          card.onMenu = function (target, card_data) {};
+          card.onEnter = function (target, card_data) {
             var enabled = Lampa.Controller.enabled().name;
             var menu = [];
             menu.push({
+              title: "".concat(Lampa.Lang.translate('nc_openAction'), " New"),
+              action: 'open',
+              sort_by: 'first_air_date.desc',
+              type: 'New',
+              card_data: card_data
+            });
+            menu.push({
+              title: "".concat(Lampa.Lang.translate('nc_openAction'), " Top"),
+              action: 'open',
+              sort_by: '',
+              type: 'Top',
+              card_data: card_data
+            });
+            menu.push({
               title: Lampa.Lang.translate('nc_bookmarkAdd') + ' New',
+              action: 'favorite',
               card_data: card_data,
               type: 'new'
             });
             menu.push({
               title: Lampa.Lang.translate('nc_bookmarkAdd') + ' Top',
+              action: 'favorite',
               card_data: card_data,
               type: 'top'
             });
-            //TODO: Исправить костыль
             menu.push({
               title: '-----------------'
             });
@@ -700,8 +722,21 @@
                 Lampa.Controller.toggle(enabled);
               },
               onSelect: function onSelect(a) {
-                if (a.type) {
+                if (a.action === 'favorite') {
                   Favorites.add(a);
+                }
+                if (a.action === 'open') {
+                  Lampa.Activity.push({
+                    url: 'discover/tv',
+                    title: "".concat(a.type, " ").concat(a.card_data.title),
+                    //a.title + " " + a.card_data.title,
+                    component: "category_full",
+                    networks: a.card_data.id,
+                    sort_by: a.sort_by,
+                    source: 'tmdb',
+                    card_type: true,
+                    page: 1
+                  });
                 }
                 if (a.favorites) {
                   var itemsFavs = [];
@@ -745,33 +780,39 @@
               }
             });
           };
-          card.onEnter = function (target, card_data) {
-            last = target;
-            Lampa.Select.show({
-              title: Lampa.Lang.translate('title_action'),
-              items: [{
-                title: "New",
-                type: 'first_air_date.desc',
-                card_data: card_data
-              }, {
-                title: "Top",
-                type: '',
-                card_data: card_data
-              }],
-              onSelect: function onSelect(a) {
-                Lampa.Activity.push({
-                  url: 'discover/tv',
-                  title: a.title + " " + a.card_data.title,
-                  component: "category_full",
-                  networks: a.card_data.id,
-                  sort_by: a.type,
-                  source: 'tmdb',
-                  card_type: true,
-                  page: 1
-                });
-              }
-            });
-          };
+          /*
+          card.onEnter = (target, card_data) => {
+              last = target
+              Lampa.Select.show({
+                  title: Lampa.Lang.translate('title_action'),
+                  items: [
+                      {
+                          title: "New",
+                          type: 'first_air_date.desc',
+                          card_data: card_data
+                      },
+                      {
+                          title: "Top",
+                          type: '',
+                          card_data
+                      }
+                  ],
+                  onSelect: (a) => {
+                      Lampa.Activity.push({
+                          url: 'discover/tv',
+                          title: a.title + " " + a.card_data.title,
+                          component: "category_full",
+                          networks: a.card_data.id,
+                          sort_by: a.type,
+                          source: 'tmdb',
+                          card_type: true,
+                          page: 1
+                      });
+                  }
+              });
+          }
+           */
+
           body.appendChild(card.render(true));
           items.push(card);
           if (_this2.cardRender) _this2.cardRender(object, element, card);
