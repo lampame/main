@@ -33,6 +33,12 @@
           uk: "Обрати розділ",
           zh: "选择类别" // Chinese translation
         },
+        nc_country: {
+          ru: "Страна",
+          en: "Country",
+          uk: "Країна",
+          zh: "国家" // Chinese translation
+        },
         nc_subuniversal: {
           ru: "Общие",
           en: "General",
@@ -468,6 +474,10 @@
         //apiUrl += `&queries[]=search("name", "${params.searchQuery}")`;
         apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
       }
+      if (params.geoSearchQuery && params.geoSearchQuery !== "") {
+        //apiUrl += `&queries[]=search("name", "${params.searchQuery}")`;
+        apiUrl += "&queries[]={\"method\":\"equal\",\"attribute\":\"origin_country\",\"values\":[\"".concat(params.geoSearchQuery, "\"]}");
+      }
       network.silent(encodeURI(apiUrl), function (data) {
         data.collection = true;
         data.total_pages = data.total / 36;
@@ -595,6 +605,493 @@
       return Favorites;
     }();
 
+    function list() {
+      return {
+        "results": [{
+          "iso_3166_1": "AD",
+          "english_name": "Andorra",
+          "native_name": "Andorra"
+        }, {
+          "iso_3166_1": "AE",
+          "english_name": "United Arab Emirates",
+          "native_name": "United Arab Emirates"
+        }, {
+          "iso_3166_1": "AG",
+          "english_name": "Antigua and Barbuda",
+          "native_name": "Antigua & Barbuda"
+        }, {
+          "iso_3166_1": "AL",
+          "english_name": "Albania",
+          "native_name": "Albania"
+        }, {
+          "iso_3166_1": "AR",
+          "english_name": "Argentina",
+          "native_name": "Argentina"
+        }, {
+          "iso_3166_1": "AT",
+          "english_name": "Austria",
+          "native_name": "Austria"
+        }, {
+          "iso_3166_1": "AU",
+          "english_name": "Australia",
+          "native_name": "Australia"
+        }, {
+          "iso_3166_1": "BA",
+          "english_name": "Bosnia and Herzegovina",
+          "native_name": "Bosnia & Herzegovina"
+        }, {
+          "iso_3166_1": "BB",
+          "english_name": "Barbados",
+          "native_name": "Barbados"
+        }, {
+          "iso_3166_1": "BE",
+          "english_name": "Belgium",
+          "native_name": "Belgium"
+        }, {
+          "iso_3166_1": "BG",
+          "english_name": "Bulgaria",
+          "native_name": "Bulgaria"
+        }, {
+          "iso_3166_1": "BH",
+          "english_name": "Bahrain",
+          "native_name": "Bahrain"
+        }, {
+          "iso_3166_1": "BM",
+          "english_name": "Bermuda",
+          "native_name": "Bermuda"
+        }, {
+          "iso_3166_1": "BO",
+          "english_name": "Bolivia",
+          "native_name": "Bolivia"
+        }, {
+          "iso_3166_1": "BR",
+          "english_name": "Brazil",
+          "native_name": "Brazil"
+        }, {
+          "iso_3166_1": "BS",
+          "english_name": "Bahamas",
+          "native_name": "Bahamas"
+        }, {
+          "iso_3166_1": "CA",
+          "english_name": "Canada",
+          "native_name": "Canada"
+        }, {
+          "iso_3166_1": "CH",
+          "english_name": "Switzerland",
+          "native_name": "Switzerland"
+        }, {
+          "iso_3166_1": "CI",
+          "english_name": "Cote D'Ivoire",
+          "native_name": "Côte d’Ivoire"
+        }, {
+          "iso_3166_1": "CL",
+          "english_name": "Chile",
+          "native_name": "Chile"
+        }, {
+          "iso_3166_1": "CO",
+          "english_name": "Colombia",
+          "native_name": "Colombia"
+        }, {
+          "iso_3166_1": "CR",
+          "english_name": "Costa Rica",
+          "native_name": "Costa Rica"
+        }, {
+          "iso_3166_1": "CU",
+          "english_name": "Cuba",
+          "native_name": "Cuba"
+        }, {
+          "iso_3166_1": "CV",
+          "english_name": "Cape Verde",
+          "native_name": "Cape Verde"
+        }, {
+          "iso_3166_1": "CZ",
+          "english_name": "Czech Republic",
+          "native_name": "Czech Republic"
+        }, {
+          "iso_3166_1": "DE",
+          "english_name": "Germany",
+          "native_name": "Germany"
+        }, {
+          "iso_3166_1": "DK",
+          "english_name": "Denmark",
+          "native_name": "Denmark"
+        }, {
+          "iso_3166_1": "DO",
+          "english_name": "Dominican Republic",
+          "native_name": "Dominican Republic"
+        }, {
+          "iso_3166_1": "DZ",
+          "english_name": "Algeria",
+          "native_name": "Algeria"
+        }, {
+          "iso_3166_1": "EC",
+          "english_name": "Ecuador",
+          "native_name": "Ecuador"
+        }, {
+          "iso_3166_1": "EE",
+          "english_name": "Estonia",
+          "native_name": "Estonia"
+        }, {
+          "iso_3166_1": "EG",
+          "english_name": "Egypt",
+          "native_name": "Egypt"
+        }, {
+          "iso_3166_1": "ES",
+          "english_name": "Spain",
+          "native_name": "Spain"
+        }, {
+          "iso_3166_1": "FI",
+          "english_name": "Finland",
+          "native_name": "Finland"
+        }, {
+          "iso_3166_1": "FJ",
+          "english_name": "Fiji",
+          "native_name": "Fiji"
+        }, {
+          "iso_3166_1": "FR",
+          "english_name": "France",
+          "native_name": "France"
+        }, {
+          "iso_3166_1": "GB",
+          "english_name": "United Kingdom",
+          "native_name": "United Kingdom"
+        }, {
+          "iso_3166_1": "GF",
+          "english_name": "French Guiana",
+          "native_name": "French Guiana"
+        }, {
+          "iso_3166_1": "GH",
+          "english_name": "Ghana",
+          "native_name": "Ghana"
+        }, {
+          "iso_3166_1": "GI",
+          "english_name": "Gibraltar",
+          "native_name": "Gibraltar"
+        }, {
+          "iso_3166_1": "GP",
+          "english_name": "Guadaloupe",
+          "native_name": "Guadeloupe"
+        }, {
+          "iso_3166_1": "GQ",
+          "english_name": "Equatorial Guinea",
+          "native_name": "Equatorial Guinea"
+        }, {
+          "iso_3166_1": "GR",
+          "english_name": "Greece",
+          "native_name": "Greece"
+        }, {
+          "iso_3166_1": "GT",
+          "english_name": "Guatemala",
+          "native_name": "Guatemala"
+        }, {
+          "iso_3166_1": "HK",
+          "english_name": "Hong Kong",
+          "native_name": "Hong Kong SAR China"
+        }, {
+          "iso_3166_1": "HN",
+          "english_name": "Honduras",
+          "native_name": "Honduras"
+        }, {
+          "iso_3166_1": "HR",
+          "english_name": "Croatia",
+          "native_name": "Croatia"
+        }, {
+          "iso_3166_1": "HU",
+          "english_name": "Hungary",
+          "native_name": "Hungary"
+        }, {
+          "iso_3166_1": "ID",
+          "english_name": "Indonesia",
+          "native_name": "Indonesia"
+        }, {
+          "iso_3166_1": "IE",
+          "english_name": "Ireland",
+          "native_name": "Ireland"
+        }, {
+          "iso_3166_1": "IL",
+          "english_name": "Israel",
+          "native_name": "Israel"
+        }, {
+          "iso_3166_1": "IN",
+          "english_name": "India",
+          "native_name": "India"
+        }, {
+          "iso_3166_1": "IQ",
+          "english_name": "Iraq",
+          "native_name": "Iraq"
+        }, {
+          "iso_3166_1": "IS",
+          "english_name": "Iceland",
+          "native_name": "Iceland"
+        }, {
+          "iso_3166_1": "IT",
+          "english_name": "Italy",
+          "native_name": "Italy"
+        }, {
+          "iso_3166_1": "JM",
+          "english_name": "Jamaica",
+          "native_name": "Jamaica"
+        }, {
+          "iso_3166_1": "JO",
+          "english_name": "Jordan",
+          "native_name": "Jordan"
+        }, {
+          "iso_3166_1": "JP",
+          "english_name": "Japan",
+          "native_name": "Japan"
+        }, {
+          "iso_3166_1": "KE",
+          "english_name": "Kenya",
+          "native_name": "Kenya"
+        }, {
+          "iso_3166_1": "KR",
+          "english_name": "South Korea",
+          "native_name": "South Korea"
+        }, {
+          "iso_3166_1": "KW",
+          "english_name": "Kuwait",
+          "native_name": "Kuwait"
+        }, {
+          "iso_3166_1": "LB",
+          "english_name": "Lebanon",
+          "native_name": "Lebanon"
+        }, {
+          "iso_3166_1": "LC",
+          "english_name": "St. Lucia",
+          "native_name": "St. Lucia"
+        }, {
+          "iso_3166_1": "LI",
+          "english_name": "Liechtenstein",
+          "native_name": "Liechtenstein"
+        }, {
+          "iso_3166_1": "LT",
+          "english_name": "Lithuania",
+          "native_name": "Lithuania"
+        }, {
+          "iso_3166_1": "LV",
+          "english_name": "Latvia",
+          "native_name": "Latvia"
+        }, {
+          "iso_3166_1": "LY",
+          "english_name": "Libyan Arab Jamahiriya",
+          "native_name": "Libya"
+        }, {
+          "iso_3166_1": "MA",
+          "english_name": "Morocco",
+          "native_name": "Morocco"
+        }, {
+          "iso_3166_1": "MC",
+          "english_name": "Monaco",
+          "native_name": "Monaco"
+        }, {
+          "iso_3166_1": "MD",
+          "english_name": "Moldova",
+          "native_name": "Moldova"
+        }, {
+          "iso_3166_1": "MK",
+          "english_name": "Macedonia",
+          "native_name": "Macedonia"
+        }, {
+          "iso_3166_1": "MT",
+          "english_name": "Malta",
+          "native_name": "Malta"
+        }, {
+          "iso_3166_1": "MU",
+          "english_name": "Mauritius",
+          "native_name": "Mauritius"
+        }, {
+          "iso_3166_1": "MX",
+          "english_name": "Mexico",
+          "native_name": "Mexico"
+        }, {
+          "iso_3166_1": "MY",
+          "english_name": "Malaysia",
+          "native_name": "Malaysia"
+        }, {
+          "iso_3166_1": "MZ",
+          "english_name": "Mozambique",
+          "native_name": "Mozambique"
+        }, {
+          "iso_3166_1": "NE",
+          "english_name": "Niger",
+          "native_name": "Niger"
+        }, {
+          "iso_3166_1": "NG",
+          "english_name": "Nigeria",
+          "native_name": "Nigeria"
+        }, {
+          "iso_3166_1": "NL",
+          "english_name": "Netherlands",
+          "native_name": "Netherlands"
+        }, {
+          "iso_3166_1": "NO",
+          "english_name": "Norway",
+          "native_name": "Norway"
+        }, {
+          "iso_3166_1": "NZ",
+          "english_name": "New Zealand",
+          "native_name": "New Zealand"
+        }, {
+          "iso_3166_1": "OM",
+          "english_name": "Oman",
+          "native_name": "Oman"
+        }, {
+          "iso_3166_1": "PA",
+          "english_name": "Panama",
+          "native_name": "Panama"
+        }, {
+          "iso_3166_1": "PE",
+          "english_name": "Peru",
+          "native_name": "Peru"
+        }, {
+          "iso_3166_1": "PF",
+          "english_name": "French Polynesia",
+          "native_name": "French Polynesia"
+        }, {
+          "iso_3166_1": "PH",
+          "english_name": "Philippines",
+          "native_name": "Philippines"
+        }, {
+          "iso_3166_1": "PK",
+          "english_name": "Pakistan",
+          "native_name": "Pakistan"
+        }, {
+          "iso_3166_1": "PL",
+          "english_name": "Poland",
+          "native_name": "Poland"
+        }, {
+          "iso_3166_1": "PS",
+          "english_name": "Palestinian Territory",
+          "native_name": "Palestinian Territories"
+        }, {
+          "iso_3166_1": "PT",
+          "english_name": "Portugal",
+          "native_name": "Portugal"
+        }, {
+          "iso_3166_1": "PY",
+          "english_name": "Paraguay",
+          "native_name": "Paraguay"
+        }, {
+          "iso_3166_1": "QA",
+          "english_name": "Qatar",
+          "native_name": "Qatar"
+        }, {
+          "iso_3166_1": "RO",
+          "english_name": "Romania",
+          "native_name": "Romania"
+        }, {
+          "iso_3166_1": "RS",
+          "english_name": "Serbia",
+          "native_name": "Serbia"
+        }, {
+          "iso_3166_1": "RU",
+          "english_name": "Russia",
+          "native_name": "Russia"
+        }, {
+          "iso_3166_1": "SA",
+          "english_name": "Saudi Arabia",
+          "native_name": "Saudi Arabia"
+        }, {
+          "iso_3166_1": "SC",
+          "english_name": "Seychelles",
+          "native_name": "Seychelles"
+        }, {
+          "iso_3166_1": "SE",
+          "english_name": "Sweden",
+          "native_name": "Sweden"
+        }, {
+          "iso_3166_1": "SG",
+          "english_name": "Singapore",
+          "native_name": "Singapore"
+        }, {
+          "iso_3166_1": "SI",
+          "english_name": "Slovenia",
+          "native_name": "Slovenia"
+        }, {
+          "iso_3166_1": "SK",
+          "english_name": "Slovakia",
+          "native_name": "Slovakia"
+        }, {
+          "iso_3166_1": "SM",
+          "english_name": "San Marino",
+          "native_name": "San Marino"
+        }, {
+          "iso_3166_1": "SN",
+          "english_name": "Senegal",
+          "native_name": "Senegal"
+        }, {
+          "iso_3166_1": "SV",
+          "english_name": "El Salvador",
+          "native_name": "El Salvador"
+        }, {
+          "iso_3166_1": "TC",
+          "english_name": "Turks and Caicos Islands",
+          "native_name": "Turks & Caicos Islands"
+        }, {
+          "iso_3166_1": "TH",
+          "english_name": "Thailand",
+          "native_name": "Thailand"
+        }, {
+          "iso_3166_1": "TN",
+          "english_name": "Tunisia",
+          "native_name": "Tunisia"
+        }, {
+          "iso_3166_1": "TR",
+          "english_name": "Turkey",
+          "native_name": "Turkey"
+        }, {
+          "iso_3166_1": "TT",
+          "english_name": "Trinidad and Tobago",
+          "native_name": "Trinidad & Tobago"
+        }, {
+          "iso_3166_1": "TW",
+          "english_name": "Taiwan",
+          "native_name": "Taiwan"
+        }, {
+          "iso_3166_1": "TZ",
+          "english_name": "Tanzania",
+          "native_name": "Tanzania"
+        }, {
+          "iso_3166_1": "UG",
+          "english_name": "Uganda",
+          "native_name": "Uganda"
+        }, {
+          "iso_3166_1": "US",
+          "english_name": "United States of America",
+          "native_name": "United States"
+        }, {
+          "iso_3166_1": "UY",
+          "english_name": "Uruguay",
+          "native_name": "Uruguay"
+        }, {
+          "iso_3166_1": "VA",
+          "english_name": "Holy See",
+          "native_name": "Vatican City"
+        }, {
+          "iso_3166_1": "VE",
+          "english_name": "Venezuela",
+          "native_name": "Venezuela"
+        }, {
+          "iso_3166_1": "XK",
+          "english_name": "Kosovo",
+          "native_name": "Kosovo"
+        }, {
+          "iso_3166_1": "YE",
+          "english_name": "Yemen",
+          "native_name": "Yemen"
+        }, {
+          "iso_3166_1": "ZA",
+          "english_name": "South Africa",
+          "native_name": "South Africa"
+        }, {
+          "iso_3166_1": "ZM",
+          "english_name": "Zambia",
+          "native_name": "Zambia"
+        }]
+      };
+    }
+    var GeoBase = list();
+
     function component(object) {
       var network = new Lampa.Reguest();
       var scroll = new Lampa.Scroll({
@@ -620,6 +1117,7 @@
         button.innerHTML = "\n                <svg width=\"48\" height=\"43\" viewBox=\"0 0 48 43\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path d=\"M8.11178 23.9546L7.10608 24.9852L8.137 25.9913L9.1427 24.96L8.11178 23.9546ZM20.9815 29.7729L35.3816 15.3729L33.3449 13.3364L18.945 27.7363L20.9815 29.7729ZM18.945 15.3728L33.3449 29.7729L35.3816 27.7363L20.9815 13.3364L18.945 15.3728ZM44.9232 21.5546C44.9232 31.3632 36.9718 39.3146 27.1632 39.3146V42.1946C38.5623 42.1946 47.8032 32.9537 47.8032 21.5546H44.9232ZM9.40324 21.5546C9.40324 11.746 17.3547 3.79461 27.1632 3.79461V0.914612C15.7641 0.914612 6.52324 10.1555 6.52324 21.5546H9.40324ZM27.1632 3.79461C36.9718 3.79461 44.9232 11.746 44.9232 21.5546H47.8032C47.8032 10.1555 38.5623 0.914612 27.1632 0.914612V3.79461ZM9.54071 23.7765C9.45004 23.0491 9.40324 22.3077 9.40324 21.5546H6.52324C6.52324 22.427 6.57746 23.2877 6.68284 24.1327L9.54071 23.7765ZM27.1632 39.3146C21.0603 39.3146 15.6756 36.2376 12.4764 31.5437L10.0966 33.1656C13.8093 38.6129 20.0678 42.1946 27.1632 42.1946V39.3146ZM9.1427 24.96L14.9942 18.96L12.9323 16.9493L7.08088 22.9493L9.1427 24.96ZM9.1175 22.9241L2.96896 16.9241L0.95752 18.9852L7.10608 24.9852L9.1175 22.9241Z\"/>\n                </svg>\n                <div>Reset search</div>\n        ";
         button.on('hover:enter', function () {
           object.searchQuery = "";
+          object.geoSearchQuery = "";
           Lampa.Activity.replace(object);
         });
 
@@ -712,6 +1210,10 @@
               search: true
             });
             menu.push({
+              title: 'Country',
+              country: true
+            });
+            menu.push({
               title: 'Reset',
               reset: true
             });
@@ -769,6 +1271,26 @@
                       object.searchQuery = val;
                       Lampa.Activity.replace(object);
                     } else {
+                      Lampa.Controller.toggle('content');
+                    }
+                  });
+                }
+                if (a.country) {
+                  var itemsGeo = [];
+                  GeoBase.results.forEach(function (item) {
+                    itemsGeo.push({
+                      title: item.english_name,
+                      id: item.iso_3166_1
+                    });
+                  });
+                  Lampa.Select.show({
+                    title: Lampa.Lang.translate('nc_networksList'),
+                    items: itemsGeo,
+                    onSelect: function onSelect(a) {
+                      object.geoSearchQuery = a.id;
+                      Lampa.Activity.replace(object);
+                    },
+                    onBack: function onBack() {
                       Lampa.Controller.toggle('content');
                     }
                   });
@@ -872,10 +1394,35 @@
         clear.innerHTML = "\n                <svg width=\"48\" height=\"43\" viewBox=\"0 0 48 43\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path d=\"M8.11178 23.9546L7.10608 24.9852L8.137 25.9913L9.1427 24.96L8.11178 23.9546ZM20.9815 29.7729L35.3816 15.3729L33.3449 13.3364L18.945 27.7363L20.9815 29.7729ZM18.945 15.3728L33.3449 29.7729L35.3816 27.7363L20.9815 13.3364L18.945 15.3728ZM44.9232 21.5546C44.9232 31.3632 36.9718 39.3146 27.1632 39.3146V42.1946C38.5623 42.1946 47.8032 32.9537 47.8032 21.5546H44.9232ZM9.40324 21.5546C9.40324 11.746 17.3547 3.79461 27.1632 3.79461V0.914612C15.7641 0.914612 6.52324 10.1555 6.52324 21.5546H9.40324ZM27.1632 3.79461C36.9718 3.79461 44.9232 11.746 44.9232 21.5546H47.8032C47.8032 10.1555 38.5623 0.914612 27.1632 0.914612V3.79461ZM9.54071 23.7765C9.45004 23.0491 9.40324 22.3077 9.40324 21.5546H6.52324C6.52324 22.427 6.57746 23.2877 6.68284 24.1327L9.54071 23.7765ZM27.1632 39.3146C21.0603 39.3146 15.6756 36.2376 12.4764 31.5437L10.0966 33.1656C13.8093 38.6129 20.0678 42.1946 27.1632 42.1946V39.3146ZM9.1427 24.96L14.9942 18.96L12.9323 16.9493L7.08088 22.9493L9.1427 24.96ZM9.1175 22.9241L2.96896 16.9241L0.95752 18.9852L7.10608 24.9852L9.1175 22.9241Z\"/>\n                </svg>\n                <div>Reset search</div>\n        ";
         clear.on('hover:enter', function () {
           object.searchQuery = "";
+          object.geoSearchQuery = "";
           Lampa.Activity.replace(object);
+        });
+        var geo = document.createElement('div');
+        geo.className = 'lme-clear simple-button simple-button--invisible selector button--clear';
+        geo.innerHTML = "\n                <svg width=\"60\" height=\"58\" viewBox=\"0 0 60 58\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M30 0.874997C22.2938 0.632341 14.8062 3.45783 9.18145 8.73105C3.55669 14.0043 0.254507 21.2942 0 29C0.254507 36.7058 3.55669 43.9957 9.18145 49.2689C14.8062 54.5422 22.2938 57.3677 30 57.125C37.7062 57.3677 45.1938 54.5422 50.8185 49.2689C56.4433 43.9957 59.7455 36.7058 60 29C59.7455 21.2942 56.4433 14.0043 50.8185 8.73105C45.1938 3.45783 37.7062 0.632341 30 0.874997ZM55.1625 26.375L50.55 25.25C49.6125 24.9875 49.5375 24.9125 49.4625 24.8C48.9 24.05 48.2625 23.0375 47.6625 22.0625C47.6625 21.725 47.175 21.2 47.0625 20.9C46.95 20.6 48.375 18.65 48.975 17.75C49.6218 17.0775 50.368 16.5084 51.1875 16.0625C53.3679 19.106 54.7361 22.6554 55.1625 26.375ZM30 5.5625L29.6625 6.2C29.629 6.07724 29.629 5.94775 29.6625 5.825C29.6625 6.05 29.1 6.3875 28.725 6.7625L27.6 7.85C27.0869 8.38489 26.7763 9.08187 26.7215 9.82104C26.6668 10.5602 26.8713 11.2953 27.3 11.9H26.85C26.2578 11.9171 25.6772 12.0676 25.1512 12.3403C24.6253 12.613 24.1677 13.0009 23.8125 13.475C23.3979 14.0464 23.1155 14.7029 22.9858 15.3968C22.8561 16.0908 22.8823 16.8049 23.0625 17.4875V17.75C22.5156 17.8475 21.9766 17.9854 21.45 18.1625L20.55 18.4625L18.15 19.25C17.4349 19.4595 16.783 19.8432 16.2528 20.3669C15.7227 20.8905 15.3308 21.5375 15.1125 22.25C14.9381 22.8479 14.9153 23.4798 15.0463 24.0886C15.1772 24.6975 15.4577 25.2642 15.8625 25.7375C17.3644 27.3608 19.1104 28.7399 21.0375 29.825C22.9237 31.0817 25.0605 31.9134 27.3 32.2625H33.6C34.3586 32.2263 35.1141 32.3826 35.796 32.717C36.478 33.0514 37.0641 33.553 37.5 34.175C37.704 34.3854 37.8546 34.6416 37.9394 34.9221C38.0242 35.2026 38.0407 35.4993 37.9875 35.7875C37.9128 36.2652 37.7194 36.7165 37.425 37.1C35.559 38.6263 34.2963 40.7662 33.8625 43.1375C33.3767 44.9001 32.7754 46.6289 32.0625 48.3125C31.6125 49.475 31.2 50.6 30.9 51.5C29.642 51.5905 28.3776 51.4894 27.15 51.2C27.4488 48.4138 26.7873 45.6091 25.275 43.25C24.0139 41.7599 23.3111 39.877 23.2875 37.925C23.5298 36.0733 23.1094 34.1955 22.1006 32.6239C21.0917 31.0523 19.5595 29.8882 17.775 29.3375C13.5767 26.7281 9.89108 23.3729 6.9 19.4375C9.0671 15.1955 12.3807 11.6465 16.4641 9.19379C20.5476 6.74106 25.2372 5.48297 30 5.5625ZM4.6875 29C4.68679 27.5383 4.83759 26.0806 5.1375 24.65C8.21591 28.3346 11.9549 31.4122 16.1625 33.725C18.4125 34.55 18.75 35.4125 18.75 37.925C18.7583 41.0595 19.9043 44.0844 21.975 46.4375C22.528 48.0641 22.7075 49.7945 22.5 51.5C17.4882 50.1965 13.038 47.2948 9.82365 43.2347C6.60934 39.1745 4.8062 34.1771 4.6875 29ZM35.8875 51.8C35.8875 51.2375 36.3375 50.6 36.5625 50C37.415 48.0606 38.1048 46.0537 38.625 44C38.9187 42.7281 39.632 41.5921 40.65 40.775C41.9623 39.4849 42.7277 37.7393 42.7875 35.9C42.8335 35.028 42.7008 34.1558 42.3978 33.3368C42.0947 32.5179 41.6276 31.7695 41.025 31.1375C40.123 30.0309 38.9756 29.1498 37.6737 28.5639C36.3719 27.9781 34.9514 27.7037 33.525 27.7625H27.5625C24.7619 27.0038 22.1879 25.5753 20.0625 23.6L21.825 23L22.8375 22.7C23.2834 22.4959 23.7731 22.4057 24.2625 22.4375L24.6 23C24.8806 23.5263 25.3472 23.9292 25.9088 24.1303C26.4703 24.3313 27.0866 24.3161 27.6375 24.0875C28.1829 23.8331 28.6149 23.3858 28.8502 22.832C29.0856 22.2781 29.1078 21.6567 28.9125 21.0875V20.4125C28.5 19.2875 28.0125 17.7125 27.7125 16.6625C28.6852 16.7033 29.6504 16.4767 30.5033 16.0073C31.3562 15.5378 32.0641 14.8436 32.55 14C32.7828 13.3716 32.843 12.6924 32.7243 12.0329C32.6056 11.3734 32.3123 10.7577 31.875 10.25C32.3163 9.85394 32.7298 9.42793 33.1125 8.975C33.4567 8.56312 33.7085 8.08215 33.8508 7.5646C33.9931 7.04704 34.0227 6.50496 33.9375 5.975C39.1791 6.74659 44.0596 9.10179 47.925 12.725C46.7901 13.418 45.7871 14.3068 44.9625 15.35C44.0691 16.6555 43.2672 18.0212 42.5625 19.4375C42.26 20.3116 42.1839 21.2481 42.3412 22.1596C42.4986 23.0712 42.8844 23.9279 43.4625 24.65C44.1375 25.8125 44.8875 26.9375 45.5625 27.875C46.4929 29.0477 47.8326 29.8247 49.3125 30.05C50.1375 30.275 53.0625 30.875 55.125 31.2875C54.4619 36.2872 52.2501 40.9539 48.7999 44.6327C45.3498 48.3115 40.8345 50.8178 35.8875 51.8Z\"/>\n                </svg>\n                <div>".concat(Lampa.Lang.translate("nc_country"), "</div>\n        ");
+        geo.on('hover:enter', function () {
+          var itemsGeo = [];
+          GeoBase.results.forEach(function (item) {
+            itemsGeo.push({
+              title: item.english_name,
+              id: item.iso_3166_1
+            });
+          });
+          Lampa.Select.show({
+            title: Lampa.Lang.translate('nc_networksList'),
+            items: itemsGeo,
+            onSelect: function onSelect(a) {
+              object.geoSearchQuery = a.id;
+              Lampa.Activity.replace(object);
+            },
+            onBack: function onBack() {
+              Lampa.Controller.toggle('content');
+            }
+          });
         });
         header.appendChild(search);
         header.appendChild(clear);
+        header.appendChild(geo);
         header.appendChild(favorites);
         header.appendChild(baseInfo);
         if (data.documents.length) {
@@ -913,6 +1460,7 @@
             if (val) {
               //this.clearButtons(false, val)
               object.searchQuery = val;
+              object.geoSearchQuery = "";
               Lampa.Activity.replace(object);
             } else {
               Lampa.Controller.toggle('content');
