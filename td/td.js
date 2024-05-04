@@ -265,20 +265,43 @@
     qPanels: qPanels$1
   };
 
+  function transmissionDir() {
+    var data = JSON.stringify({
+      "method": "session-get"
+    });
+    var xhr = new XMLHttpRequest();
+    xhr.withCredentials = false;
+    xhr.addEventListener("readystatechange", function () {
+      if (this.readyState === 4) {
+        JSON.parse(this.responseText).arguments['download-dir'];
+      }
+    });
+    xhr.open("POST", "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
+    xhr.setRequestHeader("X-Transmission-Session-Id", Lampa.Storage.get("transmissionKey"));
+    xhr.setRequestHeader("Authorization", "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))));
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(data);
+  }
   function transmissionClient(selectedTorrent) {
     if (selectedTorrent && Lampa.Storage.get("transmissionKey")) {
+      transmissionDir();
+      var categoryParam = selectedTorrent.CategoryDesc ? Lampa.Storage.get("transmission".concat(selectedTorrent.CategoryDesc)) : transmissionDir();
       var data = JSON.stringify({
         method: "torrent-add",
         arguments: {
           paused: Lampa.Storage.get("transmissionAutostart"),
-          filename: selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link
+          filename: selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link,
+          "download-dir": categoryParam
         }
       });
       var xhr = new XMLHttpRequest();
       xhr.addEventListener("readystatechange", function () {
-        if (this.readyState === 4 && this.status === 200) {
+        if (this.readyState === 4 && this.status === 200 && !JSON.parse(this.responseText).arguments.hasOwnProperty('torrent-duplicate')) {
           Lampa.Noty.show(Lampa.Lang.translate('tdAdded'));
-          console.log("TD", this.responseText);
+          console.log("TD", JSON.parse(this.responseText));
+        } else if (this.readyState === 4 && this.status === 200 && JSON.parse(this.responseText).arguments.hasOwnProperty('torrent-duplicate')) {
+          Lampa.Noty.show(Lampa.Lang.translate('tdDuplicate'));
+          console.log("TD", JSON.parse(this.responseText));
         } else if (xhr.status !== 200) {
           console.log("TD", xhr);
           Lampa.Noty.show(Lampa.Lang.translate('tdError') + xhr.status);
@@ -1484,6 +1507,44 @@
         Lampa.Settings.update();
       }
     });
+    Lampa.SettingsApi.addParam({
+      component: "transmissionTweak",
+      param: {
+        name: "transmissionMovies",
+        type: "input",
+        //доступно select,input,trigger,title,static
+        //values: `${Lampa.Storage.get("qBittorentPass")}`,
+        placeholder: '',
+        values: '',
+        "default": ''
+      },
+      field: {
+        name: Lampa.Lang.translate('qBittorentCM')
+      },
+      onChange: function onChange(item) {
+        Lampa.Storage.set("transmissionMovies", item);
+        Lampa.Settings.update();
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: "transmissionTweak",
+      param: {
+        name: "transmissionTV",
+        type: "input",
+        //доступно select,input,trigger,title,static
+        //values: `${Lampa.Storage.get("qBittorentPass")}`,
+        placeholder: '',
+        values: '',
+        "default": ''
+      },
+      field: {
+        name: Lampa.Lang.translate('qBittorentCS')
+      },
+      onChange: function onChange(item) {
+        Lampa.Storage.set("transmissionTV", item);
+        Lampa.Settings.update();
+      }
+    });
     /* Info block */
     Lampa.SettingsApi.addParam({
       component: COMPONENT_NAME,
@@ -1974,6 +2035,12 @@
         en: "Error loading magnet:",
         uk: "Помилка із Magnet посиланням",
         zh: "加载磁力时出错:" // Chinese translation
+      },
+      tdDuplicate: {
+        ru: "Торрент уже добавлен",
+        en: "Duplicate torrent",
+        uk: "Торрент вже додано",
+        zh: "Duplicate torrent"
       },
       tdAdded: {
         ru: "Торрент загружается",

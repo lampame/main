@@ -608,6 +608,26 @@
     function list() {
       return {
         "results": [{
+          "iso_3166_1": "CN",
+          "english_name": "China",
+          "native_name": "China"
+        }, {
+          "iso_3166_1": "US",
+          "english_name": "United States of America",
+          "native_name": "United States"
+        }, {
+          "iso_3166_1": "FR",
+          "english_name": "France",
+          "native_name": "France"
+        }, {
+          "iso_3166_1": "GB",
+          "english_name": "United Kingdom",
+          "native_name": "United Kingdom"
+        }, {
+          "iso_3166_1": "RU",
+          "english_name": "Russia",
+          "native_name": "Russia"
+        }, {
           "iso_3166_1": "AD",
           "english_name": "Andorra",
           "native_name": "Andorra"
@@ -747,14 +767,6 @@
           "iso_3166_1": "FJ",
           "english_name": "Fiji",
           "native_name": "Fiji"
-        }, {
-          "iso_3166_1": "FR",
-          "english_name": "France",
-          "native_name": "France"
-        }, {
-          "iso_3166_1": "GB",
-          "english_name": "United Kingdom",
-          "native_name": "United Kingdom"
         }, {
           "iso_3166_1": "GF",
           "english_name": "French Guiana",
@@ -984,10 +996,6 @@
           "english_name": "Serbia",
           "native_name": "Serbia"
         }, {
-          "iso_3166_1": "RU",
-          "english_name": "Russia",
-          "native_name": "Russia"
-        }, {
           "iso_3166_1": "SA",
           "english_name": "Saudi Arabia",
           "native_name": "Saudi Arabia"
@@ -1055,10 +1063,6 @@
           "iso_3166_1": "UG",
           "english_name": "Uganda",
           "native_name": "Uganda"
-        }, {
-          "iso_3166_1": "US",
-          "english_name": "United States of America",
-          "native_name": "United States"
         }, {
           "iso_3166_1": "UY",
           "english_name": "Uruguay",
