@@ -296,11 +296,14 @@
       });
       var xhr = new XMLHttpRequest();
       xhr.addEventListener("readystatechange", function () {
-        if (this.readyState === 4 && this.status === 200 && !JSON.parse(this.responseText).arguments.hasOwnProperty('torrent-duplicate')) {
-          Lampa.Noty.show(Lampa.Lang.translate('tdAdded'));
-          console.log("TD", JSON.parse(this.responseText));
+        if (this.readyState === 4 && this.status === 200 && JSON.parse(this.responseText).result === "Couldn't fetch torrent: Found (302)") {
+          console.log("TD", xhr);
+          Lampa.Noty.show(Lampa.Lang.translate('tdError') + JSON.parse(this.responseText).result);
         } else if (this.readyState === 4 && this.status === 200 && JSON.parse(this.responseText).arguments.hasOwnProperty('torrent-duplicate')) {
           Lampa.Noty.show(Lampa.Lang.translate('tdDuplicate'));
+          console.log("TD", JSON.parse(this.responseText));
+        } else if (this.readyState === 4 && this.status === 200) {
+          Lampa.Noty.show(Lampa.Lang.translate('tdAdded'));
           console.log("TD", JSON.parse(this.responseText));
         } else if (xhr.status !== 200) {
           console.log("TD", xhr);
@@ -1519,7 +1522,7 @@
         "default": ''
       },
       field: {
-        name: Lampa.Lang.translate('qBittorentCM')
+        name: Lampa.Lang.translate('transmissionCM')
       },
       onChange: function onChange(item) {
         Lampa.Storage.set("transmissionMovies", item);
@@ -1538,7 +1541,7 @@
         "default": ''
       },
       field: {
-        name: Lampa.Lang.translate('qBittorentCS')
+        name: Lampa.Lang.translate('transmissionCS')
       },
       onChange: function onChange(item) {
         Lampa.Storage.set("transmissionTV", item);
@@ -1948,6 +1951,18 @@
         en: "Change api route. Do not change without need",
         uk: "Змінити маршрут API. Не чіпати без нагальної потреби",
         zh: "更改API路径。如无必要，请勿更改" // Chinese translation
+      },
+      transmissionCM: {
+        ru: "Путь для Фильмов",
+        en: "Path for Movie",
+        uk: "Шлях для Фільмів",
+        zh: "电影之路" // Chinese translation
+      },
+      transmissionCS: {
+        ru: "Путь для Сериалов",
+        en: "Path for TVShow",
+        uk: "Шлях для Серіалів",
+        zh: "系列之路" // Chinese translation
       },
       /* panels */
       transmission0: {
