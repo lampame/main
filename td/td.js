@@ -208,7 +208,7 @@
         // Если ответ пустой, добавить строку с сообщением
         var emptyRow = table.insertRow();
         var emptyCell = emptyRow.insertCell();
-        emptyCell.colSpan = headerCells.length;
+        //emptyCell.colSpan = headerCells.length;
         emptyCell.textContent = Lampa.Lang.translate('tdPanelDataError');
       }
 
@@ -423,7 +423,13 @@
       });
 
       // Добавить строки с данными из переменной response
-      if (response && response.length > 0) {
+      if (response && response.length === 0 || !response) {
+        // Если ответ пустой, добавить строку с сообщением
+        var emptyRow = table.insertRow();
+        var emptyCell = emptyRow.insertCell();
+        //emptyCell.colSpan = headerCells.length;
+        emptyCell.textContent = Lampa.Lang.translate('tdPanelDataError');
+      } else {
         response.forEach(function (item) {
           var row = table.insertRow();
           row.id = "td_panel";
@@ -469,12 +475,6 @@
           actionCell.appendChild(deleteCell);
           actionCell.appendChild(fdeleteCell);
         });
-      } else {
-        // Если ответ пустой, добавить строку с сообщением
-        var emptyRow = table.insertRow();
-        var emptyCell = emptyRow.insertCell();
-        emptyCell.colSpan = headerCells.length;
-        emptyCell.textContent = Lampa.Lang.translate('tdPanelDataError');
       }
 
       // Вставить созданную таблицу в родительский элемент
