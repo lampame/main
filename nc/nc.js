@@ -1538,8 +1538,10 @@
       lang.data();
       config.setting();
       // Menu 2.0
+      //const submenuCatalogkeys = Object.keys(localStorage)
+      //    .filter(key => key.startsWith('nc_'))
       var submenuCatalogkeys = Object.keys(localStorage).filter(function (key) {
-        return key.startsWith('nc_');
+        return key.indexOf('nc_') === 0;
       });
       function addsubmenu(category) {
         switch (category) {
