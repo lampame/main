@@ -1,5 +1,4 @@
 # Lampa Movie Enhancer
-project extensions repository
 
 [Torrent downloader](https://lampame.github.io/main/td.js) `https://lampame.github.io/main/td.js` [About](https://teletype.in/@lme/main)
 
