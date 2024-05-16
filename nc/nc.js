@@ -1546,7 +1546,6 @@
       function addsubmenu(category) {
         switch (category) {
           case 'nc_anime':
-          //case 'nc_concert':
           case 'nc_cartoon':
           case 'nc_documentary':
           case 'nc_networksList':
