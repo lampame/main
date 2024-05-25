@@ -117,29 +117,77 @@
           "uk": "Открыть",
           "zh": "开放" // Chinese translation
         },
-        nc_bookmarkAdded: {
+        nc_favoriteAdded: {
           ru: "Вкладка успешно добавлена",
           en: "Tab successfully added",
           uk: "Вкладка успішно додана",
           zh: "成功添加选项卡" // Chinese translation
         },
-        nc_bookmarkAdd: {
+        nc_favoriteAdd: {
           "ru": "Добавить в Меню - ",
           "en": "Add to Menu - ",
           "uk": "Додати до Меню - ",
           "zh": "添加到收藏夹 - " // Chinese translation
         },
-        nc_bookmarkDeleted: {
+        nc_favoriteDeleted: {
           ru: "Вкладка успешно удалена",
           en: "The tab has been successfully deleted",
           uk: "Вкладка успішно видалена",
           zh: "标签已成功删除" // Chinese translation
         },
-        nc_bookmarkMigrate: {
+        nc_favoriteMigrateAlert: {
+          "ru": "Система Избранного была обновлена, удалите все текущие избранные сервисы и добавьте заново!",
+          "en": "The Favorites system has been updated, please remove all current favorite services and add them again!",
+          "uk": "Система Favorites була оновлена, видаліть усі поточні вибрані сервіси та додайте їх знову!",
+          "zh": "收藏系统已更新，请删除所有当前的收藏服务并重新添加！"
+        },
+        nc_favoriteMigrate: {
           "ru": "Если вы видите это сообщение, значит мы удалили вкладки с сериалами стриминговых сервисов. Не беспокойтесь, в настройках вас ждет новый раздел с еще более интересными сервисами ;)",
           "en": "If you are seeing this message, then we have removed the tabs for streaming service series. Don't worry, in the settings you will find a new section with even more exciting services ;)",
           "uk": "Якщо ви бачите це повідомлення, це означає, що ми видалили вкладки з серіалами стрімінгових сервісів. Не хвилюйтеся, у налаштуваннях вас чекає новий розділ з ще цікавішими сервісами ;)",
           "zh": "如果您看到此消息，则我们已删除流媒体服务系列的选项卡。不用担心，在设置中您将找到一个新部分，其中包含更多令人兴奋的服务 ;)" // Chinese translation
+        },
+        nc_bookmark: {
+          ru: "Закладки",
+          en: "Bookmarks",
+          uk: "Закладки",
+          zh: "书签" // Chinese translation
+        },
+        nc_bookmarkAdd: {
+          ru: "Добавить закладку",
+          en: "Add Bookmark",
+          uk: "Додати закладку",
+          zh: "添加书签" // Chinese translation
+        },
+        nc_bookmarkDuplicate: {
+          ru: "Закладка уже существует",
+          en: "A bookmark already exists",
+          uk: "Закладка вже існує",
+          zh: "书签已经存在" // Chinese translation
+        },
+        nc_bookmarkAdded: {
+          ru: "Закладка успешно добавлена",
+          en: "Bookmark successfully added",
+          uk: "Закладка успішно додана",
+          zh: "成功添加书签" // Chinese translation
+        },
+        nc_bookmarkDelete: {
+          ru: "Удалить закладку",
+          en: "Delete Bookmark",
+          uk: "Видалити закладку",
+          zh: "删除书签" // Chinese translation
+        },
+        nc_bookmarkDeleted: {
+          ru: "Закладка удалена",
+          en: "Bookmark removed",
+          uk: "Закладка видалена",
+          zh: "已删除书签" // Chinese translation
+        },
+        nc_bookmarkDeleteError: {
+          ru: "Ошибка удаления",
+          en: "Deletion error",
+          uk: "ЗПомилка видалення",
+          zh: "删除错误" // Chinese translation
         }
       });
     }
@@ -274,7 +322,7 @@
           Lampa.Activity.push({
             url: '',
             title: Lampa.Lang.translate('nc_networksList'),
-            component: 'lmeNetworks',
+            component: Lampa.Storage.get("nc_networksListHome") || 'lmeNetworks',
             page: 1
           });
         });
@@ -287,14 +335,17 @@
           var NEW_ITEM_SELECTOR = "[".concat(NEW_ITEM_ATTR, "]");
           var NEW_ITEM_TEXT = "".concat(item.card_data.name);
           var New = "";
+          var legacyFavorite = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]+$/.test(item.card_data.$id);
           if (item.type === "new") New = 'first_air_date.desc';
-          var field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <img class='networkLogo' src='").concat(Lampa.TMDB.image("t/p/w200/".concat(item.card_data.poster_path)), "' alt=\"img\">\n             </div>\n             <div class=\"menu__text\">").concat(NEW_ITEM_TEXT, "</div> <div class=\"nc_badge\">").concat(Lampa.Lang.translate(item.type === 'top' ? 'nc_toptv' : 'nc_newtv'), "</div></div>\n          </li>\n        "));
+          var field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <img class='networkLogo' src='").concat(Lampa.TMDB.image("t/p/w200/".concat(item.card_data.poster_path)), "' alt=\"img\">\n             </div>\n             <div class=\"menu__text\">").concat(legacyFavorite ? "OLD " : "").concat(NEW_ITEM_TEXT, "</div> <div class=\"nc_badge\">").concat(Lampa.Lang.translate(item.type === 'top' ? 'nc_toptv' : 'nc_newtv'), "</div></div>\n          </li>\n        "));
           field.on("hover:enter", function () {
-            Lampa.Activity.push({
+            //Migration alert
+
+            if (legacyFavorite === true) Lampa.Noty.show(Lampa.Lang.translate('nc_favoriteMigrateAlert'));else Lampa.Activity.push({
               url: 'discover/tv',
               title: "".concat(item.type.toUpperCase(), " ").concat(NEW_ITEM_TEXT),
               component: "category_full",
-              networks: item.card_data.id,
+              networks: item.card_data.$id,
               sort_by: New,
               source: 'tmdb',
               card_type: true,
@@ -462,7 +513,7 @@
     };
 
     var network = new Lampa.Reguest();
-    var api_url = 'https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/65fd541c268c09686a0e/documents?queries[0]={"method":"limit","values":[36]}';
+    var api_url = 'https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/TVNetworksSource/documents?queries[0]={"method":"limit","values":[36]}';
     var auth = {
       headers: {
         "X-Appwrite-Project": "65fd523956f5ca97eaff"
@@ -471,11 +522,9 @@
     function main$1(params, oncomplite, onerror) {
       var apiUrl = api_url;
       if (params.searchQuery && params.searchQuery !== "") {
-        //apiUrl += `&queries[]=search("name", "${params.searchQuery}")`;
         apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
       }
       if (params.geoSearchQuery && params.geoSearchQuery !== "") {
-        //apiUrl += `&queries[]=search("name", "${params.searchQuery}")`;
         apiUrl += "&queries[]={\"method\":\"equal\",\"attribute\":\"origin_country\",\"values\":[\"".concat(params.geoSearchQuery, "\"]}");
       }
       network.silent(encodeURI(apiUrl), function (data) {
@@ -499,12 +548,50 @@
         oncomplite(data);
       }, onerror, false, auth);
     }
+    function bookmarkSave(data) {
+      if (data.action === 'bookmarkAdd') {
+        try {
+          var currentItems = Lampa.Storage.get('nc_bookmarks') || [];
+          var isDuplicate = currentItems.some(function (item) {
+            return item.$id === data.card_data.$id;
+          });
+          if (isDuplicate) {
+            return false;
+          }
+          Lampa.Storage.add('nc_bookmarks', data.card_data);
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+    }
+    function bookmarkRemove(data) {
+      if (data.action === 'bookmarkRemove') {
+        try {
+          var currentItems = Lampa.Storage.get('nc_bookmarks');
+          var updatedItems = currentItems.filter(function (item) {
+            return item.$id !== data.card_data.$id;
+          });
+          if (currentItems.length === updatedItems.length) {
+            console.error('Ошибка: Запись не найдена');
+            return false;
+          }
+          Lampa.Storage.set('nc_bookmarks', JSON.stringify(updatedItems));
+          return true;
+        } catch (error) {
+          console.error('Произошла ошибка при удалении записи:', error);
+          return false;
+        }
+      }
+    }
     function clear() {
       network.clear();
     }
     var Api = {
       main: main$1,
       full: full,
+      bookmarkRemove: bookmarkRemove,
+      bookmarkSave: bookmarkSave,
       clear: clear
     };
 
@@ -569,7 +656,7 @@
           if (find) {
             Lampa.Arrays.remove(list, find);
             Lampa.Storage.set('nc_networkLists', list);
-            Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDeleted') + ' ' + find.card_data.name);
+            Lampa.Noty.show(Lampa.Lang.translate('nc_favoriteDeleted') + ' ' + find.card_data.name);
           }
         }
       }, {
@@ -579,12 +666,13 @@
           var find = this.find(favorite);
           if (!find) {
             Lampa.Arrays.extend(favorite, {
-              id: Lampa.Utils.uid(),
+              //id: Lampa.Utils.uid(),
+              id: favorite.type + favorite.card_data.$id,
               added: Date.now()
             });
             list.push(favorite);
             Lampa.Storage.set('nc_networkLists', list);
-            Lampa.Noty.show("Add need reboot");
+            Lampa.Noty.show("Add, need reboot");
           }
         }
       }, {
@@ -1096,7 +1184,7 @@
     }
     var GeoBase = list();
 
-    function component(object) {
+    function component$1(object) {
       var network = new Lampa.Reguest();
       var scroll = new Lampa.Scroll({
         mask: true,
@@ -1124,9 +1212,6 @@
           object.geoSearchQuery = "";
           Lampa.Activity.replace(object);
         });
-
-        //let button = '<div>foobar</div>'
-
         var empty = new Lampa.Empty();
         if (button) empty.append(button);
         html.appendChild(empty.render(true));
@@ -1190,14 +1275,19 @@
               type: 'Top',
               card_data: card_data
             });
+            if (Object.keys(Lampa.Storage.field("account")).length) menu.push({
+              title: Lampa.Lang.translate('nc_bookmarkAdd'),
+              action: 'bookmarkAdd',
+              card_data: card_data
+            });
             menu.push({
-              title: Lampa.Lang.translate('nc_bookmarkAdd') + ' New',
+              title: Lampa.Lang.translate('nc_favoriteAdd') + ' New',
               action: 'favorite',
               card_data: card_data,
               type: 'new'
             });
             menu.push({
-              title: Lampa.Lang.translate('nc_bookmarkAdd') + ' Top',
+              title: Lampa.Lang.translate('nc_favoriteAdd') + ' Top',
               action: 'favorite',
               card_data: card_data,
               type: 'top'
@@ -1222,7 +1312,8 @@
               reset: true
             });
             Lampa.Select.show({
-              title: Lampa.Lang.translate('title_action') + ' ' + card_data.name,
+              //${Lampa.Lang.translate('title_action')}
+              title: "[".concat(card_data.$id, "] ").concat(card_data.name),
               items: menu,
               onBack: function onBack() {
                 Lampa.Controller.toggle(enabled);
@@ -1231,13 +1322,23 @@
                 if (a.action === 'favorite') {
                   Favorites.add(a);
                 }
+                if (a.action === 'bookmarkAdd') {
+                  var result = Api.bookmarkSave(a);
+                  if (result === true) {
+                    console.log('Запись была успешно добавлена.');
+                    Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
+                  } else if (result === false) {
+                    console.error('Не удалось добавить запись.');
+                    Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDuplicate'));
+                  }
+                }
                 if (a.action === 'open') {
                   Lampa.Activity.push({
                     url: 'discover/tv',
                     title: "".concat(a.type, " ").concat(a.card_data.title),
                     //a.title + " " + a.card_data.title,
                     component: "category_full",
-                    networks: a.card_data.id,
+                    networks: a.card_data.$id,
                     sort_by: a.sort_by,
                     source: 'tmdb',
                     card_type: true,
@@ -1247,8 +1348,9 @@
                 if (a.favorites) {
                   var itemsFavs = [];
                   Favorites.get().forEach(function (item) {
+                    var legacyFavorites = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]+$/.test(item.card_data.$id);
                     itemsFavs.push({
-                      title: item.type + ' ' + item.card_data.name,
+                      title: "".concat(legacyFavorites ? "OLD " : "").concat(item.type, " ").concat(item.card_data.name),
                       id: item.id
                     });
                   });
@@ -1291,7 +1393,7 @@
                     title: Lampa.Lang.translate('nc_networksList'),
                     items: itemsGeo,
                     onSelect: function onSelect(a) {
-                      object.geoSearchQuery = a.id;
+                      object.geoSearchQuery = a.$id;
                       Lampa.Activity.replace(object);
                     },
                     onBack: function onBack() {
@@ -1306,39 +1408,6 @@
               }
             });
           };
-          /*
-          card.onEnter = (target, card_data) => {
-              last = target
-              Lampa.Select.show({
-                  title: Lampa.Lang.translate('title_action'),
-                  items: [
-                      {
-                          title: "New",
-                          type: 'first_air_date.desc',
-                          card_data: card_data
-                      },
-                      {
-                          title: "Top",
-                          type: '',
-                          card_data
-                      }
-                  ],
-                  onSelect: (a) => {
-                      Lampa.Activity.push({
-                          url: 'discover/tv',
-                          title: a.title + " " + a.card_data.title,
-                          component: "category_full",
-                          networks: a.card_data.id,
-                          sort_by: a.type,
-                          source: 'tmdb',
-                          card_type: true,
-                          page: 1
-                      });
-                  }
-              });
-          }
-           */
-
           body.appendChild(card.render(true));
           items.push(card);
           if (_this2.cardRender) _this2.cardRender(object, element, card);
@@ -1365,14 +1434,33 @@
       this.build = function (data) {
         var _this3 = this;
         header.className = 'lme-catalog lme-header';
+        //Bookmarks
+        var bookmarks = document.createElement('div');
+        bookmarks.className = 'lme-favorites simple-button simple-button--invisible simple-button--filter selector';
+        bookmarks.innerHTML = "<svg width=\"60\" height=\"58\" viewBox=\"0 0 60 58\" xmlns=\"http://www.w3.org/2000/svg\">\n                        <path fill=\"currentColor\" d=\"M11.4589 57.5318L30 47.7841L48.5411 57.5318L45 36.8859L60 22.2646L39.2704 19.2526L30 0.468231L20.7293 19.2526L0 22.2646L15 36.8859L11.4589 57.5318ZM9.3698 25.3092L23.6248 23.2378L30 10.3206L36.3752 23.2378L50.6302 25.3092L40.3154 35.3639L42.7504 49.5613L30.0003 42.8582L17.2502 49.5613L19.6852 35.3639L9.3698 25.3092Z\"/>\n                    </svg>\n                    <div>".concat(Lampa.Lang.translate('nc_bookmark'), "</div>");
+        bookmarks.on('hover:enter', function () {
+          Lampa.Activity.push({
+            url: '',
+            title: Lampa.Lang.translate('nc_bookmark'),
+            component: 'lmeNetworksBookmarks',
+            page: 1
+          });
+        });
+        bookmarks.on('hover:long', function () {
+          Lampa.Storage.set("nc_networksListHome", 'lmeNetworksBookmarks');
+          Lampa.Noty.show('Главный раздел изменен');
+        });
+
+        //Favorites
         var favorites = document.createElement('div');
         favorites.className = 'lme-favorites simple-button simple-button--invisible simple-button--filter selector';
-        favorites.innerHTML = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\" xml:space=\"preserve\">\n                        <path fill=\"currentColor\" d=\"M478.354,146.286H33.646c-12.12,0-21.943,9.823-21.943,21.943v321.829c0,12.12,9.823,21.943,21.943,21.943h444.709\n                            c12.12,0,21.943-9.823,21.943-21.943V168.229C500.297,156.109,490.474,146.286,478.354,146.286z M456.411,468.114H55.589V190.171\n                            h400.823V468.114z\"/>\n                        <path fill=\"currentColor\" d=\"M441.783,73.143H70.217c-12.12,0-21.943,9.823-21.943,21.943c0,12.12,9.823,21.943,21.943,21.943h371.566\n                            c12.12,0,21.943-9.823,21.943-21.943C463.726,82.966,453.903,73.143,441.783,73.143z\"/>\n                        <path fill=\"currentColor\" d=\"M405.211,0H106.789c-12.12,0-21.943,9.823-21.943,21.943c0,12.12,9.823,21.943,21.943,21.943h298.423\n                            c12.12,0,21.943-9.823,21.943-21.943C427.154,9.823,417.331,0,405.211,0z\"/>\n                    </svg>\n                    <div>".concat(Lampa.Lang.translate('settings_input_links'), "</div>");
+        favorites.innerHTML = "<svg width=\"46\" height=\"36\" viewBox=\"0 0 46 36\" xmlns=\"http://www.w3.org/2000/svg\">\n                        <path d=\"M3 3H43M3 18H43M3 33H43\" stroke=\"currentColor\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n                    </svg>\n                    <div>".concat(Lampa.Lang.translate('settings_input_links'), "</div>");
         favorites.on('hover:enter', function () {
           var itemsFavs = [];
           Favorites.get().forEach(function (item) {
+            var legacyFavorites = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]+$/.test(item.card_data.$id);
             itemsFavs.push({
-              title: item.type + ' ' + item.card_data.name,
+              title: "".concat(legacyFavorites ? "OLD " : "").concat(item.type, " ").concat(item.card_data.name),
               id: item.id
             });
           });
@@ -1416,7 +1504,7 @@
             title: Lampa.Lang.translate('nc_networksList'),
             items: itemsGeo,
             onSelect: function onSelect(a) {
-              object.geoSearchQuery = a.id;
+              object.geoSearchQuery = a.$id;
               Lampa.Activity.replace(object);
             },
             onBack: function onBack() {
@@ -1428,6 +1516,8 @@
         header.appendChild(clear);
         header.appendChild(geo);
         header.appendChild(favorites);
+        //Bookmarks
+        header.appendChild(bookmarks);
         header.appendChild(baseInfo);
         if (data.documents.length) {
           total_pages = data.total_pages;
@@ -1524,22 +1614,473 @@
       };
     }
 
+    function component(object) {
+      var network = new Lampa.Reguest();
+      var scroll = new Lampa.Scroll({
+        mask: true,
+        over: true,
+        step: 250,
+        end_ratio: 2
+      });
+      var items = [];
+      var html = document.createElement('div');
+      var header = document.createElement('div');
+      var body = document.createElement('div');
+      var total_pages = 0;
+      var last;
+      var waitload;
+      var active = 0;
+      this.create = function () {
+        //Api.bookmark(this.build.bind(this), this.empty.bind(this))
+        if (Lampa.Storage.get('nc_bookmarks')) this.build(Lampa.Storage.get('nc_bookmarks'));else this.empty(new Error("No results found"));
+      };
+      this.empty = function () {
+        var panel = document.createElement('div');
+        panel.className = 'panelNC blockNC';
+        var ncMain = document.createElement('div');
+        ncMain.className = 'nc-main simple-button simple-button--invisible simple-button--filter selector';
+        ncMain.innerHTML = "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M42.5 23.7505L44.146 22.9275C49.0105 20.4952 51.443 19.279 53.2215 20.3782C55 21.4773 55 24.1968 55 29.6357V30.3652C55 35.8042 55 38.5235 53.2215 39.6227C51.443 40.722 49.0105 39.5057 44.146 37.0735L42.5 36.2505V23.7505Z\" stroke=\"white\" stroke-width=\"3.75\"/>\n                    <path d=\"M5 28.75C5 20.5313 5 16.4219 7.2699 13.6561C7.68545 13.1497 8.14973 12.6854 8.65608 12.2699C11.4219 10 15.5313 10 23.75 10C31.9687 10 36.078 10 38.844 12.2699C39.3502 12.6854 39.8145 13.1497 40.23 13.6561C42.5 16.4219 42.5 20.5313 42.5 28.75V31.25C42.5 39.4687 42.5 43.578 40.23 46.344C39.8145 46.8502 39.3502 47.3145 38.844 47.73C36.078 50 31.9687 50 23.75 50C15.5313 50 11.4219 50 8.65608 47.73C8.14973 47.3145 7.68545 46.8502 7.2699 46.344C5 43.578 5 39.4687 5 31.25V28.75Z\" stroke=\"white\" stroke-width=\"3.75\"/>\n                    <path d=\"M23.75 38.75V21.25M23.75 21.25L30 28.75M23.75 21.25L17.5 28.75\" stroke=\"white\" stroke-width=\"3.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n                    </svg>\n                    <div>All service</div>";
+        ncMain.on('hover:enter', function () {
+          Lampa.Activity.push({
+            url: '',
+            title: Lampa.Lang.translate('nc_networksList'),
+            component: 'lmeNetworks',
+            page: 1
+          });
+        });
+        ncMain.on('hover:long', function () {
+          Lampa.Storage.set("nc_networksListHome", 'lmeNetworks');
+          Lampa.Noty.show('Главный раздел изменен');
+        });
+        var button = document.createElement('div');
+        button.className = 'nc-empty simple-button simple-button--invisible selector button--clear';
+        button.innerHTML = "\n                <svg width=\"48\" height=\"43\" viewBox=\"0 0 48 43\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path d=\"M8.11178 23.9546L7.10608 24.9852L8.137 25.9913L9.1427 24.96L8.11178 23.9546ZM20.9815 29.7729L35.3816 15.3729L33.3449 13.3364L18.945 27.7363L20.9815 29.7729ZM18.945 15.3728L33.3449 29.7729L35.3816 27.7363L20.9815 13.3364L18.945 15.3728ZM44.9232 21.5546C44.9232 31.3632 36.9718 39.3146 27.1632 39.3146V42.1946C38.5623 42.1946 47.8032 32.9537 47.8032 21.5546H44.9232ZM9.40324 21.5546C9.40324 11.746 17.3547 3.79461 27.1632 3.79461V0.914612C15.7641 0.914612 6.52324 10.1555 6.52324 21.5546H9.40324ZM27.1632 3.79461C36.9718 3.79461 44.9232 11.746 44.9232 21.5546H47.8032C47.8032 10.1555 38.5623 0.914612 27.1632 0.914612V3.79461ZM9.54071 23.7765C9.45004 23.0491 9.40324 22.3077 9.40324 21.5546H6.52324C6.52324 22.427 6.57746 23.2877 6.68284 24.1327L9.54071 23.7765ZM27.1632 39.3146C21.0603 39.3146 15.6756 36.2376 12.4764 31.5437L10.0966 33.1656C13.8093 38.6129 20.0678 42.1946 27.1632 42.1946V39.3146ZM9.1427 24.96L14.9942 18.96L12.9323 16.9493L7.08088 22.9493L9.1427 24.96ZM9.1175 22.9241L2.96896 16.9241L0.95752 18.9852L7.10608 24.9852L9.1175 22.9241Z\"/>\n                </svg>\n                <div>Reset search</div>\n        ";
+        button.on('hover:enter', function () {
+          object.searchQuery = "";
+          object.geoSearchQuery = "";
+          Lampa.Activity.replace(object);
+        });
+        var empty = new Lampa.Empty();
+        if (button) panel.append(button);
+        if (button) panel.append(ncMain);
+        empty.append(panel);
+        html.appendChild(empty.render(true));
+        this.start = empty.start;
+        this.activity.loader(false);
+        this.activity.toggle();
+      };
+      this.next = function () {
+        var _this = this;
+        if (waitload) return;
+        if (object.page < total_pages) {
+          waitload = true;
+          object.page++;
+          this.nextPageReuest(object, function (result) {
+            _this.append(result, true);
+            waitload = false;
+            _this.limit();
+          }, function () {
+            waitload = false;
+          });
+        }
+      };
+      this.nextPageReuest = function (object, resolve, reject) {
+        Api.full(object, resolve.bind(this), reject.bind(this));
+      };
+      this.append = function (data, append) {
+        var _this2 = this;
+        data.forEach(function (element) {
+          var card = new Lampa.Card(element, {
+            object: object,
+            card_category: typeof card_category == 'undefined' ? true : data.category,
+            card_collection: true
+          });
+          card.create();
+          card.onFocus = function (target, card_data) {
+            last = target;
+            active = items.indexOf(card);
+            scroll.update(card.render(true));
+          };
+          card.onTouch = function (target, card_data) {
+            last = target;
+            active = items.indexOf(card);
+          };
+          card.onMenu = function (target, card_data) {};
+          card.onEnter = function (target, card_data) {
+            var enabled = Lampa.Controller.enabled().name;
+            var menu = [];
+            menu.push({
+              title: "".concat(Lampa.Lang.translate('nc_openAction'), " New"),
+              action: 'open',
+              sort_by: 'first_air_date.desc',
+              type: 'New',
+              card_data: card_data
+            });
+            menu.push({
+              title: "".concat(Lampa.Lang.translate('nc_openAction'), " Top"),
+              action: 'open',
+              sort_by: '',
+              type: 'Top',
+              card_data: card_data
+            });
+            menu.push({
+              title: Lampa.Lang.translate('nc_favoriteAdd') + ' New',
+              action: 'favorite',
+              card_data: card_data,
+              type: 'new'
+            });
+            menu.push({
+              title: Lampa.Lang.translate('nc_favoriteAdd') + ' Top',
+              action: 'favorite',
+              card_data: card_data,
+              type: 'top'
+            });
+            menu.push({
+              title: Lampa.Lang.translate('nc_bookmarkDelete'),
+              action: 'bookmarkRemove',
+              card_data: card_data
+            });
+            menu.push({
+              title: '-----------------'
+            });
+            menu.push({
+              title: 'Favorites',
+              favorites: true
+            });
+            menu.push({
+              title: 'Search',
+              search: true
+            });
+            menu.push({
+              title: 'Country',
+              country: true
+            });
+            menu.push({
+              title: 'Reset',
+              reset: true
+            });
+            Lampa.Select.show({
+              title: Lampa.Lang.translate('title_action') + ' ' + card_data.name,
+              items: menu,
+              onBack: function onBack() {
+                Lampa.Controller.toggle(enabled);
+              },
+              onSelect: function onSelect(a) {
+                if (a.action === 'favorite') {
+                  Favorites.add(a);
+                }
+                if (a.action === 'bookmarkRemove') {
+                  //Api.bookmarkRemove(a)
+                  var result = Api.bookmarkRemove(a);
+                  if (result === true) {
+                    console.log('Запись была успешно удалена.');
+                    Lampa.Activity.replace({
+                      url: '',
+                      title: Lampa.Lang.translate('nc_bookmark'),
+                      component: 'lmeNetworksBookmarks',
+                      page: 1
+                    });
+                    Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDeleted'));
+                  } else if (result === false) {
+                    console.error('Не удалось удалить запись.');
+                    Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDeleteError'));
+                  }
+                }
+                if (a.action === 'open') {
+                  Lampa.Activity.push({
+                    url: 'discover/tv',
+                    title: "".concat(a.type, " ").concat(a.card_data.title),
+                    //a.title + " " + a.card_data.title,
+                    component: "category_full",
+                    networks: a.card_data.$id,
+                    sort_by: a.sort_by,
+                    source: 'tmdb',
+                    card_type: true,
+                    page: 1
+                  });
+                }
+                if (a.favorites) {
+                  var itemsFavs = [];
+                  Favorites.get().forEach(function (item) {
+                    var legacyFavorites = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]+$/.test(item.card_data.$id);
+                    itemsFavs.push({
+                      title: "".concat(legacyFavorites ? "OLD " : "").concat(item.type, " ").concat(item.card_data.name),
+                      id: item.id
+                    });
+                  });
+                  Lampa.Select.show({
+                    title: Lampa.Lang.translate('nc_networksList'),
+                    items: itemsFavs,
+                    onSelect: function onSelect(a) {
+                      Favorites.remove(a);
+                    },
+                    onBack: function onBack() {
+                      Lampa.Controller.toggle('content');
+                    }
+                  });
+                }
+                if (a.search) {
+                  Lampa.Input.edit({
+                    free: true,
+                    nosave: true,
+                    nomic: true,
+                    value: ''
+                  }, function (val) {
+                    if (val) {
+                      //this.clearButtons(false, val)
+                      object.searchQuery = val;
+                      Lampa.Activity.replace(object);
+                    } else {
+                      Lampa.Controller.toggle('content');
+                    }
+                  });
+                }
+                if (a.country) {
+                  var itemsGeo = [];
+                  GeoBase.results.forEach(function (item) {
+                    itemsGeo.push({
+                      title: item.english_name,
+                      id: item.iso_3166_1
+                    });
+                  });
+                  Lampa.Select.show({
+                    title: Lampa.Lang.translate('nc_networksList'),
+                    items: itemsGeo,
+                    onSelect: function onSelect(a) {
+                      object.geoSearchQuery = a.id;
+                      Lampa.Activity.replace(object);
+                    },
+                    onBack: function onBack() {
+                      Lampa.Controller.toggle('content');
+                    }
+                  });
+                }
+                if (a.reset) {
+                  object.searchQuery = "";
+                  Lampa.Activity.replace(object);
+                }
+              }
+            });
+          };
+          body.appendChild(card.render(true));
+          items.push(card);
+          if (_this2.cardRender) _this2.cardRender(object, element, card);
+          if (append) Lampa.Controller.collectionAppend(card.render(true));
+        });
+      };
+      this.limit = function () {
+        var limit_view = 12;
+        var lilit_collection = 36;
+        var colection = items.slice(Math.max(0, active - limit_view), active + limit_view);
+        items.forEach(function (item) {
+          if (colection.indexOf(item) === -1) {
+            item.render(true).classList.remove('layer--render');
+          } else {
+            item.render(true).classList.add('layer--render');
+          }
+        });
+        Navigator.setCollection(items.slice(Math.max(0, active - lilit_collection), active + lilit_collection).map(function (c) {
+          return c.render(true);
+        }));
+        Navigator.focused(last);
+        Lampa.Layer.visible(scroll.render(true));
+      };
+      this.build = function (data) {
+        var _this3 = this;
+        header.className = 'lme-catalog lme-header';
+        //Main
+        var ncMain = document.createElement('div');
+        ncMain.className = 'lme-favorites simple-button simple-button--invisible simple-button--filter selector';
+        ncMain.innerHTML = "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M42.5 23.7505L44.146 22.9275C49.0105 20.4952 51.443 19.279 53.2215 20.3782C55 21.4773 55 24.1968 55 29.6357V30.3652C55 35.8042 55 38.5235 53.2215 39.6227C51.443 40.722 49.0105 39.5057 44.146 37.0735L42.5 36.2505V23.7505Z\" stroke=\"white\" stroke-width=\"3.75\"/>\n                    <path d=\"M5 28.75C5 20.5313 5 16.4219 7.2699 13.6561C7.68545 13.1497 8.14973 12.6854 8.65608 12.2699C11.4219 10 15.5313 10 23.75 10C31.9687 10 36.078 10 38.844 12.2699C39.3502 12.6854 39.8145 13.1497 40.23 13.6561C42.5 16.4219 42.5 20.5313 42.5 28.75V31.25C42.5 39.4687 42.5 43.578 40.23 46.344C39.8145 46.8502 39.3502 47.3145 38.844 47.73C36.078 50 31.9687 50 23.75 50C15.5313 50 11.4219 50 8.65608 47.73C8.14973 47.3145 7.68545 46.8502 7.2699 46.344C5 43.578 5 39.4687 5 31.25V28.75Z\" stroke=\"white\" stroke-width=\"3.75\"/>\n                    <path d=\"M23.75 38.75V21.25M23.75 21.25L30 28.75M23.75 21.25L17.5 28.75\" stroke=\"white\" stroke-width=\"3.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n                    </svg>\n                    <div>".concat(Lampa.Lang.translate('nc_networksList'), "</div>");
+        ncMain.on('hover:enter', function () {
+          Lampa.Activity.push({
+            url: '',
+            title: Lampa.Lang.translate('nc_networksList'),
+            component: 'lmeNetworks',
+            page: 1
+          });
+        });
+        ncMain.on('hover:long', function () {
+          Lampa.Storage.set("nc_networksListHome", 'lmeNetworks');
+          Lampa.Noty.show('Главный раздел изменен');
+        });
+        var favorites = document.createElement('div');
+        favorites.className = 'lme-favorites simple-button simple-button--invisible simple-button--filter selector';
+        favorites.innerHTML = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\" xml:space=\"preserve\">\n                        <path fill=\"currentColor\" d=\"M478.354,146.286H33.646c-12.12,0-21.943,9.823-21.943,21.943v321.829c0,12.12,9.823,21.943,21.943,21.943h444.709\n                            c12.12,0,21.943-9.823,21.943-21.943V168.229C500.297,156.109,490.474,146.286,478.354,146.286z M456.411,468.114H55.589V190.171\n                            h400.823V468.114z\"/>\n                        <path fill=\"currentColor\" d=\"M441.783,73.143H70.217c-12.12,0-21.943,9.823-21.943,21.943c0,12.12,9.823,21.943,21.943,21.943h371.566\n                            c12.12,0,21.943-9.823,21.943-21.943C463.726,82.966,453.903,73.143,441.783,73.143z\"/>\n                        <path fill=\"currentColor\" d=\"M405.211,0H106.789c-12.12,0-21.943,9.823-21.943,21.943c0,12.12,9.823,21.943,21.943,21.943h298.423\n                            c12.12,0,21.943-9.823,21.943-21.943C427.154,9.823,417.331,0,405.211,0z\"/>\n                    </svg>\n                    <div>".concat(Lampa.Lang.translate('settings_input_links'), "</div>");
+        favorites.on('hover:enter', function () {
+          var itemsFavs = [];
+          Favorites.get().forEach(function (item) {
+            var legacyFavorites = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]+$/.test(item.card_data.$id);
+            itemsFavs.push({
+              title: "".concat(legacyFavorites ? "OLD " : "").concat(item.type, " ").concat(item.card_data.name),
+              id: item.id
+            });
+          });
+          Lampa.Select.show({
+            title: Lampa.Lang.translate('nc_networksList'),
+            items: itemsFavs,
+            onSelect: function onSelect(a) {
+              Favorites.remove(a);
+            },
+            onBack: function onBack() {
+              Lampa.Controller.toggle('content');
+            }
+          });
+        });
+        var baseInfo = document.createElement('div');
+        baseInfo.className = 'lme-baseInfo';
+        baseInfo.innerHTML = "Personal bookmarks: ".concat(data.length);
+        var search = document.createElement('div');
+        search.className = 'lme-search simple-button simple-button--invisible simple-button--filter selector button--search';
+        search.innerHTML = "\n                <svg width=\"23\" height=\"22\" viewBox=\"0 0 23 22\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" xml:space=\"preserve\">\n                    <circle cx=\"9.9964\" cy=\"9.63489\" r=\"8.43556\" stroke=\"currentColor\" stroke-width=\"2.4\"></circle>\n                    <path d=\"M20.7768 20.4334L18.2135 17.8701\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"></path>\n                </svg>\n                <div>Search</div>\n        ";
+        var clear = document.createElement('div');
+        clear.className = 'lme-clear simple-button simple-button--invisible selector button--clear';
+        clear.innerHTML = "\n                <svg width=\"48\" height=\"43\" viewBox=\"0 0 48 43\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path d=\"M8.11178 23.9546L7.10608 24.9852L8.137 25.9913L9.1427 24.96L8.11178 23.9546ZM20.9815 29.7729L35.3816 15.3729L33.3449 13.3364L18.945 27.7363L20.9815 29.7729ZM18.945 15.3728L33.3449 29.7729L35.3816 27.7363L20.9815 13.3364L18.945 15.3728ZM44.9232 21.5546C44.9232 31.3632 36.9718 39.3146 27.1632 39.3146V42.1946C38.5623 42.1946 47.8032 32.9537 47.8032 21.5546H44.9232ZM9.40324 21.5546C9.40324 11.746 17.3547 3.79461 27.1632 3.79461V0.914612C15.7641 0.914612 6.52324 10.1555 6.52324 21.5546H9.40324ZM27.1632 3.79461C36.9718 3.79461 44.9232 11.746 44.9232 21.5546H47.8032C47.8032 10.1555 38.5623 0.914612 27.1632 0.914612V3.79461ZM9.54071 23.7765C9.45004 23.0491 9.40324 22.3077 9.40324 21.5546H6.52324C6.52324 22.427 6.57746 23.2877 6.68284 24.1327L9.54071 23.7765ZM27.1632 39.3146C21.0603 39.3146 15.6756 36.2376 12.4764 31.5437L10.0966 33.1656C13.8093 38.6129 20.0678 42.1946 27.1632 42.1946V39.3146ZM9.1427 24.96L14.9942 18.96L12.9323 16.9493L7.08088 22.9493L9.1427 24.96ZM9.1175 22.9241L2.96896 16.9241L0.95752 18.9852L7.10608 24.9852L9.1175 22.9241Z\"/>\n                </svg>\n                <div>Reset search</div>\n        ";
+        clear.on('hover:enter', function () {
+          object.searchQuery = "";
+          object.geoSearchQuery = "";
+          Lampa.Activity.replace(object);
+        });
+        var geo = document.createElement('div');
+        geo.className = 'lme-clear simple-button simple-button--invisible selector button--clear';
+        geo.innerHTML = "\n                <svg width=\"60\" height=\"58\" viewBox=\"0 0 60 58\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M30 0.874997C22.2938 0.632341 14.8062 3.45783 9.18145 8.73105C3.55669 14.0043 0.254507 21.2942 0 29C0.254507 36.7058 3.55669 43.9957 9.18145 49.2689C14.8062 54.5422 22.2938 57.3677 30 57.125C37.7062 57.3677 45.1938 54.5422 50.8185 49.2689C56.4433 43.9957 59.7455 36.7058 60 29C59.7455 21.2942 56.4433 14.0043 50.8185 8.73105C45.1938 3.45783 37.7062 0.632341 30 0.874997ZM55.1625 26.375L50.55 25.25C49.6125 24.9875 49.5375 24.9125 49.4625 24.8C48.9 24.05 48.2625 23.0375 47.6625 22.0625C47.6625 21.725 47.175 21.2 47.0625 20.9C46.95 20.6 48.375 18.65 48.975 17.75C49.6218 17.0775 50.368 16.5084 51.1875 16.0625C53.3679 19.106 54.7361 22.6554 55.1625 26.375ZM30 5.5625L29.6625 6.2C29.629 6.07724 29.629 5.94775 29.6625 5.825C29.6625 6.05 29.1 6.3875 28.725 6.7625L27.6 7.85C27.0869 8.38489 26.7763 9.08187 26.7215 9.82104C26.6668 10.5602 26.8713 11.2953 27.3 11.9H26.85C26.2578 11.9171 25.6772 12.0676 25.1512 12.3403C24.6253 12.613 24.1677 13.0009 23.8125 13.475C23.3979 14.0464 23.1155 14.7029 22.9858 15.3968C22.8561 16.0908 22.8823 16.8049 23.0625 17.4875V17.75C22.5156 17.8475 21.9766 17.9854 21.45 18.1625L20.55 18.4625L18.15 19.25C17.4349 19.4595 16.783 19.8432 16.2528 20.3669C15.7227 20.8905 15.3308 21.5375 15.1125 22.25C14.9381 22.8479 14.9153 23.4798 15.0463 24.0886C15.1772 24.6975 15.4577 25.2642 15.8625 25.7375C17.3644 27.3608 19.1104 28.7399 21.0375 29.825C22.9237 31.0817 25.0605 31.9134 27.3 32.2625H33.6C34.3586 32.2263 35.1141 32.3826 35.796 32.717C36.478 33.0514 37.0641 33.553 37.5 34.175C37.704 34.3854 37.8546 34.6416 37.9394 34.9221C38.0242 35.2026 38.0407 35.4993 37.9875 35.7875C37.9128 36.2652 37.7194 36.7165 37.425 37.1C35.559 38.6263 34.2963 40.7662 33.8625 43.1375C33.3767 44.9001 32.7754 46.6289 32.0625 48.3125C31.6125 49.475 31.2 50.6 30.9 51.5C29.642 51.5905 28.3776 51.4894 27.15 51.2C27.4488 48.4138 26.7873 45.6091 25.275 43.25C24.0139 41.7599 23.3111 39.877 23.2875 37.925C23.5298 36.0733 23.1094 34.1955 22.1006 32.6239C21.0917 31.0523 19.5595 29.8882 17.775 29.3375C13.5767 26.7281 9.89108 23.3729 6.9 19.4375C9.0671 15.1955 12.3807 11.6465 16.4641 9.19379C20.5476 6.74106 25.2372 5.48297 30 5.5625ZM4.6875 29C4.68679 27.5383 4.83759 26.0806 5.1375 24.65C8.21591 28.3346 11.9549 31.4122 16.1625 33.725C18.4125 34.55 18.75 35.4125 18.75 37.925C18.7583 41.0595 19.9043 44.0844 21.975 46.4375C22.528 48.0641 22.7075 49.7945 22.5 51.5C17.4882 50.1965 13.038 47.2948 9.82365 43.2347C6.60934 39.1745 4.8062 34.1771 4.6875 29ZM35.8875 51.8C35.8875 51.2375 36.3375 50.6 36.5625 50C37.415 48.0606 38.1048 46.0537 38.625 44C38.9187 42.7281 39.632 41.5921 40.65 40.775C41.9623 39.4849 42.7277 37.7393 42.7875 35.9C42.8335 35.028 42.7008 34.1558 42.3978 33.3368C42.0947 32.5179 41.6276 31.7695 41.025 31.1375C40.123 30.0309 38.9756 29.1498 37.6737 28.5639C36.3719 27.9781 34.9514 27.7037 33.525 27.7625H27.5625C24.7619 27.0038 22.1879 25.5753 20.0625 23.6L21.825 23L22.8375 22.7C23.2834 22.4959 23.7731 22.4057 24.2625 22.4375L24.6 23C24.8806 23.5263 25.3472 23.9292 25.9088 24.1303C26.4703 24.3313 27.0866 24.3161 27.6375 24.0875C28.1829 23.8331 28.6149 23.3858 28.8502 22.832C29.0856 22.2781 29.1078 21.6567 28.9125 21.0875V20.4125C28.5 19.2875 28.0125 17.7125 27.7125 16.6625C28.6852 16.7033 29.6504 16.4767 30.5033 16.0073C31.3562 15.5378 32.0641 14.8436 32.55 14C32.7828 13.3716 32.843 12.6924 32.7243 12.0329C32.6056 11.3734 32.3123 10.7577 31.875 10.25C32.3163 9.85394 32.7298 9.42793 33.1125 8.975C33.4567 8.56312 33.7085 8.08215 33.8508 7.5646C33.9931 7.04704 34.0227 6.50496 33.9375 5.975C39.1791 6.74659 44.0596 9.10179 47.925 12.725C46.7901 13.418 45.7871 14.3068 44.9625 15.35C44.0691 16.6555 43.2672 18.0212 42.5625 19.4375C42.26 20.3116 42.1839 21.2481 42.3412 22.1596C42.4986 23.0712 42.8844 23.9279 43.4625 24.65C44.1375 25.8125 44.8875 26.9375 45.5625 27.875C46.4929 29.0477 47.8326 29.8247 49.3125 30.05C50.1375 30.275 53.0625 30.875 55.125 31.2875C54.4619 36.2872 52.2501 40.9539 48.7999 44.6327C45.3498 48.3115 40.8345 50.8178 35.8875 51.8Z\"/>\n                </svg>\n                <div>".concat(Lampa.Lang.translate("nc_country"), "</div>\n        ");
+        geo.on('hover:enter', function () {
+          var itemsGeo = [];
+          GeoBase.results.forEach(function (item) {
+            itemsGeo.push({
+              title: item.english_name,
+              id: item.iso_3166_1
+            });
+          });
+          Lampa.Select.show({
+            title: Lampa.Lang.translate('nc_networksList'),
+            items: itemsGeo,
+            onSelect: function onSelect(a) {
+              object.geoSearchQuery = a.id;
+              Lampa.Activity.replace(object);
+            },
+            onBack: function onBack() {
+              Lampa.Controller.toggle('content');
+            }
+          });
+        });
+
+        //header.appendChild(search)
+        //header.appendChild(clear)
+        //header.appendChild(geo)
+        header.appendChild(favorites);
+        header.appendChild(ncMain);
+        header.appendChild(baseInfo);
+        if (data.length) {
+          total_pages = data.total_pages;
+          body.classList.add('lme-catalog', 'category-full');
+          scroll.minus();
+          scroll.onEnd = this.next.bind(this);
+          scroll.onScroll = this.limit.bind(this);
+          scroll.onWheel = function (step) {
+            if (!Lampa.Controller.own(_this3)) _this3.start();
+            if (step > 0) Navigator.move('down');else Navigator.move('up');
+          };
+          this.append(data);
+          scroll.append(body);
+          html.addClass('lmeCatalog');
+          html.appendChild(header);
+          html.appendChild(scroll.render(true));
+          //this.buildSearch()
+          this.limit();
+          this.activity.loader(false);
+          this.activity.toggle();
+        } else {
+          this.empty();
+        }
+      };
+      this.buildSearch = function () {
+        var btn = html.find('.button--search');
+        btn.on('hover:enter', function () {
+          Lampa.Input.edit({
+            free: true,
+            nosave: true,
+            nomic: true,
+            value: ''
+          }, function (val) {
+            if (val) {
+              //this.clearButtons(false, val)
+              object.searchQuery = val;
+              object.geoSearchQuery = "";
+              Lampa.Activity.replace(object);
+            } else {
+              Lampa.Controller.toggle('content');
+            }
+          });
+        });
+      };
+      this.start = function () {
+        var _this4 = this;
+        Lampa.Controller.add('content', {
+          link: this,
+          toggle: function toggle() {
+            if (_this4.activity.canRefresh()) return false;
+            Lampa.Controller.collectionSet(header, scroll.render(true));
+            Lampa.Controller.collectionFocus(last || false, header, scroll.render(true));
+          },
+          left: function left() {
+            if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+          },
+          right: function right() {
+            if (_this4.onRight) {
+              if (Navigator.canmove('right')) Navigator.move('right');else _this4.onRight();
+            } else Navigator.move('right');
+          },
+          up: function up() {
+            if (Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
+          },
+          down: function down() {
+            if (Navigator.canmove('down')) Navigator.move('down');
+          },
+          back: function back() {
+            Lampa.Activity.backward();
+          }
+        });
+        Lampa.Controller.toggle('content');
+      };
+      this.refresh = function () {
+        this.activity.needRefresh();
+      };
+      this.pause = function () {};
+      this.stop = function () {};
+      this.render = function (js) {
+        return js ? html : $(html);
+      };
+      this.clearButtons = function (category, search) {
+        var btn_search = html.find('.button--search');
+        btn_search.find('div').addClass('hide').text('');
+        btn_search.find('div').removeClass('hide').text(search);
+      };
+      this.destroy = function () {
+        network.clear();
+        Lampa.Arrays.destroy(items);
+        scroll.destroy();
+        html.remove();
+        body.remove();
+        items = [];
+      };
+    }
+
     var manifest = {
       type: "other",
-      version: "3.0",
+      version: "4.0",
       name: "New category",
-      description: "Add new category to mein menu",
+      description: "Add new category and TV Show stream service",
       component: "nc"
     };
     var main = function main() {
       Lampa.Manifest.plugins = manifest;
-      Lampa.Component.add('lmeNetworks', component);
-      Lampa.Template.add('ncStyle', "\n        <style>\n            @charset 'UTF-8';div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}.lme-catalog.lme-header{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-moz-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.lme-baseInfo{padding:0 0 0 2%}.empty.simple-button.simple-button--invisible.selector.button--clear{margin:auto}.lme-baseInfo,.lme-favorites,.lme-search,.lme-clear,.lme-filter{-webkit-box-flex:1;-webkit-flex:1;-moz-box-flex:1;-ms-flex:1;flex:1;padding-left:1.5em;padding-right:1.5em;margin-left:.5em;margin-right:.5em}.lme-clear div,.lme-filter div{margin-left:1em}.lme-catalog.category-full .card__img{-o-object-fit:contain;object-fit:contain;padding:5%}.networkLogo{-o-object-fit:contain;object-fit:contain;padding:2%}\n        </style>\n    ");
+      Lampa.Component.add('lmeNetworks', component$1);
+      Lampa.Component.add('lmeNetworksBookmarks', component);
+      Lampa.Template.add('ncStyle', "\n        <style>\n            @charset 'UTF-8';.panelNC.blockNC{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-justify-content:space-around;-ms-flex-pack:distribute;justify-content:space-around;gap:10px;padding:10px}.nc-empty,.nc-main{margin:0 5px}.nc-empty svg,.nc-main svg{display:block;margin:0 auto}.nc-empty div,.nc-main div{text-align:center}div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}.lme-catalog.lme-header{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-moz-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.lme-baseInfo{padding:0 0 0 2%}.empty.simple-button.simple-button--invisible.selector.button--clear{margin:auto}.lme-baseInfo,.lme-favorites,.lme-search,.lme-clear,.lme-filter{-webkit-box-flex:1;-webkit-flex:1;-moz-box-flex:1;-ms-flex:1;flex:1;padding-left:1.5em;padding-right:1.5em;margin-left:.5em;margin-right:.5em}.lme-clear div,.lme-filter div{margin-left:1em}.lme-catalog.category-full .card__img{-o-object-fit:contain;object-fit:contain;padding:5%}.networkLogo{-o-object-fit:contain;object-fit:contain;padding:2%}\n        </style>\n    ");
       lang.data();
       config.setting();
       // Menu 2.0
-      //const submenuCatalogkeys = Object.keys(localStorage)
-      //    .filter(key => key.startsWith('nc_'))
       var submenuCatalogkeys = Object.keys(localStorage).filter(function (key) {
         return key.indexOf('nc_') === 0;
       });
@@ -1565,7 +2106,7 @@
             if (Lampa.Storage.get(category).available === true || Lampa.Storage.get('nc_concert') === true) {
               if (Lampa.Storage.get(category)) {
                 localStorage.removeItem(category);
-                Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkMigrate'));
+                Lampa.Noty.show(Lampa.Lang.translate('nc_favoriteMigrate'));
               } else {
                 console.log("\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0441 \u043A\u043B\u044E\u0447\u043E\u043C ".concat(Lampa.Storage.get(category), " \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0432 localStorage."));
               }
