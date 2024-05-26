@@ -702,29 +702,29 @@
         oncomplite(data);
       }, onerror, false);
     }
-    function collectionBookmarkSave(data) {
-      if (data.action === 'collectionBookmarkAdd') {
+    function collectionBookmarkSave(action, card_data) {
+      if (action === 'collectionBookmarkAdd') {
         try {
           var currentItems = Lampa.Storage.get('nc_collectionBookmarks') || [];
           var isDuplicate = currentItems.some(function (item) {
-            return item.$id === data.card_data.$id;
+            return item.$id === card_data.$id;
           });
           if (isDuplicate) {
             return false;
           }
-          Lampa.Storage.add('nc_collectionBookmarks', data.card_data);
+          Lampa.Storage.add('nc_collectionBookmarks', card_data);
           return true;
         } catch (error) {
           return false;
         }
       }
     }
-    function collectionBookmarkRemove(data) {
-      if (data.action === 'collectionBookmarkRemove') {
+    function collectionBookmarkRemove(action, card_data) {
+      if (action === 'collectionBookmarkRemove') {
         try {
           var currentItems = Lampa.Storage.get('nc_collectionBookmarks');
           var updatedItems = currentItems.filter(function (item) {
-            return item.$id !== data.card_data.$id;
+            return item.$id !== card_data.$id;
           });
           if (currentItems.length === updatedItems.length) {
             console.error('Ошибка: Запись не найдена');
@@ -2286,51 +2286,23 @@
             last = target;
             active = items.indexOf(card);
           };
-          card.onMenu = function (target, card_data) {};
+          card.onMenu = function (target, card_data) {
+            var result = Api.collectionBookmarkSave('collectionBookmarkAdd', card_data);
+            if (result === true) {
+              console.log('Запись была успешно добавлена.');
+              Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
+            } else if (result === false) {
+              console.error('Не удалось добавить запись.');
+              Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDuplicate'));
+            }
+          };
           card.onEnter = function (target, card_data) {
-            var enabled = Lampa.Controller.enabled().name;
-            var menu = [];
-            menu.push({
-              title: "".concat(Lampa.Lang.translate('nc_openAction')),
-              action: 'open',
-              card_data: card_data
-            });
-            menu.push({
-              title: Lampa.Lang.translate('nc_bookmarkAdd'),
-              action: 'collectionBookmarkAdd',
-              card_data: card_data
-            });
-            Lampa.Select.show({
-              title: "".concat(card_data.name),
-              items: menu,
-              onBack: function onBack() {
-                Lampa.Controller.toggle(enabled);
-              },
-              onSelect: function onSelect(a) {
-                if (a.action === 'collectionBookmarkAdd') {
-                  var result = Api.collectionBookmarkSave(a);
-                  if (result === true) {
-                    console.log('Запись была успешно добавлена.');
-                    Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
-                  } else if (result === false) {
-                    console.error('Не удалось добавить запись.');
-                    Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDuplicate'));
-                  }
-                }
-                if (a.action === 'open') {
-                  Lampa.Activity.push({
-                    url: '',
-                    title: card_data.name,
-                    collectionID: card_data.$id,
-                    component: 'lmeCollection',
-                    page: 1
-                  });
-                }
-                if (a.reset) {
-                  object.searchQuery = "";
-                  Lampa.Activity.replace(object);
-                }
-              }
+            Lampa.Activity.push({
+              url: '',
+              title: card_data.name,
+              collectionID: card_data.$id,
+              component: 'lmeCollection',
+              page: 1
             });
           };
           body.appendChild(card.render(true));
@@ -2637,57 +2609,29 @@
             last = target;
             active = items.indexOf(card);
           };
-          card.onMenu = function (target, card_data) {};
+          card.onMenu = function (target, card_data) {
+            var result = Api.collectionBookmarkRemove('collectionBookmarkRemove', card_data);
+            if (result === true) {
+              console.log('Запись была успешно удалена.');
+              Lampa.Activity.replace({
+                url: '',
+                title: Lampa.Lang.translate('nc_bookmark'),
+                component: 'lmeCollectionBookmark',
+                page: 1
+              });
+              Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDeleted'));
+            } else if (result === false) {
+              console.error('Не удалось удалить запись.');
+              Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDeleteError'));
+            }
+          };
           card.onEnter = function (target, card_data) {
-            var enabled = Lampa.Controller.enabled().name;
-            var menu = [];
-            menu.push({
-              title: "".concat(Lampa.Lang.translate('nc_openAction')),
-              action: 'open',
-              card_data: card_data
-            });
-            menu.push({
-              title: Lampa.Lang.translate('nc_bookmarkDelete'),
-              action: 'collectionBookmarkRemove',
-              card_data: card_data
-            });
-            Lampa.Select.show({
-              title: "".concat(card_data.name),
-              items: menu,
-              onBack: function onBack() {
-                Lampa.Controller.toggle(enabled);
-              },
-              onSelect: function onSelect(a) {
-                if (a.action === 'collectionBookmarkRemove') {
-                  var result = Api.collectionBookmarkRemove(a);
-                  if (result === true) {
-                    console.log('Запись была успешно удалена.');
-                    Lampa.Activity.replace({
-                      url: '',
-                      title: Lampa.Lang.translate('nc_bookmark'),
-                      component: 'lmeCollectionBookmark',
-                      page: 1
-                    });
-                    Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDeleted'));
-                  } else if (result === false) {
-                    console.error('Не удалось удалить запись.');
-                    Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDeleteError'));
-                  }
-                }
-                if (a.action === 'open') {
-                  Lampa.Activity.push({
-                    url: '',
-                    title: card_data.name,
-                    collectionID: card_data.$id,
-                    component: 'lmeCollection',
-                    page: 1
-                  });
-                }
-                if (a.reset) {
-                  object.searchQuery = "";
-                  Lampa.Activity.replace(object);
-                }
-              }
+            Lampa.Activity.push({
+              url: '',
+              title: card_data.name,
+              collectionID: card_data.$id,
+              component: 'lmeCollection',
+              page: 1
             });
           };
           body.appendChild(card.render(true));
