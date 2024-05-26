@@ -649,7 +649,12 @@
     function mainCollection(params, oncomplite, onerror) {
       var apiUrl = api_urlCollection;
       if (params.searchQuery && params.searchQuery !== "") {
-        apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
+        // Получаем значение языка из хранилища
+        var language = Lampa.Storage.get('language');
+
+        // Определяем атрибут для поиска в зависимости от языка
+        var searchAttribute = language === 'uk' ? 'uk' : language === 'ru' ? 'ru' : 'name';
+        apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"".concat(searchAttribute, "\",\"values\":[\"").concat(params.searchQuery, "\"]}");
       }
       network.silent(encodeURI(apiUrl), function (data) {
         data.collection = false;
@@ -689,7 +694,8 @@
       }, onerror, false, auth);
     }
     function mainCollectionGet(params, oncomplite, onerror) {
-      var apiUrl = "https://corsproxy.io/?https://api.themoviedb.org/3/collection/".concat(params.collectionID, "?api_key=4ef0d7355d9ffb5151e987764708ce96&language=").concat(Lampa.Storage.get('language'));
+      //https://api.allorigins.win/get?url=https://api.themoviedb.org/3/collection/295?api_key=4ef0d7355d9ffb5151e987764708ce96&language=uk
+      var apiUrl = "https://api.allorigins.win/get?url=https://api.themoviedb.org/3/collection/".concat(params.collectionID, "?api_key=4ef0d7355d9ffb5151e987764708ce96&language=").concat(Lampa.Storage.get('language'));
       if (params.searchQuery && params.searchQuery !== "") {
         apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
       }
