@@ -674,7 +674,6 @@
         apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
       }
       network.silent(encodeURI(apiUrl), function (data) {
-        data.collection = true;
         data.results = data.parts;
         data.total_pages = data.total / 36;
         oncomplite(data);
