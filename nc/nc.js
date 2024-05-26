@@ -118,16 +118,16 @@
           "zh": "开放" // Chinese translation
         },
         nc_networkstat: {
-          "ru": "Сервисов в базе",
-          "en": "Services in the base",
-          "uk": "Сервісів у базі",
-          "zh": "基地内的服务" // Chinese translation
+          "ru": "Найдено записей",
+          "en": "Records found",
+          "uk": "Знайдено записів",
+          "zh": "已找到记录" // Chinese translation
         },
         nc_bookmarksstat: {
-          "ru": "Закладок",
-          "en": "Bookmarks",
-          "uk": "Закладок",
-          "zh": "书签" // Chinese translation
+          "ru": "Найдено записей",
+          "en": "Records found",
+          "uk": "Знайдено записів",
+          "zh": "已找到记录" // Chinese translation
         },
         nc_favoriteAdded: {
           ru: "Вкладка успешно добавлена",
@@ -198,7 +198,7 @@
         nc_bookmarkDeleteError: {
           ru: "Ошибка удаления",
           en: "Deletion error",
-          uk: "ЗПомилка видалення",
+          uk: "Помилка видалення",
           zh: "删除错误" // Chinese translation
         },
         //Collections
