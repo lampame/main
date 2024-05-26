@@ -654,6 +654,16 @@
       network.silent(encodeURI(apiUrl), function (data) {
         data.collection = false;
         data.total_pages = data.total / 36;
+        data.documents.forEach(function (element) {
+          var language = Lampa.Storage.get('language');
+          if (language === 'uk') {
+            element.name = element.uk || element.name;
+          } else if (language === 'ru') {
+            element.name = element.ru || element.name;
+          } else {
+            element.name = "".concat(element.name);
+          }
+        });
         oncomplite(data);
       }, onerror, false, auth);
     }
@@ -665,11 +675,21 @@
       network.silent(encodeURI(apiUrl + "&queries[]={\"method\":\"offset\",\"values\":[".concat(params.page * 36, "]}")), function (data) {
         data.collection = false;
         data.total_pages = data.total / 36;
+        data.documents.forEach(function (element) {
+          var language = Lampa.Storage.get('language');
+          if (language === 'uk') {
+            element.name = element.uk || element.name;
+          } else if (language === 'ru') {
+            element.name = element.ru || element.name;
+          } else {
+            element.name = "".concat(element.name);
+          }
+        });
         oncomplite(data);
       }, onerror, false, auth);
     }
     function mainCollectionGet(params, oncomplite, onerror) {
-      var apiUrl = "https://corsproxy.io/?https://api.themoviedb.org/3/collection/".concat(params.collectionID, "?api_key=4ef0d7355d9ffb5151e987764708ce96");
+      var apiUrl = "https://corsproxy.io/?https://api.themoviedb.org/3/collection/".concat(params.collectionID, "?api_key=4ef0d7355d9ffb5151e987764708ce96&language=").concat(Lampa.Storage.get('language'));
       if (params.searchQuery && params.searchQuery !== "") {
         apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
       }
