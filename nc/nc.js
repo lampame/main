@@ -694,16 +694,13 @@
       }, onerror, false, auth);
     }
     function mainCollectionGet(params, oncomplite, onerror) {
-      //https://api.allorigins.win/get?url=https://api.themoviedb.org/3/collection/295?api_key=4ef0d7355d9ffb5151e987764708ce96&language=uk
-      var apiUrl = "https://api.allorigins.win/get?url=https://api.themoviedb.org/3/collection/".concat(params.collectionID, "?api_key=4ef0d7355d9ffb5151e987764708ce96&language=").concat(Lampa.Storage.get('language'));
-      if (params.searchQuery && params.searchQuery !== "") {
-        apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
-      }
-      network.silent(encodeURI(apiUrl), function (data) {
+      var apiUrl = "https://api.themoviedb.org/3/collection/".concat(params.collectionID, "?api_key=4ef0d7355d9ffb5151e987764708ce96&language=").concat(Lampa.Storage.get('language'));
+      network.silent(apiUrl, function (data) {
+        //data = data.contents;
         data.results = data.parts;
         data.total_pages = data.total / 36;
         oncomplite(data);
-      }, onerror, false, auth);
+      }, onerror, false);
     }
     function collectionBookmarkSave(data) {
       if (data.action === 'collectionBookmarkAdd') {
