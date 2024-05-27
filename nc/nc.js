@@ -694,7 +694,10 @@
       }, onerror, false, auth);
     }
     function mainCollectionGet(params, oncomplite, onerror) {
-      var apiUrl = "https://api.themoviedb.org/3/collection/".concat(params.collectionID, "?api_key=4ef0d7355d9ffb5151e987764708ce96&language=").concat(Lampa.Storage.get('language'));
+      var apiUrlTMDB = 'https://api.themoviedb.org/3/';
+      var apiUrlProxy = 'apitmdb.' + (Lampa.Manifest && Lampa.Manifest.cub_domain ? Lampa.Manifest.cub_domain : 'cub.red') + '/3/';
+      var request = "collection/".concat(params.collectionID, "?api_key=4ef0d7355d9ffb5151e987764708ce96&language=").concat(Lampa.Storage.get('language'));
+      var apiUrl = Lampa.Storage.field('proxy_tmdb') ? Lampa.Utils.protocol() + apiUrlProxy + request : apiUrlTMDB + request;
       network.silent(apiUrl, function (data) {
         //data = data.contents;
         data.results = data.parts;
