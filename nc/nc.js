@@ -566,8 +566,8 @@
     };
 
     var network = new Lampa.Reguest();
-    var api_url = 'https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/TVNetworksSource/documents?queries[0]={"method":"limit","values":[36]}';
-    var api_urlCollection = 'https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/CollectionSource/documents?queries[0]={"method":"limit","values":[36]}';
+    var api_url = 'https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/TVNetworksSource/documents?queries[0]={"method":"limit","values":[36]}&queries[]={"method":"orderDesc","values":["$createdAt"]}';
+    var api_urlCollection = 'https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/CollectionSource/documents?queries[0]={"method":"limit","values":[36]}&queries[]={"method":"orderDesc","values":["$createdAt"]}';
     var auth = {
       headers: {
         "X-Appwrite-Project": "65fd523956f5ca97eaff"
@@ -1639,7 +1639,7 @@
         });
         var baseInfo = document.createElement('div');
         baseInfo.className = 'lme-baseInfo';
-        baseInfo.innerHTML = "".concat(Lampa.Lang.translate('nc_networkstat'), ": ").concat(data.total);
+        baseInfo.innerHTML = "".concat(Lampa.Lang.translate('nc_networkstat'), ": ").concat(data.total === 5000 ? '5000+' : data.total);
         var search = document.createElement('div');
         search.className = 'lme-search simple-button simple-button--invisible simple-button--filter selector button--search';
         search.innerHTML = "\n                <svg width=\"23\" height=\"22\" viewBox=\"0 0 23 22\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" xml:space=\"preserve\">\n                    <circle cx=\"9.9964\" cy=\"9.63489\" r=\"8.43556\" stroke=\"currentColor\" stroke-width=\"2.4\"></circle>\n                    <path d=\"M20.7768 20.4334L18.2135 17.8701\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"></path>\n                </svg>\n                <div class=\"nc_tv\">Search</div>\n        ";
@@ -2377,7 +2377,7 @@
         });
         var baseInfo = document.createElement('div');
         baseInfo.className = 'lme-baseInfo';
-        baseInfo.innerHTML = "".concat(Lampa.Lang.translate('nc_networkstat'), ": ").concat(data.total);
+        baseInfo.innerHTML = "".concat(Lampa.Lang.translate('nc_networkstat'), ": ").concat(data.total === 5000 ? '5000+' : data.total);
         var search = document.createElement('div');
         search.className = 'lme-search simple-button simple-button--invisible simple-button--filter selector button--search';
         search.innerHTML = "\n                <svg width=\"23\" height=\"22\" viewBox=\"0 0 23 22\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" xml:space=\"preserve\">\n                    <circle cx=\"9.9964\" cy=\"9.63489\" r=\"8.43556\" stroke=\"currentColor\" stroke-width=\"2.4\"></circle>\n                    <path d=\"M20.7768 20.4334L18.2135 17.8701\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"></path>\n                </svg>\n                <div class=\"nc_tv\">Search</div>\n        ";
