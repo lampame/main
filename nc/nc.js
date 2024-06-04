@@ -69,6 +69,18 @@
           uk: "TV Show Networks",
           zh: "TV Show Networks" // Chinese translation
         },
+        nc_networksListGeoAdd: {
+          ru: "Страна успешно выбрана",
+          en: "The country has been successfully selected",
+          uk: "Країну успішно обрано",
+          zh: "该国已成功入选" // Chinese translation
+        },
+        nc_networksListGeoDeleted: {
+          ru: "Страна успешно удалена",
+          en: "Country successfully deleted",
+          uk: "Країну успішно видалено",
+          zh: "该国家已被成功删除" // Chinese translation
+        },
         nc_concert: {
           ru: "Концерты",
           en: "Concerts",
@@ -578,8 +590,8 @@
       if (params.searchQuery && params.searchQuery !== "") {
         apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
       }
-      if (params.geoSearchQuery && params.geoSearchQuery !== "") {
-        apiUrl += "&queries[]={\"method\":\"equal\",\"attribute\":\"origin_country\",\"values\":[\"".concat(params.geoSearchQuery, "\"]}");
+      if (!params.searchQuery && (params.geoSearchQuery && params.geoSearchQuery !== "" || Lampa.Storage.get('nc_networksListGeo') && Lampa.Storage.get('nc_networksListGeo') !== "null")) {
+        apiUrl += "&queries[]={\"method\":\"equal\",\"attribute\":\"origin_country\",\"values\":[\"".concat(Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery, "\"]}");
       }
       network.silent(encodeURI(apiUrl), function (data) {
         data.collection = true;
@@ -1346,6 +1358,18 @@
     }
     var GeoBase$1 = list();
 
+    function setGeo(a) {
+      if (Lampa.Storage.get('nc_networksListGeo') === a.id) {
+        nullGeo();
+      } else {
+        Lampa.Storage.set('nc_networksListGeo', a.id);
+        Lampa.Noty.show(Lampa.Lang.translate('nc_networksListGeoAdd'));
+      }
+    }
+    function nullGeo() {
+      Lampa.Storage.set('nc_networksListGeo', null);
+      Lampa.Noty.show(Lampa.Lang.translate('nc_networksListGeoDeleted'));
+    }
     function component$4(object) {
       var network = new Lampa.Reguest();
       var scroll = new Lampa.Scroll({
@@ -1474,8 +1498,7 @@
               reset: true
             });
             Lampa.Select.show({
-              //${Lampa.Lang.translate('title_action')}
-              title: "[".concat(card_data.$id, "] ").concat(card_data.name),
+              title: "".concat(card_data.name, " [").concat(card_data.$id, "]"),
               items: menu,
               onBack: function onBack() {
                 Lampa.Controller.toggle(enabled);
@@ -1557,6 +1580,9 @@
                     onSelect: function onSelect(a) {
                       object.geoSearchQuery = a.id;
                       Lampa.Activity.replace(object);
+                    },
+                    onLong: function onLong(a) {
+                      setGeo(a);
                     },
                     onBack: function onBack() {
                       Lampa.Controller.toggle('content');
@@ -1669,10 +1695,16 @@
               object.geoSearchQuery = a.id;
               Lampa.Activity.replace(object);
             },
+            onLong: function onLong(a) {
+              setGeo(a);
+            },
             onBack: function onBack() {
               Lampa.Controller.toggle('content');
             }
           });
+        });
+        geo.on('hover:long', function () {
+          nullGeo();
         });
         header.appendChild(search);
         header.appendChild(clear);
