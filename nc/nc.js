@@ -2875,7 +2875,7 @@
 
     var manifest = {
       type: "other",
-      version: "4.1",
+      version: "4.1.1",
       name: "New category",
       description: "Add new category and TV Show stream service",
       component: "nc"
