@@ -598,7 +598,9 @@
         data.total_pages = data.total / 36;
         data.documents.forEach(function (element) {
           element.poster_path = element.logo_path;
-          element.name = "".concat(element.name, " ").concat(element.origin_country);
+          if (element.origin_country !== 'null') {
+            element.name = "".concat(element.name, " ").concat(element.origin_country);
+          }
         });
         oncomplite(data);
       }, onerror, false, auth);
@@ -608,8 +610,8 @@
       if (params.searchQuery && params.searchQuery !== "") {
         apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
       }
-      if (params.geoSearchQuery && params.geoSearchQuery !== "") {
-        apiUrl += "&queries[]={\"method\":\"equal\",\"attribute\":\"origin_country\",\"values\":[\"".concat(params.geoSearchQuery, "\"]}");
+      if (!params.searchQuery && (params.geoSearchQuery && params.geoSearchQuery !== "" || Lampa.Storage.get('nc_networksListGeo') && Lampa.Storage.get('nc_networksListGeo') !== "null")) {
+        apiUrl += "&queries[]={\"method\":\"equal\",\"attribute\":\"origin_country\",\"values\":[\"".concat(Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery, "\"]}");
       }
       network.silent(encodeURI(apiUrl + "&queries[]={\"method\":\"offset\",\"values\":[".concat(params.page * 36, "]}")), function (data) {
         data.collection = true;
@@ -2875,7 +2877,7 @@
 
     var manifest = {
       type: "other",
-      version: "4.1.1",
+      version: "4.1.2",
       name: "New category",
       description: "Add new category and TV Show stream service",
       component: "nc"
