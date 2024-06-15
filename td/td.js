@@ -265,87 +265,625 @@
     qPanels: qPanels$1
   };
 
-  function transmissionDir() {
-    var data = JSON.stringify({
-      "method": "session-get"
+  function _iterableToArrayLimit(r, l) {
+    var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
+    if (null != t) {
+      var e,
+        n,
+        i,
+        u,
+        a = [],
+        f = !0,
+        o = !1;
+      try {
+        if (i = (t = t.call(r)).next, 0 === l) {
+          if (Object(t) !== t) return;
+          f = !1;
+        } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0);
+      } catch (r) {
+        o = !0, n = r;
+      } finally {
+        try {
+          if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return;
+        } finally {
+          if (o) throw n;
+        }
+      }
+      return a;
+    }
+  }
+  function _regeneratorRuntime() {
+    _regeneratorRuntime = function () {
+      return e;
+    };
+    var t,
+      e = {},
+      r = Object.prototype,
+      n = r.hasOwnProperty,
+      o = Object.defineProperty || function (t, e, r) {
+        t[e] = r.value;
+      },
+      i = "function" == typeof Symbol ? Symbol : {},
+      a = i.iterator || "@@iterator",
+      c = i.asyncIterator || "@@asyncIterator",
+      u = i.toStringTag || "@@toStringTag";
+    function define(t, e, r) {
+      return Object.defineProperty(t, e, {
+        value: r,
+        enumerable: !0,
+        configurable: !0,
+        writable: !0
+      }), t[e];
+    }
+    try {
+      define({}, "");
+    } catch (t) {
+      define = function (t, e, r) {
+        return t[e] = r;
+      };
+    }
+    function wrap(t, e, r, n) {
+      var i = e && e.prototype instanceof Generator ? e : Generator,
+        a = Object.create(i.prototype),
+        c = new Context(n || []);
+      return o(a, "_invoke", {
+        value: makeInvokeMethod(t, r, c)
+      }), a;
+    }
+    function tryCatch(t, e, r) {
+      try {
+        return {
+          type: "normal",
+          arg: t.call(e, r)
+        };
+      } catch (t) {
+        return {
+          type: "throw",
+          arg: t
+        };
+      }
+    }
+    e.wrap = wrap;
+    var h = "suspendedStart",
+      l = "suspendedYield",
+      f = "executing",
+      s = "completed",
+      y = {};
+    function Generator() {}
+    function GeneratorFunction() {}
+    function GeneratorFunctionPrototype() {}
+    var p = {};
+    define(p, a, function () {
+      return this;
     });
+    var d = Object.getPrototypeOf,
+      v = d && d(d(values([])));
+    v && v !== r && n.call(v, a) && (p = v);
+    var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p);
+    function defineIteratorMethods(t) {
+      ["next", "throw", "return"].forEach(function (e) {
+        define(t, e, function (t) {
+          return this._invoke(e, t);
+        });
+      });
+    }
+    function AsyncIterator(t, e) {
+      function invoke(r, o, i, a) {
+        var c = tryCatch(t[r], t, o);
+        if ("throw" !== c.type) {
+          var u = c.arg,
+            h = u.value;
+          return h && "object" == typeof h && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) {
+            invoke("next", t, i, a);
+          }, function (t) {
+            invoke("throw", t, i, a);
+          }) : e.resolve(h).then(function (t) {
+            u.value = t, i(u);
+          }, function (t) {
+            return invoke("throw", t, i, a);
+          });
+        }
+        a(c.arg);
+      }
+      var r;
+      o(this, "_invoke", {
+        value: function (t, n) {
+          function callInvokeWithMethodAndArg() {
+            return new e(function (e, r) {
+              invoke(t, n, e, r);
+            });
+          }
+          return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg();
+        }
+      });
+    }
+    function makeInvokeMethod(e, r, n) {
+      var o = h;
+      return function (i, a) {
+        if (o === f) throw Error("Generator is already running");
+        if (o === s) {
+          if ("throw" === i) throw a;
+          return {
+            value: t,
+            done: !0
+          };
+        }
+        for (n.method = i, n.arg = a;;) {
+          var c = n.delegate;
+          if (c) {
+            var u = maybeInvokeDelegate(c, n);
+            if (u) {
+              if (u === y) continue;
+              return u;
+            }
+          }
+          if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) {
+            if (o === h) throw o = s, n.arg;
+            n.dispatchException(n.arg);
+          } else "return" === n.method && n.abrupt("return", n.arg);
+          o = f;
+          var p = tryCatch(e, r, n);
+          if ("normal" === p.type) {
+            if (o = n.done ? s : l, p.arg === y) continue;
+            return {
+              value: p.arg,
+              done: n.done
+            };
+          }
+          "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg);
+        }
+      };
+    }
+    function maybeInvokeDelegate(e, r) {
+      var n = r.method,
+        o = e.iterator[n];
+      if (o === t) return r.delegate = null, "throw" === n && e.iterator.return && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y;
+      var i = tryCatch(o, e.iterator, r.arg);
+      if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y;
+      var a = i.arg;
+      return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y);
+    }
+    function pushTryEntry(t) {
+      var e = {
+        tryLoc: t[0]
+      };
+      1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e);
+    }
+    function resetTryEntry(t) {
+      var e = t.completion || {};
+      e.type = "normal", delete e.arg, t.completion = e;
+    }
+    function Context(t) {
+      this.tryEntries = [{
+        tryLoc: "root"
+      }], t.forEach(pushTryEntry, this), this.reset(!0);
+    }
+    function values(e) {
+      if (e || "" === e) {
+        var r = e[a];
+        if (r) return r.call(e);
+        if ("function" == typeof e.next) return e;
+        if (!isNaN(e.length)) {
+          var o = -1,
+            i = function next() {
+              for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next;
+              return next.value = t, next.done = !0, next;
+            };
+          return i.next = i;
+        }
+      }
+      throw new TypeError(typeof e + " is not iterable");
+    }
+    return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", {
+      value: GeneratorFunctionPrototype,
+      configurable: !0
+    }), o(GeneratorFunctionPrototype, "constructor", {
+      value: GeneratorFunction,
+      configurable: !0
+    }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) {
+      var e = "function" == typeof t && t.constructor;
+      return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name));
+    }, e.mark = function (t) {
+      return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t;
+    }, e.awrap = function (t) {
+      return {
+        __await: t
+      };
+    }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () {
+      return this;
+    }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) {
+      void 0 === i && (i = Promise);
+      var a = new AsyncIterator(wrap(t, r, n, o), i);
+      return e.isGeneratorFunction(r) ? a : a.next().then(function (t) {
+        return t.done ? t.value : a.next();
+      });
+    }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () {
+      return this;
+    }), define(g, "toString", function () {
+      return "[object Generator]";
+    }), e.keys = function (t) {
+      var e = Object(t),
+        r = [];
+      for (var n in e) r.push(n);
+      return r.reverse(), function next() {
+        for (; r.length;) {
+          var t = r.pop();
+          if (t in e) return next.value = t, next.done = !1, next;
+        }
+        return next.done = !0, next;
+      };
+    }, e.values = values, Context.prototype = {
+      constructor: Context,
+      reset: function (e) {
+        if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t);
+      },
+      stop: function () {
+        this.done = !0;
+        var t = this.tryEntries[0].completion;
+        if ("throw" === t.type) throw t.arg;
+        return this.rval;
+      },
+      dispatchException: function (e) {
+        if (this.done) throw e;
+        var r = this;
+        function handle(n, o) {
+          return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o;
+        }
+        for (var o = this.tryEntries.length - 1; o >= 0; --o) {
+          var i = this.tryEntries[o],
+            a = i.completion;
+          if ("root" === i.tryLoc) return handle("end");
+          if (i.tryLoc <= this.prev) {
+            var c = n.call(i, "catchLoc"),
+              u = n.call(i, "finallyLoc");
+            if (c && u) {
+              if (this.prev < i.catchLoc) return handle(i.catchLoc, !0);
+              if (this.prev < i.finallyLoc) return handle(i.finallyLoc);
+            } else if (c) {
+              if (this.prev < i.catchLoc) return handle(i.catchLoc, !0);
+            } else {
+              if (!u) throw Error("try statement without catch or finally");
+              if (this.prev < i.finallyLoc) return handle(i.finallyLoc);
+            }
+          }
+        }
+      },
+      abrupt: function (t, e) {
+        for (var r = this.tryEntries.length - 1; r >= 0; --r) {
+          var o = this.tryEntries[r];
+          if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) {
+            var i = o;
+            break;
+          }
+        }
+        i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null);
+        var a = i ? i.completion : {};
+        return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a);
+      },
+      complete: function (t, e) {
+        if ("throw" === t.type) throw t.arg;
+        return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y;
+      },
+      finish: function (t) {
+        for (var e = this.tryEntries.length - 1; e >= 0; --e) {
+          var r = this.tryEntries[e];
+          if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y;
+        }
+      },
+      catch: function (t) {
+        for (var e = this.tryEntries.length - 1; e >= 0; --e) {
+          var r = this.tryEntries[e];
+          if (r.tryLoc === t) {
+            var n = r.completion;
+            if ("throw" === n.type) {
+              var o = n.arg;
+              resetTryEntry(r);
+            }
+            return o;
+          }
+        }
+        throw Error("illegal catch attempt");
+      },
+      delegateYield: function (e, r, n) {
+        return this.delegate = {
+          iterator: values(e),
+          resultName: r,
+          nextLoc: n
+        }, "next" === this.method && (this.arg = t), y;
+      }
+    }, e;
+  }
+  function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
+    try {
+      var info = gen[key](arg);
+      var value = info.value;
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    if (info.done) {
+      resolve(value);
+    } else {
+      Promise.resolve(value).then(_next, _throw);
+    }
+  }
+  function _asyncToGenerator(fn) {
+    return function () {
+      var self = this,
+        args = arguments;
+      return new Promise(function (resolve, reject) {
+        var gen = fn.apply(self, args);
+        function _next(value) {
+          asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
+        }
+        function _throw(err) {
+          asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err);
+        }
+        _next(undefined);
+      });
+    };
+  }
+  function _slicedToArray(arr, i) {
+    return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
+  }
+  function _arrayWithHoles(arr) {
+    if (Array.isArray(arr)) return arr;
+  }
+  function _unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+  }
+  function _arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+    return arr2;
+  }
+  function _nonIterableRest() {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
+
+  function transmissionAuth() {
     var xhr = new XMLHttpRequest();
     xhr.withCredentials = false;
     xhr.addEventListener("readystatechange", function () {
       if (this.readyState === 4) {
-        JSON.parse(this.responseText).arguments['download-dir'];
+        if (this.status === 409) {
+          Lampa.Storage.set("transmissionKey", xhr.getResponseHeader("X-Transmission-Session-Id"));
+          Lampa.Noty.show(Lampa.Lang.translate('transmissionAuthSuccess'));
+        } else {
+          if (this.status !== 200) {
+            console.log('TD', 'Try Auth', this.status);
+            Lampa.Noty.show(Lampa.Lang.translate('transmissionAuthDenied'));
+          }
+        }
       }
     });
-    xhr.open("POST", "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
-    xhr.setRequestHeader("X-Transmission-Session-Id", Lampa.Storage.get("transmissionKey"));
-    xhr.setRequestHeader("Authorization", "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))));
-    xhr.setRequestHeader("Content-Type", "application/json");
+    var data = JSON.stringify({
+      "method": "session-get",
+      "arguments": {
+        "fields": ["session-id"]
+      }
+    });
+    xhr.open("POST", getTransmissionUrl());
+    Object.entries(getHeaders()).forEach(function (_ref) {
+      var _ref2 = _slicedToArray(_ref, 2),
+        key = _ref2[0],
+        value = _ref2[1];
+      return xhr.setRequestHeader(key, value);
+    });
     xhr.send(data);
   }
-  function transmissionClient(selectedTorrent) {
-    if (selectedTorrent && Lampa.Storage.get("transmissionKey")) {
-      transmissionDir();
-      var categoryParam = selectedTorrent.CategoryDesc ? Lampa.Storage.get("transmission".concat(selectedTorrent.CategoryDesc)) : transmissionDir();
-      var data = JSON.stringify({
-        method: "torrent-add",
-        arguments: {
-          paused: Lampa.Storage.get("transmissionAutostart"),
-          filename: selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link,
-          "download-dir": categoryParam
+  function getTransmissionUrl() {
+    return "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc");
+  }
+  function getHeaders() {
+    return {
+      "X-Transmission-Session-Id": Lampa.Storage.get("transmissionKey"),
+      "Authorization": "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))),
+      "Content-Type": "application/json"
+    };
+  }
+  function transmissionDir() {
+    return _transmissionDir.apply(this, arguments);
+  }
+  function _transmissionDir() {
+    _transmissionDir = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+      var data, url, headers;
+      return _regeneratorRuntime().wrap(function _callee$(_context) {
+        while (1) switch (_context.prev = _context.next) {
+          case 0:
+            data = JSON.stringify({
+              "method": "session-get"
+            });
+            url = getTransmissionUrl();
+            headers = getHeaders();
+            return _context.abrupt("return", new Promise(function (resolve, reject) {
+              var xhr = new XMLHttpRequest();
+              xhr.withCredentials = false;
+              xhr.addEventListener("readystatechange", function () {
+                if (this.readyState === 4) {
+                  if (this.status === 200) {
+                    resolve(JSON.parse(this.responseText).arguments['download-dir']);
+                  } else {
+                    reject("Error: ".concat(this.status));
+                  }
+                }
+              });
+              xhr.open("POST", url);
+              Object.entries(headers).forEach(function (_ref3) {
+                var _ref4 = _slicedToArray(_ref3, 2),
+                  key = _ref4[0],
+                  value = _ref4[1];
+                return xhr.setRequestHeader(key, value);
+              });
+              xhr.send(data);
+            }));
+          case 4:
+          case "end":
+            return _context.stop();
         }
-      });
-      var xhr = new XMLHttpRequest();
-      xhr.addEventListener("readystatechange", function () {
-        if (this.readyState === 4 && this.status === 200 && JSON.parse(this.responseText).result === "Couldn't fetch torrent: Found (302)") {
-          console.log("TD", xhr);
-          Lampa.Noty.show(Lampa.Lang.translate('tdError') + JSON.parse(this.responseText).result);
-        } else if (this.readyState === 4 && this.status === 200 && JSON.parse(this.responseText).arguments.hasOwnProperty('torrent-duplicate')) {
-          Lampa.Noty.show(Lampa.Lang.translate('tdDuplicate'));
-          console.log("TD", JSON.parse(this.responseText));
-        } else if (this.readyState === 4 && this.status === 200) {
-          Lampa.Noty.show(Lampa.Lang.translate('tdAdded'));
-          console.log("TD", JSON.parse(this.responseText));
-        } else if (xhr.status !== 200) {
-          console.log("TD", xhr);
-          Lampa.Noty.show(Lampa.Lang.translate('tdError') + xhr.status);
+      }, _callee);
+    }));
+    return _transmissionDir.apply(this, arguments);
+  }
+  function transmissionClient(_x) {
+    return _transmissionClient.apply(this, arguments);
+  }
+  function _transmissionClient() {
+    _transmissionClient = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(selectedTorrent) {
+      var categoryParam, data, xhr;
+      return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+        while (1) switch (_context2.prev = _context2.next) {
+          case 0:
+            if (!(selectedTorrent && Lampa.Storage.get("transmissionKey"))) {
+              _context2.next = 38;
+              break;
+            }
+            _context2.prev = 1;
+            if (!selectedTorrent.CategoryDesc) {
+              _context2.next = 6;
+              break;
+            }
+            _context2.t0 = Lampa.Storage.get("transmission".concat(selectedTorrent.CategoryDesc));
+            _context2.next = 9;
+            break;
+          case 6:
+            _context2.next = 8;
+            return transmissionDir();
+          case 8:
+            _context2.t0 = _context2.sent;
+          case 9:
+            categoryParam = _context2.t0;
+            if (categoryParam) {
+              _context2.next = 16;
+              break;
+            }
+            _context2.next = 13;
+            return transmissionDir();
+          case 13:
+            _context2.t1 = _context2.sent;
+            _context2.next = 17;
+            break;
+          case 16:
+            _context2.t1 = categoryParam;
+          case 17:
+            categoryParam = _context2.t1;
+            _context2.t2 = console;
+            _context2.t3 = categoryParam;
+            _context2.next = 22;
+            return transmissionDir();
+          case 22:
+            _context2.t4 = _context2.sent;
+            _context2.t2.log.call(_context2.t2, 'categoryParam', _context2.t3, _context2.t4);
+            data = JSON.stringify({
+              method: "torrent-add",
+              arguments: {
+                paused: Lampa.Storage.get("transmissionAutostart"),
+                filename: selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link,
+                "download-dir": categoryParam
+              }
+            });
+            xhr = new XMLHttpRequest();
+            xhr.addEventListener("readystatechange", function () {
+              if (this.readyState === 4) {
+                var response = JSON.parse(this.responseText);
+                if (this.status === 200) {
+                  if (response.result === "Couldn't fetch torrent: Found (302)") {
+                    Lampa.Noty.show(Lampa.Lang.translate('tdError') + response.result);
+                  } else if (response.arguments.hasOwnProperty('torrent-duplicate')) {
+                    Lampa.Noty.show(Lampa.Lang.translate('tdDuplicate'));
+                  } else {
+                    Lampa.Noty.show(Lampa.Lang.translate('tdAdded'));
+                  }
+                } else {
+                  Lampa.Noty.show(Lampa.Lang.translate('tdError') + this.status);
+                }
+              }
+            });
+            xhr.open("POST", getTransmissionUrl());
+            Object.entries(getHeaders()).forEach(function (_ref5) {
+              var _ref6 = _slicedToArray(_ref5, 2),
+                key = _ref6[0],
+                value = _ref6[1];
+              return xhr.setRequestHeader(key, value);
+            });
+            xhr.send(data);
+            _context2.next = 36;
+            break;
+          case 32:
+            _context2.prev = 32;
+            _context2.t5 = _context2["catch"](1);
+            console.error(_context2.t5);
+            Lampa.Noty.show(Lampa.Lang.translate('tdError') + _context2.t5);
+          case 36:
+            _context2.next = 39;
+            break;
+          case 38:
+            if (!Lampa.Storage.get("transmissionKey")) {
+              Lampa.Noty.show(Lampa.Lang.translate('tdAuthError') + !Lampa.Storage.get("transmissionKey") + " ".concat(getTransmissionUrl()));
+            }
+          case 39:
+            setTimeout(function () {
+              return Lampa.Select.close();
+            }, 10);
+          case 40:
+          case "end":
+            return _context2.stop();
         }
-      });
-      xhr.open("POST", "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
-      xhr.setRequestHeader("X-Transmission-Session-Id", Lampa.Storage.get("transmissionKey"));
-      xhr.setRequestHeader("Content-Type", "application/json");
-      xhr.setRequestHeader("Authorization", "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))));
-      xhr.send(data);
-    } else if (!Lampa.Storage.get("transmissionKey")) {
-      Lampa.Noty.show(Lampa.Lang.translate('tdAuthError') + !Lampa.Storage.get("transmissionKey") + " ".concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
-    }
-    setTimeout(function () {
-      Lampa.Select.close();
-    }, 10);
+      }, _callee2, null, [[1, 32]]);
+    }));
+    return _transmissionClient.apply(this, arguments);
   }
   function getStatus$1() {
-    var xhr = new XMLHttpRequest();
-    xhr.withCredentials = false;
-    xhr.addEventListener("readystatechange", function () {
-      if (this.readyState === 4) {
-        console.log('TD', this.getAllResponseHeaders());
-        console.log('TD', this.status);
-        console.log('TD', this);
-        if (this.status === 200 || this.status === 409) {
-          Lampa.Storage.set("transmissionKey", xhr.getResponseHeader("X-Transmission-Session-Id"));
-          $("#transmissionStatus").removeClass("active error wait").addClass("active");
-          $("#transmissionStatusBtn").removeClass("active error wait").addClass("active");
-        } else if (this.status === undefined) {
-          $("#transmissionStatus").removeClass("active error wait").addClass("error");
-          $("#transmissionStatusBtn").removeClass("active error wait").addClass("error");
-        } else {
-          $("#transmissionStatus").removeClass("active error wait").addClass("error");
-          $("#transmissionStatusBtn").removeClass("active error wait").addClass("error");
+    return _getStatus.apply(this, arguments);
+  }
+  function _getStatus() {
+    _getStatus = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+      var url, headers;
+      return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+        while (1) switch (_context3.prev = _context3.next) {
+          case 0:
+            url = getTransmissionUrl();
+            headers = getHeaders();
+            return _context3.abrupt("return", new Promise(function (resolve, reject) {
+              var xhr = new XMLHttpRequest();
+              xhr.withCredentials = false;
+              var data = JSON.stringify({
+                "method": "session-get"
+              });
+              xhr.addEventListener("readystatechange", function () {
+                if (this.readyState === 4) {
+                  console.log('TD', this.getAllResponseHeaders(), this.status, this);
+                  if (this.status === 200 || this.status === 409) {
+                    //Lampa.Storage.set("transmissionKey", xhr.getResponseHeader("X-Transmission-Session-Id"));
+                    $("#transmissionStatus, #transmissionStatusBtn").removeClass("active error wait").addClass("active");
+                    resolve();
+                  } else {
+                    $("#transmissionStatus, #transmissionStatusBtn").removeClass("active error wait").addClass("error");
+                    reject("Error: ".concat(this.status));
+                  }
+                }
+              });
+              xhr.open("POST", url);
+              Object.entries(headers).forEach(function (_ref7) {
+                var _ref8 = _slicedToArray(_ref7, 2),
+                  key = _ref8[0],
+                  value = _ref8[1];
+                return xhr.setRequestHeader(key, value);
+              });
+              xhr.send(data);
+            }));
+          case 3:
+          case "end":
+            return _context3.stop();
         }
-      }
-    });
-    xhr.open("POST", "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://corsproxy.io/?" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
-    xhr.setRequestHeader("Authorization", "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))));
-    xhr.send();
+      }, _callee3);
+    }));
+    return _getStatus.apply(this, arguments);
   }
   function qPanels() {
     Lampa.Storage.get("transmissionProtocol") || "http://";
@@ -534,8 +1072,9 @@
     xhr.setRequestHeader("Authorization", "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))));
     xhr.send(data);
   }
-  var transmission = {
+  var Transmission = {
     transmissionClient: transmissionClient,
+    transmissionAuth: transmissionAuth,
     getStatus: getStatus$1,
     qPanels: qPanels
   };
@@ -629,7 +1168,7 @@
       synology.synologyClient(selectedTorrent);
     }
     function send2transmission(selectedTorrent) {
-      transmission.transmissionClient(selectedTorrent);
+      Transmission.transmissionClient(selectedTorrent);
     }
     function send2universal(selectedTorrent) {
       universal.sender(selectedTorrent);
@@ -649,7 +1188,7 @@
           });
         }
         if (Lampa.Storage.field("tdClient") === 'transmission') {
-          typeof Lampa.Storage.get("transmissionUrl") !== 'undefined' && typeof Lampa.Storage.get("transmissionUser") !== 'undefined' && typeof Lampa.Storage.get("transmissionPass") !== 'undefined' && transmission.getStatus();
+          typeof Lampa.Storage.get("transmissionUrl") !== 'undefined' && typeof Lampa.Storage.get("transmissionUser") !== 'undefined' && typeof Lampa.Storage.get("transmissionPass") !== 'undefined' && Transmission.getStatus();
           e.menu.push({
             title: '<div id="transmissionStatusBtn" class="btnTD wait"><svg class="download" width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\n' + '<path class="path" d="M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>\n' + '<path class="path" d="M18 17H12H6" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '<path class="path" d="M22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C21.5093 4.43821 21.8356 5.80655 21.9449 8" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round"/>\n' + '</svg>Transmission</div>',
             send2app: send2transmission,
@@ -717,7 +1256,7 @@
       var tdClient = Lampa.Storage.get('tdClient');
       var clients = {
         'qBittorent': qBittorent,
-        'transmission': transmission
+        'transmission': Transmission
       };
       if (tdClient && clients[tdClient]) {
         clients[tdClient].qPanels();
@@ -1335,7 +1874,7 @@
       },
       onRender: function onRender(item) {
         if (Lampa.Storage.field("tdClient") === "transmission") {
-          typeof Lampa.Storage.get("transmissionUrl") !== 'undefined' && typeof Lampa.Storage.get("transmissionUser") !== 'undefined' && typeof Lampa.Storage.get("transmissionPass") !== 'undefined' && transmission.getStatus();
+          typeof Lampa.Storage.get("transmissionUrl") !== 'undefined' && typeof Lampa.Storage.get("transmissionUser") !== 'undefined' && typeof Lampa.Storage.get("transmissionPass") !== 'undefined' && Transmission.getStatus();
           item.show();
           $(".settings-param__name", item).before('<div id="transmissionStatus" class="settings-param__status wait"></div>');
         } else item.hide();
@@ -1916,6 +2455,18 @@
         uk: "Transmission",
         zh: "Transmission" // Chinese translation
       },
+      transmissionAuthSuccess: {
+        ru: "Авторизация в Transmission успешна",
+        en: "Authorization in Transmission successful",
+        uk: "Авторизація в Transmission успішна",
+        zh: "在 Transmission 中授权成功" // Chinese translation
+      },
+      transmissionAuthDenied: {
+        ru: "Авторизация в Transmission не успешна, в Консоль -> TD за подробностями",
+        en: "Authorization in Transmission unsuccessful, see Console -> TD for details",
+        uk: "Авторизація в Transmission не успішна, дивіться Консоль -> TD для деталей",
+        zh: "在 Transmission 中授权不成功，请查看控制台 -> TD 了解详细信息" // Chinese translation
+      },
       transmissionAutostop: {
         ru: "Автостоп",
         en: "Autostop",
@@ -2121,6 +2672,8 @@
     Lampa.Template.add("td_panel_page", "<div class='td_panel'></div>");
     Lampa.Template.add("td_panel_scroll", "<div class='td_panel'></div>");
     Lampa.Template.add('tdStyle', "\n        <style>\n            #error h2{width:90%;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;-moz-box-pack:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.more-clients{text-align:center}#systemTool{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;margin:0 1.5em 0 1.5em;-webkit-box-pack:justify;-webkit-justify-content:space-between;-moz-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;width:-webkit-calc(100% - 3em);width:calc(100% - 3em)}#systemTool>div{margin-right:10px}#systemTool>div.simple-button.selector.tdReload{width:auto}#tdStatus{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-moz-box-orient:vertical;-moz-box-direction:normal;-ms-flex-direction:column;flex-direction:column;-webkit-box-pack:start;-webkit-justify-content:flex-start;-moz-box-pack:start;-ms-flex-pack:start;justify-content:flex-start}#cardList{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap}.cardTd{-webkit-box-flex:0;-webkit-flex:0 0 -webkit-calc(25% - 10px);-moz-box-flex:0;-ms-flex:0 0 calc(25% - 10px);flex:0 0 calc(25% - 10px);margin:5px;padding:10px;border:1px solid white;-webkit-border-radius:5px;border-radius:5px;-webkit-box-shadow:0 2px 4px rgba(0,0,0,0.1);box-shadow:0 2px 4px rgba(0,0,0,0.1)}.titleTd{font-weight:bold;margin-bottom:10px;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.statusTd{-webkit-box-pack:center;-webkit-justify-content:center;-moz-box-pack:center;-ms-flex-pack:center;justify-content:center;margin-bottom:5px;border:1px solid white;padding:5px}.buttons{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;-moz-box-pack:center;-ms-flex-pack:center;justify-content:center}.tdAction,.tdActionDell{background-color:transparent;border:1px solid white;outline:0;margin:0 !important}@media(max-width:768px){#tdStatus{-webkit-box-orient:initial;-webkit-box-direction:initial;-webkit-flex-direction:initial;-moz-box-orient:initial;-moz-box-direction:initial;-ms-flex-direction:initial;flex-direction:initial;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.cardTd{-webkit-box-flex:0;-webkit-flex:0 0 -webkit-calc(100% - 20px);-moz-box-flex:0;-ms-flex:0 0 calc(100% - 20px);flex:0 0 calc(100% - 20px);width:100%}.titleTd{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}}#tdStatus table{width:-webkit-calc(100% - 3em);width:calc(100% - 3em);border-collapse:collapse;margin-top:16px;margin-left:1.5em;margin-right:1.5em;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-moz-box-orient:vertical;-moz-box-direction:normal;-ms-flex-direction:column;flex-direction:column}#tdStatus table th,#tdStatus table td{padding:10px;text-align:left}#tdStatus table td.tdAction{text-align:center}#tdStatus table td#tName{-webkit-box-flex:1;-webkit-flex-grow:1;-moz-box-flex:1;-ms-flex-positive:1;flex-grow:1;width:100%;word-break:break-all;font-size:1.5vw}#tdStatus table th{background-color:#fff;color:#000}tr#td_panel{background-color:rgba(0,0,0,0.3);-webkit-border-radius:1em;border-radius:1em;padding:1em;line-height:1.4;top:16px;position:relative;margin-top:8px;width:100%;-webkit-align-content:center;-ms-flex-line-pack:center;align-content:center;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;justify-items:start;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex}td#percent{white-space:nowrap}td.tdActionBlock{white-space:nowrap}td.simple-button.selector.tdActionDell{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;-moz-box-pack:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.simple-button.focus>svg{fill:#000}.tdActionBlock{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;gap:8px}#serverInfo{font-size:1.5vw}.btnTD{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}svg.download{width:36px;height:36px;margin-right:5%}.error .download .path{stroke:red}.active .download .path{stroke:green}.wait .download .path{stroke:gray}@media(max-width:720px){.cardTd{-webkit-box-flex:0;-webkit-flex:0 0 -webkit-calc(100% - 10px);-moz-box-flex:0;-ms-flex:0 0 calc(100% - 10px);flex:0 0 calc(100% - 10px)}tr#td_panel{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-moz-box-orient:vertical;-moz-box-direction:normal;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:start !important;-webkit-align-items:start !important;-moz-box-align:start !important;-ms-flex-align:start !important;align-items:start !important}#tdStatus table td#tName{font-size:3vw}#serverInfo{font-size:3vw}}\n        </style>\n    ");
+    //Set Transmission session
+    if (Lampa.Storage.get('tdClient') === 'transmission') Transmission.transmissionAuth();
     function add() {
       Menu.setMenu();
       var button = $('<li class="menu__item selector">\n            <div class="menu__ico">\n                <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 48 48" width="48px" height="48px"><path d="M 23.501953 4.125 C 12.485953 4.125 3.5019531 13.11 3.5019531 24.125 C 3.5019531 32.932677 9.2467538 40.435277 17.179688 43.091797 L 17.146484 42.996094 L 7 16 L 15 14 C 17.573 20.519 20.825516 32.721688 27.728516 30.929688 C 35.781516 28.948688 28.615 16.981172 27 12.076172 L 34 11 C 38.025862 19.563024 39.693648 25.901226 43.175781 27.089844 C 43.191423 27.095188 43.235077 27.103922 43.275391 27.113281 C 43.422576 26.137952 43.501953 25.140294 43.501953 24.125 C 43.501953 13.11 34.517953 4.125 23.501953 4.125 z M 34.904297 29.314453 C 34.250297 34.648453 28.811359 37.069578 21.943359 35.517578 L 26.316406 43.763672 L 26.392578 43.914062 C 33.176993 42.923925 38.872645 38.505764 41.660156 32.484375 C 41.603665 32.485465 41.546284 32.486418 41.529297 32.486328 C 38.928405 32.472567 36.607552 31.572967 34.904297 29.314453 z"></path></svg>\n            </div>\n            <div class="menu__text">'.concat(Lampa.Lang.translate("tdPanel"), "</div>\n        </li>"));

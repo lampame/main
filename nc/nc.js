@@ -598,7 +598,7 @@
         data.total_pages = data.total / 36;
         data.documents.forEach(function (element) {
           element.poster_path = element.logo_path;
-          if (element.origin_country !== 'null') {
+          if (element.origin_country !== null) {
             element.name = "".concat(element.name, " ").concat(element.origin_country);
           }
         });
@@ -618,7 +618,9 @@
         data.total_pages = data.total / 36;
         data.documents.forEach(function (element) {
           element.poster_path = element.logo_path;
-          element.name = "".concat(element.name, " ").concat(element.origin_country);
+          if (element.origin_country !== null) {
+            element.name = "".concat(element.name, " ").concat(element.origin_country);
+          }
         });
         oncomplite(data);
       }, onerror, false, auth);
