@@ -10,4 +10,8 @@
 
 [Radio Record](https://lampame.github.io/main/rradio.js) `https://lampame.github.io/main/rradio.js` [About](https://teletype.in/@lme/re_radiorecord)
 
+[Concert search](https://lampame.github.io/main/cts.js) `https://lampame.github.io/main/cts.js` [About](https://teletype.in/@lme/cts)
+
+[Another Quality](https://lampame.github.io/main/lmeq.js) `https://lampame.github.io/main/lmeq.js` [About](https://teletype.in/@lme/quality)
+
 Telegram chat - [https://t.me/lme_chat](https://t.me/lme_chat)
