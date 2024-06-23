@@ -12,8 +12,6 @@
               if (data.status === "ok") {
                 var movie = data.data.movie;
                 if (movie.id === 0) {
-                  var newSpan = $("<span>").html("".concat(Lampa.Lang.translate('player_quality'), ": Not found"));
-                  $(".full-start-new__details").append(newDivider, newSpan);
                   return; // Прекращаем выполнение если id равен 0 <span>●</span>
                 }
                 var torrents = movie.torrents;
@@ -32,8 +30,8 @@
                       quality = '4K';
                       break;
                   }
-                  var _newSpan = $("<span>").html("".concat(Lampa.Lang.translate('player_quality'), ": ").concat(quality));
-                  $(".full-start-new__details").append(newDivider, _newSpan);
+                  var newSpan = $("<span>").html("".concat(Lampa.Lang.translate('player_quality'), ": ").concat(quality));
+                  $(".full-start-new__details").append(newDivider, newSpan);
                 }
               } else {
                 console.error("Error fetching movie details:", data.status_message);
