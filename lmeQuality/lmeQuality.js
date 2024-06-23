@@ -31,9 +31,6 @@
                     case '2160p':
                       quality = '4K';
                       break;
-                    default:
-                      quality = quality;
-                    // Оставляем как есть, если формат не распознан
                   }
                   var _newSpan = $("<span>").html("".concat(Lampa.Lang.translate('player_quality'), ": ").concat(quality));
                   $(".full-start-new__details").append(newDivider, _newSpan);
