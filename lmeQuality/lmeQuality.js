@@ -17,7 +17,7 @@
         });
       }
       Lampa.Listener.follow("full", function (e) {
-        if (e.type === "complite" && Storage.field('source') !== 'cub') {
+        if (e.type === "complite" && Lampa.Storage.field('source') !== 'cub') {
           $(document).ready(function () {
             fetchMovieDetails(e.data.movie.id, function (err, data) {
               if (err) {
@@ -35,7 +35,7 @@
         }
       });
       Lampa.Listener.follow('line', function (e) {
-        if (e.type === "append" && Storage.field('source') !== 'cub') {
+        if (e.type === "append" && Lampa.Storage.field('source') !== 'cub') {
           e.items.forEach(function (movieCard) {
             fetchMovieDetails(movieCard.data.id, function (err, data) {
               if (err) {
