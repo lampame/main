@@ -5,32 +5,13 @@
       Lampa.Listener.follow("full", function (e) {
         if (e.type === "complite") {
           $(document).ready(function () {
-            var imdbID = e.data.movie.imdb_id; // Замените на нужный ID
-            var apiUrl = "https://yts.mx/api/v2/movie_details.json?imdb_id=".concat(imdbID);
-            $.getJSON(apiUrl, function (data) {
+            var apiUrl = "http://tmdb.cub.red/3/movie/".concat(e.data.movie.id, "?api_key=4ef0d7355d9ffb5151e987764708ce96");
+            $.getJSON(apiUrl, function (data, textStatus, xhr) {
               var newDivider = $("<span class='full-start-new__split'>").html("\u25CF");
-              if (data.status === "ok") {
-                var movie = data.data.movie;
-                if (movie.id === 0) {
-                  return; // Прекращаем выполнение если id равен 0 <span>●</span>
-                }
-                var torrents = movie.torrents;
-                if (torrents.length > 0) {
-                  var lastTorrent = torrents[torrents.length - 1];
-                  var quality = lastTorrent.quality;
-                  // Преобразование форматов качества
-                  switch (quality) {
-                    case '720p':
-                      quality = 'HD';
-                      break;
-                    case '1080p':
-                      quality = 'Full HD';
-                      break;
-                    case '2160p':
-                      quality = '4K';
-                      break;
-                  }
-                  var newSpan = $("<span>").html("".concat(Lampa.Lang.translate('player_quality'), ": ").concat(quality));
+              if (xhr.status === 200) {
+                var release_quality = data.release_quality;
+                if (release_quality) {
+                  var newSpan = $("<span>").html("".concat(Lampa.Lang.translate('player_quality'), ": ").concat(release_quality.toUpperCase()));
                   $(".full-start-new__details").append(newDivider, newSpan);
                 }
               } else {
