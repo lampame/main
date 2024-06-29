@@ -760,7 +760,7 @@
     function clear() {
       network.clear();
     }
-    var Api$1 = {
+    var Api = {
       main: main$2,
       full: full,
       bookmarkRemove: bookmarkRemove,
@@ -1391,7 +1391,7 @@
       var waitload;
       var active = 0;
       this.create = function () {
-        Api$1.main(object, this.build.bind(this), this.empty.bind(this));
+        Api.main(object, this.build.bind(this), this.empty.bind(this));
       };
       this.empty = function () {
         var button = document.createElement('div');
@@ -1425,7 +1425,7 @@
         }
       };
       this.nextPageReuest = function (object, resolve, reject) {
-        Api$1.full(object, resolve.bind(this), reject.bind(this));
+        Api.full(object, resolve.bind(this), reject.bind(this));
       };
       this.append = function (data, append) {
         var _this2 = this;
@@ -1512,7 +1512,7 @@
                   Favorites$1.add(a);
                 }
                 if (a.action === 'bookmarkAdd') {
-                  var result = Api$1.bookmarkSave(a);
+                  var result = Api.bookmarkSave(a);
                   if (result === true) {
                     console.log('Запись была успешно добавлена.');
                     Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
@@ -1883,7 +1883,7 @@
         }
       };
       this.nextPageReuest = function (object, resolve, reject) {
-        Api$1.full(object, resolve.bind(this), reject.bind(this));
+        Api.full(object, resolve.bind(this), reject.bind(this));
       };
       this.append = function (data, append) {
         var _this2 = this;
@@ -1957,7 +1957,7 @@
                 }
                 if (a.action === 'bookmarkRemove') {
                   //Api.bookmarkRemove(a)
-                  var result = Api$1.bookmarkRemove(a);
+                  var result = Api.bookmarkRemove(a);
                   if (result === true) {
                     console.log('Запись была успешно удалена.');
                     Lampa.Activity.replace({
@@ -2269,7 +2269,7 @@
       var waitload;
       var active = 0;
       this.create = function () {
-        Api$1.mainCollection(object, this.build.bind(this), this.empty.bind(this));
+        Api.mainCollection(object, this.build.bind(this), this.empty.bind(this));
       };
       this.empty = function () {
         var button = document.createElement('div');
@@ -2303,7 +2303,7 @@
         }
       };
       this.nextPageReuest = function (object, resolve, reject) {
-        Api$1.fullCollection(object, resolve.bind(this), reject.bind(this));
+        Api.fullCollection(object, resolve.bind(this), reject.bind(this));
       };
       this.append = function (data, append) {
         var _this2 = this;
@@ -2326,7 +2326,7 @@
             active = items.indexOf(card);
           };
           card.onMenu = function (target, card_data) {
-            var result = Api$1.collectionBookmarkSave('collectionBookmarkAdd', card_data);
+            var result = Api.collectionBookmarkSave('collectionBookmarkAdd', card_data);
             if (result === true) {
               console.log('Запись была успешно добавлена.');
               Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
@@ -2552,7 +2552,7 @@
       console.log('Collection', object);
       var comp = new Lampa.InteractionCategory(object);
       comp.create = function () {
-        Api$1.mainCollectionGet(object, this.build.bind(this), this.empty.bind(this));
+        Api.mainCollectionGet(object, this.build.bind(this), this.empty.bind(this));
       };
       return comp;
     }
@@ -2628,7 +2628,7 @@
         }
       };
       this.nextPageReuest = function (object, resolve, reject) {
-        Api$1.full(object, resolve.bind(this), reject.bind(this));
+        Api.full(object, resolve.bind(this), reject.bind(this));
       };
       this.append = function (data, append) {
         var _this2 = this;
@@ -2649,7 +2649,7 @@
             active = items.indexOf(card);
           };
           card.onMenu = function (target, card_data) {
-            var result = Api$1.collectionBookmarkRemove('collectionBookmarkRemove', card_data);
+            var result = Api.collectionBookmarkRemove('collectionBookmarkRemove', card_data);
             if (result === true) {
               console.log('Запись была успешно удалена.');
               Lampa.Activity.replace({
@@ -2888,7 +2888,9 @@
               var card_data = {
                 $id: rawdata.id,
                 logo_path: rawdata.logo_path,
-                name: rawdata.name,
+                poster_path: rawdata.logo_path,
+                name: "".concat(rawdata.name, " ").concat(rawdata.origin_country),
+                title: "".concat(rawdata.name, " ").concat(rawdata.origin_country),
                 origin_country: rawdata.origin_country
               };
               console.log('card_data', card_data);
@@ -2908,23 +2910,25 @@
                 type: 'Top',
                 card_data: card_data
               });
+              /*
               menu.push({
-                title: Lampa.Lang.translate('nc_bookmarkAdd'),
-                action: 'bookmarkAdd',
-                card_data: card_data
-              });
+                  title: Lampa.Lang.translate('nc_bookmarkAdd'),
+                  action: 'bookmarkAdd',
+                  card_data
+              })
               menu.push({
-                title: Lampa.Lang.translate('nc_favoriteAdd') + ' New',
-                action: 'favorite',
-                card_data: card_data,
-                type: 'new'
-              });
+                  title: Lampa.Lang.translate('nc_favoriteAdd') + ' New',
+                  action: 'favorite',
+                  card_data,
+                  type: 'new'
+              })
               menu.push({
-                title: Lampa.Lang.translate('nc_favoriteAdd') + ' Top',
-                action: 'favorite',
-                card_data: card_data,
-                type: 'top'
-              });
+                  title: Lampa.Lang.translate('nc_favoriteAdd') + ' Top',
+                  action: 'favorite',
+                  card_data,
+                  type: 'top'
+              })
+              */
               Lampa.Select.show({
                 title: card_data.name,
                 items: menu,
@@ -2933,7 +2937,7 @@
                 },
                 onSelect: function onSelect(a) {
                   if (a.action === 'favorite') {
-                    Favorites.add(a);
+                    Favorites$1.add(a);
                   }
                   if (a.action === 'bookmarkAdd') {
                     var result = Api.bookmarkSave(a);
