@@ -33,13 +33,11 @@
                     case 'ts':
                       return 'red';
                     case 'webdl':
+                    case 'dvdrip':
                       return 'yellow';
                     case '4k':
                     case 'bd':
                       return 'green';
-                    default:
-                      return 'transparent';
-                    // Default color if none of the conditions match
                   }
                 }());
                 $(".full-start-new__details").append(newDivider, newSpan);
@@ -51,7 +49,7 @@
       Lampa.Listener.follow('line', function (e) {
         if (e.type === "append" && Lampa.Storage.field('source') !== 'cub') {
           e.items.forEach(function (movieCard) {
-            fetchMovieDetails(movieCard.data.id, movieCard.data.media_type || 'movie', function (err, data) {
+            fetchMovieDetails(movieCard.data.id, movieCard.data.media_type ? movieCard.data.media_type : movieCard.data.number_of_seasons ? 'tv' : 'movie', function (err, data) {
               if (err) {
                 console.error(err.message);
                 return;
