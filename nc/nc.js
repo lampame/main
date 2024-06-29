@@ -585,7 +585,7 @@
         "X-Appwrite-Project": "65fd523956f5ca97eaff"
       }
     };
-    function main$1(params, oncomplite, onerror) {
+    function main$2(params, oncomplite, onerror) {
       var apiUrl = api_url;
       if (params.searchQuery && params.searchQuery !== "") {
         apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
@@ -760,8 +760,8 @@
     function clear() {
       network.clear();
     }
-    var Api = {
-      main: main$1,
+    var Api$1 = {
+      main: main$2,
       full: full,
       bookmarkRemove: bookmarkRemove,
       bookmarkSave: bookmarkSave,
@@ -1391,7 +1391,7 @@
       var waitload;
       var active = 0;
       this.create = function () {
-        Api.main(object, this.build.bind(this), this.empty.bind(this));
+        Api$1.main(object, this.build.bind(this), this.empty.bind(this));
       };
       this.empty = function () {
         var button = document.createElement('div');
@@ -1425,7 +1425,7 @@
         }
       };
       this.nextPageReuest = function (object, resolve, reject) {
-        Api.full(object, resolve.bind(this), reject.bind(this));
+        Api$1.full(object, resolve.bind(this), reject.bind(this));
       };
       this.append = function (data, append) {
         var _this2 = this;
@@ -1512,7 +1512,7 @@
                   Favorites$1.add(a);
                 }
                 if (a.action === 'bookmarkAdd') {
-                  var result = Api.bookmarkSave(a);
+                  var result = Api$1.bookmarkSave(a);
                   if (result === true) {
                     console.log('Запись была успешно добавлена.');
                     Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
@@ -1883,7 +1883,7 @@
         }
       };
       this.nextPageReuest = function (object, resolve, reject) {
-        Api.full(object, resolve.bind(this), reject.bind(this));
+        Api$1.full(object, resolve.bind(this), reject.bind(this));
       };
       this.append = function (data, append) {
         var _this2 = this;
@@ -1957,7 +1957,7 @@
                 }
                 if (a.action === 'bookmarkRemove') {
                   //Api.bookmarkRemove(a)
-                  var result = Api.bookmarkRemove(a);
+                  var result = Api$1.bookmarkRemove(a);
                   if (result === true) {
                     console.log('Запись была успешно удалена.');
                     Lampa.Activity.replace({
@@ -2269,7 +2269,7 @@
       var waitload;
       var active = 0;
       this.create = function () {
-        Api.mainCollection(object, this.build.bind(this), this.empty.bind(this));
+        Api$1.mainCollection(object, this.build.bind(this), this.empty.bind(this));
       };
       this.empty = function () {
         var button = document.createElement('div');
@@ -2303,7 +2303,7 @@
         }
       };
       this.nextPageReuest = function (object, resolve, reject) {
-        Api.fullCollection(object, resolve.bind(this), reject.bind(this));
+        Api$1.fullCollection(object, resolve.bind(this), reject.bind(this));
       };
       this.append = function (data, append) {
         var _this2 = this;
@@ -2326,7 +2326,7 @@
             active = items.indexOf(card);
           };
           card.onMenu = function (target, card_data) {
-            var result = Api.collectionBookmarkSave('collectionBookmarkAdd', card_data);
+            var result = Api$1.collectionBookmarkSave('collectionBookmarkAdd', card_data);
             if (result === true) {
               console.log('Запись была успешно добавлена.');
               Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
@@ -2552,7 +2552,7 @@
       console.log('Collection', object);
       var comp = new Lampa.InteractionCategory(object);
       comp.create = function () {
-        Api.mainCollectionGet(object, this.build.bind(this), this.empty.bind(this));
+        Api$1.mainCollectionGet(object, this.build.bind(this), this.empty.bind(this));
       };
       return comp;
     }
@@ -2628,7 +2628,7 @@
         }
       };
       this.nextPageReuest = function (object, resolve, reject) {
-        Api.full(object, resolve.bind(this), reject.bind(this));
+        Api$1.full(object, resolve.bind(this), reject.bind(this));
       };
       this.append = function (data, append) {
         var _this2 = this;
@@ -2649,7 +2649,7 @@
             active = items.indexOf(card);
           };
           card.onMenu = function (target, card_data) {
-            var result = Api.collectionBookmarkRemove('collectionBookmarkRemove', card_data);
+            var result = Api$1.collectionBookmarkRemove('collectionBookmarkRemove', card_data);
             if (result === true) {
               console.log('Запись была успешно удалена.');
               Lampa.Activity.replace({
@@ -2877,6 +2877,94 @@
       };
     }
 
+    function main$1() {
+      Lampa.Listener.follow('full', function (e) {
+        if (e.type === 'complite' && e.object.method === 'tv' && Lampa.Storage.field('nc_networksList') === true) {
+          if (e.data.movie.networks) {
+            var btn = "<div class=\"full-start__button selector button--nc_networksList\">\n                            <svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <path d=\"M42.5 23.7505L44.146 22.9275C49.0105 20.4952 51.443 19.279 53.2215 20.3782C55 21.4773 55 24.1968 55 29.6357V30.3652C55 35.8042 55 38.5235 53.2215 39.6227C51.443 40.722 49.0105 39.5057 44.146 37.0735L42.5 36.2505V23.7505Z\" stroke=\"white\" stroke-width=\"3.75\"></path>\n                                <path d=\"M5 28.75C5 20.5313 5 16.4219 7.2699 13.6561C7.68545 13.1497 8.14973 12.6854 8.65608 12.2699C11.4219 10 15.5313 10 23.75 10C31.9687 10 36.078 10 38.844 12.2699C39.3502 12.6854 39.8145 13.1497 40.23 13.6561C42.5 16.4219 42.5 20.5313 42.5 28.75V31.25C42.5 39.4687 42.5 43.578 40.23 46.344C39.8145 46.8502 39.3502 47.3145 38.844 47.73C36.078 50 31.9687 50 23.75 50C15.5313 50 11.4219 50 8.65608 47.73C8.14973 47.3145 7.68545 46.8502 7.2699 46.344C5 43.578 5 39.4687 5 31.25V28.75Z\" stroke=\"white\" stroke-width=\"3.75\"></path>\n                                <path d=\"M23.75 38.75V21.25M23.75 21.25L30 28.75M23.75 21.25L17.5 28.75\" stroke=\"white\" stroke-width=\"3.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path>\n                            </svg><div>".concat(e.data.movie.networks[0].name, "</div>\n                         </div>");
+            $(".full-start-new__buttons").append(btn);
+            $(".button--nc_networksList").on("hover:enter", function (card) {
+              var rawdata = e.data.movie.networks[0];
+              var card_data = {
+                $id: rawdata.id,
+                logo_path: rawdata.logo_path,
+                name: rawdata.name,
+                origin_country: rawdata.origin_country
+              };
+              console.log('card_data', card_data);
+              var enabled = Lampa.Controller.enabled().name;
+              var menu = [];
+              menu.push({
+                title: "".concat(Lampa.Lang.translate('nc_openAction'), " New"),
+                action: 'open',
+                sort_by: 'first_air_date.desc',
+                type: 'New',
+                card_data: card_data
+              });
+              menu.push({
+                title: "".concat(Lampa.Lang.translate('nc_openAction'), " Top"),
+                action: 'open',
+                sort_by: '',
+                type: 'Top',
+                card_data: card_data
+              });
+              menu.push({
+                title: Lampa.Lang.translate('nc_bookmarkAdd'),
+                action: 'bookmarkAdd',
+                card_data: card_data
+              });
+              menu.push({
+                title: Lampa.Lang.translate('nc_favoriteAdd') + ' New',
+                action: 'favorite',
+                card_data: card_data,
+                type: 'new'
+              });
+              menu.push({
+                title: Lampa.Lang.translate('nc_favoriteAdd') + ' Top',
+                action: 'favorite',
+                card_data: card_data,
+                type: 'top'
+              });
+              Lampa.Select.show({
+                title: card_data.name,
+                items: menu,
+                onBack: function onBack() {
+                  Lampa.Controller.toggle(enabled);
+                },
+                onSelect: function onSelect(a) {
+                  if (a.action === 'favorite') {
+                    Favorites.add(a);
+                  }
+                  if (a.action === 'bookmarkAdd') {
+                    var result = Api.bookmarkSave(a);
+                    if (result === true) {
+                      console.log('Запись была успешно добавлена.');
+                      Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
+                    } else if (result === false) {
+                      console.error('Не удалось добавить запись.');
+                      Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDuplicate'));
+                    }
+                  }
+                  if (a.action === 'open') {
+                    Lampa.Activity.push({
+                      url: 'discover/tv',
+                      title: "".concat(a.type, " ").concat(a.card_data.name),
+                      component: "category_full",
+                      networks: a.card_data.$id,
+                      sort_by: a.sort_by,
+                      source: 'tmdb',
+                      card_type: true,
+                      page: 1
+                    });
+                  }
+                }
+              });
+            });
+          }
+        }
+      });
+    }
+
     var manifest = {
       type: "other",
       version: "4.1.2",
@@ -2932,6 +3020,8 @@
       // Menu 2.0
       submenuCatalogkeys.forEach(addsubmenu);
       $('body').append(Lampa.Template.get('ncStyle', {}, true));
+      //Get Stream in card
+      main$1();
     };
     if (window.appready) {
       main();
