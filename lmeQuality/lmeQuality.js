@@ -3,9 +3,9 @@
 
     function card() {
       var apiKey = '4ef0d7355d9ffb5151e987764708ce96';
-      var baseUrl = 'http://tmdb.cub.red/3/movie/';
-      function fetchMovieDetails(movieId, callback) {
-        var apiUrl = "".concat(baseUrl).concat(movieId, "?api_key=").concat(apiKey);
+      var baseUrl = 'http://tmdb.cub.red/3/';
+      function fetchMovieDetails(movieId, method, callback) {
+        var apiUrl = "".concat(baseUrl).concat(method, "/").concat(movieId, "?api_key=").concat(apiKey);
         $.getJSON(apiUrl, function (data, textStatus, xhr) {
           if (xhr.status === 200) {
             callback(null, data);
@@ -19,7 +19,7 @@
       Lampa.Listener.follow("full", function (e) {
         if (e.type === "complite" && Lampa.Storage.field('source') !== 'cub') {
           $(document).ready(function () {
-            fetchMovieDetails(e.data.movie.id, function (err, data) {
+            fetchMovieDetails(e.data.movie.id, e.object.method, function (err, data) {
               if (err) {
                 console.error(err.message);
                 return;
@@ -37,7 +37,7 @@
       Lampa.Listener.follow('line', function (e) {
         if (e.type === "append" && Lampa.Storage.field('source') !== 'cub') {
           e.items.forEach(function (movieCard) {
-            fetchMovieDetails(movieCard.data.id, function (err, data) {
+            fetchMovieDetails(movieCard.data.id, movieCard.data.media_type || 'movie', function (err, data) {
               if (err) {
                 console.error(err.message);
                 return;
@@ -60,7 +60,16 @@
       card: card
     };
 
+    var manifest = {
+      type: "other",
+      version: "4.1.2",
+      author: '@lme_chat',
+      name: "LME Quality",
+      description: "Add Quality stick on other source",
+      component: "lmeq"
+    };
     function add() {
+      Lampa.Manifest.plugins = manifest;
       UTILS.card();
     }
     function startPlugin() {
