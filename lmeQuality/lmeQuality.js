@@ -27,7 +27,7 @@
               var release_quality = data.release_quality;
               if (release_quality) {
                 var newDivider = $("<span class='full-start-new__split'>").html("\u25CF");
-                var newSpan = $("<span>").html("".concat(Lampa.Lang.translate('player_quality'), ": ").concat(release_quality.toUpperCase()));
+                var newSpan = $("<span class='full-start__pg'>").html("".concat(Lampa.Lang.translate('player_quality'), ": ").concat(release_quality.toUpperCase()));
                 $(".full-start-new__details").append(newDivider, newSpan);
               }
             });
