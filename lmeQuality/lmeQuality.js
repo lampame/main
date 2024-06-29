@@ -27,7 +27,21 @@
               var release_quality = data.release_quality;
               if (release_quality) {
                 var newDivider = $("<span class='full-start-new__split'>").html("\u25CF");
-                var newSpan = $("<span class='full-start__pg'>").html("".concat(Lampa.Lang.translate('player_quality'), ": ").concat(release_quality.toUpperCase()));
+                //const newSpan = $("<span class='full-start__pg'>").html(`${Lampa.Lang.translate('player_quality')}: ${release_quality.toUpperCase()}`);
+                var newSpan = $("<span class='full-start__pg'>").html("".concat(Lampa.Lang.translate('player_quality'), ": ").concat(release_quality.toUpperCase())).css('border-color', function () {
+                  switch (release_quality.toLowerCase()) {
+                    case 'ts':
+                      return 'red';
+                    case 'webdl':
+                      return 'yellow';
+                    case '4k':
+                    case 'bd':
+                      return 'green';
+                    default:
+                      return 'transparent';
+                    // Default color if none of the conditions match
+                  }
+                }());
                 $(".full-start-new__details").append(newDivider, newSpan);
               }
             });
