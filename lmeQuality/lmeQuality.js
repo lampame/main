@@ -49,7 +49,7 @@
       Lampa.Listener.follow('line', function (e) {
         if (e.type === "append" && Lampa.Storage.field('source') !== 'cub') {
           e.items.forEach(function (movieCard) {
-            fetchMovieDetails(movieCard.data.id, movieCard.data.media_type ? movieCard.data.media_type : movieCard.data.number_of_seasons ? 'tv' : 'movie', function (err, data) {
+            fetchMovieDetails(movieCard.data.id || 0, movieCard.data.media_type ? movieCard.data.media_type : movieCard.data.number_of_seasons ? 'tv' : 'movie', function (err, data) {
               if (err) {
                 console.error(err.message);
                 return;
