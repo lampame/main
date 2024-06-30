@@ -2910,25 +2910,23 @@
                 type: 'Top',
                 card_data: card_data
               });
-              /*
               menu.push({
-                  title: Lampa.Lang.translate('nc_bookmarkAdd'),
-                  action: 'bookmarkAdd',
-                  card_data
-              })
+                title: Lampa.Lang.translate('nc_bookmarkAdd'),
+                action: 'bookmarkAdd',
+                card_data: card_data
+              });
               menu.push({
-                  title: Lampa.Lang.translate('nc_favoriteAdd') + ' New',
-                  action: 'favorite',
-                  card_data,
-                  type: 'new'
-              })
+                title: Lampa.Lang.translate('nc_favoriteAdd') + ' New',
+                action: 'favorite',
+                card_data: card_data,
+                type: 'new'
+              });
               menu.push({
-                  title: Lampa.Lang.translate('nc_favoriteAdd') + ' Top',
-                  action: 'favorite',
-                  card_data,
-                  type: 'top'
-              })
-              */
+                title: Lampa.Lang.translate('nc_favoriteAdd') + ' Top',
+                action: 'favorite',
+                card_data: card_data,
+                type: 'top'
+              });
               Lampa.Select.show({
                 title: card_data.name,
                 items: menu,
