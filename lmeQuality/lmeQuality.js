@@ -83,10 +83,10 @@
 
     var manifest = {
       type: "other",
-      version: "4.1.2",
+      version: "0.0.1",
       author: '@lme_chat',
       name: "LME Quality",
-      description: "Add Quality stick on other source",
+      description: "Add Quality sticker on other source",
       component: "lmeq"
     };
     function add() {

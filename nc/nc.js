@@ -2881,8 +2881,17 @@
       Lampa.Listener.follow('full', function (e) {
         if (e.type === 'complite' && e.object.method === 'tv' && Lampa.Storage.field('nc_networksList') === true) {
           if (e.data.movie.networks) {
-            var btn = "<div class=\"full-start__button selector button--nc_networksList\">\n                            <svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <path d=\"M42.5 23.7505L44.146 22.9275C49.0105 20.4952 51.443 19.279 53.2215 20.3782C55 21.4773 55 24.1968 55 29.6357V30.3652C55 35.8042 55 38.5235 53.2215 39.6227C51.443 40.722 49.0105 39.5057 44.146 37.0735L42.5 36.2505V23.7505Z\" stroke=\"white\" stroke-width=\"3.75\"></path>\n                                <path d=\"M5 28.75C5 20.5313 5 16.4219 7.2699 13.6561C7.68545 13.1497 8.14973 12.6854 8.65608 12.2699C11.4219 10 15.5313 10 23.75 10C31.9687 10 36.078 10 38.844 12.2699C39.3502 12.6854 39.8145 13.1497 40.23 13.6561C42.5 16.4219 42.5 20.5313 42.5 28.75V31.25C42.5 39.4687 42.5 43.578 40.23 46.344C39.8145 46.8502 39.3502 47.3145 38.844 47.73C36.078 50 31.9687 50 23.75 50C15.5313 50 11.4219 50 8.65608 47.73C8.14973 47.3145 7.68545 46.8502 7.2699 46.344C5 43.578 5 39.4687 5 31.25V28.75Z\" stroke=\"white\" stroke-width=\"3.75\"></path>\n                                <path d=\"M23.75 38.75V21.25M23.75 21.25L30 28.75M23.75 21.25L17.5 28.75\" stroke=\"white\" stroke-width=\"3.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path>\n                            </svg><div>".concat(e.data.movie.networks[0].name, "</div>\n                         </div>");
+            /* New style */
+            var btn = document.createElement('div');
+            btn.className = 'full-start__button selector button--nc_networksList';
+            btn.style.backgroundColor = "#fff";
+            var img = document.createElement('img');
+            img.src = Lampa.TMDB.image("t/p/w300" + e.data.movie.networks[0].logo_path);
+            img.alt = e.data.movie.networks[0].name;
+            img.height = 24;
+            btn.appendChild(img);
             $(".full-start-new__buttons").append(btn);
+            /* End */
             $(".button--nc_networksList").on("hover:enter", function (card) {
               var rawdata = e.data.movie.networks[0];
               var card_data = {
