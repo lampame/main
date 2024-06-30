@@ -41,6 +41,15 @@
                   }
                 }());
                 $(".full-start-new__details").append(newDivider, newSpan);
+                //Add label on poster
+                var quality = document.createElement('div');
+                quality.classList.add("card__quality");
+                quality.style.zIndex = "999";
+                quality.style.fontSize = "125%";
+                var quality_inner = document.createElement("div");
+                quality_inner.innerText = release_quality;
+                quality.appendChild(quality_inner);
+                $(".full-start-new__poster").append(quality);
               }
             });
           });
