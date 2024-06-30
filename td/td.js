@@ -653,6 +653,7 @@
       if (this.readyState === 4) {
         if (this.status === 409) {
           Lampa.Storage.set("transmissionKey", xhr.getResponseHeader("X-Transmission-Session-Id"));
+          console.log('TD', "Try Auth and set key ".concat(Lampa.Storage.field('transmissionKey'), " "), this.status);
           Lampa.Noty.show(Lampa.Lang.translate('transmissionAuthSuccess'));
         } else {
           if (this.status !== 200) {
