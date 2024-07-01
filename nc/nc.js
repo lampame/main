@@ -2885,22 +2885,85 @@
             var btn = document.createElement('div');
             btn.className = 'full-start__button selector button--nc_networksList';
             btn.style.backgroundColor = "#fff";
+            btn.setAttribute('data-id', e.data.movie.networks[0].id);
+            btn.setAttribute('data-logo-path', e.data.movie.networks[0].logo_path);
+            btn.setAttribute('data-name', e.data.movie.networks[0].name);
+            btn.setAttribute('data-origin-country', e.data.movie.networks[0].origin_country);
             var img = document.createElement('img');
             img.src = Lampa.TMDB.image("t/p/w300" + e.data.movie.networks[0].logo_path);
             img.alt = e.data.movie.networks[0].name;
             img.height = 24;
             btn.appendChild(img);
-            $(".full-start-new__buttons").append(btn);
+
+            //$(".full-start-new__buttons").append(btn);
+            /* End */
+            /* Try insert in body */
+            // Создаем div для сетей
+            var networksDiv = document.createElement('div');
+            networksDiv.className = 'full-descr__line full--networks';
+
+            // Создаем название строки
+            var lineNameDiv = document.createElement('div');
+            lineNameDiv.className = 'full-descr__line-name';
+            lineNameDiv.textContent = Lampa.Lang.translate('nc_networksList');
+            networksDiv.appendChild(lineNameDiv);
+
+            // Создаем тело строки
+            var lineBodyDiv = document.createElement('div');
+            lineBodyDiv.className = 'full-descr__line-body';
+
+            // Для каждого элемента в массиве networks создаем div и добавляем его в lineBodyDiv
+            e.data.movie.networks.forEach(function (network) {
+              var networkDiv = document.createElement('div');
+              networkDiv.className = 'full-descr__tag button--nc_networksList selector';
+              networkDiv.textContent = network.name;
+              // Добавляем данные в атрибуты data-*
+              networkDiv.setAttribute('data-id', network.id);
+              networkDiv.setAttribute('data-logo-path', network.logo_path);
+              networkDiv.setAttribute('data-name', network.name);
+              networkDiv.setAttribute('data-origin-country', network.origin_country);
+              var img = document.createElement('img');
+              img.src = Lampa.TMDB.image("t/p/w300" + network.logo_path);
+              img.alt = e.data.movie.networks[0].name;
+              img.height = 24;
+              //networkDiv.style.backgroundColor = "#fff";
+              //networkDiv.appendChild(img);
+
+              lineBodyDiv.appendChild(networkDiv);
+            });
+
+            // Добавляем lineBodyDiv в networksDiv
+            networksDiv.appendChild(lineBodyDiv);
+
+            // Находим элемент full-descr__text selector
+            var fullDescrTextSelector = document.querySelector('.full-descr__text.selector');
+
+            // Вставляем networksDiv после fullDescrTextSelector
+            fullDescrTextSelector.insertAdjacentElement('afterend', networksDiv);
             /* End */
             $(".button--nc_networksList").on("hover:enter", function (card) {
-              var rawdata = e.data.movie.networks[0];
+              var id = $(this).data('id');
+              var logoPath = $(this).data('logo-path');
+              var name = $(this).data('name');
+              var originCountry = $(this).data('origin-country');
+              /**
+               * const rawdata = e.data.movie.networks[0]
+              const card_data = {
+                  $id: rawdata.id,
+                  logo_path: rawdata.logo_path,
+                  poster_path: rawdata.logo_path,
+                  name: `${rawdata.name} ${rawdata.origin_country}`,
+                  title: `${rawdata.name} ${rawdata.origin_country}`,
+                  origin_country: rawdata.origin_country
+              };
+              */
               var card_data = {
-                $id: rawdata.id,
-                logo_path: rawdata.logo_path,
-                poster_path: rawdata.logo_path,
-                name: "".concat(rawdata.name, " ").concat(rawdata.origin_country),
-                title: "".concat(rawdata.name, " ").concat(rawdata.origin_country),
-                origin_country: rawdata.origin_country
+                $id: id,
+                logo_path: logoPath,
+                poster_path: logoPath,
+                name: "".concat(name, " ").concat(originCountry),
+                title: "".concat(name, " ").concat(originCountry),
+                origin_country: originCountry
               };
               console.log('card_data', card_data);
               var enabled = Lampa.Controller.enabled().name;
