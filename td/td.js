@@ -679,7 +679,7 @@
     xhr.send(data);
   }
   function getTransmissionUrl() {
-    return "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://lmecors.glitch.me/" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc");
+    return "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://p01--corsproxy--h7ynqrkjrc6c.code.run/" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc");
   }
   function getHeaders() {
     /*
@@ -701,6 +701,9 @@
     };
     if (Lampa.Storage.get("transmissionKey")) {
       headers["X-Transmission-Session-Id"] = Lampa.Storage.get("transmissionKey");
+    }
+    if (Lampa.Storage.get('transmissionKeenetic') === true) {
+      headers["x-requested-with"] = "lampame";
     }
     return headers;
   }
@@ -940,7 +943,7 @@
           Lampa.Noty.show(Lampa.Lang.translate('tdError') + this.status);
         }
       });
-      xhr.open("POST", "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://lmecors.glitch.me/" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
+      xhr.open("POST", "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://p01--corsproxy--h7ynqrkjrc6c.code.run/" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
       xhr.setRequestHeader("X-Transmission-Session-Id", Lampa.Storage.get("transmissionKey"));
       xhr.setRequestHeader("Authorization", "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))));
       xhr.send(data);
@@ -954,7 +957,7 @@
       var table = document.createElement("table");
       table.id = "tdStatus_table";
       var settings = {
-        "url": "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://lmecors.glitch.me/" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"),
+        "url": "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://p01--corsproxy--h7ynqrkjrc6c.code.run/" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"),
         "method": "POST",
         "timeout": 0,
         "headers": {
@@ -1084,7 +1087,7 @@
         return error();
       }
     });
-    xhr.open("POST", "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://lmecors.glitch.me/" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
+    xhr.open("POST", "".concat(Lampa.Storage.get("transmissionKeenetic") === true ? "https://p01--corsproxy--h7ynqrkjrc6c.code.run/" : "").concat(Lampa.Storage.get("transmissionProtocol") || "http://").concat(Lampa.Storage.get("transmissionUrl") || "127.0.0.1:9001").concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc"));
     xhr.setRequestHeader("X-Transmission-Session-Id", Lampa.Storage.get("transmissionKey"));
     xhr.setRequestHeader("Authorization", "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))));
     xhr.send(data);
