@@ -2052,20 +2052,38 @@
     Lampa.SettingsApi.addParam({
       component: "transmissionTweak",
       param: {
-        name: "transmissionLegacy",
-        type: "trigger",
-        //доступно select,input,trigger,title,static
-        "default": false
+        name: "transmissionKeyCleaner",
+        type: "static"
       },
       field: {
-        name: Lampa.Lang.translate('transmissionLegacy'),
-        description: Lampa.Lang.translate('transmissionLegacyDescription')
+        name: 'Key cleaner'
+        //description: `Контроль адреса - ${Lampa.Storage.get("synologyProtocol") || "http://"}${Lampa.Storage.get("synologyUrl") || "127.0.0.1:9090"}`,
       },
       onChange: function onChange(value) {
-        if (value === "true") Lampa.Storage.set("transmissionLegacy", true);else Lampa.Storage.set("transmissionLegacy", false);
+        localStorage.removeItem('transmissionKey');
+        Lampa.Noty.show('Key cleared');
         Lampa.Settings.update();
       }
     });
+    /*
+    Lampa.SettingsApi.addParam({
+        component: "transmissionTweak",
+        param: {
+            name: "transmissionLegacy",
+            type: "trigger", //доступно select,input,trigger,title,static
+            default: false,
+        },
+        field: {
+            name: Lampa.Lang.translate('transmissionLegacy'),
+            description: Lampa.Lang.translate('transmissionLegacyDescription'),
+        },
+        onChange: function (value) {
+            if (value === "true") Lampa.Storage.set("transmissionLegacy", true);
+            else Lampa.Storage.set("transmissionLegacy", false);
+            Lampa.Settings.update();
+        },
+    });
+     */
     Lampa.SettingsApi.addParam({
       component: "transmissionTweak",
       param: {
