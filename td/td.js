@@ -699,7 +699,7 @@
       "Authorization": "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))),
       "Content-Type": "application/json"
     };
-    if (Lampa.Storage.get("transmissionKey")) {
+    if (Lampa.Storage.get("transmissionKey") && Lampa.Storage.get("transmissionLegacy") !== true) {
       headers["X-Transmission-Session-Id"] = Lampa.Storage.get("transmissionKey");
     }
     if (Lampa.Storage.get('transmissionKeenetic') === true) {
@@ -2052,6 +2052,23 @@
     Lampa.SettingsApi.addParam({
       component: "transmissionTweak",
       param: {
+        name: "transmissionLegacy",
+        type: "trigger",
+        //доступно select,input,trigger,title,static
+        "default": false
+      },
+      field: {
+        name: Lampa.Lang.translate('transmissionLegacy'),
+        description: Lampa.Lang.translate('transmissionLegacyDescription')
+      },
+      onChange: function onChange(value) {
+        if (value === "true") Lampa.Storage.set("transmissionLegacy", true);else Lampa.Storage.set("transmissionLegacy", false);
+        Lampa.Settings.update();
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: "transmissionTweak",
+      param: {
         name: "transmissionPath",
         type: "input",
         //доступно select,input,trigger,title,static
@@ -2510,6 +2527,18 @@
         en: "Can help with the Keenetic connection",
         uk: "Може допомогти з підключенням до Keenetic",
         zh: "可以帮助建立 Keenetic 连接" // Chinese translation
+      },
+      transmissionLegacy: {
+        ru: "Legacy version",
+        en: "Legacy version",
+        uk: "Legacy version",
+        zh: "Legacy version" // Chinese translation
+      },
+      transmissionLegacyDescription: {
+        ru: "Включение может помочь с некоторыми устройствами",
+        en: "Enabling it may help with some devices",
+        uk: "Увімкнення може допомогти з деякими пристроями",
+        zh: "启用它可能对某些设备有帮助" // Chinese translation
       },
       transmissionRPCRoute: {
         ru: "RPC Path",
