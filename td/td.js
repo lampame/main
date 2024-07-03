@@ -699,7 +699,7 @@
       "Authorization": "Basic ".concat(btoa(Lampa.Storage.get("transmissionUser") + ":" + Lampa.Storage.get("transmissionPass"))),
       "Content-Type": "application/json"
     };
-    if (Lampa.Storage.get("transmissionKey") && Lampa.Storage.get("transmissionLegacy") !== true) {
+    if (Lampa.Storage.get("transmissionKey")) {
       headers["X-Transmission-Session-Id"] = Lampa.Storage.get("transmissionKey");
     }
     if (Lampa.Storage.get('transmissionKeenetic') === true) {
