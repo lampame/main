@@ -1394,6 +1394,51 @@
         Api.main(object, this.build.bind(this), this.empty.bind(this));
       };
       this.empty = function () {
+        header.className = 'lme-catalog lme-header lme-error';
+        //Bookmarks
+        var bookmarks = document.createElement('div');
+        bookmarks.className = 'lme-favorites simple-button simple-button--invisible simple-button--filter selector';
+        bookmarks.innerHTML = "<svg width=\"60\" height=\"58\" viewBox=\"0 0 60 58\" xmlns=\"http://www.w3.org/2000/svg\">\n                        <path fill=\"currentColor\" d=\"M11.4589 57.5318L30 47.7841L48.5411 57.5318L45 36.8859L60 22.2646L39.2704 19.2526L30 0.468231L20.7293 19.2526L0 22.2646L15 36.8859L11.4589 57.5318ZM9.3698 25.3092L23.6248 23.2378L30 10.3206L36.3752 23.2378L50.6302 25.3092L40.3154 35.3639L42.7504 49.5613L30.0003 42.8582L17.2502 49.5613L19.6852 35.3639L9.3698 25.3092Z\"/>\n                    </svg>\n                    <div class=\"nc_tv\">".concat(Lampa.Lang.translate('nc_bookmark'), "</div>");
+        bookmarks.on('hover:enter', function () {
+          Lampa.Activity.push({
+            url: '',
+            title: Lampa.Lang.translate('nc_bookmark'),
+            component: 'lmeNetworksBookmarks',
+            page: 1
+          });
+        });
+        bookmarks.on('hover:long', function () {
+          Lampa.Storage.set("nc_networksListHome", 'lmeNetworksBookmarks');
+          Lampa.Noty.show('Главный раздел изменен');
+        });
+
+        //Favorites
+        var favorites = document.createElement('div');
+        favorites.className = 'lme-favorites simple-button simple-button--invisible simple-button--filter selector';
+        favorites.innerHTML = "<svg width=\"46\" height=\"36\" viewBox=\"0 0 46 36\" xmlns=\"http://www.w3.org/2000/svg\">\n                        <path d=\"M3 3H43M3 18H43M3 33H43\" stroke=\"currentColor\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n                    </svg>\n                    <div class=\"nc_tv\">".concat(Lampa.Lang.translate('settings_input_links'), "</div>");
+        favorites.on('hover:enter', function () {
+          var itemsFavs = [];
+          Favorites$1.get().forEach(function (item) {
+            var legacyFavorites = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]+$/.test(item.card_data.$id);
+            itemsFavs.push({
+              title: "".concat(legacyFavorites ? "OLD " : "").concat(item.type, " ").concat(item.card_data.name),
+              id: item.id
+            });
+          });
+          Lampa.Select.show({
+            title: Lampa.Lang.translate('nc_networksList'),
+            items: itemsFavs,
+            onSelect: function onSelect(a) {
+              Favorites$1.remove(a);
+            },
+            onBack: function onBack() {
+              Lampa.Controller.toggle('content');
+            }
+          });
+        });
+        header.appendChild(favorites);
+        //Bookmarks
+        header.appendChild(bookmarks);
         var button = document.createElement('div');
         button.className = 'empty simple-button simple-button--invisible selector button--clear';
         button.innerHTML = "\n                <svg width=\"48\" height=\"43\" viewBox=\"0 0 48 43\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path d=\"M8.11178 23.9546L7.10608 24.9852L8.137 25.9913L9.1427 24.96L8.11178 23.9546ZM20.9815 29.7729L35.3816 15.3729L33.3449 13.3364L18.945 27.7363L20.9815 29.7729ZM18.945 15.3728L33.3449 29.7729L35.3816 27.7363L20.9815 13.3364L18.945 15.3728ZM44.9232 21.5546C44.9232 31.3632 36.9718 39.3146 27.1632 39.3146V42.1946C38.5623 42.1946 47.8032 32.9537 47.8032 21.5546H44.9232ZM9.40324 21.5546C9.40324 11.746 17.3547 3.79461 27.1632 3.79461V0.914612C15.7641 0.914612 6.52324 10.1555 6.52324 21.5546H9.40324ZM27.1632 3.79461C36.9718 3.79461 44.9232 11.746 44.9232 21.5546H47.8032C47.8032 10.1555 38.5623 0.914612 27.1632 0.914612V3.79461ZM9.54071 23.7765C9.45004 23.0491 9.40324 22.3077 9.40324 21.5546H6.52324C6.52324 22.427 6.57746 23.2877 6.68284 24.1327L9.54071 23.7765ZM27.1632 39.3146C21.0603 39.3146 15.6756 36.2376 12.4764 31.5437L10.0966 33.1656C13.8093 38.6129 20.0678 42.1946 27.1632 42.1946V39.3146ZM9.1427 24.96L14.9942 18.96L12.9323 16.9493L7.08088 22.9493L9.1427 24.96ZM9.1175 22.9241L2.96896 16.9241L0.95752 18.9852L7.10608 24.9852L9.1175 22.9241Z\"/>\n                </svg>\n                <div>Reset search</div>\n        ";
@@ -1404,6 +1449,8 @@
         });
         var empty = new Lampa.Empty();
         if (button) empty.append(button);
+        html.addClass('lmeCatalog');
+        html.appendChild(header);
         html.appendChild(empty.render(true));
         this.start = empty.start;
         this.activity.loader(false);
@@ -3041,7 +3088,7 @@
 
     var manifest = {
       type: "other",
-      version: "4.1.2",
+      version: "4.1.3",
       name: "New category",
       description: "Add new category and TV Show stream service",
       component: "nc"
@@ -3053,7 +3100,7 @@
       Lampa.Component.add('lmeCollections', component$2);
       Lampa.Component.add('lmeCollection', component$1);
       Lampa.Component.add('lmeCollectionBookmark', component);
-      Lampa.Template.add('ncStyle', "\n        <style>\n            @charset 'UTF-8';.panelNC.blockNC{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-around;-ms-flex-pack:distribute;justify-content:space-around;gap:10px;padding:10px}@media(max-width:767px){.nc_tv{display:none}}.nc-empty,.nc-main{margin:0 5px}.nc-empty svg,.nc-main svg{display:block;margin:0 auto}.nc-empty div,.nc-main div{text-align:center}div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}.lme-catalog.lme-header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.lme-baseInfo{padding:0 0 0 2%}.empty.simple-button.simple-button--invisible.selector.button--clear{margin:auto}.lme-baseInfo,.lme-favorites,.lme-search,.lme-clear,.lme-filter{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;padding-left:1.5em;padding-right:1.5em;margin-left:.5em;margin-right:.5em}.lme-clear div,.lme-filter div{margin-left:1em}.lme-catalog.category-full .card__img{-o-object-fit:contain;object-fit:contain;padding:5%}.networkLogo{-o-object-fit:contain;object-fit:contain;padding:2%}\n        </style>\n    ");
+      Lampa.Template.add('ncStyle', "\n        <style>\n            @charset 'UTF-8';.panelNC.blockNC{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-around;-ms-flex-pack:distribute;justify-content:space-around;gap:10px;padding:10px}@media(max-width:767px){.nc_tv{display:none}}.nc-empty,.nc-main{margin:0 5px}.nc-empty svg,.nc-main svg{display:block;margin:0 auto}.nc-empty div,.nc-main div{text-align:center}div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}.lme-catalog.lme-header.lme-error{margin-bottom:2%}.lme-catalog.lme-header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.lme-baseInfo{padding:0 0 0 2%}.empty.simple-button.simple-button--invisible.selector.button--clear{margin:auto}.lme-baseInfo,.lme-favorites,.lme-search,.lme-clear,.lme-filter{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;padding-left:1.5em;padding-right:1.5em;margin-left:.5em;margin-right:.5em}.lme-clear div,.lme-filter div{margin-left:1em}.lme-catalog.category-full .card__img{-o-object-fit:contain;object-fit:contain;padding:5%}.networkLogo{-o-object-fit:contain;object-fit:contain;padding:2%}\n        </style>\n    ");
       lang.data();
       config.setting();
       // Menu 2.0
