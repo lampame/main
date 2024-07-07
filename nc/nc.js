@@ -2960,22 +2960,44 @@
             lineBodyDiv.className = 'full-descr__line-body';
 
             // Для каждого элемента в массиве networks создаем div и добавляем его в lineBodyDiv
-            e.data.movie.networks.forEach(function (network) {
+            /*
+            e.data.movie.networks.forEach(network => {
+                const networkDiv = document.createElement('div');
+                networkDiv.className = 'full-descr__tag button--nc_networksList selector';
+                //networkDiv.textContent = network.name;
+                // Добавляем данные в атрибуты data-*
+                networkDiv.setAttribute('data-id', network.id);
+                networkDiv.setAttribute('data-logo-path', network.logo_path);
+                networkDiv.setAttribute('data-name', network.name);
+                networkDiv.setAttribute('data-origin-country', network.origin_country);
+                const img = document.createElement('img');
+                img.src = Lampa.TMDB.image("t/p/w300" + network.logo_path);
+                img.alt = e.data.movie.networks[0].name;
+                img.height = 24;
+                networkDiv.style.backgroundColor = "#fff";
+                networkDiv.appendChild(img);
+                 lineBodyDiv.appendChild(networkDiv);
+            });
+              */
+            e.data.movie.networks.forEach(function (network, index) {
               var networkDiv = document.createElement('div');
               networkDiv.className = 'full-descr__tag button--nc_networksList selector';
-              networkDiv.textContent = network.name;
+
               // Добавляем данные в атрибуты data-*
               networkDiv.setAttribute('data-id', network.id);
               networkDiv.setAttribute('data-logo-path', network.logo_path);
               networkDiv.setAttribute('data-name', network.name);
               networkDiv.setAttribute('data-origin-country', network.origin_country);
-              var img = document.createElement('img');
-              img.src = Lampa.TMDB.image("t/p/w300" + network.logo_path);
-              img.alt = e.data.movie.networks[0].name;
-              img.height = 24;
-              //networkDiv.style.backgroundColor = "#fff";
-              //networkDiv.appendChild(img);
-
+              if (index < 3) {
+                var _img = document.createElement('img');
+                _img.src = Lampa.TMDB.image("t/p/w300" + network.logo_path);
+                _img.alt = e.data.movie.networks[0].name;
+                _img.height = 24;
+                networkDiv.style.backgroundColor = "#fff";
+                networkDiv.appendChild(_img);
+              } else {
+                networkDiv.textContent = network.name;
+              }
               lineBodyDiv.appendChild(networkDiv);
             });
 
@@ -2995,15 +3017,15 @@
               var originCountry = $(this).data('origin-country');
               /**
                * const rawdata = e.data.movie.networks[0]
-              const card_data = {
-                  $id: rawdata.id,
-                  logo_path: rawdata.logo_path,
-                  poster_path: rawdata.logo_path,
-                  name: `${rawdata.name} ${rawdata.origin_country}`,
-                  title: `${rawdata.name} ${rawdata.origin_country}`,
-                  origin_country: rawdata.origin_country
-              };
-              */
+               const card_data = {
+               $id: rawdata.id,
+               logo_path: rawdata.logo_path,
+               poster_path: rawdata.logo_path,
+               name: `${rawdata.name} ${rawdata.origin_country}`,
+               title: `${rawdata.name} ${rawdata.origin_country}`,
+               origin_country: rawdata.origin_country
+               };
+               */
               var card_data = {
                 $id: id,
                 logo_path: logoPath,
