@@ -2982,8 +2982,7 @@
             img.alt = e.data.movie.networks[0].name;
             img.height = 24;
             btn.appendChild(img);
-
-            //$(".full-start-new__buttons").append(btn);
+            $(".full-start-new__buttons").append(btn);
             /* End */
             /* Try insert in body */
             // Создаем div для сетей
