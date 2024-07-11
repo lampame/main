@@ -12,6 +12,6 @@
 
 [Concert search](https://lampame.github.io/main/cts.js) `https://lampame.github.io/main/cts.js` [About](https://teletype.in/@lme/cts)
 
-[Concert search](https://lampame.github.io/main/lme.js) `https://lampame.github.io/main/lme.js` [About](https://teletype.in/@lme/metweaks)
+[Movie Enhancer](https://lampame.github.io/main/lme.js) `https://lampame.github.io/main/lme.js` [About](https://teletype.in/@lme/metweaks)
 
 Telegram chat - [https://t.me/lme_chat](https://t.me/lme_chat)
