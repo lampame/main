@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    function main$3() {
+    function main$4() {
       Lampa.Lang.add({
         lme_EngData_desc: {
           ru: "Добавляет английское название произведения, и заменяет описание если оно отсутсвует",
@@ -12,14 +12,19 @@
           ru: "Для источников кроме Cub, добавляет лейбл с качеством. Где это возможно",
           en: "For sources other than Cub, adds a quality label where possible",
           uk: "Для джерел, окрім Cub, додає лейбл з якістю. Де це можливо"
+        },
+        lme_averageRuntime_desc: {
+          ru: "Добавляет среднее время серии",
+          en: "Adds average episode runtime",
+          uk: "Додає середній час серії"
         }
       });
     }
     var Lang = {
-      main: main$3
+      main: main$4
     };
 
-    function main$2() {
+    function main$3() {
       Lampa.SettingsApi.addComponent({
         component: "lme",
         name: 'Movie Enhancer',
@@ -57,12 +62,28 @@
           Lampa.Settings.update();
         }
       });
+      //TV Show time
+      Lampa.SettingsApi.addParam({
+        component: "lme",
+        param: {
+          name: "lme_averageRuntime",
+          type: "trigger",
+          "default": false
+        },
+        field: {
+          name: 'Show time',
+          description: Lampa.Lang.translate('lme_averageRuntime_desc')
+        },
+        onChange: function onChange(value) {
+          Lampa.Settings.update();
+        }
+      });
     }
     var CONFIG = {
-      main: main$2
+      main: main$3
     };
 
-    function main$1() {
+    function main$2() {
       var apiKey = '4ef0d7355d9ffb5151e987764708ce96';
       var baseUrl = 'http://tmdb.cub.red/3/';
       function fetchMovieDetails(movieId, method, callback) {
@@ -154,17 +175,20 @@
       });
     }
     var Quality = {
-      main: main$1
+      main: main$2
     };
 
-    function main() {
+    function main$1() {
       Lampa.Listener.follow("full", function (cardData) {
         if (cardData.type === "complite") {
           var _cardData$object = cardData.object,
             method = _cardData$object.method,
             id = _cardData$object.id;
           var apiKey = "4ef0d7355d9ffb5151e987764708ce96";
-          var url = "https://api.themoviedb.org/3/".concat(method, "/").concat(id, "?api_key=").concat(apiKey, "&language=en");
+          var apiUrlTMDB = 'https://api.themoviedb.org/3/';
+          var apiUrlProxy = 'apitmdb.' + (Lampa.Manifest && Lampa.Manifest.cub_domain ? Lampa.Manifest.cub_domain : 'cub.red') + '/3/';
+          var request = "".concat(method, "/").concat(id, "?api_key=").concat(apiKey, "&language=en");
+          var url = Lampa.Storage.field('proxy_tmdb') ? Lampa.Utils.protocol() + apiUrlProxy + request : apiUrlTMDB + request;
           $.ajax({
             url: url,
             method: "GET",
@@ -192,6 +216,48 @@
       });
     }
     var Englishdata = {
+      main: main$1
+    };
+
+    function main() {
+      //averageRuntime
+      Lampa.Listener.follow("full", function (cardData) {
+        if (cardData.type === "complite") {
+          var imdbId = cardData.data.movie.imdb_id;
+          if (imdbId) {
+            $.ajax({
+              url: "https://api.tvmaze.com/lookup/shows?imdb=".concat(imdbId),
+              method: "GET",
+              success: function success(response) {
+                var averageRuntime = response.averageRuntime;
+                var formattedRuntime = "00:".concat(averageRuntime);
+
+                // Создаем новый span для времени
+                var runtimeSpan = $("<span>", {
+                  id: "averageRuntime",
+                  text: formattedRuntime
+                });
+
+                // Создаем новый span для разделителя
+                var splitSpan = $("<span>", {
+                  "class": "full-start-new__split",
+                  text: "●"
+                });
+
+                // Вставляем оба новых элемента в начало контейнера
+                $(".full-start-new__details").prepend(splitSpan).prepend(runtimeSpan);
+              },
+              error: function error(_error) {
+                console.error("Ошибка при выполнении запроса:", _error);
+              }
+            });
+          } else {
+            console.warn("IMDB ID отсутствует в данных фильма.");
+          }
+        }
+      });
+    }
+    var averageRuntime = {
       main: main
     };
 
@@ -210,6 +276,7 @@
       if (!Lampa.Storage.get('lme_quality')) Lampa.Storage.set('lme_quality', true);
       if (Lampa.Storage.get('lme_quality') === true) Quality.main();
       if (Lampa.Storage.get('lme_endata') === true) Englishdata.main();
+      if (Lampa.Storage.get('lme_averageRuntime') === true) averageRuntime.main();
     }
     function startPlugin() {
       window.plugin_lme_ready = true;
