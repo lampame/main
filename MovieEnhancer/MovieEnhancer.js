@@ -230,7 +230,11 @@
               method: "GET",
               success: function success(response) {
                 var averageRuntime = response.averageRuntime;
-                var formattedRuntime = "00:".concat(averageRuntime);
+                //const formattedRuntime = `00:${averageRuntime}`;
+                // Преобразование в формат HH:mm
+                var hours = Math.floor(averageRuntime / 60);
+                var minutes = averageRuntime % 60;
+                var formattedRuntime = "".concat(hours.toString().padStart(2, '0'), ":").concat(minutes.toString().padStart(2, '0'));
 
                 // Создаем новый span для времени
                 var runtimeSpan = $("<span>", {
