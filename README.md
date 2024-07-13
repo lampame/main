@@ -14,4 +14,6 @@
 
 [Movie Enhancer](https://lampame.github.io/main/lme.js) `https://lampame.github.io/main/lme.js` [About](https://teletype.in/@lme/metweaks)
 
+[LME Music](https://lampame.github.io/main/music.js) `https://lampame.github.io/main/music.js` [About](https://teletype.in/@lme/music)
+
 Telegram chat - [https://t.me/lme_chat](https://t.me/lme_chat)
