@@ -2969,7 +2969,7 @@
         //Networks
         if (e.type === 'complite' && e.object.method === 'tv' && Lampa.Storage.field('nc_networksList') === true) {
           if (e.data.movie.networks && e.data.movie.networks.length > 0) {
-            /* New style */
+            /* New css */
             var btn = document.createElement('div');
             btn.className = 'full-start__button selector button--nc_networksList';
             btn.style.backgroundColor = "#fff";
