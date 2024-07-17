@@ -5,7 +5,7 @@
     return [{
       "title": "Поиск музыки",
       "type": "custom",
-      "thumbnail": "<svg width=\"100\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n              <rect width=\"24\" height=\"24\" rx=\"4\" fill=\"#FFFFFF\"/>\n              <path d=\"M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14Z\" fill=\"#000000\"/>\n            </svg>"
+      "thumbnail": "<svg width=\"200\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"24\" height=\"12\" rx=\"2\" fill=\"#FFFFFF\"/>\n  <path d=\"M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14Z\" fill=\"#000000\"/>\n</svg>"
     }, {
       "title": "Поп",
       "type": "live",
@@ -124,22 +124,24 @@
   }
 
   function Item(data) {
-    var item = Lampa.Template.get("lme_item", {
+    var item;
+    if (data.type === 'live') item = Lampa.Template.get("lme_item", {
+      name: data.title
+    });
+    if (data.type === 'custom') item = Lampa.Template.get("lme_item--use", {
       name: data.title
     });
     var img = item.find("img")[0];
-    img.onerror = function () {
-      img.src = "./img/img_broken.svg";
-    };
-
-    //img.src = data.thumbnail;
-    if (data.type === 'live' || data.type === 'custom') {
+    if (data.type === 'live') {
+      img.onerror = function () {
+        img.src = "./img/img_broken.svg";
+      };
       // Create a blob URL for the SVG string
       var blob = new Blob([data.thumbnail], {
         type: 'image/svg+xml'
       });
       img.src = URL.createObjectURL(blob);
-    } else {
+    } else if (data.type !== 'custom') {
       img.src = data.thumbnail;
     }
     this.render = function () {
@@ -163,7 +165,8 @@
     var items = [];
     var html = $("<div class='lmem-module'></div>");
     var headpanel = $("<div class='lmem-headpanel category-full'></div>");
-    var body = $('<div class="category-full"></div>');
+    var headbody = $('<div class="lmem-catalog--title">Live по Жанрам</div>');
+    var body = $('<div class="lmem-catalog--list category-full"></div>');
     var active;
     var last;
     this.create = function () {
@@ -173,27 +176,49 @@
     };
     this.build = function () {
       scroll.minus();
+      //Put header
+      this.header(genre());
       //Put Live Chanel
       this.live(genre());
+      //Put blank
       scroll.append(headpanel);
-      //scroll.append(body);
+      scroll.append(headbody);
+      scroll.append(body);
+      //Put all in page
       html.append(scroll.render());
       this.activity.loader(false);
       this.activity.toggle();
     };
+    this.header = function (chanel) {
+      chanel.forEach(function (video) {
+        if (video.type === 'custom') {
+          var item = new Item(video);
+          item.render().on("hover:focus", function () {
+            last = item.render()[0];
+            active = items.indexOf(item);
+            scroll.update(items[active].render(), true);
+          }).on("hover:enter", function () {
+            MUSIC.search();
+          });
+          headpanel.append(item.render());
+          items.push(item);
+        }
+      });
+    };
     this.live = function (chanel) {
       chanel.forEach(function (video) {
-        var item = new Item(video);
-        item.render().on("hover:focus", function () {
-          last = item.render()[0];
-          active = items.indexOf(item);
-          scroll.update(items[active].render(), true);
-        }).on("hover:enter", function () {
-          if (video.type === 'live') request(video.query);
-          if (video.type === 'custom') MUSIC.search();
-        });
-        headpanel.append(item.render());
-        items.push(item);
+        if (video.type === 'live') {
+          var item = new Item(video);
+          item.render().on("hover:focus", function () {
+            last = item.render()[0];
+            active = items.indexOf(item);
+            scroll.update(items[active].render(), true);
+          }).on("hover:enter", function () {
+            request(video.query);
+          });
+          body.append(item.render());
+          items.push(item);
+        }
       });
     };
     this.append = function (element) {
@@ -270,7 +295,8 @@
 
   function add() {
     Lampa.Template.add("lme_item", "<div class=\"card selector lme-item\">\n                <div class=\"lme-item__imgbox\">\n                    <img class=\"lme-item__img\"/>\n                </div>\n                <div class=\"lme-item__name\">{name}</div>\n            </div>");
-    Lampa.Template.add('lmemStyle', "\n        <style>\n            .lme-item{margin-left:1em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lme-item__imgbox{background-color:#3e3e3e;padding-bottom:100%;position:relative;-webkit-border-radius:.3em;border-radius:.3em}.lme-item__listeners{position:absolute;top:.5em;left:.5em;background-color:#eee;padding:.1em .3em;font-size:.7em;font-weight:bold;color:#292d32;-webkit-border-radius:.25em;border-radius:.25em}.lme-item__listeners>svg{width:1em;height:1em;vertical-align:bottom}.lme-item__img{position:absolute;top:0;left:0;width:100%;height:100%;-webkit-border-radius:.4em;border-radius:.4em}.lme-item__name{font-size:1.1em;margin-top:.8em}.lme-item.focus .lme-item__imgbox::after{border:solid .26em #fff;content:'';display:block;position:absolute;left:-0.5em;top:-0.5em;right:-0.5em;bottom:-0.5em;-webkit-border-radius:.8em;border-radius:.8em}@-webkit-keyframes sound{from{height:.1em}to{height:1em}}@-o-keyframes sound{from{height:.1em}to{height:1em}}@keyframes sound{from{height:.1em}to{height:1em}}@-webkit-keyframes sound-loading{from{-webkit-transform:rotate(0);transform:rotate(0)}to{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}@-o-keyframes sound-loading{from{-o-transform:rotate(0);transform:rotate(0)}to{-o-transform:rotate(360deg);transform:rotate(360deg)}}@keyframes sound-loading{from{-webkit-transform:rotate(0);-o-transform:rotate(0);transform:rotate(0)}to{-webkit-transform:rotate(360deg);-o-transform:rotate(360deg);transform:rotate(360deg)}}@media screen and (max-width:580px){.lme-item{width:21%}}@media screen and (max-width:385px){.lme-item__name{display:none}}\n        </style>\n    ");
+    Lampa.Template.add("lme_item--use", "<div class=\"lme-item--use simple-button selector\">\n                <div class=\"lme-item__name--use\">{name}</div>\n            </div>");
+    Lampa.Template.add('lmemStyle', "\n        <style>\n            @charset 'UTF-8';.card.selector.lme-item--use{margin-left:1em;margin-bottom:1em;width:20%;height:10%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lme-item__name--use{margin-top:-0.2em}.lmem-catalog--title{margin:1% 5% 1% 5%;font-size:1.6em;font-weight:400}.lme-item{margin-left:1em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lme-item__imgbox{background-color:#3e3e3e;padding-bottom:100%;position:relative;-webkit-border-radius:.3em;border-radius:.3em}.lme-item__listeners{position:absolute;top:.5em;left:.5em;background-color:#eee;padding:.1em .3em;font-size:.7em;font-weight:bold;color:#292d32;-webkit-border-radius:.25em;border-radius:.25em}.lme-item__listeners>svg{width:1em;height:1em;vertical-align:bottom}.lme-item__img{position:absolute;top:0;left:0;width:100%;height:100%;-webkit-border-radius:.4em;border-radius:.4em}.lme-item__name{font-size:1.1em;margin-top:.8em}.lme-item.focus .lme-item__imgbox::after{border:solid .26em #fff;content:'';display:block;position:absolute;left:-0.5em;top:-0.5em;right:-0.5em;bottom:-0.5em;-webkit-border-radius:.8em;border-radius:.8em}@-webkit-keyframes sound{from{height:.1em}to{height:1em}}@-o-keyframes sound{from{height:.1em}to{height:1em}}@keyframes sound{from{height:.1em}to{height:1em}}@-webkit-keyframes sound-loading{from{-webkit-transform:rotate(0);transform:rotate(0)}to{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}@-o-keyframes sound-loading{from{-o-transform:rotate(0);transform:rotate(0)}to{-o-transform:rotate(360deg);transform:rotate(360deg)}}@keyframes sound-loading{from{-webkit-transform:rotate(0);-o-transform:rotate(0);transform:rotate(0)}to{-webkit-transform:rotate(360deg);-o-transform:rotate(360deg);transform:rotate(360deg)}}@media screen and (max-width:580px){.lme-item{width:21%}}@media screen and (max-width:385px){.lme-item__name{display:none}}\n        </style>\n    ");
     //Lang.main()
     Lampa.Manifest.plugins = {
       type: "other",
