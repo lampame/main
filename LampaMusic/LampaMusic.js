@@ -1,202 +1,368 @@
 (function () {
   'use strict';
 
-  function genre() {
-    return [{
-      "title": "Клипы и Концерты",
-      "type": "custom",
-      "source": "yt",
-      "thumbnail": ""
-    }, {
-      "title": "MixCloud по Жанрам",
-      "type": "custom",
-      "source": "mc",
-      "thumbnail": ""
-    }, {
-      "title": "Поп",
-      "type": "live",
-      "query": "Pop",
-      "thumbnail": "<svg width=\"100\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                  <rect width=\"24\" height=\"24\" rx=\"4\" fill=\"#FFFFFF\"/>\n                  <path d=\"M12 3V15.55C11.42 15.21 10.74 15 10 15C8.34 15 7 16.34 7 18C7 19.66 8.34 21 10 21C11.66 21 13 19.66 13 18V8H16V3H12Z\" fill=\"#000000\"/>\n                </svg>"
-    }, {
-      "title": "Рок",
-      "type": "live",
-      "query": "Rock",
-      "thumbnail": "<svg width=\"100\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n              <rect width=\"24\" height=\"24\" rx=\"4\" fill=\"#FFFFFF\"/>\n              <path d=\"M12 2C11.45 2 11 2.45 11 3V5H9V3C9 2.45 8.55 2 8 2C7.45 2 7 2.45 7 3V5H5V3C5 2.45 4.55 2 4 2C3.45 2 3 2.45 3 3V21C3 21.55 3.45 22 4 22C4.55 22 5 21.55 5 21V19H7V21C7 21.55 7.45 22 8 22C8.55 22 9 21.55 9 21V19H11V21C11 21.55 11.45 22 12 22C12.55 22 13 21.55 13 21V19H15V21C15 21.55 15.45 22 16 22C16.55 22 17 21.55 17 21V19H19V21C19 V21.55,19.45,22,20,22C20.55,22,21,21.55,21,21V3C21,2.45,20.55,2,20,2C19.45,2,19,2.45,19,3V5H17V3C17,2.45,16.55,2,16,2C15.45,2,15,2.45,15,3V5H13V3C13,2.45,12.55,2,12,2ZM5 ,17H7V15H5 V17ZM9 ,17H11 V15 H9 V17ZM13 ,17 H15 V15 H13 V17ZM17 ,17 H19 V15 H17 V17Z\" fill=\"#000000\"/>\n            </svg>"
-    }, {
-      "title": "Хип-хоп/Рэп",
-      "type": "live",
-      "query": "Hip-Hop/Rap",
-      "thumbnail": "<svg width=\"100\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n              <rect width=\"24\" height=\"24\" rx=\"4\" fill=\"#FFFFFF\"/>\n              <path d=\"M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16.5 15H14.5V13H13V15H11V13H9V15H7V9H9V11H11V9H13V11H14.5V9H16.5V15Z\" fill=\"#000000\"/>\n            </svg>"
-    }, {
-      "title": "Электронная музыка",
-      "type": "live",
-      "query": "Electronic/Dance",
-      "thumbnail": "<svg width=\"100\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n              <rect width=\"24\" height=\"24\" rx=\"4\" fill=\"#FFFFFF\"/>\n              <path d=\"M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM15.5 16H8.5C7.67 16 7 15.33 7 14.5V9.5C7 8.67 7.67 8 8.5 8H15.5C16.33 8 17 8.67 17 9.5V14.5C17 15.33 16.33 16 15.5 16ZM9.5 10H14.5V14H9.5V10Z\" fill=\"#000000\"/>\n            </svg>"
-    }, {
-      "title": "Джаз",
-      "type": "live",
-      "query": "Jazz",
-      "thumbnail": "<svg width=\"100\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"24\" height=\"24\" rx=\"4\" fill=\"#FFFFFF\"/>\n  <path d=\"M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM15.5 16H14V10.5L11.5 12V16H10V12L7.5 10.5V16H6V8H7.5L10.5 9.5L13.5 8H15V16Z\" fill=\"#000000\"/>\n</svg>"
-    }, {
-      "title": "Классическая музыка",
-      "type": "live",
-      "query": "Classical music",
-      "thumbnail": "<svg width=\"100\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"24\" height=\"24\" rx=\"4\" fill=\"#FFFFFF\"/>\n  <path d=\"M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM15.5 14H14V8H10V14H8.5V16H15.5V14Z\" fill=\"#000000\"/>\n</svg>"
-    }, {
-      "title": "R&B/Soul",
-      "type": "live",
-      "query": "R&B/Soul",
-      "thumbnail": "<svg width=\"100\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"24\" height=\"24\" rx=\"4\" fill=\"#FFFFFF\"/>\n  <path d=\"M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16.5 15H14.5V13H13V15H11V13H9V15H7V9H9V11H11V9H13V11H14.5V9H16.5V15Z\" fill=\"#000000\"/>\n</svg>"
-    }, {
-      "title": "Кантри",
-      "type": "live",
-      "query": "Country",
-      "thumbnail": "<svg width=\"100\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"24\" height=\"24\" rx=\"4\" fill=\"#FFFFFF\"/>\n  <path d=\"M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM14.5 16H9.5C8.67 16 8 15.33 8 14.5V9.5C8 8.67 8.67 8 9.5 8H14.5C15.33 8 16 8.67 16 9.5V14.5C16 15.33 15.33 16 14.5 16ZM10.5 10H13.5V14H10.5V10Z\" fill=\"#000000\"/>\n</svg>"
-    }, {
-      "title": "Регги",
-      "type": "live",
-      "query": "Reggae",
-      "thumbnail": "<svg width=\"100\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"24\" height=\"24\" rx=\"4\" fill=\"#FFFFFF\"/>\n  <path d=\"M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM15.5 14H13V10H11V14H8.5V16H15.5V14Z\" fill=\"#000000\"/>\n</svg>"
-    }, {
-      "title": "Блюз",
-      "type": "live",
-      "query": "Blues",
-      "thumbnail": "<svg width=\"100\" height=\"100\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect width=\"24\" height=\"24\" rx=\"4\" fill=\"#FFFFFF\"/>\n  <path d=\"M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM14.5 16H9.5C8.67 16 8 15.33 8 14.5V9.5C8 8.67 8.67 8 9.5 8H14.5C15.33 8 16 8.67 16 9.5V14.5C16 15.33 15.33 16 14.5 16ZM10.5 10H13.5V14H10.5V10Z\" fill=\"#000000\"/>\n</svg>"
-    }];
-  }
-
-  function request(query) {
-    var settings = {
-      url: "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://lmemusic-0ho252zr59om.runkit.sh/live",
-      method: "POST",
-      timeout: 0,
-      headers: {
-        "Content-Type": "application/json",
-        "origin": "Lampa"
-      },
-      data: JSON.stringify({
-        key: query
-      })
+  function _regeneratorRuntime() {
+    _regeneratorRuntime = function () {
+      return e;
     };
-    $.ajax(settings).done(function (response) {
-      console.log(response);
-      Lampa.Player.play(response[0]);
-      Lampa.Player.playlist(response);
-    }).fail(function (jqXHR, textStatus, errorThrown) {
-      Lampa.Noty.show('Кажется сервису поиска плохо, попробуй еще раз');
-    });
-  }
-
-  function search$1() {
-    Lampa.Input.edit({
-      free: true,
-      nosave: true,
-      nomic: true,
-      value: ''
-    }, function (val) {
-      if (val) {
-        getVideos(val);
-      } else {
-        Lampa.Controller.toggle('content');
-      }
-    });
-  }
-  function getVideos(query) {
-    var settings = {
-      url: "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://lmemusic-0ho252zr59om.runkit.sh/search-music",
-      method: "POST",
-      timeout: 0,
-      headers: {
-        "Content-Type": "application/json",
-        "origin": "Lampa"
+    var t,
+      e = {},
+      r = Object.prototype,
+      n = r.hasOwnProperty,
+      o = Object.defineProperty || function (t, e, r) {
+        t[e] = r.value;
       },
-      data: JSON.stringify({
-        key: query
-      })
-    };
-    $.ajax(settings).done(function (response) {
-      console.log(response);
-      Lampa.Player.play(response[0]);
-      Lampa.Player.playlist(response);
-    });
-  }
-  var MUSIC = {
-    search: search$1,
-    getVideos: getVideos
-  };
-
-  function _readOnlyError(name) {
-    throw new TypeError("\"" + name + "\" is read-only");
-  }
-
-  function Item(data) {
-    var item;
-    if (data.type === 'live') item = Lampa.Template.get("lme_item", {
-      name: data.title
-    });
-    if (data.type === 'custom') item = Lampa.Template.get("lme_item--use", {
-      name: data.title
-    });
-    var img = item.find("img")[0];
-    if (data.type === 'live') {
-      img.onerror = function () {
-        img.src = "./img/img_broken.svg";
-      };
-      // Create a blob URL for the SVG string
-      var blob = new Blob([data.thumbnail], {
-        type: 'image/svg+xml'
-      });
-      img.src = URL.createObjectURL(blob);
-    } else if (data.type !== 'custom') {
-      img.src = data.thumbnail;
+      i = "function" == typeof Symbol ? Symbol : {},
+      a = i.iterator || "@@iterator",
+      c = i.asyncIterator || "@@asyncIterator",
+      u = i.toStringTag || "@@toStringTag";
+    function define(t, e, r) {
+      return Object.defineProperty(t, e, {
+        value: r,
+        enumerable: !0,
+        configurable: !0,
+        writable: !0
+      }), t[e];
     }
+    try {
+      define({}, "");
+    } catch (t) {
+      define = function (t, e, r) {
+        return t[e] = r;
+      };
+    }
+    function wrap(t, e, r, n) {
+      var i = e && e.prototype instanceof Generator ? e : Generator,
+        a = Object.create(i.prototype),
+        c = new Context(n || []);
+      return o(a, "_invoke", {
+        value: makeInvokeMethod(t, r, c)
+      }), a;
+    }
+    function tryCatch(t, e, r) {
+      try {
+        return {
+          type: "normal",
+          arg: t.call(e, r)
+        };
+      } catch (t) {
+        return {
+          type: "throw",
+          arg: t
+        };
+      }
+    }
+    e.wrap = wrap;
+    var h = "suspendedStart",
+      l = "suspendedYield",
+      f = "executing",
+      s = "completed",
+      y = {};
+    function Generator() {}
+    function GeneratorFunction() {}
+    function GeneratorFunctionPrototype() {}
+    var p = {};
+    define(p, a, function () {
+      return this;
+    });
+    var d = Object.getPrototypeOf,
+      v = d && d(d(values([])));
+    v && v !== r && n.call(v, a) && (p = v);
+    var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p);
+    function defineIteratorMethods(t) {
+      ["next", "throw", "return"].forEach(function (e) {
+        define(t, e, function (t) {
+          return this._invoke(e, t);
+        });
+      });
+    }
+    function AsyncIterator(t, e) {
+      function invoke(r, o, i, a) {
+        var c = tryCatch(t[r], t, o);
+        if ("throw" !== c.type) {
+          var u = c.arg,
+            h = u.value;
+          return h && "object" == typeof h && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) {
+            invoke("next", t, i, a);
+          }, function (t) {
+            invoke("throw", t, i, a);
+          }) : e.resolve(h).then(function (t) {
+            u.value = t, i(u);
+          }, function (t) {
+            return invoke("throw", t, i, a);
+          });
+        }
+        a(c.arg);
+      }
+      var r;
+      o(this, "_invoke", {
+        value: function (t, n) {
+          function callInvokeWithMethodAndArg() {
+            return new e(function (e, r) {
+              invoke(t, n, e, r);
+            });
+          }
+          return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg();
+        }
+      });
+    }
+    function makeInvokeMethod(e, r, n) {
+      var o = h;
+      return function (i, a) {
+        if (o === f) throw Error("Generator is already running");
+        if (o === s) {
+          if ("throw" === i) throw a;
+          return {
+            value: t,
+            done: !0
+          };
+        }
+        for (n.method = i, n.arg = a;;) {
+          var c = n.delegate;
+          if (c) {
+            var u = maybeInvokeDelegate(c, n);
+            if (u) {
+              if (u === y) continue;
+              return u;
+            }
+          }
+          if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) {
+            if (o === h) throw o = s, n.arg;
+            n.dispatchException(n.arg);
+          } else "return" === n.method && n.abrupt("return", n.arg);
+          o = f;
+          var p = tryCatch(e, r, n);
+          if ("normal" === p.type) {
+            if (o = n.done ? s : l, p.arg === y) continue;
+            return {
+              value: p.arg,
+              done: n.done
+            };
+          }
+          "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg);
+        }
+      };
+    }
+    function maybeInvokeDelegate(e, r) {
+      var n = r.method,
+        o = e.iterator[n];
+      if (o === t) return r.delegate = null, "throw" === n && e.iterator.return && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y;
+      var i = tryCatch(o, e.iterator, r.arg);
+      if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y;
+      var a = i.arg;
+      return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y);
+    }
+    function pushTryEntry(t) {
+      var e = {
+        tryLoc: t[0]
+      };
+      1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e);
+    }
+    function resetTryEntry(t) {
+      var e = t.completion || {};
+      e.type = "normal", delete e.arg, t.completion = e;
+    }
+    function Context(t) {
+      this.tryEntries = [{
+        tryLoc: "root"
+      }], t.forEach(pushTryEntry, this), this.reset(!0);
+    }
+    function values(e) {
+      if (e || "" === e) {
+        var r = e[a];
+        if (r) return r.call(e);
+        if ("function" == typeof e.next) return e;
+        if (!isNaN(e.length)) {
+          var o = -1,
+            i = function next() {
+              for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next;
+              return next.value = t, next.done = !0, next;
+            };
+          return i.next = i;
+        }
+      }
+      throw new TypeError(typeof e + " is not iterable");
+    }
+    return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", {
+      value: GeneratorFunctionPrototype,
+      configurable: !0
+    }), o(GeneratorFunctionPrototype, "constructor", {
+      value: GeneratorFunction,
+      configurable: !0
+    }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) {
+      var e = "function" == typeof t && t.constructor;
+      return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name));
+    }, e.mark = function (t) {
+      return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t;
+    }, e.awrap = function (t) {
+      return {
+        __await: t
+      };
+    }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () {
+      return this;
+    }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) {
+      void 0 === i && (i = Promise);
+      var a = new AsyncIterator(wrap(t, r, n, o), i);
+      return e.isGeneratorFunction(r) ? a : a.next().then(function (t) {
+        return t.done ? t.value : a.next();
+      });
+    }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () {
+      return this;
+    }), define(g, "toString", function () {
+      return "[object Generator]";
+    }), e.keys = function (t) {
+      var e = Object(t),
+        r = [];
+      for (var n in e) r.push(n);
+      return r.reverse(), function next() {
+        for (; r.length;) {
+          var t = r.pop();
+          if (t in e) return next.value = t, next.done = !1, next;
+        }
+        return next.done = !0, next;
+      };
+    }, e.values = values, Context.prototype = {
+      constructor: Context,
+      reset: function (e) {
+        if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t);
+      },
+      stop: function () {
+        this.done = !0;
+        var t = this.tryEntries[0].completion;
+        if ("throw" === t.type) throw t.arg;
+        return this.rval;
+      },
+      dispatchException: function (e) {
+        if (this.done) throw e;
+        var r = this;
+        function handle(n, o) {
+          return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o;
+        }
+        for (var o = this.tryEntries.length - 1; o >= 0; --o) {
+          var i = this.tryEntries[o],
+            a = i.completion;
+          if ("root" === i.tryLoc) return handle("end");
+          if (i.tryLoc <= this.prev) {
+            var c = n.call(i, "catchLoc"),
+              u = n.call(i, "finallyLoc");
+            if (c && u) {
+              if (this.prev < i.catchLoc) return handle(i.catchLoc, !0);
+              if (this.prev < i.finallyLoc) return handle(i.finallyLoc);
+            } else if (c) {
+              if (this.prev < i.catchLoc) return handle(i.catchLoc, !0);
+            } else {
+              if (!u) throw Error("try statement without catch or finally");
+              if (this.prev < i.finallyLoc) return handle(i.finallyLoc);
+            }
+          }
+        }
+      },
+      abrupt: function (t, e) {
+        for (var r = this.tryEntries.length - 1; r >= 0; --r) {
+          var o = this.tryEntries[r];
+          if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) {
+            var i = o;
+            break;
+          }
+        }
+        i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null);
+        var a = i ? i.completion : {};
+        return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a);
+      },
+      complete: function (t, e) {
+        if ("throw" === t.type) throw t.arg;
+        return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y;
+      },
+      finish: function (t) {
+        for (var e = this.tryEntries.length - 1; e >= 0; --e) {
+          var r = this.tryEntries[e];
+          if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y;
+        }
+      },
+      catch: function (t) {
+        for (var e = this.tryEntries.length - 1; e >= 0; --e) {
+          var r = this.tryEntries[e];
+          if (r.tryLoc === t) {
+            var n = r.completion;
+            if ("throw" === n.type) {
+              var o = n.arg;
+              resetTryEntry(r);
+            }
+            return o;
+          }
+        }
+        throw Error("illegal catch attempt");
+      },
+      delegateYield: function (e, r, n) {
+        return this.delegate = {
+          iterator: values(e),
+          resultName: r,
+          nextLoc: n
+        }, "next" === this.method && (this.arg = t), y;
+      }
+    }, e;
+  }
+  function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
+    try {
+      var info = gen[key](arg);
+      var value = info.value;
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    if (info.done) {
+      resolve(value);
+    } else {
+      Promise.resolve(value).then(_next, _throw);
+    }
+  }
+  function _asyncToGenerator(fn) {
+    return function () {
+      var self = this,
+        args = arguments;
+      return new Promise(function (resolve, reject) {
+        var gen = fn.apply(self, args);
+        function _next(value) {
+          asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
+        }
+        function _throw(err) {
+          asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err);
+        }
+        _next(undefined);
+      });
+    };
+  }
+
+  function Item(data, typeCat) {
+    var item = Lampa.Template.get("lmeMusic_item", {
+      thumbnails: data.thumbnails && data.thumbnails[1] ? data.thumbnails[1].url : './img/img_load.svg',
+      typeCat: typeCat,
+      type: data.type,
+      name: data.name,
+      artist: data.artist ? data.artist.name : ''
+    });
     this.render = function () {
       return item;
     };
     this.destroy = function () {
-      img.onerror = function () {};
-      img.onload = function () {};
-      img.src = "";
       item.remove();
     };
   }
 
-  function search() {
-    Lampa.Input.edit({
-      free: true,
-      nosave: true,
-      nomic: true,
-      value: ''
-    }, function (val) {
-      if (val) {
-        getShows(val);
-      } else {
-        Lampa.Controller.toggle('content');
-      }
-    });
-  }
-  function getShows(query) {
+  function Main(playlistId) {
     var settings = {
-      url: "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://lmemusic-0ho252zr59om.runkit.sh/Mixcloud",
-      method: "POST",
-      timeout: 0,
-      headers: {
-        "Content-Type": "application/json",
-        "origin": "Lampa"
-      },
-      data: JSON.stringify({
-        key: query
-      })
+      "url": "https://delicious-verene-gwynnbleiidd-fe8dd6c5.koyeb.app/playlists/".concat(playlistId),
+      "method": "GET",
+      "timeout": 0
     };
     $.ajax(settings).done(function (response) {
-      console.log(response);
-      Lampa.Player.play(response[0]);
-      Lampa.Player.playlist(response);
+      Lampa.Player.play(response.videos[0]);
+      Lampa.Player.playlist(response.videos);
+    }).fail(function (jqXHR, textStatus, errorThrown) {
+      Lampa.Noty.show('Бядаб бядося');
+      console.log('LME Music', jqXHR, textStatus, errorThrown);
     });
   }
-  var Mixcloud = {
-    search: search
-  };
 
   function Component() {
     var network = new Lampa.Reguest();
@@ -206,79 +372,114 @@
       step: 250
     });
     var items = [];
-    var html = $("<div class='lmem-module'></div>");
-    var headpanel = $("<div class='lmem-headpanel category-full'></div>");
-    var headbody = $('<div class="lmem-catalog--title">Live по Жанрам</div>');
-    var body = $('<div class="lmem-catalog--list category-full"></div>');
-    var active;
-    var last;
-    this.create = function () {
-      this.activity.loader(true);
-      this.build();
-      return this.render();
+    var html = $("<div class='lmetorrent-module'></div>");
+    var head = $("<div class='lmetorrent-head'></div>");
+    var body = $('<div class="lmetorrent-catalog--list category-full"></div>');
+    var active, last;
+    this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+      var settings;
+      return _regeneratorRuntime().wrap(function _callee$(_context) {
+        while (1) switch (_context.prev = _context.next) {
+          case 0:
+            this.activity.loader(true);
+            settings = {
+              "url": "https://delicious-verene-gwynnbleiidd-fe8dd6c5.koyeb.app/home",
+              "method": "GET",
+              "timeout": 0
+            };
+            $.ajax(settings).done(function (response) {
+              this.build(response);
+            }.bind(this)).fail(function (jqXHR, textStatus, errorThrown) {
+              this.errorClient(jqXHR, textStatus, errorThrown);
+            }.bind(this));
+            return _context.abrupt("return", this.render());
+          case 4:
+          case "end":
+            return _context.stop();
+        }
+      }, _callee, this);
+    }));
+    this.errorClient = function (jqXHR, textStatus, errorThrown) {
+      scroll.append(body);
+      //Put all in page
+      html.append(scroll.render());
+      body.append(error_body);
+      this.activity.loader(false);
+      this.activity.toggle();
     };
-    this.build = function () {
+    this.build = function (result) {
+      console.log('result', result);
       scroll.minus();
       //Put header
-      this.header(genre());
-      //Put Live Chanel
-      this.live(genre());
+
+      //Put Data
+      this.body(result);
       //Put blank
-      scroll.append(headpanel);
-      scroll.append(headbody);
+      scroll.append(head);
       scroll.append(body);
       //Put all in page
       html.append(scroll.render());
       this.activity.loader(false);
       this.activity.toggle();
     };
-    this.header = function (chanel) {
-      chanel.forEach(function (video) {
-        if (video.type === 'custom') {
-          var item = new Item(video);
-          item.render().on("hover:focus", function () {
-            last = item.render()[0];
-            active = items.indexOf(item);
-            scroll.update(items[active].render(), true);
-          }).on("hover:enter", function () {
-            if (video.source === 'yt') MUSIC.search();
-            if (video.source === 'mc') Mixcloud.search();
-          });
-          headpanel.append(item.render());
-          items.push(item);
-        }
+    this.header = function (data) {
+      var item = new PanelHeader(data);
+      item.render().on("hover:focus", function () {
+        last = item.render()[0];
+        active = items.indexOf(item);
+        scroll.update(items[active].render(), true);
       });
+      // Добавляем обработчик события только для элемента с классом 'lmetorrent-header__update'
+      item.render()[0].on("hover:enter", function () {
+        Lampa.Activity.replace({
+          url: "",
+          title: "LME Torrent Manager",
+          component: "lmetorrentPanel",
+          page: 1
+        });
+        Lampa.Noty.show("Reloaded");
+      });
+      head.append(item.render());
+      items.push(item);
     };
-    this.live = function (chanel) {
-      chanel.forEach(function (video) {
-        if (video.type === 'live') {
-          var item = new Item(video);
+    this.body = function (data) {
+      data.forEach(function (typeCat) {
+        typeCat.contents.forEach(function (videoItem) {
+          if (videoItem.type === 'SONG') {
+            videoItem.url = "https://www.youtube.com/watch?v=".concat(videoItem.videoId);
+            videoItem.title = "".concat(videoItem.artist.name, " - ").concat(videoItem.name);
+          }
+        });
+      });
+      data.forEach(function (typeCat) {
+        typeCat.contents.forEach(function (videoItem) {
+          var item = new Item(videoItem, typeCat.title);
           item.render().on("hover:focus", function () {
             last = item.render()[0];
             active = items.indexOf(item);
             scroll.update(items[active].render(), true);
-          }).on("hover:enter", function () {
-            request(video.query);
-          });
+          }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+            return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+              while (1) switch (_context2.prev = _context2.next) {
+                case 0:
+                  if (videoItem.type === 'SONG') {
+                    Lampa.Player.play(videoItem);
+                    Lampa.Player.playlist(typeCat.contents);
+                  } else {
+                    Main(videoItem.playlistId);
+                  }
+                case 1:
+                case "end":
+                  return _context2.stop();
+              }
+            }, _callee2);
+          })));
           body.append(item.render());
           items.push(item);
-        }
-      });
-    };
-    this.append = function (element) {
-      element.forEach(function (video) {
-        var item = new Item(video);
-        item.render().on("hover:focus", function () {
-          last = item.render()[0];
-          active = items.indexOf(item);
-          scroll.update(items[active].render(), true);
-        }).on("hover:enter", function () {
-          console.log('start', video, element);
         });
-        body.append(item.render());
-        items.push(item);
       });
     };
+    this.append = function (element) {};
     this.back = function () {
       Lampa.Activity.backward();
     };
@@ -319,8 +520,8 @@
       Lampa.Arrays.destroy(items);
       scroll.destroy();
       html.remove();
-      _readOnlyError("items");
-      _readOnlyError("network");
+      items = null;
+      network = null;
     };
   }
 
@@ -330,7 +531,7 @@
       Lampa.Activity.push({
         url: '',
         title: 'Music and Live',
-        component: 'lme',
+        component: 'lmeMusic',
         page: 1
       });
     });
@@ -338,21 +539,20 @@
   }
 
   function add() {
-    Lampa.Template.add("lme_item", "<div class=\"card selector lme-item\">\n                <div class=\"lme-item__imgbox\">\n                    <img class=\"lme-item__img\"/>\n                </div>\n                <div class=\"lme-item__name\">{name}</div>\n            </div>");
-    Lampa.Template.add("lme_item--use", "<div class=\"lme-item--use simple-button selector\">\n                <div class=\"lme-item__name--use\">{name}</div>\n            </div>");
-    Lampa.Template.add('lmemStyle', "\n        <style>\n            @charset 'UTF-8';.card.selector.lme-item--use{margin-left:1em;margin-bottom:1em;width:20%;height:10%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lme-item__name--use{margin-top:-0.2em}.lmem-catalog--title{margin:1% 5% 1% 5%;font-size:1.6em;font-weight:400}.lme-item{margin-left:1em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lme-item__imgbox{background-color:#3e3e3e;padding-bottom:100%;position:relative;-webkit-border-radius:.3em;border-radius:.3em}.lme-item__listeners{position:absolute;top:.5em;left:.5em;background-color:#eee;padding:.1em .3em;font-size:.7em;font-weight:bold;color:#292d32;-webkit-border-radius:.25em;border-radius:.25em}.lme-item__listeners>svg{width:1em;height:1em;vertical-align:bottom}.lme-item__img{position:absolute;top:0;left:0;width:100%;height:100%;-webkit-border-radius:.4em;border-radius:.4em}.lme-item__name{font-size:1.1em;margin-top:.8em}.lme-item.focus .lme-item__imgbox::after{border:solid .26em #fff;content:'';display:block;position:absolute;left:-0.5em;top:-0.5em;right:-0.5em;bottom:-0.5em;-webkit-border-radius:.8em;border-radius:.8em}@-webkit-keyframes sound{from{height:.1em}to{height:1em}}@-o-keyframes sound{from{height:.1em}to{height:1em}}@keyframes sound{from{height:.1em}to{height:1em}}@-webkit-keyframes sound-loading{from{-webkit-transform:rotate(0);transform:rotate(0)}to{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}@-o-keyframes sound-loading{from{-o-transform:rotate(0);transform:rotate(0)}to{-o-transform:rotate(360deg);transform:rotate(360deg)}}@keyframes sound-loading{from{-webkit-transform:rotate(0);-o-transform:rotate(0);transform:rotate(0)}to{-webkit-transform:rotate(360deg);-o-transform:rotate(360deg);transform:rotate(360deg)}}@media screen and (max-width:580px){.lme-item{width:21%}}@media screen and (max-width:385px){.lme-item__name{display:none}}\n        </style>\n    ");
-    //Lang.main()
+    //Add style and Component's
+    Lampa.Template.add('lmemusicStyle', "\n        <style>\n            .lmeMusic-item{margin-left:1em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lmeMusic-item__imgbox{background-color:#3e3e3e;padding-bottom:100%;position:relative;-webkit-border-radius:.3em;border-radius:.3em}.lmeMusic-item__type{top:.5em;left:.5em}.lmeMusic-item__typeCat{bottom:.5em;left:.5em}.lmeMusic-item__type,.lmeMusic-item__typeCat{position:absolute;background-color:#eee;padding:.1em .3em;font-size:.7em;font-weight:bold;color:#292d32;-webkit-border-radius:.25em;border-radius:.25em}.lmeMusic-item__img{position:absolute;top:0;left:0;width:100%;height:100%;-webkit-border-radius:.4em;border-radius:.4em}.lmeMusic-item__name,.lmeMusic-item__artist{font-size:1.1em;margin-top:.8em}.lmeMusic-item.focus .lmeMusic-item__imgbox::after{border:solid .26em #fff;content:'';display:block;position:absolute;left:-0.5em;top:-0.5em;right:-0.5em;bottom:-0.5em;-webkit-border-radius:.8em;border-radius:.8em}\n        </style>\n    ");
+    Lampa.Template.add("lmeMusic_item", "<div class=\"selector lmeMusic-item\">\n                <div class=\"lmeMusic-item__imgbox\">\n                    <img class=\"lmeMusic-item__img\" src=\"{thumbnails}\"/>\n                    <div class=\"lmeMusic-item__type\">{type}</div>\n                    <div class=\"lmeMusic-item__typeCat\">{typeCat}</div>\n                </div>\n                <div class=\"lmeMusic-item__name\">{name}</div>\n                <div class=\"lmeMusic-item__artist\">{artist}</div>\n            </div>");
     Lampa.Manifest.plugins = {
       type: "other",
-      version: "0.0.1",
+      version: "0.1",
       author: '@lme_chat',
       name: "LME Music",
       description: "Music and Live content from YouTube",
-      component: "lme"
+      component: "lmeMusic"
     };
-    Lampa.Component.add('lme', Component);
-    $('body').append(Lampa.Template.get('lmemStyle', {}, true));
+    Lampa.Component.add('lmeMusic', Component);
     component();
+    $('body').append(Lampa.Template.get('lmemusicStyle', {}, true));
   }
   function startPlugin() {
     window.plugin_lmelm_ready = true;
