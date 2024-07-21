@@ -83,6 +83,31 @@
           uk: "Щось пішло не так"
         },
         //Panel action
+        actionWithTorrent: {
+          en: "Action with torrent",
+          ru: "Действие с торрентом",
+          uk: "Дія з торрентом"
+        },
+        resume: {
+          en: "Resume",
+          ru: "Возобновить",
+          uk: "Відновити"
+        },
+        pause: {
+          en: "Pause",
+          ru: "Пауза",
+          uk: "Пауза"
+        },
+        "delete": {
+          en: "Delete",
+          ru: "Удалить",
+          uk: "Видалити"
+        },
+        fullDelete: {
+          en: "Full delete",
+          ru: "Полное удаление",
+          uk: "Повне видалення"
+        },
         actionSentSuccessfully: {
           "en": "Action sent successfully",
           "ru": "Действие успешно отправлено",
@@ -477,7 +502,7 @@
       throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
     }
 
-    /* Constant */
+    // Constant
     var url$2 = Lampa.Storage.field("lmetorrentqBittorentUrl");
     var proxy$2 = "";
     if (Lampa.Storage.field("lmetorrentqBittorentProxy") === true) {
@@ -605,7 +630,7 @@
       SendTask: SendTask$2
     };
 
-    /* Constant */
+    // Constant
     var url$1 = Lampa.Storage.field("lmetorrenttransmissionUrl");
     var user$1 = Lampa.Storage.field("lmetorrenttransmissionUser");
     var pass$1 = Lampa.Storage.field("lmetorrenttransmissionPass");
@@ -623,7 +648,7 @@
     if (Lampa.Storage.field("lmetorrenttransmissionProxy") === true) {
       proxy$1 = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
     }
-    /* Tweaks */
+    // Tweaks
     function getHeaders$1() {
       var headers = {
         Authorization: "Basic ".concat(btoa(user$1 + ":" + pass$1)),
@@ -791,7 +816,7 @@
       SendTask: SendTask$1
     };
 
-    /* Constant */
+    // Constant
     var url = Lampa.Storage.field("lmetorrentsynologyUrl");
     var user = Lampa.Storage.field("lmetorrentsynologyUser");
     var pass = Lampa.Storage.field("lmetorrentsynologyPass");
@@ -1107,24 +1132,24 @@
                   enabled = Lampa.Controller.enabled().name;
                   menu = [];
                   menu.push({
-                    title: "Resume",
+                    title: Lampa.Lang.translate('resume'),
                     action: 'resume'
                   }, {
-                    title: "Pause",
+                    title: Lampa.Lang.translate('pause'),
                     action: 'pause'
                   }, {
-                    title: 'Delete',
+                    title: Lampa.Lang.translate('delete'),
                     action: 'delete'
                   });
                   if (client !== 'synology') menu.push({
-                    title: 'Full delete',
+                    title: Lampa.Lang.translate('fullDelete'),
                     action: 'delete',
                     deleteFiles: true
                   });
 
-                  /* Set menu */
+                  // Set menu
                   Lampa.Select.show({
-                    title: "Action with torrent",
+                    title: Lampa.Lang.translate('actionWithTorrent'),
                     items: menu,
                     onBack: function onBack() {
                       Lampa.Controller.toggle(enabled);
@@ -1275,46 +1300,6 @@
           Lampa.Settings.update();
         }
       });
-      /**
-      Lampa.SettingsApi.addParam({
-          component: manifest.component,
-          param: {
-              name: manifest.component+"qBittorentUser",
-              type: "input", //доступно select,input,trigger,title,static
-              placeholder: '',
-              values: '',
-              default: ''
-          },
-          field: {
-              name: "Login",
-          },  onRender: function (item) {
-              if (Lampa.Storage.field(manifest.component + 'Select') === "qBittorent") {
-                  item.show();
-              } else item.hide();
-          }, onChange: function (item) {
-              Lampa.Settings.update();
-          },
-      });
-      Lampa.SettingsApi.addParam({
-          component: manifest.component,
-          param: {
-              name: manifest.component+"qBittorentPass",
-              type: "input", //доступно select,input,trigger,title,static
-              placeholder: '',
-              values: '',
-              default: ''
-          },
-          field: {
-              name: "Password",
-          },  onRender: function (item) {
-              if (Lampa.Storage.field(manifest.component + 'Select') === "qBittorent") {
-                  item.show();
-              } else item.hide();
-          }, onChange: function (item) {
-              Lampa.Settings.update();
-          },
-      });
-       **/
       Lampa.SettingsApi.addParam({
         component: manifest.component,
         param: {
@@ -1838,32 +1823,28 @@
       });
     }
 
-    /* Backlog */
-    // TODO: Clear all Log and add normal logs
-    // TODO: Add translate(?) for status
-
     function add() {
-      /* Lang */
+      // Lang
       Component$1();
-      /* Style */
+      // Style
       Lampa.Template.add('lmemStyle', "\n        <style>\n            @charset 'UTF-8';.btnTDdownload{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}svg.btnTDdownload{width:36px;height:36px;margin-right:5%}.lmetorrent-error_body{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center}.lmetorrent-error_body .lmetorrent-error_result{margin-top:2em}.lmetorrent-head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;padding:0 2% 0 2%;margin:0 2% 2% 2%}.lmetorrent-header__update{white-space:nowrap}.lmetorrent-header__space{margin-left:auto}.lmetorrent-catalog--list.category-full{margin-left:2%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:start;-webkit-justify-content:start;-ms-flex-pack:start;justify-content:start}.lmetorrent_card__completed{position:absolute;right:0;bottom:0;font-size:.8em;-webkit-border-radius:.3em;-moz-border-radius:.3em;padding:.4em .4em;border-radius:.3em;text-align:center;font-weight:bold;background-color:var(--background-color);color:var(--text-color)}.lmetorrent_card__completed[data-completed]:nth-child(n):nth-last-child(n+51){--background-color:#fcc;--text-color:#900}.lmetorrent_card__completed[data-completed]:nth-child(n+51):nth-last-child(n+2){--background-color:#ffc;--text-color:#990}.lmetorrent_card__completed[data-completed='100']{--background-color:#cfc;--text-color:#090}.lmetorrent_card__state{left:0;top:0}.lmetorrent_card__size{left:0;bottom:0}.lmetorrent_card__size,.lmetorrent_card__state{position:absolute;padding:.4em .4em;background:#fff;color:#000;font-size:.8em;-webkit-border-radius:.3em;border-radius:.3em}.lmetorrent-item{margin-right:.5em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;border:solid .01em #fff;-webkit-border-radius:.8em;border-radius:.8em}.lmetorrent-item.focus{border:solid .26em #fff}.lmetorrent-item__data{margin-bottom:.4em}.lmetorrent-item__state{top:.5em;left:.5em;padding:.1em .3em;font-weight:bold;-webkit-border-radius:.25em;border-radius:.25em;color:#292d32;background-color:#eee}.lmetorrent-item__badge>svg{width:1em;height:1em;vertical-align:bottom}.lmetorrent-item__name{font-size:1.1em;margin-top:.8em;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}@media screen and (max-width:580px){.lmetorrent-item{width:21%}}@media screen and (max-width:385px){.lmetorrent-item__name{display:none}}\n        </style>\n    ");
       Lampa.Template.add("lmetorrent_header", "<div class=\"lmetorrent-header__data lmetorrent-header__update simple-button selector\">Update</div>\n              <div class=\"lmetorrent-header__data lmetorrent-header__space\">Free space: {space}</div>\n            ");
       Lampa.Template.add("lmetorrent_item", "<div class=\"card selector lmetorrent-item\">\n                <div class=\"lmetorrent-item__data lmetorrent-item__name\">{name}</div>\n                <div class=\"lmetorrent-item__data lmetorrent-item__state\">{state}</div>\n                <div class=\"lmetorrent-item__data lmetorrent-item__progress\">{size} / {completed}</div>\n            </div>");
       Lampa.Template.add("lmetorrent_item__card", "<div class=\"card card--collection selector layer--visible layer--render\">\n                <div class=\"card__view\">\n                    <img src=\"./img/img_load.svg\" class=\"card__img\" />\n                    <div class=\"card__icons\">\n                        <div class=\"card__icons-inner\">\n                        </div>\n                    </div>\n                   <div class=\"lmetorrent_card__state\">{state}</div>\n                    <div class=\"lmetorrent_card__size\">{size}</div>\n                    <div class=\"lmetorrent_card__completed\" data-completed=\"{data-completed}\">{completed}</div>\n                </div>\n                <div class=\"card__title\">{title}</div>\n            </div>");
-      /* Components */
+      // Components
       Lampa.Component.add('lmetorrentPanel', Component);
-      /* Manifest */
+      // Manifest
       var manifest = {
         type: "other",
-        version: "0.0.1",
+        version: "2.0",
         author: '@lme_chat',
         name: "LME Torrent Manager",
-        description: "Torrent manager and Runner",
+        description: "Manager and Runner query",
         component: "lmetorrent",
         icon: "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\" viewBox=\"0 0 48 48\" width=\"48px\" height=\"48px\">\n                        <path fill=\"white\" d=\"M 23.501953 4.125 C 12.485953 4.125 3.5019531 13.11 3.5019531 24.125 C 3.5019531 32.932677 9.2467538 40.435277 17.179688 43.091797 L 17.146484 42.996094 L 7 16 L 15 14 C 17.573 20.519 20.825516 32.721688 27.728516 30.929688 C 35.781516 28.948688 28.615 16.981172 27 12.076172 L 34 11 C 38.025862 19.563024 39.693648 25.901226 43.175781 27.089844 C 43.191423 27.095188 43.235077 27.103922 43.275391 27.113281 C 43.422576 26.137952 43.501953 25.140294 43.501953 24.125 C 43.501953 13.11 34.517953 4.125 23.501953 4.125 z M34 .90429729 .314453 C34 .25029734 .64845328 .81135921 .06957826 .94335935 .51757826 .31640643 .76367226 .39257843 .91406233 .17699342 .92392538 .87264541 .50576441 .66015632 .48437541 .60366532 .48546541 .54628432 .48641841 .52929732 .48632838 .92840532 .47256736 .60755231 .57296734 .90429729 .314453 z\"></path>\n                    </svg>"
       };
       Lampa.Manifest.plugins = manifest;
-      /* Insert */
+      // Insert
       var button = $("<li class=\"menu__item selector\">\n                <div class=\"menu__ico\">\n                    ".concat(manifest.icon, "\n                </div>\n                <div class=\"menu__text\">").concat(manifest.name, "</div>\n            </li>"));
       button.on("hover:enter", function () {
         Lampa.Activity.push({
@@ -1877,25 +1858,18 @@
       $('body').append(Lampa.Template.get('lmemStyle', {}, true));
       Main$1(manifest);
       Send();
-      /**/
-      //if (Lampa.Storage.get(manifest.component + 'Select') === 'qBittorent') qBittorent.auth()
-      /* Start Transmission Auth */
+      // Start Transmission Auth */
       if (Lampa.Storage.get(manifest.component + 'Select') === 'transmission') Transmission.auth();
-      /* Start Synology Auth */
+      // Start Synology Auth */
       if (Lampa.Storage.get(manifest.component + 'Select') === 'synology') {
         // Synology.auth()
         var isKeyDateOld = function isKeyDateOld(keyDate) {
           if (!keyDate) {
-            return true; // Если keyDate не существует, считаем его "старым"
+            return true;
           }
-
-          // Получаем текущий таймштамп в секундах
           var currentTimestamp = Math.floor(Date.now() / 1000);
-
-          // Вычисляем таймштамп 5 дней назад (5 дней * 24 часа * 60 минут * 60 секунд)
           var fiveDaysInSeconds = 5 * 24 * 60 * 60;
           var timestampFiveDaysAgo = currentTimestamp - fiveDaysInSeconds;
-
           // Проверяем, старше ли keyDate на 5 дней
           return keyDate < timestampFiveDaysAgo;
         }; // Используем функцию для проверки
