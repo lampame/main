@@ -535,6 +535,7 @@
     var html = $("<div class='lmeMusic-module'></div>");
     var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__search simple-button simple-button--filter selector'>Search artist</div></div>");
     var body = $('<div class="lmeMusic-catalog--list category-full"></div>');
+    var featuredOn = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var active, last;
     this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
       return _regeneratorRuntime().wrap(function _callee3$(_context3) {
@@ -556,10 +557,11 @@
       //Put Songs
       this.body(result);
       //Put Playlists
-
+      this.featuredOn(result);
       //Put blank
       scroll.append(head);
       scroll.append(body);
+      scroll.append(featuredOn);
       //Put all in page
       html.append(scroll.render());
       this.activity.loader(false);
@@ -604,6 +606,28 @@
           }, _callee4);
         })));
         body.append(item.render());
+        items.push(item);
+      });
+    };
+    this.featuredOn = function (data) {
+      data.featuredOn.forEach(function (videoItem) {
+        var item = new SearchItem.Songs(videoItem);
+        item.render().on("hover:focus", function () {
+          last = item.render()[0];
+          active = items.indexOf(item);
+          scroll.update(items[active].render(), true);
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+          return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+            while (1) switch (_context5.prev = _context5.next) {
+              case 0:
+                Main(videoItem.playlistId);
+              case 1:
+              case "end":
+                return _context5.stop();
+            }
+          }, _callee5);
+        })));
+        featuredOn.append(item.render());
         items.push(item);
       });
     };
