@@ -364,6 +364,341 @@
     });
   }
 
+  function Artist$1(data) {
+    var item = Lampa.Template.get("lmeMusic_searchitem", {
+      thumbnails: data.thumbnailUrl,
+      subscribers: data.subscribers,
+      name: data.name
+    });
+    this.render = function () {
+      return item;
+    };
+    this.destroy = function () {
+      item.remove();
+    };
+  }
+  function Songs(data) {
+    var item = Lampa.Template.get("lmeMusic_songitem", {
+      thumbnails: data.thumbnails && data.thumbnails[1] ? data.thumbnails[1].url : './img/img_load.svg',
+      type: data.type,
+      name: data.name,
+      artist: data.artist ? data.artist.name : ''
+    });
+    this.render = function () {
+      return item;
+    };
+    this.destroy = function () {
+      item.remove();
+    };
+  }
+  var SearchItem = {
+    Artist: Artist$1,
+    Songs: Songs
+  };
+
+  function SearchResult(component) {
+    var network = new Lampa.Reguest();
+    var result = component.response;
+    console.log('component', component);
+    console.log('result', result);
+    var scroll = new Lampa.Scroll({
+      mask: true,
+      over: true,
+      step: 250
+    });
+    var items = [];
+    var html = $("<div class='lmeMusic-module'></div>");
+    var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__search simple-button simple-button--filter selector'>Search artist</div></div>");
+    var body = $('<div class="lmeMusic-catalog--list category-full"></div>');
+    var active, last;
+    this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+      return _regeneratorRuntime().wrap(function _callee$(_context) {
+        while (1) switch (_context.prev = _context.next) {
+          case 0:
+            this.activity.loader(true);
+            this.build(result);
+            return _context.abrupt("return", this.render());
+          case 3:
+          case "end":
+            return _context.stop();
+        }
+      }, _callee, this);
+    }));
+    this.build = function (result) {
+      scroll.minus();
+      //Put header
+      this.headerAction();
+      //Put Data
+      this.body(result);
+      //Put blank
+      scroll.append(head);
+      scroll.append(body);
+      //Put all in page
+      html.append(scroll.render());
+      this.activity.loader(false);
+      this.activity.toggle();
+    };
+    this.headerAction = function () {
+      var searchElement = head.find('.lmeMusic-head__search');
+      searchElement.on('click', function () {
+        Lampa.Input.edit({
+          free: true,
+          nosave: true,
+          nomic: true,
+          value: ''
+        }, function (val) {
+          if (val) {
+            GetArtists.Search(val);
+          } else {
+            Lampa.Controller.toggle('content');
+          }
+        });
+      });
+    };
+    this.body = function (data) {
+      data.forEach(function (artist_data) {
+        var item = new SearchItem.Artist(artist_data);
+        item.render().on("hover:focus", function () {
+          last = item.render()[0];
+          active = items.indexOf(item);
+          scroll.update(items[active].render(), true);
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+          return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+            while (1) switch (_context2.prev = _context2.next) {
+              case 0:
+                GetArtists.Info(artist_data.artistId);
+              case 1:
+              case "end":
+                return _context2.stop();
+            }
+          }, _callee2);
+        })));
+        body.append(item.render());
+        items.push(item);
+      });
+    };
+    this.back = function () {
+      Lampa.Activity.backward();
+    };
+    this.background = function () {
+      Lampa.Background.immediately("");
+    };
+    this.start = function () {
+      if (Lampa.Activity.active().activity !== this.activity) return;
+      this.background();
+      Lampa.Controller.add("content", {
+        toggle: function toggle() {
+          Lampa.Controller.collectionSet(scroll.render());
+          Lampa.Controller.collectionFocus(last || false, scroll.render());
+        },
+        left: function left() {
+          if (Navigator.canmove("left")) Navigator.move("left");else Lampa.Controller.toggle("menu");
+        },
+        right: function right() {
+          Navigator.move("right");
+        },
+        up: function up() {
+          if (Navigator.canmove("up")) Navigator.move("up");else Lampa.Controller.toggle("head");
+        },
+        down: function down() {
+          if (Navigator.canmove("down")) Navigator.move("down");
+        },
+        back: this.back
+      });
+      Lampa.Controller.toggle("content");
+    };
+    this.pause = function () {};
+    this.stop = function () {};
+    this.render = function () {
+      return html;
+    };
+    this.destroy = function () {
+      network.clear();
+      Lampa.Arrays.destroy(items);
+      scroll.destroy();
+      html.remove();
+      items = null;
+      network = null;
+    };
+  }
+  function Page(component) {
+    var network = new Lampa.Reguest();
+    var result = component.response;
+    console.log('component', component);
+    console.log('result', result);
+    var scroll = new Lampa.Scroll({
+      mask: true,
+      over: true,
+      step: 250
+    });
+    var items = [];
+    var html = $("<div class='lmeMusic-module'></div>");
+    var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__search simple-button simple-button--filter selector'>Search artist</div></div>");
+    var body = $('<div class="lmeMusic-catalog--list category-full"></div>');
+    var active, last;
+    this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+      return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+        while (1) switch (_context3.prev = _context3.next) {
+          case 0:
+            this.activity.loader(true);
+            this.build(result);
+            return _context3.abrupt("return", this.render());
+          case 3:
+          case "end":
+            return _context3.stop();
+        }
+      }, _callee3, this);
+    }));
+    this.build = function (result) {
+      scroll.minus();
+      //Put header
+      this.headerAction();
+      //Put Songs
+      this.body(result);
+      //Put Playlists
+
+      //Put blank
+      scroll.append(head);
+      scroll.append(body);
+      //Put all in page
+      html.append(scroll.render());
+      this.activity.loader(false);
+      this.activity.toggle();
+    };
+    this.headerAction = function () {
+      var searchElement = head.find('.lmeMusic-head__search');
+      searchElement.on('click', function () {
+        Lampa.Input.edit({
+          free: true,
+          nosave: true,
+          nomic: true,
+          value: ''
+        }, function (val) {
+          if (val) {
+            GetArtists.Search(val);
+          } else {
+            Lampa.Controller.toggle('content');
+          }
+        });
+      });
+    };
+    this.body = function (data) {
+      data.topSongs.forEach(function (videoItem) {
+        videoItem.url = "https://www.youtube.com/watch?v=".concat(videoItem.videoId);
+        videoItem.title = videoItem.name;
+        var item = new SearchItem.Songs(videoItem);
+        item.render().on("hover:focus", function () {
+          last = item.render()[0];
+          active = items.indexOf(item);
+          scroll.update(items[active].render(), true);
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+          return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+            while (1) switch (_context4.prev = _context4.next) {
+              case 0:
+                Lampa.Player.play(videoItem);
+                Lampa.Player.playlist(data.topSongs);
+              case 2:
+              case "end":
+                return _context4.stop();
+            }
+          }, _callee4);
+        })));
+        body.append(item.render());
+        items.push(item);
+      });
+    };
+    this.back = function () {
+      Lampa.Activity.backward();
+    };
+    this.background = function () {
+      Lampa.Background.immediately(result.thumbnails[result.thumbnails.length - 1]);
+    };
+    this.start = function () {
+      if (Lampa.Activity.active().activity !== this.activity) return;
+      this.background();
+      Lampa.Controller.add("content", {
+        toggle: function toggle() {
+          Lampa.Controller.collectionSet(scroll.render());
+          Lampa.Controller.collectionFocus(last || false, scroll.render());
+        },
+        left: function left() {
+          if (Navigator.canmove("left")) Navigator.move("left");else Lampa.Controller.toggle("menu");
+        },
+        right: function right() {
+          Navigator.move("right");
+        },
+        up: function up() {
+          if (Navigator.canmove("up")) Navigator.move("up");else Lampa.Controller.toggle("head");
+        },
+        down: function down() {
+          if (Navigator.canmove("down")) Navigator.move("down");
+        },
+        back: this.back
+      });
+      Lampa.Controller.toggle("content");
+    };
+    this.pause = function () {};
+    this.stop = function () {};
+    this.render = function () {
+      return html;
+    };
+    this.destroy = function () {
+      network.clear();
+      Lampa.Arrays.destroy(items);
+      scroll.destroy();
+      html.remove();
+      items = null;
+      network = null;
+    };
+  }
+  var Artist = {
+    SearchResult: SearchResult,
+    Page: Page
+  };
+
+  function Search(val) {
+    var settings = {
+      "url": "https://delicious-verene-gwynnbleiidd-fe8dd6c5.koyeb.app/search/artists?query=".concat(val),
+      "method": "GET",
+      "timeout": 0
+    };
+    $.ajax(settings).done(function (response) {
+      Lampa.Activity.push({
+        url: '',
+        title: 'Music and Live',
+        component: 'lmeMusicSearch',
+        response: response,
+        page: 1
+      });
+    }).fail(function (jqXHR, textStatus, errorThrown) {
+      Lampa.Noty.show('Бядаб бядося');
+      console.log('LME Music', jqXHR, textStatus, errorThrown);
+    });
+  }
+  function Info(val) {
+    var settings = {
+      "url": "https://delicious-verene-gwynnbleiidd-fe8dd6c5.koyeb.app/artists/".concat(val),
+      "method": "GET",
+      "timeout": 0
+    };
+    $.ajax(settings).done(function (response) {
+      Lampa.Activity.push({
+        url: '',
+        title: response.name,
+        component: 'lmeMusicArtist',
+        response: response,
+        page: 1
+      });
+    }).fail(function (jqXHR, textStatus, errorThrown) {
+      Lampa.Noty.show('Бядаб бядося');
+      console.log('LME Music', jqXHR, textStatus, errorThrown);
+    });
+  }
+  var GetArtists = {
+    Search: Search,
+    Info: Info
+  };
+
   function Component() {
     var network = new Lampa.Reguest();
     var scroll = new Lampa.Scroll({
@@ -372,9 +707,9 @@
       step: 250
     });
     var items = [];
-    var html = $("<div class='lmetorrent-module'></div>");
-    var head = $("<div class='lmetorrent-head'></div>");
-    var body = $('<div class="lmetorrent-catalog--list category-full"></div>');
+    var html = $("<div class='lmeMusic-module'></div>");
+    var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__search simple-button simple-button--filter selector'>Search artist</div></div>");
+    var body = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var active, last;
     this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
       var settings;
@@ -411,7 +746,7 @@
       console.log('result', result);
       scroll.minus();
       //Put header
-
+      this.headerAction();
       //Put Data
       this.body(result);
       //Put blank
@@ -422,25 +757,22 @@
       this.activity.loader(false);
       this.activity.toggle();
     };
-    this.header = function (data) {
-      var item = new PanelHeader(data);
-      item.render().on("hover:focus", function () {
-        last = item.render()[0];
-        active = items.indexOf(item);
-        scroll.update(items[active].render(), true);
-      });
-      // Добавляем обработчик события только для элемента с классом 'lmetorrent-header__update'
-      item.render()[0].on("hover:enter", function () {
-        Lampa.Activity.replace({
-          url: "",
-          title: "LME Torrent Manager",
-          component: "lmetorrentPanel",
-          page: 1
+    this.headerAction = function () {
+      var searchElement = head.find('.lmeMusic-head__search');
+      searchElement.on('click', function () {
+        Lampa.Input.edit({
+          free: true,
+          nosave: true,
+          nomic: true,
+          value: ''
+        }, function (val) {
+          if (val) {
+            GetArtists.Search(val);
+          } else {
+            Lampa.Controller.toggle('content');
+          }
         });
-        Lampa.Noty.show("Reloaded");
       });
-      head.append(item.render());
-      items.push(item);
     };
     this.body = function (data) {
       data.forEach(function (typeCat) {
@@ -479,7 +811,6 @@
         });
       });
     };
-    this.append = function (element) {};
     this.back = function () {
       Lampa.Activity.backward();
     };
@@ -540,8 +871,10 @@
 
   function add() {
     //Add style and Component's
-    Lampa.Template.add('lmemusicStyle', "\n        <style>\n            .lmeMusic-item{margin-left:1em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lmeMusic-item__imgbox{background-color:#3e3e3e;padding-bottom:100%;position:relative;-webkit-border-radius:.3em;border-radius:.3em}.lmeMusic-item__type{top:.5em;left:.5em}.lmeMusic-item__typeCat{bottom:.5em;left:.5em}.lmeMusic-item__type,.lmeMusic-item__typeCat{position:absolute;background-color:#eee;padding:.1em .3em;font-size:.7em;font-weight:bold;color:#292d32;-webkit-border-radius:.25em;border-radius:.25em}.lmeMusic-item__img{position:absolute;top:0;left:0;width:100%;height:100%;-webkit-border-radius:.4em;border-radius:.4em}.lmeMusic-item__name,.lmeMusic-item__artist{font-size:1.1em;margin-top:.8em}.lmeMusic-item.focus .lmeMusic-item__imgbox::after{border:solid .26em #fff;content:'';display:block;position:absolute;left:-0.5em;top:-0.5em;right:-0.5em;bottom:-0.5em;-webkit-border-radius:.8em;border-radius:.8em}\n        </style>\n    ");
+    Lampa.Template.add('lmemusicStyle', "\n        <style>\n            .lmeMusic-head.torrent-filter{padding:0 2em}.lmeMusic-item{margin-left:1em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lmeMusic-item__imgbox{background-color:#3e3e3e;padding-bottom:100%;position:relative;-webkit-border-radius:.3em;border-radius:.3em}.lmeMusic-item__type{top:.5em;left:.5em}.lmeMusic-item__typeCat{bottom:.5em;left:.5em}.lmeMusic-item__type,.lmeMusic-item__typeCat{position:absolute;background-color:#eee;padding:.1em .3em;font-size:.7em;font-weight:bold;color:#292d32;-webkit-border-radius:.25em;border-radius:.25em}.lmeMusic-item__img{position:absolute;top:0;left:0;width:100%;height:100%;-webkit-border-radius:.4em;border-radius:.4em}.lmeMusic-item__name,.lmeMusic-item__artist{font-size:1.1em;margin-top:.8em}.lmeMusic-item.focus .lmeMusic-item__imgbox::after{border:solid .26em #fff;content:'';display:block;position:absolute;left:-0.5em;top:-0.5em;right:-0.5em;bottom:-0.5em;-webkit-border-radius:.8em;border-radius:.8em}\n        </style>\n    ");
     Lampa.Template.add("lmeMusic_item", "<div class=\"selector lmeMusic-item\">\n                <div class=\"lmeMusic-item__imgbox\">\n                    <img class=\"lmeMusic-item__img\" src=\"{thumbnails}\"/>\n                    <div class=\"lmeMusic-item__type\">{type}</div>\n                    <div class=\"lmeMusic-item__typeCat\">{typeCat}</div>\n                </div>\n                <div class=\"lmeMusic-item__name\">{name}</div>\n                <div class=\"lmeMusic-item__artist\">{artist}</div>\n            </div>");
+    Lampa.Template.add("lmeMusic_searchitem", "<div class=\"selector lmeMusic-item\">\n                <div class=\"lmeMusic-item__imgbox\">\n                    <img class=\"lmeMusic-item__img\" src=\"{thumbnails}\"/>\n                    <div class=\"lmeMusic-item__typeCat\">{subscribers}</div>\n                </div>\n                <div class=\"lmeMusic-item__artist\">{name}</div>\n            </div>");
+    Lampa.Template.add("lmeMusic_songitem", "<div class=\"selector lmeMusic-item\">\n                <div class=\"lmeMusic-item__imgbox\">\n                    <img class=\"lmeMusic-item__img\" src=\"{thumbnails}\"/>\n                    <div class=\"lmeMusic-item__type\">{type}</div>\n                </div>\n                <div class=\"lmeMusic-item__name\">{name}</div>\n                <div class=\"lmeMusic-item__artist\">{artist}</div>\n            </div>");
     Lampa.Manifest.plugins = {
       type: "other",
       version: "0.1",
@@ -551,6 +884,8 @@
       component: "lmeMusic"
     };
     Lampa.Component.add('lmeMusic', Component);
+    Lampa.Component.add('lmeMusicSearch', Artist.SearchResult);
+    Lampa.Component.add('lmeMusicArtist', Artist.Page);
     component();
     $('body').append(Lampa.Template.get('lmemusicStyle', {}, true));
   }
