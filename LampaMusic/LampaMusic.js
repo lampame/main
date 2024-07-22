@@ -875,28 +875,6 @@
     Info: Info
   };
 
-  function Component$1(head) {
-    var searchElement = head.find('.lmeMusic-head__search');
-    searchElement.on('click', function () {
-      Lampa.Input.edit({
-        free: true,
-        nosave: true,
-        nomic: true,
-        value: ''
-      }, function (val) {
-        if (val) {
-          GetArtists.Search(val);
-        } else {
-          Lampa.Controller.toggle('content');
-        }
-      });
-    });
-    var homeElement = head.find('.lmeMusic-head__home');
-    homeElement.on('click', function () {
-      component();
-    });
-  }
-
   function Component() {
     var network = new Lampa.Reguest();
     var scroll = new Lampa.Scroll({
@@ -969,7 +947,21 @@
       this.activity.toggle();
     };
     this.headerAction = function () {
-      Component$1(head);
+      var searchElement = head.find('.lmeMusic-head__search');
+      searchElement.on('click', function () {
+        Lampa.Input.edit({
+          free: true,
+          nosave: true,
+          nomic: true,
+          value: ''
+        }, function (val) {
+          if (val) {
+            GetArtists.Search(val);
+          } else {
+            Lampa.Controller.toggle('content');
+          }
+        });
+      });
     };
     this.blockOneBody = function (data) {
       data.contents.forEach(function (videoItem) {
