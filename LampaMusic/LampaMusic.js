@@ -670,7 +670,7 @@
     };
     this.topVideos = function (data) {
       data.topVideos.forEach(function (videoItem) {
-        videoItem.url = "https://www.youtube.com/watch?v=".concat(videoItem.videoId);
+        videoItem.url = "https://www.youtube.com/watch?v=".concat(videoItem.videoId, "&autoplay=1");
         videoItem.title = videoItem.name;
         var item = new SearchItem.Songs(videoItem);
         item.render().on("hover:focus", function () {
@@ -949,7 +949,6 @@
     this.headerAction = function () {
       var searchElement = head.find('.lmeMusic-head__search');
       searchElement.on('hover:enter', function () {
-        Lampa.Noty.show('Clicked');
         Lampa.Input.edit({
           free: true,
           nosave: true,
