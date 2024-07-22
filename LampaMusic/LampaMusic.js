@@ -451,7 +451,7 @@
     };
     this.headerAction = function () {
       var searchElement = head.find('.lmeMusic-head__search');
-      searchElement.on('click', function () {
+      searchElement.on('hover:enter', function () {
         Lampa.Input.edit({
           free: true,
           nosave: true,
@@ -466,7 +466,7 @@
         });
       });
       var homeElement = head.find('.lmeMusic-head__home');
-      homeElement.on('click', function () {
+      homeElement.on('hover:enter', function () {
         Lampa.Activity.push({
           url: '',
           title: 'Music and Live',
@@ -618,7 +618,7 @@
     };
     this.headerAction = function () {
       var searchElement = head.find('.lmeMusic-head__search');
-      searchElement.on('click', function () {
+      searchElement.on('hover:enter', function () {
         Lampa.Input.edit({
           free: true,
           nosave: true,
@@ -633,7 +633,7 @@
         });
       });
       var homeElement = head.find('.lmeMusic-head__home');
-      homeElement.on('click', function () {
+      homeElement.on('hover:enter', function () {
         Lampa.Activity.push({
           url: '',
           title: 'Music and Live',
@@ -948,7 +948,8 @@
     };
     this.headerAction = function () {
       var searchElement = head.find('.lmeMusic-head__search');
-      searchElement.on('click', function () {
+      searchElement.on('hover:enter', function () {
+        Lampa.Noty.show('Clicked');
         Lampa.Input.edit({
           free: true,
           nosave: true,
