@@ -907,7 +907,9 @@
     var items = [];
     var html = $("<div class='lmeMusic-module'></div>");
     var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__search simple-button simple-button--filter selector'>Search artist</div></div>");
-    var body = $('<div class="lmeMusic-catalog--list category-full"></div>');
+    var blockOneBody = $('<div class="lmeMusic-catalog--list category-full"></div>');
+    var blockTwoBody = $('<div class="lmeMusic-catalog--list category-full"></div>');
+    var blockThreeBody = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var active, last;
     this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
       var settings;
@@ -941,14 +943,26 @@
       this.activity.toggle();
     };
     this.build = function (result) {
+      //Const
+      var blockOne = $("<div class=\"lmeMusic-catalog--list  items-line__head items-line__title\">".concat(result[0].title, "</div>"));
+      var blockTwo = $("<div class=\"lmeMusic-catalog--list  items-line__head items-line__title\">".concat(result[1].title, "</div>"));
+      var blockThree = $("<div class=\"lmeMusic-catalog--list  items-line__head items-line__title\">".concat(result[2].title, "</div>"));
       scroll.minus();
       //Put header
       this.headerAction();
       //Put Data
-      this.body(result);
+      //this.body(result)
+      this.blockOneBody(result[0]);
+      this.blockTwoBody(result[1]);
+      this.blockThreeBody(result[2]);
       //Put blank
       scroll.append(head);
-      scroll.append(body);
+      scroll.append(blockOne);
+      scroll.append(blockOneBody);
+      scroll.append(blockTwo);
+      scroll.append(blockTwoBody);
+      scroll.append(blockThree);
+      scroll.append(blockThreeBody);
       //Put all in page
       html.append(scroll.render());
       this.activity.loader(false);
@@ -956,6 +970,99 @@
     };
     this.headerAction = function () {
       Component$1(head);
+    };
+    this.blockOneBody = function (data) {
+      data.contents.forEach(function (videoItem) {
+        if (videoItem.type === 'SONG') {
+          videoItem.url = "https://www.youtube.com/watch?v=".concat(videoItem.videoId);
+          videoItem.title = "".concat(videoItem.artist.name, " - ").concat(videoItem.name);
+        }
+        var item = new Item(videoItem, '');
+        item.render().on("hover:focus", function () {
+          last = item.render()[0];
+          active = items.indexOf(item);
+          scroll.update(items[active].render(), true);
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+          return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+            while (1) switch (_context2.prev = _context2.next) {
+              case 0:
+                if (videoItem.type === 'SONG') {
+                  Lampa.Player.play(videoItem);
+                  Lampa.Player.playlist(data.contents);
+                } else {
+                  Main(videoItem.playlistId);
+                }
+              case 1:
+              case "end":
+                return _context2.stop();
+            }
+          }, _callee2);
+        })));
+        blockOneBody.append(item.render());
+        items.push(item);
+      });
+    };
+    this.blockTwoBody = function (data) {
+      data.contents.forEach(function (videoItem) {
+        if (videoItem.type === 'SONG') {
+          videoItem.url = "https://www.youtube.com/watch?v=".concat(videoItem.videoId);
+          videoItem.title = "".concat(videoItem.artist.name, " - ").concat(videoItem.name);
+        }
+        var item = new Item(videoItem, '');
+        item.render().on("hover:focus", function () {
+          last = item.render()[0];
+          active = items.indexOf(item);
+          scroll.update(items[active].render(), true);
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+          return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+            while (1) switch (_context3.prev = _context3.next) {
+              case 0:
+                if (videoItem.type === 'SONG') {
+                  Lampa.Player.play(videoItem);
+                  Lampa.Player.playlist(data.contents);
+                } else {
+                  Main(videoItem.playlistId);
+                }
+              case 1:
+              case "end":
+                return _context3.stop();
+            }
+          }, _callee3);
+        })));
+        blockTwoBody.append(item.render());
+        items.push(item);
+      });
+    };
+    this.blockThreeBody = function (data) {
+      data.contents.forEach(function (videoItem) {
+        if (videoItem.type === 'SONG') {
+          videoItem.url = "https://www.youtube.com/watch?v=".concat(videoItem.videoId);
+          videoItem.title = "".concat(videoItem.artist.name, " - ").concat(videoItem.name);
+        }
+        var item = new Item(videoItem, '');
+        item.render().on("hover:focus", function () {
+          last = item.render()[0];
+          active = items.indexOf(item);
+          scroll.update(items[active].render(), true);
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+          return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+            while (1) switch (_context4.prev = _context4.next) {
+              case 0:
+                if (videoItem.type === 'SONG') {
+                  Lampa.Player.play(videoItem);
+                  Lampa.Player.playlist(data.contents);
+                } else {
+                  Main(videoItem.playlistId);
+                }
+              case 1:
+              case "end":
+                return _context4.stop();
+            }
+          }, _callee4);
+        })));
+        blockThreeBody.append(item.render());
+        items.push(item);
+      });
     };
     this.body = function (data) {
       data.forEach(function (typeCat) {
@@ -973,9 +1080,9 @@
             last = item.render()[0];
             active = items.indexOf(item);
             scroll.update(items[active].render(), true);
-          }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-            return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-              while (1) switch (_context2.prev = _context2.next) {
+          }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+            return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+              while (1) switch (_context5.prev = _context5.next) {
                 case 0:
                   if (videoItem.type === 'SONG') {
                     Lampa.Player.play(videoItem);
@@ -985,9 +1092,9 @@
                   }
                 case 1:
                 case "end":
-                  return _context2.stop();
+                  return _context5.stop();
               }
-            }, _callee2);
+            }, _callee5);
           })));
           body.append(item.render());
           items.push(item);
