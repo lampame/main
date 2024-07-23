@@ -377,7 +377,7 @@
               _context.next = 10;
               break;
             }
-            console.error("\u041D\u0435\u0442 id \u0438\u043B\u0438 videoId \u0434\u043B\u044F \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430:", item);
+            console.error('LME Music', "\u041D\u0435\u0442 id \u0438\u043B\u0438 videoId \u0434\u043B\u044F \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430:", item);
             return _context.abrupt("continue", 35);
           case 10:
             if (!cache.has(id)) {
@@ -421,7 +421,7 @@
           case 32:
             _context.prev = 32;
             _context.t0 = _context["catch"](14);
-            console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0437\u0430\u043F\u0440\u043E\u0441\u0435 \u0434\u043B\u044F id: ".concat(id), _context.t0);
+            console.error('LME Music', "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0437\u0430\u043F\u0440\u043E\u0441\u0435 \u0434\u043B\u044F id: ".concat(id), _context.t0);
           case 35:
             i++;
             _context.next = 4;
