@@ -349,6 +349,98 @@
     };
   }
 
+  function Main$1(_x, _x2) {
+    return _Main.apply(this, arguments);
+  }
+  function _Main() {
+    _Main = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(data, itemNumber) {
+      var cache, delay, results, i, item, id, response, result, formattedResult, progress;
+      return _regeneratorRuntime().wrap(function _callee$(_context) {
+        while (1) switch (_context.prev = _context.next) {
+          case 0:
+            cache = new Map();
+            delay = function delay(ms) {
+              return new Promise(function (resolve) {
+                return setTimeout(resolve, ms);
+              });
+            };
+            results = [];
+            i = 0;
+          case 4:
+            if (!(i < data.length)) {
+              _context.next = 38;
+              break;
+            }
+            item = data[i];
+            id = item.id || item.videoId; // Используем id или videoId
+            if (id) {
+              _context.next = 10;
+              break;
+            }
+            console.error("\u041D\u0435\u0442 id \u0438\u043B\u0438 videoId \u0434\u043B\u044F \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430:", item);
+            return _context.abrupt("continue", 35);
+          case 10:
+            if (!cache.has(id)) {
+              _context.next = 14;
+              break;
+            }
+            results.push(cache.get(id));
+            _context.next = 35;
+            break;
+          case 14:
+            _context.prev = 14;
+            _context.next = 17;
+            return delay(100);
+          case 17:
+            _context.next = 19;
+            return fetch("https://pipedapi.r4fo.com/streams/".concat(id));
+          case 19:
+            response = _context.sent;
+            if (response.ok) {
+              _context.next = 22;
+              break;
+            }
+            throw new Error('Network response was not ok');
+          case 22:
+            _context.next = 24;
+            return response.json();
+          case 24:
+            result = _context.sent;
+            formattedResult = {
+              title: result.title,
+              url: result.hls
+            };
+            results.push(formattedResult);
+            cache.set(id, formattedResult);
+
+            // Обновляем прогресс
+            progress = (i + 1) / data.length * 100;
+            Lampa.Noty.show("\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E ".concat(progress.toFixed(2), "%"));
+            _context.next = 35;
+            break;
+          case 32:
+            _context.prev = 32;
+            _context.t0 = _context["catch"](14);
+            console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0437\u0430\u043F\u0440\u043E\u0441\u0435 \u0434\u043B\u044F id: ".concat(id), _context.t0);
+          case 35:
+            i++;
+            _context.next = 4;
+            break;
+          case 38:
+            // Воспроизводим выбранный элемент и весь плейлист
+            if (results[itemNumber]) {
+              Lampa.Player.play(results[itemNumber]);
+            }
+            Lampa.Player.playlist(results);
+          case 40:
+          case "end":
+            return _context.stop();
+        }
+      }, _callee, null, [[14, 32]]);
+    }));
+    return _Main.apply(this, arguments);
+  }
+
   function Main(playlistId) {
     var settings = {
       "url": "https://delicious-verene-gwynnbleiidd-fe8dd6c5.koyeb.app/playlists/".concat(playlistId),
@@ -356,8 +448,7 @@
       "timeout": 0
     };
     $.ajax(settings).done(function (response) {
-      Lampa.Player.play(response.videos[0]);
-      Lampa.Player.playlist(response.videos);
+      Main$1(response.videos, 0);
     }).fail(function (jqXHR, textStatus, errorThrown) {
       Lampa.Noty.show('Бядаб бядося');
       console.log('LME Music', jqXHR, textStatus, errorThrown);
@@ -656,8 +747,8 @@
           return _regeneratorRuntime().wrap(function _callee4$(_context4) {
             while (1) switch (_context4.prev = _context4.next) {
               case 0:
-                Lampa.Player.play(videoItem);
-                Lampa.Player.playlist(data.topSongs);
+                _context4.next = 2;
+                return Main$1(data.topSongs, items.indexOf(item));
               case 2:
               case "end":
                 return _context4.stop();
@@ -670,8 +761,6 @@
     };
     this.topVideos = function (data) {
       data.topVideos.forEach(function (videoItem) {
-        videoItem.url = "https://www.youtube.com/watch?v=".concat(videoItem.videoId, "&autoplay=1");
-        videoItem.title = videoItem.name;
         var item = new SearchItem.Songs(videoItem);
         item.render().on("hover:focus", function () {
           last = item.render()[0];
@@ -681,8 +770,8 @@
           return _regeneratorRuntime().wrap(function _callee5$(_context5) {
             while (1) switch (_context5.prev = _context5.next) {
               case 0:
-                Lampa.Player.play(videoItem);
-                Lampa.Player.playlist(data.topSongs);
+                _context5.next = 2;
+                return Main$1(data.topVideos, items.indexOf(item));
               case 2:
               case "end":
                 return _context5.stop();
@@ -978,13 +1067,18 @@
           return _regeneratorRuntime().wrap(function _callee2$(_context2) {
             while (1) switch (_context2.prev = _context2.next) {
               case 0:
-                if (videoItem.type === 'SONG') {
-                  Lampa.Player.play(videoItem);
-                  Lampa.Player.playlist(data.contents);
-                } else {
-                  Main(videoItem.playlistId);
+                if (!(videoItem.type === 'SONG')) {
+                  _context2.next = 5;
+                  break;
                 }
-              case 1:
+                _context2.next = 3;
+                return Main$1(data.contents, items.indexOf(item));
+              case 3:
+                _context2.next = 6;
+                break;
+              case 5:
+                Main(videoItem.playlistId);
+              case 6:
               case "end":
                 return _context2.stop();
             }
@@ -1009,13 +1103,18 @@
           return _regeneratorRuntime().wrap(function _callee3$(_context3) {
             while (1) switch (_context3.prev = _context3.next) {
               case 0:
-                if (videoItem.type === 'SONG') {
-                  Lampa.Player.play(videoItem);
-                  Lampa.Player.playlist(data.contents);
-                } else {
-                  Main(videoItem.playlistId);
+                if (!(videoItem.type === 'SONG')) {
+                  _context3.next = 5;
+                  break;
                 }
-              case 1:
+                _context3.next = 3;
+                return Main$1(data.contents, videoItem);
+              case 3:
+                _context3.next = 6;
+                break;
+              case 5:
+                Main(videoItem.playlistId);
+              case 6:
               case "end":
                 return _context3.stop();
             }
