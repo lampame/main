@@ -354,7 +354,7 @@
   }
   function _Main() {
     _Main = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(data, itemNumber) {
-      var cache, delay, results, i, item, id, response, result, formattedResult, progress;
+      var cache, delay, results, i, item, id, lmeMusicHSL, response, result, formattedResult, progress;
       return _regeneratorRuntime().wrap(function _callee$(_context) {
         while (1) switch (_context.prev = _context.next) {
           case 0:
@@ -368,7 +368,7 @@
             i = 0;
           case 4:
             if (!(i < data.length)) {
-              _context.next = 38;
+              _context.next = 39;
               break;
             }
             item = data[i];
@@ -378,33 +378,35 @@
               break;
             }
             console.error('LME Music', "\u041D\u0435\u0442 id \u0438\u043B\u0438 videoId \u0434\u043B\u044F \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430:", item);
-            return _context.abrupt("continue", 35);
+            return _context.abrupt("continue", 36);
           case 10:
             if (!cache.has(id)) {
               _context.next = 14;
               break;
             }
             results.push(cache.get(id));
-            _context.next = 35;
+            _context.next = 36;
             break;
           case 14:
             _context.prev = 14;
             _context.next = 17;
             return delay(100);
           case 17:
-            _context.next = 19;
-            return fetch("https://pipedapi.r4fo.com/streams/".concat(id));
-          case 19:
+            // Задержка в 1 секунду между запросами
+            lmeMusicHSL = Lampa.Storage.field('LMEMusicHSL');
+            _context.next = 20;
+            return fetch("".concat(lmeMusicHSL && lmeMusicHSL !== 'undefined' ? lmeMusicHSL : 'https://pipedapi.r4fo.com', "/streams/").concat(id));
+          case 20:
             response = _context.sent;
             if (response.ok) {
-              _context.next = 22;
+              _context.next = 23;
               break;
             }
             throw new Error('Network response was not ok');
-          case 22:
-            _context.next = 24;
+          case 23:
+            _context.next = 25;
             return response.json();
-          case 24:
+          case 25:
             result = _context.sent;
             formattedResult = {
               title: result.title,
@@ -416,27 +418,27 @@
             // Обновляем прогресс
             progress = Math.floor((i + 1) / data.length * 100);
             Lampa.Noty.show("\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E ".concat(progress, "% (").concat(i + 1, " \u0438\u0437 ").concat(data.length, ")"));
-            _context.next = 35;
+            _context.next = 36;
             break;
-          case 32:
-            _context.prev = 32;
+          case 33:
+            _context.prev = 33;
             _context.t0 = _context["catch"](14);
             console.error('LME Music', "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0437\u0430\u043F\u0440\u043E\u0441\u0435 \u0434\u043B\u044F id: ".concat(id), _context.t0);
-          case 35:
+          case 36:
             i++;
             _context.next = 4;
             break;
-          case 38:
+          case 39:
             // Воспроизводим выбранный элемент и весь плейлист
             if (results[itemNumber]) {
               Lampa.Player.play(results[itemNumber]);
             }
             Lampa.Player.playlist(results);
-          case 40:
+          case 41:
           case "end":
             return _context.stop();
         }
-      }, _callee, null, [[14, 32]]);
+      }, _callee, null, [[14, 33]]);
     }));
     return _Main.apply(this, arguments);
   }
@@ -486,19 +488,6 @@
     Artist: Artist$1,
     Songs: Songs
   };
-
-  function component(manifest) {
-    var button = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" x=\"0px\" y=\"0px\" width=\"100\" height=\"100\" viewBox=\"0,0,300,150\">\n                    <g fill=\"#ffffff\" fill-rule=\"nonzero\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" stroke-miterlimit=\"10\" stroke-dasharray=\"\" stroke-dashoffset=\"0\" font-family=\"none\" font-weight=\"none\" font-size=\"none\" text-anchor=\"none\" style=\"mix-blend-mode: normal\"><g transform=\"scale(5.12,5.12)\"><path d=\"M8.03125,8.45703c-0.26088,0.00188 -0.52094,0.1055 -0.71094,0.3125c-3.925,4.272 -6.32031,9.97147 -6.32031,16.23047c0,6.259 2.39531,11.95847 6.32031,16.23047c0.38,0.414 1.03659,0.41262 1.43359,0.01563l2.12891,-2.12891c0.383,-0.383 0.38058,-0.99253 0.01758,-1.39453c-3.045,-3.37 -4.90039,-7.83366 -4.90039,-12.72266c0,-4.889 1.85539,-9.35266 4.90039,-12.72266c0.363,-0.402 0.36542,-1.01053 -0.01758,-1.39453l-2.12891,-2.12891c-0.1985,-0.1985 -0.46178,-0.29875 -0.72266,-0.29687zM41.96875,8.45703c-0.26112,-0.00162 -0.52416,0.09838 -0.72266,0.29688l-2.13086,2.13086c-0.383,0.383 -0.38058,0.99058 -0.01758,1.39258c3.046,3.369 4.90234,7.83366 4.90234,12.72266c0,4.889 -1.85539,9.35266 -4.90039,12.72266c-0.363,0.402 -0.36542,1.01053 0.01758,1.39453l2.12891,2.12891c0.397,0.397 1.05359,0.39738 1.43359,-0.01562c3.925,-4.272 6.32031,-9.97147 6.32031,-16.23047c0,-6.259 -2.39531,-11.95847 -6.32031,-16.23047c-0.19,-0.207 -0.44981,-0.31087 -0.71094,-0.3125zM35.625,14.83789c-0.26987,-0.01338 -0.54541,0.08251 -0.75391,0.29101l-2.13086,2.13086c-0.359,0.359 -0.39827,0.93717 -0.07227,1.32617c1.456,1.738 2.33203,3.97506 2.33203,6.41406c0,2.439 -0.87603,4.67511 -2.33203,6.41211c-0.326,0.389 -0.28674,0.96717 0.07227,1.32617l2.13086,2.13281c0.417,0.417 1.09642,0.37959 1.48242,-0.06641c2.272,-2.629 3.64648,-6.05669 3.64648,-9.80469c0,-3.748 -1.37448,-7.17569 -3.64648,-9.80469c-0.193,-0.223 -0.45864,-0.34405 -0.72852,-0.35742zM14.375,14.83984c-0.26988,0.01337 -0.53552,0.13442 -0.72852,0.35742c-2.272,2.628 -3.64648,6.05473 -3.64648,9.80273c0,3.748 1.37448,7.17569 3.64648,9.80469c0.386,0.446 1.06542,0.48341 1.48242,0.06641l2.13086,-2.13086c0.359,-0.359 0.39827,-0.93717 0.07227,-1.32617c-1.456,-1.738 -2.33203,-3.97506 -2.33203,-6.41406c0,-2.439 0.87603,-4.67511 2.33203,-6.41211c0.326,-0.389 0.28674,-0.96717 -0.07227,-1.32617l-2.13086,-2.13281c-0.2085,-0.2085 -0.48403,-0.30244 -0.75391,-0.28906zM25,19c-3.314,0 -6,2.686 -6,6c0,3.314 2.686,6 6,6c3.314,0 6,-2.686 6,-6c0,-3.314 -2.686,-6 -6,-6z\"></path></g></g>\n                </svg>\n            </div>\n            <div class=\"menu__text\">LME Music</div>\n        </li>");
-    button.on("hover:enter", function () {
-      Lampa.Activity.push({
-        url: '',
-        title: 'Music and Live',
-        component: 'lmeMusic',
-        page: 1
-      });
-    });
-    $(".menu .menu__list").eq(0).append(button);
-  }
 
   function SearchResult(component) {
     var network = new Lampa.Reguest();
@@ -973,7 +962,7 @@
     });
     var items = [];
     var html = $("<div class='lmeMusic-module'></div>");
-    var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__search simple-button simple-button--filter selector'>Search artist</div></div>");
+    var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__search simple-button simple-button--filter selector'>Search artist</div><div class='lmeMusic-head__server simple-button simple-button--filter selector'>Server</div></div>");
     var blockOneBody = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var blockTwoBody = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var blockThreeBody = $('<div class="lmeMusic-catalog--list category-full"></div>');
@@ -1049,6 +1038,40 @@
           } else {
             Lampa.Controller.toggle('content');
           }
+        });
+      });
+      var serverElement = head.find('.lmeMusic-head__server');
+      serverElement.on('hover:enter', function () {
+        var settings = {
+          "url": "https://piped-instances.kavin.rocks/",
+          "method": "GET",
+          "timeout": 0
+        };
+        $.ajax(settings).done(function (response) {
+          // Проверяем, что response является массивом
+          if (Array.isArray(response)) {
+            // Проходим по каждому элементу массива
+            response.forEach(function (item) {
+              if (item.name) {
+                item.title = "".concat(item.api_url === Lampa.Storage.field('LMEMusicHSL') ? "✓" : "", " ").concat(item.cdn ? "[CDN] " : "", " ").concat(item.name, " [").concat(item.locations, "]"); // Переименовываем name в title
+                delete item.name; // Удаляем старое свойство name
+              }
+            });
+          }
+          // Показываем выбор сервера
+          Lampa.Select.show({
+            title: 'Выбор сервера',
+            items: response,
+            onBack: function onBack() {
+              Lampa.Controller.toggle("content");
+            },
+            onSelect: function onSelect(a) {
+              Lampa.Storage.set('LMEMusicHSL', a.api_url);
+            }
+          });
+        }).fail(function () {
+          // Показываем уведомление об ошибке
+          Lampa.Noty.show("Бяда, бядося");
         });
       });
     };
@@ -1237,9 +1260,22 @@
     };
   }
 
+  function component(manifest) {
+    var button = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" x=\"0px\" y=\"0px\" width=\"100\" height=\"100\" viewBox=\"0,0,300,150\">\n                    <g fill=\"#ffffff\" fill-rule=\"nonzero\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" stroke-miterlimit=\"10\" stroke-dasharray=\"\" stroke-dashoffset=\"0\" font-family=\"none\" font-weight=\"none\" font-size=\"none\" text-anchor=\"none\" style=\"mix-blend-mode: normal\"><g transform=\"scale(5.12,5.12)\"><path d=\"M8.03125,8.45703c-0.26088,0.00188 -0.52094,0.1055 -0.71094,0.3125c-3.925,4.272 -6.32031,9.97147 -6.32031,16.23047c0,6.259 2.39531,11.95847 6.32031,16.23047c0.38,0.414 1.03659,0.41262 1.43359,0.01563l2.12891,-2.12891c0.383,-0.383 0.38058,-0.99253 0.01758,-1.39453c-3.045,-3.37 -4.90039,-7.83366 -4.90039,-12.72266c0,-4.889 1.85539,-9.35266 4.90039,-12.72266c0.363,-0.402 0.36542,-1.01053 -0.01758,-1.39453l-2.12891,-2.12891c-0.1985,-0.1985 -0.46178,-0.29875 -0.72266,-0.29687zM41.96875,8.45703c-0.26112,-0.00162 -0.52416,0.09838 -0.72266,0.29688l-2.13086,2.13086c-0.383,0.383 -0.38058,0.99058 -0.01758,1.39258c3.046,3.369 4.90234,7.83366 4.90234,12.72266c0,4.889 -1.85539,9.35266 -4.90039,12.72266c-0.363,0.402 -0.36542,1.01053 0.01758,1.39453l2.12891,2.12891c0.397,0.397 1.05359,0.39738 1.43359,-0.01562c3.925,-4.272 6.32031,-9.97147 6.32031,-16.23047c0,-6.259 -2.39531,-11.95847 -6.32031,-16.23047c-0.19,-0.207 -0.44981,-0.31087 -0.71094,-0.3125zM35.625,14.83789c-0.26987,-0.01338 -0.54541,0.08251 -0.75391,0.29101l-2.13086,2.13086c-0.359,0.359 -0.39827,0.93717 -0.07227,1.32617c1.456,1.738 2.33203,3.97506 2.33203,6.41406c0,2.439 -0.87603,4.67511 -2.33203,6.41211c-0.326,0.389 -0.28674,0.96717 0.07227,1.32617l2.13086,2.13281c0.417,0.417 1.09642,0.37959 1.48242,-0.06641c2.272,-2.629 3.64648,-6.05669 3.64648,-9.80469c0,-3.748 -1.37448,-7.17569 -3.64648,-9.80469c-0.193,-0.223 -0.45864,-0.34405 -0.72852,-0.35742zM14.375,14.83984c-0.26988,0.01337 -0.53552,0.13442 -0.72852,0.35742c-2.272,2.628 -3.64648,6.05473 -3.64648,9.80273c0,3.748 1.37448,7.17569 3.64648,9.80469c0.386,0.446 1.06542,0.48341 1.48242,0.06641l2.13086,-2.13086c0.359,-0.359 0.39827,-0.93717 0.07227,-1.32617c-1.456,-1.738 -2.33203,-3.97506 -2.33203,-6.41406c0,-2.439 0.87603,-4.67511 2.33203,-6.41211c0.326,-0.389 0.28674,-0.96717 -0.07227,-1.32617l-2.13086,-2.13281c-0.2085,-0.2085 -0.48403,-0.30244 -0.75391,-0.28906zM25,19c-3.314,0 -6,2.686 -6,6c0,3.314 2.686,6 6,6c3.314,0 6,-2.686 6,-6c0,-3.314 -2.686,-6 -6,-6z\"></path></g></g>\n                </svg>\n            </div>\n            <div class=\"menu__text\">LME Music</div>\n        </li>");
+    button.on("hover:enter", function () {
+      Lampa.Activity.push({
+        url: '',
+        title: 'Music and Live',
+        component: 'lmeMusic',
+        page: 1
+      });
+    });
+    $(".menu .menu__list").eq(0).append(button);
+  }
+
   function add() {
     //Add style and Component's
-    Lampa.Template.add('lmemusicStyle', "\n        <style>\n            .lmeMusic-head.torrent-filter{padding:0 2em}.lmeMusic-item{margin-left:1em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lmeMusic-item__imgbox{background-color:#3e3e3e;padding-bottom:100%;position:relative;-webkit-border-radius:.3em;border-radius:.3em}.lmeMusic-item__type{top:.5em;left:.5em}.lmeMusic-item__typeCat{bottom:.5em;left:.5em}.lmeMusic-item__type,.lmeMusic-item__typeCat{position:absolute;background-color:#eee;padding:.1em .3em;font-size:.7em;font-weight:bold;color:#292d32;-webkit-border-radius:.25em;border-radius:.25em}.lmeMusic-item__img{position:absolute;top:0;left:0;width:100%;height:100%;-webkit-border-radius:.4em;border-radius:.4em}.lmeMusic-item__name,.lmeMusic-item__artist{font-size:1.1em;margin-top:.8em}.lmeMusic-item.focus .lmeMusic-item__imgbox::after{border:solid .26em #fff;content:'';display:block;position:absolute;left:-0.5em;top:-0.5em;right:-0.5em;bottom:-0.5em;-webkit-border-radius:.8em;border-radius:.8em}\n        </style>\n    ");
+    Lampa.Template.add('lmemusicStyle', "\n        <style>\n            .lmeMusic-head.torrent-filter{padding:0 2em}.lmeMusic-head__server{margin-left:auto}.lmeMusic-item{margin-left:1em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lmeMusic-item__imgbox{background-color:#3e3e3e;padding-bottom:100%;position:relative;-webkit-border-radius:.3em;border-radius:.3em}.lmeMusic-item__type{top:.5em;left:.5em}.lmeMusic-item__typeCat{bottom:.5em;left:.5em}.lmeMusic-item__type,.lmeMusic-item__typeCat{position:absolute;background-color:#eee;padding:.1em .3em;font-size:.7em;font-weight:bold;color:#292d32;-webkit-border-radius:.25em;border-radius:.25em}.lmeMusic-item__img{position:absolute;top:0;left:0;width:100%;height:100%;-webkit-border-radius:.4em;border-radius:.4em}.lmeMusic-item__name,.lmeMusic-item__artist{font-size:1.1em;margin-top:.8em}.lmeMusic-item.focus .lmeMusic-item__imgbox::after{border:solid .26em #fff;content:'';display:block;position:absolute;left:-0.5em;top:-0.5em;right:-0.5em;bottom:-0.5em;-webkit-border-radius:.8em;border-radius:.8em}\n        </style>\n    ");
     Lampa.Template.add("lmeMusic_item", "<div class=\"selector lmeMusic-item\">\n                <div class=\"lmeMusic-item__imgbox\">\n                    <img class=\"lmeMusic-item__img\" src=\"{thumbnails}\"/>\n                    <div class=\"lmeMusic-item__type\">{type}</div>\n                    <div class=\"lmeMusic-item__typeCat\">{typeCat}</div>\n                </div>\n                <div class=\"lmeMusic-item__name\">{name}</div>\n                <div class=\"lmeMusic-item__artist\">{artist}</div>\n            </div>");
     Lampa.Template.add("lmeMusic_searchitem", "<div class=\"selector lmeMusic-item\">\n                <div class=\"lmeMusic-item__imgbox\">\n                    <img class=\"lmeMusic-item__img\" src=\"{thumbnails}\"/>\n                    <div class=\"lmeMusic-item__typeCat\">{subscribers}</div>\n                </div>\n                <div class=\"lmeMusic-item__artist\">{name}</div>\n            </div>");
     Lampa.Template.add("lmeMusic_songitem", "<div class=\"selector lmeMusic-item\">\n                <div class=\"lmeMusic-item__imgbox\">\n                    <img class=\"lmeMusic-item__img\" src=\"{thumbnails}\"/>\n                    <div class=\"lmeMusic-item__type\">{type}</div>\n                </div>\n                <div class=\"lmeMusic-item__name\">{name}</div>\n                <div class=\"lmeMusic-item__artist\">{artist}</div>\n            </div>");
