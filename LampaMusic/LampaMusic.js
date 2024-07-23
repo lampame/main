@@ -414,8 +414,8 @@
             cache.set(id, formattedResult);
 
             // Обновляем прогресс
-            progress = (i + 1) / data.length * 100;
-            Lampa.Noty.show("\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E ".concat(progress.toFixed(2), "%"));
+            progress = Math.floor((i + 1) / data.length * 100);
+            Lampa.Noty.show("\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E ".concat(progress, "% (").concat(i + 1, " \u0438\u0437 ").concat(data.length, ")"));
             _context.next = 35;
             break;
           case 32:
