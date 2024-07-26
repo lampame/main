@@ -349,7 +349,7 @@
     };
   }
 
-  function Main$1(_x, _x2) {
+  function Main$2(_x, _x2) {
     return _Main.apply(this, arguments);
   }
   function _Main() {
@@ -417,7 +417,7 @@
 
             // Обновляем прогресс
             progress = Math.floor((i + 1) / data.length * 100);
-            Lampa.Noty.show("\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E ".concat(progress, "% (").concat(i + 1, " \u0438\u0437 ").concat(data.length, ")"));
+            Lampa.Noty.show("".concat(Lampa.Lang.translate('LMEM_received'), " ").concat(progress, "% (").concat(i + 1, "/").concat(data.length, ")"));
             _context.next = 36;
             break;
           case 33:
@@ -443,14 +443,14 @@
     return _Main.apply(this, arguments);
   }
 
-  function Main(playlistId) {
+  function Main$1(playlistId) {
     var settings = {
       "url": "https://delicious-verene-gwynnbleiidd-fe8dd6c5.koyeb.app/playlists/".concat(playlistId),
       "method": "GET",
       "timeout": 0
     };
     $.ajax(settings).done(function (response) {
-      Main$1(response.videos, 0);
+      Main$2(response.videos, 0);
     }).fail(function (jqXHR, textStatus, errorThrown) {
       Lampa.Noty.show('Бядаб бядося');
       console.log('LME Music', jqXHR, textStatus, errorThrown);
@@ -499,7 +499,7 @@
     });
     var items = [];
     var html = $("<div class='lmeMusic-module'></div>");
-    var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__home simple-button simple-button--filter selector'>Home</div><div class='lmeMusic-head__search simple-button simple-button--filter selector'>Search artist</div></div>");
+    var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__home simple-button simple-button--filter selector'>Home</div><div class='lmeMusic-head__search simple-button simple-button--filter selector'>".concat(Lampa.Lang.translate('LMEM_searchPerformer'), "</div></div>"));
     var body = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var active, last;
     this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
@@ -549,7 +549,7 @@
       homeElement.on('hover:enter', function () {
         Lampa.Activity.push({
           url: '',
-          title: 'Music and Live',
+          title: 'LME Music',
           component: 'lmeMusic',
           page: 1
         });
@@ -631,7 +631,7 @@
     });
     var items = [];
     var html = $("<div class='lmeMusic-module items-line'></div>");
-    var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__home simple-button simple-button--filter selector'>Home</div><div class='lmeMusic-head__search simple-button simple-button--filter selector'>Search artist</div></div>");
+    var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__home simple-button simple-button--filter selector'>Home</div><div class='lmeMusic-head__search simple-button simple-button--filter selector'>".concat(Lampa.Lang.translate('LMEM_searchPerformer'), "</div></div>"));
     var body = $('<div class="lmeMusic-catalog--list category-full"></div>');
     //Headers
     var featuredOnHead = $('<div class="lmeMusic-catalog--list items-line__head items-line__title">Featured On</div>');
@@ -665,11 +665,11 @@
       //Put header
       this.headerAction();
       //Put Songs
-      this.body(result);
+      //this.body(result)
       //Put featuredOn
       this.featuredOn(result);
       //Put topVideos
-      this.topVideos(result);
+      //this.topVideos(result)
       //Put topAlbums
       this.topAlbums(result);
       //Put topSingles
@@ -716,7 +716,7 @@
       homeElement.on('hover:enter', function () {
         Lampa.Activity.push({
           url: '',
-          title: 'Music and Live',
+          title: 'LME Music',
           component: 'lmeMusic',
           page: 1
         });
@@ -737,7 +737,7 @@
             while (1) switch (_context4.prev = _context4.next) {
               case 0:
                 _context4.next = 2;
-                return Main$1(data.topSongs, items.indexOf(item));
+                return Main$2(data.topSongs, items.indexOf(item));
               case 2:
               case "end":
                 return _context4.stop();
@@ -760,7 +760,7 @@
             while (1) switch (_context5.prev = _context5.next) {
               case 0:
                 _context5.next = 2;
-                return Main$1(data.topVideos, items.indexOf(item));
+                return Main$2(data.topVideos, items.indexOf(item));
               case 2:
               case "end":
                 return _context5.stop();
@@ -783,7 +783,7 @@
           return _regeneratorRuntime().wrap(function _callee6$(_context6) {
             while (1) switch (_context6.prev = _context6.next) {
               case 0:
-                Main(videoItem.playlistId);
+                Main$1(videoItem.playlistId);
               case 1:
               case "end":
                 return _context6.stop();
@@ -805,7 +805,7 @@
           return _regeneratorRuntime().wrap(function _callee7$(_context7) {
             while (1) switch (_context7.prev = _context7.next) {
               case 0:
-                Main(videoItem.playlistId);
+                Main$1(videoItem.playlistId);
               case 1:
               case "end":
                 return _context7.stop();
@@ -827,7 +827,7 @@
           return _regeneratorRuntime().wrap(function _callee8$(_context8) {
             while (1) switch (_context8.prev = _context8.next) {
               case 0:
-                Main(videoItem.playlistId);
+                Main$1(videoItem.playlistId);
               case 1:
               case "end":
                 return _context8.stop();
@@ -919,7 +919,7 @@
     $.ajax(settings).done(function (response) {
       Lampa.Activity.push({
         url: '',
-        title: 'Music and Live',
+        title: 'LME Music',
         component: 'lmeMusicSearch',
         response: response,
         page: 1
@@ -938,7 +938,7 @@
     $.ajax(settings).done(function (response) {
       Lampa.Activity.push({
         url: '',
-        title: response.name,
+        title: 'LME Music ' + response.name,
         component: 'lmeMusicArtist',
         response: response,
         page: 1
@@ -962,7 +962,8 @@
     });
     var items = [];
     var html = $("<div class='lmeMusic-module'></div>");
-    var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__search simple-button simple-button--filter selector'>Search artist</div><div class='lmeMusic-head__server simple-button simple-button--filter selector'>Server</div></div>");
+    var body = "<span>a</span>";
+    var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__search simple-button simple-button--filter selector'>".concat(Lampa.Lang.translate('LMEM_searchPerformer'), "</div><div class='lmeMusic-head__server simple-button simple-button--filter selector'>").concat(Lampa.Lang.translate('LMEM_server'), "</div></div>"));
     var blockOneBody = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var blockTwoBody = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var blockThreeBody = $('<div class="lmeMusic-catalog--list category-full"></div>');
@@ -1060,19 +1061,34 @@
           }
           // Показываем выбор сервера
           Lampa.Select.show({
-            title: 'Выбор сервера',
+            title: Lampa.Lang.translate('LMEM_selectServer'),
             items: response,
             onBack: function onBack() {
               Lampa.Controller.toggle("content");
             },
             onSelect: function onSelect(a) {
               Lampa.Storage.set('LMEMusicHSL', a.api_url);
+              Lampa.Activity.push({
+                url: '',
+                title: 'LME Music',
+                component: 'lmeMusic',
+                page: 1
+              });
             }
           });
         }).fail(function () {
           // Показываем уведомление об ошибке
           Lampa.Noty.show("Бяда, бядося");
         });
+      }).on('hover:long', function () {
+        localStorage.removeItem('LMEMusicHSL');
+        Lampa.Activity.push({
+          url: '',
+          title: 'LME Music',
+          component: 'lmeMusic',
+          page: 1
+        });
+        Lampa.Noty.show('Server reset to default');
       });
     };
     this.blockOneBody = function (data) {
@@ -1095,12 +1111,12 @@
                   break;
                 }
                 _context2.next = 3;
-                return Main$1(data.contents, items.indexOf(item));
+                return Main$2(data.contents, items.indexOf(item));
               case 3:
                 _context2.next = 6;
                 break;
               case 5:
-                Main(videoItem.playlistId);
+                Main$1(videoItem.playlistId);
               case 6:
               case "end":
                 return _context2.stop();
@@ -1131,12 +1147,12 @@
                   break;
                 }
                 _context3.next = 3;
-                return Main$1(data.contents, videoItem);
+                return Main$2(data.contents, videoItem);
               case 3:
                 _context3.next = 6;
                 break;
               case 5:
-                Main(videoItem.playlistId);
+                Main$1(videoItem.playlistId);
               case 6:
               case "end":
                 return _context3.stop();
@@ -1166,7 +1182,7 @@
                   Lampa.Player.play(videoItem);
                   Lampa.Player.playlist(data.contents);
                 } else {
-                  Main(videoItem.playlistId);
+                  Main$1(videoItem.playlistId);
                 }
               case 1:
               case "end":
@@ -1202,7 +1218,7 @@
                     Lampa.Player.play(videoItem);
                     Lampa.Player.playlist(typeCat.contents);
                   } else {
-                    Main(videoItem.playlistId);
+                    Main$1(videoItem.playlistId);
                   }
                 case 1:
                 case "end":
@@ -1265,7 +1281,7 @@
     button.on("hover:enter", function () {
       Lampa.Activity.push({
         url: '',
-        title: 'Music and Live',
+        title: 'LME Music',
         component: 'lmeMusic',
         page: 1
       });
@@ -1273,7 +1289,34 @@
     $(".menu .menu__list").eq(0).append(button);
   }
 
+  function Main() {
+    Lampa.Lang.add({
+      LMEM_searchPerformer: {
+        en: "Search performer",
+        ru: "Поиск исполнителя",
+        uk: "Пошук виконавця"
+      },
+      LMEM_server: {
+        en: "Server",
+        ru: "Сервер",
+        uk: "Сервер"
+      },
+      LMEM_selectServer: {
+        en: "Select server",
+        ru: "Выбор сервера",
+        uk: "Вибір сервера"
+      },
+      LMEM_received: {
+        en: "Received",
+        ru: "Получено",
+        uk: "Отримано"
+      }
+    });
+  }
+
   function add() {
+    //Add Lang
+    Main();
     //Add style and Component's
     Lampa.Template.add('lmemusicStyle', "\n        <style>\n            .lmeMusic-head.torrent-filter{padding:0 2em}.lmeMusic-head__server{margin-left:auto}.lmeMusic-item{margin-left:1em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lmeMusic-item__imgbox{background-color:#3e3e3e;padding-bottom:100%;position:relative;-webkit-border-radius:.3em;border-radius:.3em}.lmeMusic-item__type{top:.5em;left:.5em}.lmeMusic-item__typeCat{bottom:.5em;left:.5em}.lmeMusic-item__type,.lmeMusic-item__typeCat{position:absolute;background-color:#eee;padding:.1em .3em;font-size:.7em;font-weight:bold;color:#292d32;-webkit-border-radius:.25em;border-radius:.25em}.lmeMusic-item__img{position:absolute;top:0;left:0;width:100%;height:100%;-webkit-border-radius:.4em;border-radius:.4em}.lmeMusic-item__name,.lmeMusic-item__artist{font-size:1.1em;margin-top:.8em}.lmeMusic-item.focus .lmeMusic-item__imgbox::after{border:solid .26em #fff;content:'';display:block;position:absolute;left:-0.5em;top:-0.5em;right:-0.5em;bottom:-0.5em;-webkit-border-radius:.8em;border-radius:.8em}\n        </style>\n    ");
     Lampa.Template.add("lmeMusic_item", "<div class=\"selector lmeMusic-item\">\n                <div class=\"lmeMusic-item__imgbox\">\n                    <img class=\"lmeMusic-item__img\" src=\"{thumbnails}\"/>\n                    <div class=\"lmeMusic-item__type\">{type}</div>\n                    <div class=\"lmeMusic-item__typeCat\">{typeCat}</div>\n                </div>\n                <div class=\"lmeMusic-item__name\">{name}</div>\n                <div class=\"lmeMusic-item__artist\">{artist}</div>\n            </div>");
@@ -1281,10 +1324,10 @@
     Lampa.Template.add("lmeMusic_songitem", "<div class=\"selector lmeMusic-item\">\n                <div class=\"lmeMusic-item__imgbox\">\n                    <img class=\"lmeMusic-item__img\" src=\"{thumbnails}\"/>\n                    <div class=\"lmeMusic-item__type\">{type}</div>\n                </div>\n                <div class=\"lmeMusic-item__name\">{name}</div>\n                <div class=\"lmeMusic-item__artist\">{artist}</div>\n            </div>");
     Lampa.Manifest.plugins = {
       type: "other",
-      version: "0.1",
+      version: "0.2",
       author: '@lme_chat',
       name: "LME Music",
-      description: "Music and Live content from YouTube",
+      description: "Music content from YouTube",
       component: "lmeMusic"
     };
     Lampa.Component.add('lmeMusic', Component);
