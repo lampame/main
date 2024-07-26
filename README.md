@@ -16,4 +16,6 @@
 
 [LME Music](https://lampame.github.io/main/music.js) `https://lampame.github.io/main/music.js` [About](https://teletype.in/@lme/music)
 
+[LME Music](https://lampame.github.io/main/music.js) `https://lampame.github.io/main/shikimori.js` [About](https://teletype.in/@lme/shikimori)
+
 Telegram chat - [https://t.me/lme_chat](https://t.me/lme_chat)
