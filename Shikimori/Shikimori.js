@@ -418,6 +418,7 @@
     });
   }
   function search(animeData) {
+    //Cleaner
     function cleanName(name) {
       // Регулярное выражение для удаления фраз "Season", "Part" и цифр рядом с ними
       var regex = /\b(Season|Part)\s*\d*\.?\d*\b/gi;
@@ -429,28 +430,74 @@
       cleanedName = cleanedName.replace(/\s{2,}/g, ' ');
       return cleanedName;
     }
-    var apiKey = "4ef0d7355d9ffb5151e987764708ce96";
-    var apiUrlTMDB = 'https://api.themoviedb.org/3/';
-    var apiUrlProxy = 'apitmdb.' + (Lampa.Manifest && Lampa.Manifest.cub_domain ? Lampa.Manifest.cub_domain : 'cub.red') + '/3/';
-    var request = "search/multi?api_key=".concat(apiKey, "&language=").concat(Lampa.Storage.field('language'), "&include_adult=true&query=").concat(cleanName(animeData.japanese));
-    var settings = {
-      "url": Lampa.Storage.field('proxy_tmdb') ? Lampa.Utils.protocol() + apiUrlProxy + request : apiUrlTMDB + request,
-      "method": "GET",
-      "timeout": 0,
-      success: function success(response) {
-        var menu = [];
+
+    // Первый GET запрос к https://animeapi.my.id/shikimori/{animeData.id}
+    $.get("https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://animeapi.my.id/shikimori/".concat(animeData.id), function (response) {
+      if (response.code === 404) {
+        // Если получили 404, продолжаем искать на TMDB
+        searchTmdb(animeData.name, function (tmdbResponse) {
+          handleTmdbResponse(tmdbResponse, animeData.japanese);
+        });
+      } else if (response.themoviedb === null) {
+        // Если themoviedb: null, делаем запрос к https://api.themoviedb.org/3/search/multi?include_adult=true&query={animeData.name}
+        searchTmdb(animeData.name, function (tmdbResponse) {
+          handleTmdbResponse(tmdbResponse, animeData.japanese);
+        });
+      } else {
+        // Если themoviedb не равно null, делаем запрос к https://api.themoviedb.org/3/movie/{response.themoviedb}
+        getTmdb(response.themoviedb, processResults);
+      }
+    }).fail(function (jqXHR) {
+      if (jqXHR.status === 404) {
+        // Если получили 404, продолжаем искать на TMDB
+        searchTmdb(animeData.name, function (tmdbResponse) {
+          handleTmdbResponse(tmdbResponse, animeData.japanese);
+        });
+      } else {
+        console.error('Error fetching data from animeapi.my.id:', jqXHR.status);
+      }
+    });
+    function searchTmdb(query, callback) {
+      //PFS
+      var apiKey = "4ef0d7355d9ffb5151e987764708ce96";
+      var apiUrlTMDB = 'https://api.themoviedb.org/3/';
+      var apiUrlProxy = 'apitmdb.' + (Lampa.Manifest && Lampa.Manifest.cub_domain ? Lampa.Manifest.cub_domain : 'cub.red') + '/3/';
+      var request = "search/multi?api_key=".concat(apiKey, "&language=").concat(Lampa.Storage.field('language'), "&include_adult=true&query=").concat(cleanName(query));
+      $.get(Lampa.Storage.field('proxy_tmdb') ? Lampa.Utils.protocol() + apiUrlProxy + request : apiUrlTMDB + request, callback);
+    }
+    function getTmdb(id, callback) {
+      var apiKey = "4ef0d7355d9ffb5151e987764708ce96";
+      var apiUrlTMDB = 'https://api.themoviedb.org/3/';
+      var apiUrlProxy = 'apitmdb.' + (Lampa.Manifest && Lampa.Manifest.cub_domain ? Lampa.Manifest.cub_domain : 'cub.red') + '/3/';
+      var request = "movie/".concat(id, "?api_key=").concat(apiKey, "&language=").concat(Lampa.Storage.field('language'));
+      $.get(Lampa.Storage.field('proxy_tmdb') ? Lampa.Utils.protocol() + apiUrlProxy + request : apiUrlTMDB + request, callback);
+    }
+    function handleTmdbResponse(tmdbResponse, fallbackQuery) {
+      if (tmdbResponse.total_results === 0) {
+        // Если результатов нет, делаем запрос с японским именем
+        searchTmdb(fallbackQuery, handleFallbackResponse);
+      } else {
+        processResults(tmdbResponse);
+      }
+    }
+    function handleFallbackResponse(fallbackResponse) {
+      processResults(fallbackResponse);
+    }
+    function processResults(response) {
+      var menu = [];
+      if (response.total_results !== undefined) {
+        // Обработка результата от поиска (search/multi)
         if (response.total_results === 0) {
-          Lampa.Noty.show('Сорямба, ничего не нашлось');
+          Lampa.Noty.show('Бядосе, обыскали все углы и ничего не нашли');
         } else if (response.total_results === 1) {
           Lampa.Activity.push({
             url: '',
             component: 'full',
             id: response.results[0].id,
             method: response.results[0].media_type,
-            card: response
-            //source: element.source || object.source
+            card: response.results[0]
           });
-        } else {
+        } else if (response.total_results > 1) {
           response.results.forEach(function (animeItem) {
             menu.push({
               title: "[".concat(animeItem.media_type.toUpperCase(), "] ").concat(animeItem.name ? animeItem.name : animeItem.title),
@@ -470,17 +517,21 @@
                 id: a.card.id,
                 method: a.card.media_type,
                 card: a.card
-                //source: element.source || object.source
               });
             }
           });
         }
-      },
-      error: function error(_error3) {
-        console.error('Error:', _error3);
+      } else {
+        // Обработка результата от запроса по ID (movie/{id})
+        Lampa.Activity.push({
+          url: '',
+          component: 'full',
+          id: response.id,
+          method: 'movie',
+          card: response
+        });
       }
-    };
-    $.ajax(settings);
+    }
   }
   var API = {
     main: main,
@@ -500,8 +551,7 @@
       type: data.kind.toUpperCase(),
       status: capitalizeFirstLetter(data.status),
       rate: data.score,
-      //title: userLang === 'ru' ? data.russian : data.english,
-      title: userLang === 'ru' ? data.russian || data.english || data.japanese : data.english || data.japanese,
+      title: userLang === 'ru' ? data.russian || data.name || data.japanese : data.name || data.japanese,
       seasonID: data.season,
       season: formattedSeason
     });
