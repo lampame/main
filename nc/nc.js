@@ -510,22 +510,6 @@
       Lampa.SettingsApi.addParam({
         component: "addCategory",
         param: {
-          name: "nc_anime",
-          type: "trigger",
-          "default": false
-        },
-        field: {
-          name: "New Anime movie",
-          description: "TMDB"
-        },
-        onChange: function onChange(value) {
-          if (value === 'true') insert.catSubmenu('nc_anime');else $('body').find('.menu [data-action="nc_anime"]').remove();
-          Lampa.Settings.update();
-        }
-      });
-      Lampa.SettingsApi.addParam({
-        component: "addCategory",
-        param: {
           name: "nc_cartoon",
           type: "trigger",
           "default": false
@@ -3130,6 +3114,10 @@
       component: "nc"
     };
     var main = function main() {
+      if (Lampa.Storage.field('nc_anime') === true) {
+        localStorage.removeItem('nc_anime');
+        Lampa.Noty.show('Anime deleted) Have a new plugin Shikimori');
+      }
       Lampa.Manifest.plugins = manifest;
       Lampa.Component.add('lmeNetworks', component$4);
       Lampa.Component.add('lmeNetworksBookmarks', component$3);
@@ -3145,7 +3133,6 @@
       });
       function addsubmenu(category) {
         switch (category) {
-          case 'nc_anime':
           case 'nc_cartoon':
           case 'nc_documentary':
           case 'nc_networksList':
