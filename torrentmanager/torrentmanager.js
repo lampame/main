@@ -727,7 +727,7 @@
             Lampa.Noty.show(Lampa.Lang.translate('AuthSuccess'));
           }
           if (jqXHR.status !== 200 && jqXHR.status !== 409) {
-            console.log('LME Torrent manager', 'Synology auth', jqXHR.status, jqXHR);
+            console.log('LME Torrent manager', 'Transmission auth', jqXHR.status, jqXHR);
             Lampa.Noty.show(Lampa.Lang.translate('AuthDenied'));
           }
         }
