@@ -277,7 +277,6 @@
       Lang.main();
       Lampa.Manifest.plugins = manifest;
       CONFIG.main();
-      if (!Lampa.Storage.get('lme_quality')) Lampa.Storage.set('lme_quality', true);
       if (Lampa.Storage.get('lme_quality') === true) Quality.main();
       if (Lampa.Storage.get('lme_endata') === true) Englishdata.main();
       if (Lampa.Storage.get('lme_averageRuntime') === true) averageRuntime.main();
