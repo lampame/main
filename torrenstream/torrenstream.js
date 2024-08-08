@@ -16,9 +16,32 @@
               Lampa.Noty.show("Load"); // Показать сообщение о загрузке
 
               $.ajax(settings).done(function (response) {
-                console.log('response', response);
-                Lampa.Player.play(response[0].files[0]);
-                Lampa.Player.playlist(response[0].files);
+                if (response.length === 1) {
+                  Lampa.Player.play(response[0].files[0]);
+                  Lampa.Player.playlist(response[0].files);
+                }
+                if (response.length > 1) {
+                  var menu = [];
+                  response.forEach(function (data, index) {
+                    menu.push({
+                      title: "Server ".concat(index + 1),
+                      server: index
+                    });
+                  });
+                  Lampa.Select.show({
+                    title: 'Select server',
+                    items: menu,
+                    onBack: function onBack() {
+                      Lampa.Controller.toggle(enabled);
+                      Lampa.Modal.close();
+                    },
+                    onSelect: function onSelect(a) {
+                      console.log(a);
+                      Lampa.Player.play(response[a.server].files[0]);
+                      Lampa.Player.playlist(response[a.server].files);
+                    }
+                  });
+                }
               }).fail(function () {
                 Lampa.Noty.show("Бяда"); // Показать сообщение об ошибке
               });
