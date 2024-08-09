@@ -963,7 +963,7 @@
       });
     }
     function SendTask(selectedTorrent) {
-      var path = selectedTorrent.CategoryDesc ? "&destination=".concat(Lampa.Storage.get("lmetorrenttransmission".concat(selectedTorrent.CategoryDesc))) : '';
+      var path = selectedTorrent.CategoryDesc ? "&destination=".concat(Lampa.Storage.get("lmetorrentsynologyPath".concat(selectedTorrent.CategoryDesc))) : '';
       var settings = {
         url: "".concat(proxy).concat(url, "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=create&uri=").concat(encodeURIComponent(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link)).concat(path, "&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID),
         method: "GET",
