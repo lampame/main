@@ -86,7 +86,7 @@
   }
   function InitAnalytics() {
     var userId = !Lampa.Storage.field("account_user").id ? Lampa.Utils.uid() : Lampa.Storage.field("account_user").id;
-    window.amplitude.init("343003b66d0ec2a6399be6442f4b86a7", userId, {
+    if (window.amplitude) window.amplitude.init("343003b66d0ec2a6399be6442f4b86a7", userId, {
       autocapture: {
         sessions: true,
         attribution: false,
