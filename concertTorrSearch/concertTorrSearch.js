@@ -1,51 +1,6 @@
 (function () {
     'use strict';
 
-    function InputAnalytics() {
-      // URL скрипта аналитики
-      var analyticsScriptUrl = "https://cdn.amplitude.com/libs/analytics-browser-2.10.0-min.js.gz";
-
-      // Функция для проверки наличия скрипта
-      function isScriptIncluded(url) {
-        return document.querySelector("script[src=\"".concat(url, "\"]")) !== null;
-      }
-
-      // Добавляем скрипт аналитики, если он еще не добавлен
-      if (!isScriptIncluded(analyticsScriptUrl)) {
-        Lampa.Utils.putScriptAsync([analyticsScriptUrl], function () {
-          console.log("Analytics script included");
-        });
-      } else {
-        console.log("Analytics script already included");
-      }
-    }
-    function InitAnalytics() {
-      var userId = !Lampa.Storage.field("account_user").id ? Lampa.Utils.uid() : Lampa.Storage.field("account_user").id;
-      if (window.amplitude) window.amplitude.init("343003b66d0ec2a6399be6442f4b86a7", userId, {
-        autocapture: {
-          sessions: true,
-          attribution: false,
-          pageViews: false
-        }
-      });
-      var identifyEvent = new window.amplitude.Identify();
-      identifyEvent.set("Platform", Lampa.Storage.get("platform", "No name"));
-      identifyEvent.postInsert("Plugins", "Concert search");
-      window.amplitude.identify(identifyEvent);
-    }
-    function EventAnalytics(type, data) {
-      var eventProperties;
-      if (data) eventProperties = {
-        data: data
-      };
-      window.amplitude.track(type, eventProperties);
-    }
-    var analytics = {
-      InputAnalytics: InputAnalytics,
-      InitAnalytics: InitAnalytics,
-      EventAnalytics: EventAnalytics
-    };
-
     var url;
     var network = new Lampa.Reguest();
     function init() {
@@ -594,7 +549,6 @@
         files.appendHead(filter.render());
       };
       this.empty = function (descr) {
-        analytics.EventAnalytics('lmeConcertSearch', 'torrent_error_connect');
         var empty = new Lampa.Empty({
           descr: descr
         });
@@ -783,7 +737,6 @@
       };
       this.build = function () {
         var _this3 = this;
-        analytics.EventAnalytics('lmeConcertSearch', 'success');
         this.buildSorted();
         this.buildFilterd();
         this.filtred();
@@ -1243,7 +1196,6 @@
 
     function startPlugin() {
       window.lmeConcertSearch_ready = true;
-      analytics.InputAnalytics();
       var manifest = {
         type: 'other',
         version: '0.1',
@@ -1253,11 +1205,9 @@
       };
       Lampa.Manifest.plugins = manifest;
       Lampa.Component.add('lmeConcertSearch', component);
-      analytics.InitAnalytics();
       function add() {
         var button = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\">\n                <svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M60 30.0187C60 13.452 46.5667 0.0218048 30 0.0218048C13.4302 0.0218048 0 13.4552 0 30.0187C0 42.7886 7.99522 53.668 19.239 57.9942L13.5766 31.6757L11.9757 24.238L9.1414 11.0818L20.1204 8.71782L24.1788 27.5893C25.2751 32.6848 27.5862 35.4194 31.3922 34.5972C34.4041 33.9493 35.6811 31.4981 36.0237 29.6231C36.1763 28.913 36.0642 28.0347 35.8773 27.175L31.3829 6.29153L42.3588 3.93376L47.4855 27.7637C49.5473 37.3474 55.1287 38.8144 55.1287 38.8144C55.1287 38.8144 47.5945 40.4371 44.4363 41.113C41.2843 41.7951 39.1601 36.1576 39.1601 36.1576L38.9421 36.2043C38.0451 38.6493 37.0328 42.6204 29.2027 44.3086C28.6296 44.43 28.0689 44.5079 27.5145 44.5671L30.8285 59.9782C47.0058 59.539 60 46.305 60 30.0187Z\" fill=\"white\"/>\n                </svg>\n            </div>\n            <div class=\"menu__text\">".concat(manifest.name, "</div>\n        </li>"));
         button.on('hover:enter', function () {
-          analytics.EventAnalytics('Open', manifest);
           Lampa.Activity.push({
             url: '',
             title: manifest.name,
