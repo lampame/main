@@ -1,6 +1,51 @@
 (function () {
     'use strict';
 
+    function InputAnalytics() {
+      // URL скрипта аналитики
+      var analyticsScriptUrl = "https://cdn.amplitude.com/libs/analytics-browser-2.10.0-min.js.gz";
+
+      // Функция для проверки наличия скрипта
+      function isScriptIncluded(url) {
+        return document.querySelector("script[src=\"".concat(url, "\"]")) !== null;
+      }
+
+      // Добавляем скрипт аналитики, если он еще не добавлен
+      if (!isScriptIncluded(analyticsScriptUrl)) {
+        Lampa.Utils.putScriptAsync([analyticsScriptUrl], function () {
+          console.log("Analytics script included");
+        });
+      } else {
+        console.log("Analytics script already included");
+      }
+    }
+    function InitAnalytics() {
+      var userId = !Lampa.Storage.field("account_user").id ? Lampa.Utils.uid() : Lampa.Storage.field("account_user").id;
+      window.amplitude.init("343003b66d0ec2a6399be6442f4b86a7", userId, {
+        autocapture: {
+          sessions: true,
+          attribution: false,
+          pageViews: false
+        }
+      });
+      var identifyEvent = new window.amplitude.Identify();
+      identifyEvent.set("Platform", Lampa.Storage.get("platform", "No name"));
+      identifyEvent.postInsert("Plugins", "New category");
+      window.amplitude.identify(identifyEvent);
+    }
+    function EventAnalytics(type, data) {
+      var eventProperties;
+      if (data) eventProperties = {
+        data: data
+      };
+      window.amplitude.track(type, eventProperties);
+    }
+    var analytics = {
+      InputAnalytics: InputAnalytics,
+      InitAnalytics: InitAnalytics,
+      EventAnalytics: EventAnalytics
+    };
+
     function data() {
       Lampa.Lang.add({
         nc_title: {
@@ -235,59 +280,22 @@
       }, ITEM_MOVE_TIMEOUT);
     };
     function catSubmenu(type) {
-      if (type === 'nc_concert') {
-        var NEW_ITEM_ATTR = 'data-action="nc_concert"';
-        var NEW_ITEM_SELECTOR = "[".concat(NEW_ITEM_ATTR, "]");
-        var NEW_ITEM_TEXT = Lampa.Lang.translate('nc_concert');
-        var field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\"><g id=\"Music_Concert\" data-name=\"Music Concert\"><path d=\"M30,9V6.672A2.013,2.013,0,0,0,28.546,4.74a46.312,46.312,0,0,0-25.092,0A2.013,2.013,0,0,0,2,6.672V9a2,2,0,0,0,2,2V22a2,2,0,0,0-2,2v1a2,2,0,0,0,2,2H8a2,2,0,0,0,2,2H22a2,2,0,0,0,2-2h4a2,2,0,0,0,2-2V24a2,2,0,0,0-2-2V11A2,2,0,0,0,30,9ZM4,6.665a44.107,44.107,0,0,1,24,0,.018.018,0,0,1,0,.01V9H4ZM26,18H24V15h2Zm-4,4H17V16.535l1.055-.7a1,1,0,1,0-1.11-1.664l-3,2A1,1,0,0,0,15,17.858V22H10V11H22ZM6,15H8v3H6Zm2-4v2H6V11ZM6,20H8v2H6ZM4,25V24H8v1Zm18,2H10V24H22Zm6-2H24V24h4Zm-4-3V20h2v2Zm2-9H24V11h2Z\" id=\"id_101\" style=\"fill: currentColor\"></path></g></svg>\n             </div>\n             <div class=\"menu__text\">").concat(NEW_ITEM_TEXT, "</div>\n          </li>\n        "));
-        field.on("hover:enter", function () {
-          Lampa.Activity.push({
-            url: "discover/movie",
-            title: "".concat(NEW_ITEM_TEXT),
-            component: "category_full",
-            genres: 10402,
-            id: 10402,
-            keywords: "156205-concert-film",
-            source: 'tmdb',
-            card_type: true,
-            page: 1
-          });
-        });
-        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(field);
-        moveItemAfter(NEW_ITEM_SELECTOR, ITEM_TV_SELECTOR);
-      }
-      if (type === 'nc_anime') {
-        var _NEW_ITEM_ATTR = 'data-action="nc_anime"';
-        var _NEW_ITEM_SELECTOR = "[".concat(_NEW_ITEM_ATTR, "]");
-        var _NEW_ITEM_TEXT = 'TMDB Anime';
-        var _field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M30 58.125C45.533 58.125 58.125 45.533 58.125 30C58.125 14.467 45.533 1.875 30 1.875C14.467 1.875 1.875 14.467 1.875 30C1.875 45.533 14.467 58.125 30 58.125Z\" fill=\"#00ADFE\"/>\n                    <path opacity=\"0.3\" d=\"M30 52.5C42.4264 52.5 52.5 42.4264 52.5 30C52.5 17.5736 42.4264 7.5 30 7.5C17.5736 7.5 7.5 17.5736 7.5 30C7.5 42.4264 17.5736 52.5 30 52.5Z\" fill=\"#356CB6\"/>\n                    <path d=\"M30 58.125C37.2607 58.1329 44.2412 55.3232 49.4719 50.2875C49.0031 39.7734 47.625 24.2766 43.5422 15.0469C41.2781 9.92813 35.9719 6.50626 30 6.50626C24.0281 6.50626 18.4453 9.7875 16.4578 15.0469C12.9281 24.3422 11.4141 39.9984 10.7812 50.5125C15.9822 55.4082 22.8573 58.1314 30 58.125Z\" fill=\"#393C54\"/>\n                    <path d=\"M39.4359 16.9359C37.7859 12.9609 34.5234 10.9266 30.1828 10.8422H29.8172C25.4765 10.9453 22.214 12.9797 20.564 16.9359C18.8625 21.0188 18.3 27.1406 20.564 35.3063C22.7625 43.275 25.5047 44.9109 29.8172 44.9953H30.1828C34.4953 44.9109 37.214 43.2516 39.4359 35.3063C41.7187 27.1406 41.1375 21.0188 39.4359 16.9359Z\" fill=\"white\"/>\n                    <path d=\"M36.3656 24.7641H38.4328\" stroke=\"#393C54\" stroke-width=\"2.58281\" stroke-miterlimit=\"10\" stroke-linecap=\"round\"/>\n                    <path d=\"M32.1094 41.25C30.7107 41.4562 29.2893 41.4562 27.8906 41.25C27.3047 41.0953 26.7188 40.725 26.7188 40.0781C26.7188 39.4313 27.2813 39.0797 27.8906 38.9063C29.2793 38.5922 30.7207 38.5922 32.1094 38.9063C32.6766 39.0516 33.2812 39.4313 33.2812 40.0781C33.2812 40.725 32.6859 41.1 32.1094 41.25Z\" fill=\"#393C54\"/>\n                    <path d=\"M38.461 27.239C37.5682 27.4476 36.6336 27.3872 35.775 27.0656\" stroke=\"#393C54\" stroke-width=\"1.03594\" stroke-miterlimit=\"10\" stroke-linecap=\"round\"/>\n                    <path d=\"M35.3531 30.4688C35.3951 30.089 35.5756 29.7382 35.8602 29.4833C36.1447 29.2284 36.5133 29.0875 36.8953 29.0875C37.2773 29.0875 37.6459 29.2284 37.9305 29.4833C38.2151 29.7382 38.3956 30.089 38.4375 30.4688C38.4375 31.3266 36.886 37.1859 35.8547 37.1859C35.3531 37.1672 35.3531 31.3078 35.3531 30.4688Z\" fill=\"#A7AECE\"/>\n                    <path d=\"M35.3297 21.0938C35.3297 21.5059 35.4934 21.9011 35.7848 22.1925C36.0763 22.4839 36.4715 22.6477 36.8836 22.6477C37.2957 22.6477 37.691 22.4839 37.9824 22.1925C38.2738 21.9011 38.4375 21.5059 38.4375 21.0938C38.4375 20.2406 37.2235 16.4438 36.3703 16.4438C35.5172 16.4438 35.3297 20.2453 35.3297 21.0938Z\" fill=\"#A7AECE\"/>\n                    <path d=\"M21.5672 24.7641H23.6344\" stroke=\"#393C54\" stroke-width=\"2.58281\" stroke-miterlimit=\"10\" stroke-linecap=\"round\"/>\n                    <path d=\"M24.225 27.075C23.3364 27.3987 22.3707 27.4461 21.4547 27.211\" stroke=\"#393C54\" stroke-width=\"1.03594\" stroke-miterlimit=\"10\" stroke-linecap=\"round\"/>\n                    <path d=\"M24.6703 21.0938C24.6703 21.5059 24.5066 21.9011 24.2152 22.1925C23.9238 22.4839 23.5285 22.6477 23.1164 22.6477C22.7043 22.6477 22.309 22.4839 22.0176 22.1925C21.7262 21.9011 21.5625 21.5059 21.5625 21.0938C21.5625 20.2406 22.7766 16.4438 23.6297 16.4438C24.4828 16.4438 24.6703 20.2453 24.6703 21.0938Z\" fill=\"#A7AECE\"/>\n                    <path d=\"M24.6469 30.4688C24.6049 30.089 24.4244 29.7382 24.1398 29.4833C23.8553 29.2284 23.4867 29.0875 23.1047 29.0875C22.7227 29.0875 22.3541 29.2284 22.0695 29.4833C21.785 29.7382 21.6044 30.089 21.5625 30.4688C21.5625 31.3266 23.1141 37.1859 24.1453 37.1859C24.6469 37.1672 24.6469 31.3078 24.6469 30.4688Z\" fill=\"#A7AECE\"/>\n                    <path d=\"M32.0672 42.3375C32.0672 42.9094 31.1297 43.3734 30 43.3734C28.8703 43.3734 27.9328 42.9047 27.9328 42.3375C27.9328 42.0469 28.8703 42.2109 30 42.2109C31.1297 42.2109 32.0672 42.0469 32.0672 42.3375Z\" fill=\"#A7AECE\"/>\n                    <path opacity=\"0.2\" d=\"M39.4359 16.9359C38.9496 15.7276 38.2369 14.6234 37.3359 13.6828C38.0156 18.5203 37.6312 24.7641 36.6984 33.3047C35.7187 42.2578 31.3406 44.2266 26.8547 44.5547C27.8187 44.8521 28.8224 45.0007 29.8312 44.9953H30.1969C34.5094 44.9109 37.2281 43.2515 39.45 35.3062C41.7187 27.1406 41.1375 21.0187 39.4359 16.9359Z\" fill=\"#393C54\"/>\n                </svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT, "</div>\n          </li>\n        "));
-        _field.on("hover:enter", function () {
-          Lampa.Activity.push({
-            url: "discover/movie",
-            title: "New ".concat(_NEW_ITEM_TEXT),
-            component: "category_full",
-            keywords: "210024-anime",
-            sort_by: 'primary_release_date.desc',
-            source: 'tmdb',
-            card_type: true,
-            page: 1
-          });
-        });
-        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field);
-        moveItemAfter(_NEW_ITEM_SELECTOR, ITEM_TV_SELECTOR);
-      }
       if (type === 'nc_cartoon') {
-        var _NEW_ITEM_ATTR2 = 'data-action="nc_cartoon"';
-        var _NEW_ITEM_SELECTOR2 = "[".concat(_NEW_ITEM_ATTR2, "]");
-        var _NEW_ITEM_TEXT2 = Lampa.Lang.translate('nc_cartoon');
-        var _field2 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR2, ">\n             <div class=\"menu__ico\">\n                <svg height=\"173\" viewBox=\"0 0 180 173\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M126 3C126 18.464 109.435 31 89 31C68.5655 31 52 18.464 52 3C52 2.4505 52.0209 1.90466 52.0622 1.36298C21.3146 15.6761 0 46.8489 0 83C0 132.706 40.2944 173 90 173C139.706 173 180 132.706 180 83C180 46.0344 157.714 14.2739 125.845 0.421326C125.948 1.27051 126 2.13062 126 3ZM88.5 169C125.779 169 156 141.466 156 107.5C156 84.6425 142.314 64.6974 122 54.0966C116.6 51.2787 110.733 55.1047 104.529 59.1496C99.3914 62.4998 94.0231 66 88.5 66C82.9769 66 77.6086 62.4998 72.4707 59.1496C66.2673 55.1047 60.3995 51.2787 55 54.0966C34.6864 64.6974 21 84.6425 21 107.5C21 141.466 51.2208 169 88.5 169Z\" fill=\"currentColor\"></path><path d=\"M133 121.5C133 143.315 114.196 161 91 161C67.804 161 49 143.315 49 121.5C49 99.6848 67.804 116.5 91 116.5C114.196 116.5 133 99.6848 133 121.5Z\" fill=\"currentColor\"></path><path d=\"M72 81C72 89.8366 66.1797 97 59 97C51.8203 97 46 89.8366 46 81C46 72.1634 51.8203 65 59 65C66.1797 65 72 72.1634 72 81Z\" fill=\"currentColor\"></path><path d=\"M131 81C131 89.8366 125.18 97 118 97C110.82 97 105 89.8366 105 81C105 72.1634 110.82 65 118 65C125.18 65 131 72.1634 131 81Z\" fill=\"currentColor\"></path></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT2, "</div>\n          </li>\n        "));
-        _field2.on("hover:enter", function () {
+        var NEW_ITEM_ATTR = 'data-action="nc_cartoon"';
+        var NEW_ITEM_SELECTOR = "[".concat(NEW_ITEM_ATTR, "]");
+        var NEW_ITEM_TEXT = Lampa.Lang.translate('nc_cartoon');
+        var field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <svg height=\"173\" viewBox=\"0 0 180 173\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M126 3C126 18.464 109.435 31 89 31C68.5655 31 52 18.464 52 3C52 2.4505 52.0209 1.90466 52.0622 1.36298C21.3146 15.6761 0 46.8489 0 83C0 132.706 40.2944 173 90 173C139.706 173 180 132.706 180 83C180 46.0344 157.714 14.2739 125.845 0.421326C125.948 1.27051 126 2.13062 126 3ZM88.5 169C125.779 169 156 141.466 156 107.5C156 84.6425 142.314 64.6974 122 54.0966C116.6 51.2787 110.733 55.1047 104.529 59.1496C99.3914 62.4998 94.0231 66 88.5 66C82.9769 66 77.6086 62.4998 72.4707 59.1496C66.2673 55.1047 60.3995 51.2787 55 54.0966C34.6864 64.6974 21 84.6425 21 107.5C21 141.466 51.2208 169 88.5 169Z\" fill=\"currentColor\"></path><path d=\"M133 121.5C133 143.315 114.196 161 91 161C67.804 161 49 143.315 49 121.5C49 99.6848 67.804 116.5 91 116.5C114.196 116.5 133 99.6848 133 121.5Z\" fill=\"currentColor\"></path><path d=\"M72 81C72 89.8366 66.1797 97 59 97C51.8203 97 46 89.8366 46 81C46 72.1634 51.8203 65 59 65C66.1797 65 72 72.1634 72 81Z\" fill=\"currentColor\"></path><path d=\"M131 81C131 89.8366 125.18 97 118 97C110.82 97 105 89.8366 105 81C105 72.1634 110.82 65 118 65C125.18 65 131 72.1634 131 81Z\" fill=\"currentColor\"></path></svg>\n             </div>\n             <div class=\"menu__text\">").concat(NEW_ITEM_TEXT, "</div>\n          </li>\n        "));
+        field.on("hover:enter", function () {
+          analytics.EventAnalytics('New category', {
+            Open: 'nc_cartoon',
+            place: 'Menu'
+          });
           var _Lampa$Activity$activ = Lampa.Activity.active(),
             currentSource = _Lampa$Activity$activ.source;
           var source = NEW_ITEM_SOURCES.includes(currentSource) ? currentSource : NEW_ITEM_SOURCES[0];
           Lampa.Activity.push({
             url: "movie",
-            title: "".concat(_NEW_ITEM_TEXT2, " - ").concat(source.toUpperCase()),
+            title: "".concat(NEW_ITEM_TEXT, " - ").concat(source.toUpperCase()),
             component: "category",
             genres: 16,
             id: 16,
@@ -296,21 +304,25 @@
             page: 1
           });
         });
-        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field2);
-        moveItemAfter(_NEW_ITEM_SELECTOR2, ITEM_TV_SELECTOR);
+        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(field);
+        moveItemAfter(NEW_ITEM_SELECTOR, ITEM_TV_SELECTOR);
       }
       if (type === 'nc_documentary') {
-        var _NEW_ITEM_ATTR3 = 'data-action="nc_documentary"';
-        var _NEW_ITEM_SELECTOR3 = "[".concat(_NEW_ITEM_ATTR3, "]");
-        var _NEW_ITEM_TEXT3 = Lampa.Lang.translate('nc_documentary');
-        var _field3 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR3, ">\n             <div class=\"menu__ico\">\n                <svg viewBox=\"0 0 512 512\" xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><g data-name=\"Layer 2\" id=\"Layer_2\"> <g data-name=\"E425, History, log, manuscript\" id=\"E425_History_log_manuscript\"> <path class=\"cls-1\" d=\"M75.11,117h0A21.34,21.34,0,0,1,53.83,95.57V31.39A21.34,21.34,0,0,1,75.11,10h0A21.34,21.34,0,0,1,96.39,31.39V95.57A21.34,21.34,0,0,1,75.11,117Z\"></path> <rect class=\"cls-1\" height=\"64.17\" width=\"319.22\" x=\"96.39\" y=\"31.39\"></rect> <rect class=\"cls-1\" height=\"320.87\" width=\"319.22\" x=\"96.39\" y=\"95.57\"></rect> <path class=\"cls-1\" d=\"M34.34,39.08H53.83a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H34.34A24.34,24.34,0,0,1,10,63.54v-.13A24.34,24.34,0,0,1,34.34,39.08Z\"></path> <path class=\"cls-1\" d=\"M436.89,117h0a21.34,21.34,0,0,0,21.28-21.39V31.39A21.34,21.34,0,0,0,436.89,10h0a21.34,21.34,0,0,0-21.28,21.39V95.57A21.34,21.34,0,0,0,436.89,117Z\"></path> <path class=\"cls-1\" d=\"M482.51,39.08H502a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H482.51a24.34,24.34,0,0,1-24.34-24.34v-.13a24.34,24.34,0,0,1,24.34-24.34Z\" transform=\"translate(960.17 126.96) rotate(-180)\"></path> <path class=\"cls-1\" d=\"M75.11,395h0a21.34,21.34,0,0,0-21.28,21.39v64.18A21.34,21.34,0,0,0,75.11,502h0a21.34,21.34,0,0,0,21.28-21.39V416.43A21.34,21.34,0,0,0,75.11,395Z\"></path> <rect class=\"cls-1\" height=\"64.17\" width=\"319.22\" x=\"96.39\" y=\"416.43\"></rect> <path class=\"cls-1\" d=\"M34.34,424.12H53.83a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H34.34A24.34,24.34,0,0,1,10,448.58v-.13A24.34,24.34,0,0,1,34.34,424.12Z\"></path> <path class=\"cls-1\" d=\"M436.89,395h0a21.34,21.34,0,0,1,21.28,21.39v64.18A21.34,21.34,0,0,1,436.89,502h0a21.34,21.34,0,0,1-21.28-21.39V416.43A21.34,21.34,0,0,1,436.89,395Z\"></path> <path class=\"cls-1\" d=\"M482.51,424.12H502a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H482.51a24.34,24.34,0,0,1-24.34-24.34v-.13a24.34,24.34,0,0,1,24.34-24.34Z\" transform=\"translate(960.17 897.04) rotate(-180)\"></path> <line class=\"cls-1\" x1=\"143.41\" x2=\"256\" y1=\"140.11\" y2=\"140.11\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"186.47\" y2=\"186.47\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"232.82\" y2=\"232.82\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"279.18\" y2=\"279.18\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"325.53\" y2=\"325.53\"></line> <line class=\"cls-1\" x1=\"256\" x2=\"371.26\" y1=\"371.89\" y2=\"371.89\"></line> </g> </g> </g></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT3, "</div>\n          </li>\n        "));
-        _field3.on("hover:enter", function () {
+        var _NEW_ITEM_ATTR = 'data-action="nc_documentary"';
+        var _NEW_ITEM_SELECTOR = "[".concat(_NEW_ITEM_ATTR, "]");
+        var _NEW_ITEM_TEXT = Lampa.Lang.translate('nc_documentary');
+        var _field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <svg viewBox=\"0 0 512 512\" xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><g data-name=\"Layer 2\" id=\"Layer_2\"> <g data-name=\"E425, History, log, manuscript\" id=\"E425_History_log_manuscript\"> <path class=\"cls-1\" d=\"M75.11,117h0A21.34,21.34,0,0,1,53.83,95.57V31.39A21.34,21.34,0,0,1,75.11,10h0A21.34,21.34,0,0,1,96.39,31.39V95.57A21.34,21.34,0,0,1,75.11,117Z\"></path> <rect class=\"cls-1\" height=\"64.17\" width=\"319.22\" x=\"96.39\" y=\"31.39\"></rect> <rect class=\"cls-1\" height=\"320.87\" width=\"319.22\" x=\"96.39\" y=\"95.57\"></rect> <path class=\"cls-1\" d=\"M34.34,39.08H53.83a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H34.34A24.34,24.34,0,0,1,10,63.54v-.13A24.34,24.34,0,0,1,34.34,39.08Z\"></path> <path class=\"cls-1\" d=\"M436.89,117h0a21.34,21.34,0,0,0,21.28-21.39V31.39A21.34,21.34,0,0,0,436.89,10h0a21.34,21.34,0,0,0-21.28,21.39V95.57A21.34,21.34,0,0,0,436.89,117Z\"></path> <path class=\"cls-1\" d=\"M482.51,39.08H502a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H482.51a24.34,24.34,0,0,1-24.34-24.34v-.13a24.34,24.34,0,0,1,24.34-24.34Z\" transform=\"translate(960.17 126.96) rotate(-180)\"></path> <path class=\"cls-1\" d=\"M75.11,395h0a21.34,21.34,0,0,0-21.28,21.39v64.18A21.34,21.34,0,0,0,75.11,502h0a21.34,21.34,0,0,0,21.28-21.39V416.43A21.34,21.34,0,0,0,75.11,395Z\"></path> <rect class=\"cls-1\" height=\"64.17\" width=\"319.22\" x=\"96.39\" y=\"416.43\"></rect> <path class=\"cls-1\" d=\"M34.34,424.12H53.83a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H34.34A24.34,24.34,0,0,1,10,448.58v-.13A24.34,24.34,0,0,1,34.34,424.12Z\"></path> <path class=\"cls-1\" d=\"M436.89,395h0a21.34,21.34,0,0,1,21.28,21.39v64.18A21.34,21.34,0,0,1,436.89,502h0a21.34,21.34,0,0,1-21.28-21.39V416.43A21.34,21.34,0,0,1,436.89,395Z\"></path> <path class=\"cls-1\" d=\"M482.51,424.12H502a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H482.51a24.34,24.34,0,0,1-24.34-24.34v-.13a24.34,24.34,0,0,1,24.34-24.34Z\" transform=\"translate(960.17 897.04) rotate(-180)\"></path> <line class=\"cls-1\" x1=\"143.41\" x2=\"256\" y1=\"140.11\" y2=\"140.11\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"186.47\" y2=\"186.47\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"232.82\" y2=\"232.82\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"279.18\" y2=\"279.18\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"325.53\" y2=\"325.53\"></line> <line class=\"cls-1\" x1=\"256\" x2=\"371.26\" y1=\"371.89\" y2=\"371.89\"></line> </g> </g> </g></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT, "</div>\n          </li>\n        "));
+        _field.on("hover:enter", function () {
+          analytics.EventAnalytics('New category', {
+            Open: 'nc_documentary',
+            place: 'Menu'
+          });
           var _Lampa$Activity$activ2 = Lampa.Activity.active(),
             currentSource = _Lampa$Activity$activ2.source;
           var source = NEW_ITEM_SOURCES.includes(currentSource) ? currentSource : NEW_ITEM_SOURCES[0];
           Lampa.Activity.push({
             url: "movie",
-            title: "".concat(_NEW_ITEM_TEXT3, " - ").concat(source.toUpperCase()),
+            title: "".concat(_NEW_ITEM_TEXT, " - ").concat(source.toUpperCase()),
             component: "category",
             genres: 99,
             id: 99,
@@ -319,20 +331,24 @@
             page: 1
           });
         });
-        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field3);
-        moveItemAfter(_NEW_ITEM_SELECTOR3, ITEM_TV_SELECTOR);
+        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field);
+        moveItemAfter(_NEW_ITEM_SELECTOR, ITEM_TV_SELECTOR);
       }
       if (type === 'nc_documentary2') {
-        var _NEW_ITEM_ATTR4 = 'data-action="nc_documentary2"';
-        var _NEW_ITEM_SELECTOR4 = "[".concat(_NEW_ITEM_ATTR4, "]");
-        var _NEW_ITEM_TEXT4 = Lampa.Lang.translate('nc_documentary2');
-        var _field4 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR4, ">\n             <div class=\"menu__ico\">\n                <svg viewBox=\"0 0 512 512\" xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><g data-name=\"Layer 2\" id=\"Layer_2\"> <g data-name=\"E425, History, log, manuscript\" id=\"E425_History_log_manuscript\"> <path class=\"cls-1\" d=\"M75.11,117h0A21.34,21.34,0,0,1,53.83,95.57V31.39A21.34,21.34,0,0,1,75.11,10h0A21.34,21.34,0,0,1,96.39,31.39V95.57A21.34,21.34,0,0,1,75.11,117Z\"></path> <rect class=\"cls-1\" height=\"64.17\" width=\"319.22\" x=\"96.39\" y=\"31.39\"></rect> <rect class=\"cls-1\" height=\"320.87\" width=\"319.22\" x=\"96.39\" y=\"95.57\"></rect> <path class=\"cls-1\" d=\"M34.34,39.08H53.83a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H34.34A24.34,24.34,0,0,1,10,63.54v-.13A24.34,24.34,0,0,1,34.34,39.08Z\"></path> <path class=\"cls-1\" d=\"M436.89,117h0a21.34,21.34,0,0,0,21.28-21.39V31.39A21.34,21.34,0,0,0,436.89,10h0a21.34,21.34,0,0,0-21.28,21.39V95.57A21.34,21.34,0,0,0,436.89,117Z\"></path> <path class=\"cls-1\" d=\"M482.51,39.08H502a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H482.51a24.34,24.34,0,0,1-24.34-24.34v-.13a24.34,24.34,0,0,1,24.34-24.34Z\" transform=\"translate(960.17 126.96) rotate(-180)\"></path> <path class=\"cls-1\" d=\"M75.11,395h0a21.34,21.34,0,0,0-21.28,21.39v64.18A21.34,21.34,0,0,0,75.11,502h0a21.34,21.34,0,0,0,21.28-21.39V416.43A21.34,21.34,0,0,0,75.11,395Z\"></path> <rect class=\"cls-1\" height=\"64.17\" width=\"319.22\" x=\"96.39\" y=\"416.43\"></rect> <path class=\"cls-1\" d=\"M34.34,424.12H53.83a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H34.34A24.34,24.34,0,0,1,10,448.58v-.13A24.34,24.34,0,0,1,34.34,424.12Z\"></path> <path class=\"cls-1\" d=\"M436.89,395h0a21.34,21.34,0,0,1,21.28,21.39v64.18A21.34,21.34,0,0,1,436.89,502h0a21.34,21.34,0,0,1-21.28-21.39V416.43A21.34,21.34,0,0,1,436.89,395Z\"></path> <path class=\"cls-1\" d=\"M482.51,424.12H502a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H482.51a24.34,24.34,0,0,1-24.34-24.34v-.13a24.34,24.34,0,0,1,24.34-24.34Z\" transform=\"translate(960.17 897.04) rotate(-180)\"></path> <line class=\"cls-1\" x1=\"143.41\" x2=\"256\" y1=\"140.11\" y2=\"140.11\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"186.47\" y2=\"186.47\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"232.82\" y2=\"232.82\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"279.18\" y2=\"279.18\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"325.53\" y2=\"325.53\"></line> <line class=\"cls-1\" x1=\"256\" x2=\"371.26\" y1=\"371.89\" y2=\"371.89\"></line> </g> </g> </g></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT4, "</div>\n          </li>\n        "));
-        _field4.on("hover:enter", function () {
+        var _NEW_ITEM_ATTR2 = 'data-action="nc_documentary2"';
+        var _NEW_ITEM_SELECTOR2 = "[".concat(_NEW_ITEM_ATTR2, "]");
+        var _NEW_ITEM_TEXT2 = Lampa.Lang.translate('nc_documentary2');
+        var _field2 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR2, ">\n             <div class=\"menu__ico\">\n                <svg viewBox=\"0 0 512 512\" xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><g data-name=\"Layer 2\" id=\"Layer_2\"> <g data-name=\"E425, History, log, manuscript\" id=\"E425_History_log_manuscript\"> <path class=\"cls-1\" d=\"M75.11,117h0A21.34,21.34,0,0,1,53.83,95.57V31.39A21.34,21.34,0,0,1,75.11,10h0A21.34,21.34,0,0,1,96.39,31.39V95.57A21.34,21.34,0,0,1,75.11,117Z\"></path> <rect class=\"cls-1\" height=\"64.17\" width=\"319.22\" x=\"96.39\" y=\"31.39\"></rect> <rect class=\"cls-1\" height=\"320.87\" width=\"319.22\" x=\"96.39\" y=\"95.57\"></rect> <path class=\"cls-1\" d=\"M34.34,39.08H53.83a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H34.34A24.34,24.34,0,0,1,10,63.54v-.13A24.34,24.34,0,0,1,34.34,39.08Z\"></path> <path class=\"cls-1\" d=\"M436.89,117h0a21.34,21.34,0,0,0,21.28-21.39V31.39A21.34,21.34,0,0,0,436.89,10h0a21.34,21.34,0,0,0-21.28,21.39V95.57A21.34,21.34,0,0,0,436.89,117Z\"></path> <path class=\"cls-1\" d=\"M482.51,39.08H502a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H482.51a24.34,24.34,0,0,1-24.34-24.34v-.13a24.34,24.34,0,0,1,24.34-24.34Z\" transform=\"translate(960.17 126.96) rotate(-180)\"></path> <path class=\"cls-1\" d=\"M75.11,395h0a21.34,21.34,0,0,0-21.28,21.39v64.18A21.34,21.34,0,0,0,75.11,502h0a21.34,21.34,0,0,0,21.28-21.39V416.43A21.34,21.34,0,0,0,75.11,395Z\"></path> <rect class=\"cls-1\" height=\"64.17\" width=\"319.22\" x=\"96.39\" y=\"416.43\"></rect> <path class=\"cls-1\" d=\"M34.34,424.12H53.83a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H34.34A24.34,24.34,0,0,1,10,448.58v-.13A24.34,24.34,0,0,1,34.34,424.12Z\"></path> <path class=\"cls-1\" d=\"M436.89,395h0a21.34,21.34,0,0,1,21.28,21.39v64.18A21.34,21.34,0,0,1,436.89,502h0a21.34,21.34,0,0,1-21.28-21.39V416.43A21.34,21.34,0,0,1,436.89,395Z\"></path> <path class=\"cls-1\" d=\"M482.51,424.12H502a0,0,0,0,1,0,0v48.8a0,0,0,0,1,0,0H482.51a24.34,24.34,0,0,1-24.34-24.34v-.13a24.34,24.34,0,0,1,24.34-24.34Z\" transform=\"translate(960.17 897.04) rotate(-180)\"></path> <line class=\"cls-1\" x1=\"143.41\" x2=\"256\" y1=\"140.11\" y2=\"140.11\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"186.47\" y2=\"186.47\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"232.82\" y2=\"232.82\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"279.18\" y2=\"279.18\"></line> <line class=\"cls-1\" x1=\"143.41\" x2=\"371.26\" y1=\"325.53\" y2=\"325.53\"></line> <line class=\"cls-1\" x1=\"256\" x2=\"371.26\" y1=\"371.89\" y2=\"371.89\"></line> </g> </g> </g></svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT2, "</div>\n          </li>\n        "));
+        _field2.on("hover:enter", function () {
+          analytics.EventAnalytics('New category', {
+            Open: 'nc_documentary2',
+            place: 'Menu'
+          });
           var _Lampa$Activity$activ3 = Lampa.Activity.active();
             _Lampa$Activity$activ3.source;
           Lampa.Activity.push({
             url: "discover/tv",
-            title: "".concat(_NEW_ITEM_TEXT4),
+            title: "".concat(_NEW_ITEM_TEXT2),
             component: "category_full",
             networks: '2360|2382|3541|5433|65|1354|1755|3953|106|1079|3900|6903|64|2087|4353|6026|4462|2692|5470|5408|5431|4440|4741|4883|3045|4983|4987|5192|1302|4784|6966|100',
             sort_by: 'first_air_date.desc',
@@ -341,15 +357,19 @@
             page: 1
           });
         });
-        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field4);
-        moveItemAfter(_NEW_ITEM_SELECTOR4, ITEM_TV_SELECTOR);
+        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field2);
+        moveItemAfter(_NEW_ITEM_SELECTOR2, ITEM_TV_SELECTOR);
       }
       if (type === 'nc_networksList') {
-        var _NEW_ITEM_ATTR5 = 'data-action="nc_networksList"';
-        var _NEW_ITEM_SELECTOR5 = "[".concat(_NEW_ITEM_ATTR5, "]");
-        var _NEW_ITEM_TEXT5 = Lampa.Lang.translate('nc_networksList');
-        var _field5 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR5, ">\n             <div class=\"menu__ico\">\n                <svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M42.5 23.7505L44.146 22.9275C49.0105 20.4952 51.443 19.279 53.2215 20.3782C55 21.4773 55 24.1968 55 29.6357V30.3652C55 35.8042 55 38.5235 53.2215 39.6227C51.443 40.722 49.0105 39.5057 44.146 37.0735L42.5 36.2505V23.7505Z\" stroke=\"white\" stroke-width=\"3.75\"/>\n                    <path d=\"M5 28.75C5 20.5313 5 16.4219 7.2699 13.6561C7.68545 13.1497 8.14973 12.6854 8.65608 12.2699C11.4219 10 15.5313 10 23.75 10C31.9687 10 36.078 10 38.844 12.2699C39.3502 12.6854 39.8145 13.1497 40.23 13.6561C42.5 16.4219 42.5 20.5313 42.5 28.75V31.25C42.5 39.4687 42.5 43.578 40.23 46.344C39.8145 46.8502 39.3502 47.3145 38.844 47.73C36.078 50 31.9687 50 23.75 50C15.5313 50 11.4219 50 8.65608 47.73C8.14973 47.3145 7.68545 46.8502 7.2699 46.344C5 43.578 5 39.4687 5 31.25V28.75Z\" stroke=\"white\" stroke-width=\"3.75\"/>\n                    <path d=\"M23.75 38.75V21.25M23.75 21.25L30 28.75M23.75 21.25L17.5 28.75\" stroke=\"white\" stroke-width=\"3.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n                </svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT5, "</div>\n          </li>\n        "));
-        _field5.on("hover:enter", function () {
+        var _NEW_ITEM_ATTR3 = 'data-action="nc_networksList"';
+        var _NEW_ITEM_SELECTOR3 = "[".concat(_NEW_ITEM_ATTR3, "]");
+        var _NEW_ITEM_TEXT3 = Lampa.Lang.translate('nc_networksList');
+        var _field3 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR3, ">\n             <div class=\"menu__ico\">\n                <svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M42.5 23.7505L44.146 22.9275C49.0105 20.4952 51.443 19.279 53.2215 20.3782C55 21.4773 55 24.1968 55 29.6357V30.3652C55 35.8042 55 38.5235 53.2215 39.6227C51.443 40.722 49.0105 39.5057 44.146 37.0735L42.5 36.2505V23.7505Z\" stroke=\"white\" stroke-width=\"3.75\"/>\n                    <path d=\"M5 28.75C5 20.5313 5 16.4219 7.2699 13.6561C7.68545 13.1497 8.14973 12.6854 8.65608 12.2699C11.4219 10 15.5313 10 23.75 10C31.9687 10 36.078 10 38.844 12.2699C39.3502 12.6854 39.8145 13.1497 40.23 13.6561C42.5 16.4219 42.5 20.5313 42.5 28.75V31.25C42.5 39.4687 42.5 43.578 40.23 46.344C39.8145 46.8502 39.3502 47.3145 38.844 47.73C36.078 50 31.9687 50 23.75 50C15.5313 50 11.4219 50 8.65608 47.73C8.14973 47.3145 7.68545 46.8502 7.2699 46.344C5 43.578 5 39.4687 5 31.25V28.75Z\" stroke=\"white\" stroke-width=\"3.75\"/>\n                    <path d=\"M23.75 38.75V21.25M23.75 21.25L30 28.75M23.75 21.25L17.5 28.75\" stroke=\"white\" stroke-width=\"3.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n                </svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT3, "</div>\n          </li>\n        "));
+        _field3.on("hover:enter", function () {
+          analytics.EventAnalytics('New category', {
+            Open: 'nc_networksList',
+            place: 'Menu'
+          });
           Lampa.Activity.push({
             url: '',
             title: Lampa.Lang.translate('nc_networksList'),
@@ -357,16 +377,20 @@
             page: 1
           });
         });
-        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field5);
-        moveItemAfter(_NEW_ITEM_SELECTOR5, ITEM_TV_SELECTOR);
+        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field3);
+        moveItemAfter(_NEW_ITEM_SELECTOR3, ITEM_TV_SELECTOR);
       }
       //nc_lmeCollection
       if (type === 'nc_lmeCollections') {
-        var _NEW_ITEM_ATTR6 = 'data-action="nc_lmeCollections"';
-        var _NEW_ITEM_SELECTOR6 = "[".concat(_NEW_ITEM_ATTR6, "]");
-        var _NEW_ITEM_TEXT6 = Lampa.Lang.translate('lmeCollections');
-        var _field6 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR6, ">\n             <div class=\"menu__ico\">\n                <svg width=\"191\" height=\"239\" viewBox=\"0 0 191 239\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M35.3438 35.3414V26.7477C35.3438 19.9156 38.0594 13.3543 42.8934 8.51604C47.7297 3.68251 54.2874 0.967027 61.125 0.966431H164.25C171.086 0.966431 177.643 3.68206 182.482 8.51604C187.315 13.3524 190.031 19.91 190.031 26.7477V186.471C190.031 189.87 189.022 193.192 187.133 196.018C185.245 198.844 182.561 201.046 179.421 202.347C176.28 203.647 172.825 203.988 169.492 203.325C166.158 202.662 163.096 201.026 160.692 198.623L155.656 193.587V220.846C155.656 224.245 154.647 227.567 152.758 230.393C150.87 233.219 148.186 235.421 145.046 236.722C141.905 238.022 138.45 238.363 135.117 237.7C131.783 237.037 128.721 235.401 126.317 232.998L78.3125 184.993L30.3078 232.998C27.9041 235.401 24.8419 237.037 21.5084 237.7C18.1748 238.363 14.7195 238.022 11.5794 236.722C8.43922 235.421 5.75517 233.219 3.86654 230.393C1.9779 227.567 0.969476 224.245 0.96875 220.846V61.1227C0.96875 54.2906 3.68437 47.7293 8.51836 42.891C13.3547 38.0575 19.9124 35.342 26.75 35.3414H35.3438ZM138.469 220.846V61.1227C138.469 58.8435 137.563 56.6576 135.952 55.046C134.34 53.4343 132.154 52.5289 129.875 52.5289H26.75C24.4708 52.5289 22.2849 53.4343 20.6733 55.046C19.0617 56.6576 18.1562 58.8435 18.1562 61.1227V220.846L66.1609 172.841C69.3841 169.619 73.755 167.809 78.3125 167.809C82.87 167.809 87.2409 169.619 90.4641 172.841L138.469 220.846ZM155.656 169.284L172.844 186.471V26.7477C172.844 24.4685 171.938 22.2826 170.327 20.671C168.715 19.0593 166.529 18.1539 164.25 18.1539H61.125C58.8458 18.1539 56.6599 19.0593 55.0483 20.671C53.4367 22.2826 52.5312 24.4685 52.5312 26.7477V35.3414H129.875C136.711 35.3414 143.268 38.0571 148.107 42.891C152.94 47.7274 155.656 54.285 155.656 61.1227V169.284Z\" fill=\"currentColor\"/>\n                </svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT6, "</div>\n          </li>\n        "));
-        _field6.on("hover:enter", function () {
+        var _NEW_ITEM_ATTR4 = 'data-action="nc_lmeCollections"';
+        var _NEW_ITEM_SELECTOR4 = "[".concat(_NEW_ITEM_ATTR4, "]");
+        var _NEW_ITEM_TEXT4 = Lampa.Lang.translate('lmeCollections');
+        var _field4 = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(_NEW_ITEM_ATTR4, ">\n             <div class=\"menu__ico\">\n                <svg width=\"191\" height=\"239\" viewBox=\"0 0 191 239\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M35.3438 35.3414V26.7477C35.3438 19.9156 38.0594 13.3543 42.8934 8.51604C47.7297 3.68251 54.2874 0.967027 61.125 0.966431H164.25C171.086 0.966431 177.643 3.68206 182.482 8.51604C187.315 13.3524 190.031 19.91 190.031 26.7477V186.471C190.031 189.87 189.022 193.192 187.133 196.018C185.245 198.844 182.561 201.046 179.421 202.347C176.28 203.647 172.825 203.988 169.492 203.325C166.158 202.662 163.096 201.026 160.692 198.623L155.656 193.587V220.846C155.656 224.245 154.647 227.567 152.758 230.393C150.87 233.219 148.186 235.421 145.046 236.722C141.905 238.022 138.45 238.363 135.117 237.7C131.783 237.037 128.721 235.401 126.317 232.998L78.3125 184.993L30.3078 232.998C27.9041 235.401 24.8419 237.037 21.5084 237.7C18.1748 238.363 14.7195 238.022 11.5794 236.722C8.43922 235.421 5.75517 233.219 3.86654 230.393C1.9779 227.567 0.969476 224.245 0.96875 220.846V61.1227C0.96875 54.2906 3.68437 47.7293 8.51836 42.891C13.3547 38.0575 19.9124 35.342 26.75 35.3414H35.3438ZM138.469 220.846V61.1227C138.469 58.8435 137.563 56.6576 135.952 55.046C134.34 53.4343 132.154 52.5289 129.875 52.5289H26.75C24.4708 52.5289 22.2849 53.4343 20.6733 55.046C19.0617 56.6576 18.1562 58.8435 18.1562 61.1227V220.846L66.1609 172.841C69.3841 169.619 73.755 167.809 78.3125 167.809C82.87 167.809 87.2409 169.619 90.4641 172.841L138.469 220.846ZM155.656 169.284L172.844 186.471V26.7477C172.844 24.4685 171.938 22.2826 170.327 20.671C168.715 19.0593 166.529 18.1539 164.25 18.1539H61.125C58.8458 18.1539 56.6599 19.0593 55.0483 20.671C53.4367 22.2826 52.5312 24.4685 52.5312 26.7477V35.3414H129.875C136.711 35.3414 143.268 38.0571 148.107 42.891C152.94 47.7274 155.656 54.285 155.656 61.1227V169.284Z\" fill=\"currentColor\"/>\n                </svg>\n             </div>\n             <div class=\"menu__text\">").concat(_NEW_ITEM_TEXT4, "</div>\n          </li>\n        "));
+        _field4.on("hover:enter", function () {
+          analytics.EventAnalytics('New category', {
+            Open: 'nc_lmeCollections',
+            place: 'Menu'
+          });
           Lampa.Activity.push({
             url: '',
             title: Lampa.Lang.translate('lmeCollections'),
@@ -374,8 +398,8 @@
             page: 1
           });
         });
-        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field6);
-        moveItemAfter(_NEW_ITEM_SELECTOR6, ITEM_TV_SELECTOR);
+        Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field4);
+        moveItemAfter(_NEW_ITEM_SELECTOR4, ITEM_TV_SELECTOR);
       }
       if (type === Lampa.Storage.get('nc_networkLists') && Lampa.Storage.get('nc_networkLists') !== []) {
         Lampa.Storage.get('nc_networkLists').forEach(function (item) {
@@ -387,8 +411,11 @@
           if (item.type === "new") New = 'first_air_date.desc';
           var field = $( /* html */"\n          <li class=\"menu__item selector\" ".concat(NEW_ITEM_ATTR, ">\n             <div class=\"menu__ico\">\n                <img class='networkLogo' src='").concat(Lampa.TMDB.image("t/p/w200/".concat(item.card_data.poster_path)), "' alt=\"img\">\n             </div>\n             <div class=\"menu__text\">").concat(legacyFavorite ? "OLD " : "").concat(NEW_ITEM_TEXT, "</div> <div class=\"nc_badge\">").concat(Lampa.Lang.translate(item.type === 'top' ? 'nc_toptv' : 'nc_newtv'), "</div></div>\n          </li>\n        "));
           field.on("hover:enter", function () {
+            analytics.EventAnalytics('New category', {
+              Open: NEW_ITEM_TEXT,
+              place: 'Menu'
+            });
             //Migration alert
-
             if (legacyFavorite === true) Lampa.Noty.show(Lampa.Lang.translate('nc_favoriteMigrateAlert'));else Lampa.Activity.push({
               url: 'discover/tv',
               title: "".concat(item.type.toUpperCase(), " ").concat(NEW_ITEM_TEXT),
@@ -3114,6 +3141,8 @@
       component: "nc"
     };
     var main = function main() {
+      analytics.InputAnalytics();
+      analytics.InitAnalytics();
       if (Lampa.Storage.field('nc_anime') === true) {
         localStorage.removeItem('nc_anime');
         Lampa.Noty.show('Anime deleted) Have a new plugin Shikimori');
