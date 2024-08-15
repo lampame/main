@@ -296,14 +296,14 @@
         uk: "Завантаження, а поки зроби собі кавусю"
       },
       trakttv_remove_from_collection: {
-        ru: "Удалить из коллекции",
-        en: "Remove from collection",
-        uk: "Видалити з колекці"
+        ru: "Удалить из watchlist",
+        en: "Remove from watchlist",
+        uk: "Видалити з watchlist"
       },
       trakttv_add_to_collection: {
-        ru: "Добавить в коллекцию",
-        en: "Add to collection",
-        uk: "Додати в колекцію"
+        ru: "Добавить в watchlist",
+        en: "Add to watchlist",
+        uk: "Додати в watchlist"
       }
     });
   }
