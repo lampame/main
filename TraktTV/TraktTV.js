@@ -127,9 +127,12 @@
   var traktTokens = Lampa.Storage.get('lmeTraktToken');
   var token = null;
   if (traktTokens && profileId$1) {
-    token = traktTokens.find(function (obj) {
-      return Object.keys(obj);
-    })[profileId$1];
+    var tokenObj = traktTokens.find(function (obj) {
+      return obj.hasOwnProperty(profileId$1);
+    });
+    if (tokenObj) {
+      token = tokenObj[profileId$1];
+    }
   }
   var tmdbLang = Lampa.Storage.field('tmdb_lang');
   function upnext$1(params, oncomplite, onerror) {
@@ -168,9 +171,11 @@
       return;
     }
     var tokenObj = traktTokens.find(function (obj) {
-      return Object.keys(obj)[0] === profileId$1.toString();
+      return obj.hasOwnProperty(profileId$1);
     });
-    var token = tokenObj ? tokenObj[profileId$1] : null;
+    if (tokenObj) {
+      token = tokenObj[profileId$1];
+    }
     if (!token) {
       console.error('TraktTV', 'Token not found for profile ID:', profileId$1);
       return;
@@ -315,9 +320,12 @@
       var traktTokens = Lampa.Storage.get('lmeTraktToken');
       var tokenData = null;
       if (traktTokens && profileId) {
-        tokenData = traktTokens.find(function (obj) {
-          return Object.keys(obj);
-        })[profileId];
+        var tokenObj = traktTokens.find(function (obj) {
+          return obj.hasOwnProperty(profileId);
+        });
+        if (tokenObj) {
+          tokenData = tokenObj[profileId];
+        }
       }
       if (e.type === "complite") {
         var lookupWatchlistItem = function lookupWatchlistItem() {
