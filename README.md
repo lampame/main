@@ -1,5 +1,7 @@
 # Lampa Movie Enhancer
 
+Telegram chat - [https://t.me/lme_chat](https://t.me/lme_chat)
+
 [Torrent downloader](https://lampame.github.io/main/torrentmanager.js) `https://lampame.github.io/main/td.js` [About](https://teletype.in/@lme/torrentmanager)
 
 [Infuse saver](https://lampame.github.io/main/infuseSave.js) `https://lampame.github.io/main/infuseSave.js` [About](https://teletype.in/@lme/infusesave)
@@ -16,6 +18,6 @@
 
 [LME Music](https://lampame.github.io/main/music.js) `https://lampame.github.io/main/music.js` [About](https://teletype.in/@lme/music)
 
-[LME Shikimori](https://lampame.github.io/main/music.js) `https://lampame.github.io/main/shikimori.js` [About](https://teletype.in/@lme/shikimori)
+[LME Shikimori](https://lampame.github.io/main/shikimori.js) `https://lampame.github.io/main/shikimori.js` [About](https://teletype.in/@lme/shikimori)
 
-Telegram chat - [https://t.me/lme_chat](https://t.me/lme_chat)
+[LME Shikimori](https://lampame.github.io/main/trakttv.js) `https://lampame.github.io/main/trakttv.js` [About](https://teletype.in/@lme/trakttv)
