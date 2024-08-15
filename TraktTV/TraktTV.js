@@ -39,7 +39,7 @@
     Lampa.SettingsApi.addComponent({
       component: "lmeTrakt",
       name: 'Trakt.TV',
-      icon: "<svg width=\"800\" height=\"800\" viewBox=\"0 0 800 800\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <g clip-path=\"url(#clip0_226_2)\">\n                    <path d=\"M400 800C179.5 800 0 620.5 0 400C0 179.5 179.5 0 400 0C620.5 0 800 179.5 800 400C800 620.5 620.5 800 400 800ZM400 40.3667C201.667 40.3667 40.3667 201.667 40.3667 400C40.3667 598.333 201.667 759.667 400 759.667C598.333 759.667 759.667 598.333 759.667 400C759.667 201.667 598.333 40.3667 400 40.3667ZM163 617.7C221.533 681.7 306.133 721.467 400 721.467C447.967 721.467 493.367 711.033 534.233 692.267L311 469.6L163 617.7ZM639.267 615.467C690.633 558.467 722.067 482.467 722.067 399.933C722.067 270.433 645.833 159.433 536.467 107.933L333.5 310.467L638.967 615.467H639.267ZM310.033 334.5L140.9 503L118.267 480.333L296.167 302.467L503.833 94.9667C471.233 84.0333 436.5 78 400 78C222.1 77.9 77.9 222.1 77.9 400C77.9 472.4 101.667 539.267 142.533 593.367L311.067 424.867L323.033 435.833L564.533 677.333C569.533 674.6 574.033 671.867 578.533 668.467L311 401.667L149.2 563.5L126.567 540.867L311.067 356.367L323.033 367.4L605.033 648.633C609.533 645.3 613.533 641.467 617.533 638.1L313 334.233L310.233 334.733L310.033 334.5ZM411.6 368.767L389 346.233L548.6 186.567L571.233 209.533L411.6 369.033V368.767ZM563 149.5L379 333.5L356.333 310.867L540.367 126.867L563 149.667V149.5Z\" fill=\"white\"/>\n                    </g>\n                    <defs>\n                    <clipPath id=\"clip0_226_2\">\n                    <rect width=\"800\" height=\"800\" fill=\"white\"/>\n                    </clipPath>\n                    </defs>\n                </svg>"
+      icon: "<svg xmlns=\"http://www.w3.org/2000/svg\" enable-background=\"new 0 0 24 24\" viewBox=\"0 0 24 24\" id=\"Trakt\"><path d=\"M12,24C5.383,24,0,18.617,0,12S5.383,0,12,0s12,5.383,12,12S18.617,24,12,24z M12,1.5C6.21,1.5,1.5,6.21,1.5,12S6.21,22.5,12,22.5S22.5,17.79,22.5,12S17.79,1.5,12,1.5z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M4.383,14.003c-0.192,0-0.384-0.073-0.53-0.22c-0.293-0.293-0.293-0.768,0-1.061l10.36-10.36c0.293-0.293,0.768-0.293,1.061,0s0.293,0.768,0,1.061l-10.36,10.36C4.767,13.93,4.575,14.003,4.383,14.003z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M19.95 20.7c-.192 0-.384-.073-.53-.22L8.64 9.7c-.293-.293-.293-.768 0-1.061s.768-.293 1.061 0l10.78 10.78c.293.293.293.768 0 1.061C20.334 20.627 20.143 20.7 19.95 20.7zM11.793 9.672c-.192 0-.384-.073-.53-.22-.293-.293-.293-.768 0-1.061l4.229-4.229c.293-.293.768-.293 1.061 0s.293.768 0 1.061l-4.229 4.229C12.177 9.599 11.985 9.672 11.793 9.672zM13.207 11.086c-.192 0-.384-.073-.53-.22-.293-.293-.293-.768 0-1.061l2.828-2.828c.293-.293.768-.293 1.061 0s.293.768 0 1.061l-2.828 2.828C13.591 11.013 13.399 11.086 13.207 11.086zM18.39 22.01c-.192 0-.384-.073-.53-.22l-8.938-8.938-3.71 3.718c-.292.295-.769.293-1.061.002-.294-.293-.294-.768-.002-1.061l4.24-4.25c.141-.142.332-.221.531-.221l0 0c.199 0 .39.079.53.22l9.47 9.47c.293.293.293.768 0 1.061C18.773 21.937 18.582 22.01 18.39 22.01z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M16.55,23.04c-0.192,0-0.384-0.073-0.53-0.22l-7.099-7.099l-4.54,4.549c-0.292,0.292-0.768,0.293-1.062,0.001c-0.293-0.293-0.293-0.768-0.001-1.062l5.07-5.08c0.141-0.141,0.332-0.22,0.531-0.22l0,0c0.199,0,0.39,0.079,0.53,0.22l7.63,7.63c0.293,0.293,0.293,0.768,0,1.061C16.934,22.967,16.742,23.04,16.55,23.04z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path></svg>"
     });
     //Get Code
     if (!Lampa.Storage.get('lmeTraktDeviceCode')[profileId]) $.get('https://lme-trakt.deno.dev/auth/codes', function (response) {
@@ -263,7 +263,7 @@
     watchlist: watchlist
   };
 
-  function Main() {
+  function Main$1() {
     Lampa.Lang.add({
       trakttvAuthMissed: {
         ru: "Не авторизированы",
@@ -294,6 +294,100 @@
         ru: "Загрузка, а пока сделай кофе",
         en: "Loading and go drink coffee",
         uk: "Завантаження, а поки зроби собі кавусю"
+      },
+      trakttv_remove_from_collection: {
+        ru: "Удалить из коллекции",
+        en: "Remove from collection",
+        uk: "Видалити з колекці"
+      },
+      trakttv_add_to_collection: {
+        ru: "Добавить в коллекцию",
+        en: "Add to collection",
+        uk: "Додати в колекцію"
+      }
+    });
+  }
+
+  function Main() {
+    Lampa.Listener.follow('full', function (e) {
+      var account = Lampa.Storage.get('account');
+      var profileId = account && Object.keys(account).length > 0 ? account.profile.id : null;
+      var traktTokens = Lampa.Storage.get('lmeTraktToken');
+      var tokenData = null;
+      if (traktTokens && profileId) {
+        tokenData = traktTokens.find(function (obj) {
+          return Object.keys(obj);
+        })[profileId];
+      }
+      if (e.type === "complite") {
+        var lookupWatchlistItem = function lookupWatchlistItem() {
+          var settings = {
+            "url": "https://gwb-trakt.deno.dev/watchlistItem",
+            "method": "POST",
+            "timeout": 0,
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "data": JSON.stringify({
+              "action": "lookup",
+              "tmdb": {
+                "id": e.object.id,
+                "type": e.object.method
+              },
+              "tokenData": tokenData
+            })
+          };
+          $.ajax(settings).done(function (response) {
+            console.log(response);
+            updateButtonState(response.added);
+          }).fail(function () {
+            Lampa.Noty.show('Error');
+          });
+        };
+        var updateButtonState = function updateButtonState(added) {
+          var button = $('.button--lmeTraktWatchlist span');
+          if (added) {
+            button.text(Lampa.Lang.translate('trakttv_remove_from_collection'));
+            button.closest('.button--lmeTraktWatchlist').attr('data-action', 'delete');
+          } else {
+            button.text(Lampa.Lang.translate('trakttv_add_to_collection'));
+            button.closest('.button--lmeTraktWatchlist').attr('data-action', 'add');
+          }
+        };
+        var handleButtonClick = function handleButtonClick() {
+          var action = $(this).attr('data-action');
+          var settings = {
+            "url": "https://gwb-trakt.deno.dev/watchlistItem",
+            "method": "POST",
+            "timeout": 0,
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "data": JSON.stringify({
+              "action": action,
+              "tmdb": {
+                "id": e.object.id,
+                "type": e.object.method
+              },
+              "tokenData": tokenData
+            })
+          };
+          $.ajax(settings).done(function (response) {
+            console.log(response);
+            if (response.success) {
+              Lampa.Noty.show(action === 'add' ? 'Added' : 'Deleted');
+              updateButtonState(action === 'add' ? true : false);
+            } else {
+              Lampa.Noty.show('Error');
+            }
+          }).fail(function () {
+            Lampa.Noty.show('Error');
+          });
+        };
+        lookupWatchlistItem();
+        var lmeTraktWatchlist = "<div class=\"full-start__button selector button--lmeTraktWatchlist\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><path fill=\"currentColor\" d=\"M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32l288 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-288 0c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z\"/></svg>\n                <span>Watchlist</span>\n            </div>";
+        e.object.activity.render().find('.full-start-new__buttons').append(lmeTraktWatchlist);
+        $(document).on('click', '.button--lmeTraktWatchlist', handleButtonClick);
       }
     });
   }
@@ -302,7 +396,7 @@
   var profileId = account && Object.keys(account).length > 0 ? account.profile.id : null;
   var manifest = {
     type: "other",
-    version: "0.1",
+    version: "0.2",
     author: '@lme_chat',
     name: "Trakt.TV",
     description: "Get content from Trakt.TV",
@@ -312,11 +406,13 @@
     //Lang.main()
     Lampa.Manifest.plugins = manifest;
     config.main();
+    Main$1();
+    //Button Watchlist
     Main();
     //Refresh Auth
     api.updateTokenIfNeeded();
     //Add menu item
-    var lmeTrakt_upnext = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\">\n                <svg width=\"800\" height=\"800\" viewBox=\"0 0 800 800\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <g clip-path=\"url(#clip0_226_2)\">\n        <path d=\"M400 800C179.5 800 0 620.5 0 400C0 179.5 179.5 0 400 0C620.5 0 800 179.5 800 400C800 620.5 620.5 800 400 800ZM400 40.3667C201.667 40.3667 40.3667 201.667 40.3667 400C40.3667 598.333 201.667 759.667 400 759.667C598.333 759.667 759.667 598.333 759.667 400C759.667 201.667 598.333 40.3667 400 40.3667ZM163 617.7C221.533 681.7 306.133 721.467 400 721.467C447.967 721.467 493.367 711.033 534.233 692.267L311 469.6L163 617.7ZM639.267 615.467C690.633 558.467 722.067 482.467 722.067 399.933C722.067 270.433 645.833 159.433 536.467 107.933L333.5 310.467L638.967 615.467H639.267ZM310.033 334.5L140.9 503L118.267 480.333L296.167 302.467L503.833 94.9667C471.233 84.0333 436.5 78 400 78C222.1 77.9 77.9 222.1 77.9 400C77.9 472.4 101.667 539.267 142.533 593.367L311.067 424.867L323.033 435.833L564.533 677.333C569.533 674.6 574.033 671.867 578.533 668.467L311 401.667L149.2 563.5L126.567 540.867L311.067 356.367L323.033 367.4L605.033 648.633C609.533 645.3 613.533 641.467 617.533 638.1L313 334.233L310.233 334.733L310.033 334.5ZM411.6 368.767L389 346.233L548.6 186.567L571.233 209.533L411.6 369.033V368.767ZM563 149.5L379 333.5L356.333 310.867L540.367 126.867L563 149.667V149.5Z\" fill=\"white\"/>\n        </g>\n    <defs>\n        <clipPath id=\"clip0_226_2\">\n            <rect width=\"800\" height=\"800\" fill=\"white\"/>\n        </clipPath>\n    </defs></svg>\n            </div>\n            <div class=\"menu__text\">UpNext</div>\n        </li>");
+    var lmeTrakt_upnext = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\"><svg xmlns=\"http://www.w3.org/2000/svg\" enable-background=\"new 0 0 24 24\" viewBox=\"0 0 24 24\" id=\"Trakt\"><path d=\"M12,24C5.383,24,0,18.617,0,12S5.383,0,12,0s12,5.383,12,12S18.617,24,12,24z M12,1.5C6.21,1.5,1.5,6.21,1.5,12S6.21,22.5,12,22.5S22.5,17.79,22.5,12S17.79,1.5,12,1.5z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M4.383,14.003c-0.192,0-0.384-0.073-0.53-0.22c-0.293-0.293-0.293-0.768,0-1.061l10.36-10.36c0.293-0.293,0.768-0.293,1.061,0s0.293,0.768,0,1.061l-10.36,10.36C4.767,13.93,4.575,14.003,4.383,14.003z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M19.95 20.7c-.192 0-.384-.073-.53-.22L8.64 9.7c-.293-.293-.293-.768 0-1.061s.768-.293 1.061 0l10.78 10.78c.293.293.293.768 0 1.061C20.334 20.627 20.143 20.7 19.95 20.7zM11.793 9.672c-.192 0-.384-.073-.53-.22-.293-.293-.293-.768 0-1.061l4.229-4.229c.293-.293.768-.293 1.061 0s.293.768 0 1.061l-4.229 4.229C12.177 9.599 11.985 9.672 11.793 9.672zM13.207 11.086c-.192 0-.384-.073-.53-.22-.293-.293-.293-.768 0-1.061l2.828-2.828c.293-.293.768-.293 1.061 0s.293.768 0 1.061l-2.828 2.828C13.591 11.013 13.399 11.086 13.207 11.086zM18.39 22.01c-.192 0-.384-.073-.53-.22l-8.938-8.938-3.71 3.718c-.292.295-.769.293-1.061.002-.294-.293-.294-.768-.002-1.061l4.24-4.25c.141-.142.332-.221.531-.221l0 0c.199 0 .39.079.53.22l9.47 9.47c.293.293.293.768 0 1.061C18.773 21.937 18.582 22.01 18.39 22.01z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M16.55,23.04c-0.192,0-0.384-0.073-0.53-0.22l-7.099-7.099l-4.54,4.549c-0.292,0.292-0.768,0.293-1.062,0.001c-0.293-0.293-0.293-0.768-0.001-1.062l5.07-5.08c0.141-0.141,0.332-0.22,0.531-0.22l0,0c0.199,0,0.39,0.079,0.53,0.22l7.63,7.63c0.293,0.293,0.293,0.768,0,1.061C16.934,22.967,16.742,23.04,16.55,23.04z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path></svg></div>\n            <div class=\"menu__text\">UpNext</div>\n        </li>");
     lmeTrakt_upnext.on('hover:enter', function () {
       if (!Array.isArray(Lampa.Storage.get('lmeTraktToken')) || !Lampa.Storage.get('lmeTraktToken').find(function (obj) {
         return Object.keys(obj)[0] === profileId.toString();
@@ -331,7 +427,7 @@
         page: 1
       });
     });
-    var lmeTrakt_watchlist = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\">\n                <svg width=\"800\" height=\"800\" viewBox=\"0 0 800 800\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <g clip-path=\"url(#clip0_226_2)\">\n        <path d=\"M400 800C179.5 800 0 620.5 0 400C0 179.5 179.5 0 400 0C620.5 0 800 179.5 800 400C800 620.5 620.5 800 400 800ZM400 40.3667C201.667 40.3667 40.3667 201.667 40.3667 400C40.3667 598.333 201.667 759.667 400 759.667C598.333 759.667 759.667 598.333 759.667 400C759.667 201.667 598.333 40.3667 400 40.3667ZM163 617.7C221.533 681.7 306.133 721.467 400 721.467C447.967 721.467 493.367 711.033 534.233 692.267L311 469.6L163 617.7ZM639.267 615.467C690.633 558.467 722.067 482.467 722.067 399.933C722.067 270.433 645.833 159.433 536.467 107.933L333.5 310.467L638.967 615.467H639.267ZM310.033 334.5L140.9 503L118.267 480.333L296.167 302.467L503.833 94.9667C471.233 84.0333 436.5 78 400 78C222.1 77.9 77.9 222.1 77.9 400C77.9 472.4 101.667 539.267 142.533 593.367L311.067 424.867L323.033 435.833L564.533 677.333C569.533 674.6 574.033 671.867 578.533 668.467L311 401.667L149.2 563.5L126.567 540.867L311.067 356.367L323.033 367.4L605.033 648.633C609.533 645.3 613.533 641.467 617.533 638.1L313 334.233L310.233 334.733L310.033 334.5ZM411.6 368.767L389 346.233L548.6 186.567L571.233 209.533L411.6 369.033V368.767ZM563 149.5L379 333.5L356.333 310.867L540.367 126.867L563 149.667V149.5Z\" fill=\"white\"/>\n        </g>\n        <defs>\n            <clipPath id=\"clip0_226_2\">\n                <rect width=\"800\" height=\"800\" fill=\"white\"/>\n            </clipPath>\n        </defs></svg>\n            </div>\n            <div class=\"menu__text\">Watchlist</div>\n        </li>");
+    var lmeTrakt_watchlist = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\"><svg xmlns=\"http://www.w3.org/2000/svg\" enable-background=\"new 0 0 24 24\" viewBox=\"0 0 24 24\" id=\"Trakt\"><path d=\"M12,24C5.383,24,0,18.617,0,12S5.383,0,12,0s12,5.383,12,12S18.617,24,12,24z M12,1.5C6.21,1.5,1.5,6.21,1.5,12S6.21,22.5,12,22.5S22.5,17.79,22.5,12S17.79,1.5,12,1.5z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M4.383,14.003c-0.192,0-0.384-0.073-0.53-0.22c-0.293-0.293-0.293-0.768,0-1.061l10.36-10.36c0.293-0.293,0.768-0.293,1.061,0s0.293,0.768,0,1.061l-10.36,10.36C4.767,13.93,4.575,14.003,4.383,14.003z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M19.95 20.7c-.192 0-.384-.073-.53-.22L8.64 9.7c-.293-.293-.293-.768 0-1.061s.768-.293 1.061 0l10.78 10.78c.293.293.293.768 0 1.061C20.334 20.627 20.143 20.7 19.95 20.7zM11.793 9.672c-.192 0-.384-.073-.53-.22-.293-.293-.293-.768 0-1.061l4.229-4.229c.293-.293.768-.293 1.061 0s.293.768 0 1.061l-4.229 4.229C12.177 9.599 11.985 9.672 11.793 9.672zM13.207 11.086c-.192 0-.384-.073-.53-.22-.293-.293-.293-.768 0-1.061l2.828-2.828c.293-.293.768-.293 1.061 0s.293.768 0 1.061l-2.828 2.828C13.591 11.013 13.399 11.086 13.207 11.086zM18.39 22.01c-.192 0-.384-.073-.53-.22l-8.938-8.938-3.71 3.718c-.292.295-.769.293-1.061.002-.294-.293-.294-.768-.002-1.061l4.24-4.25c.141-.142.332-.221.531-.221l0 0c.199 0 .39.079.53.22l9.47 9.47c.293.293.293.768 0 1.061C18.773 21.937 18.582 22.01 18.39 22.01z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M16.55,23.04c-0.192,0-0.384-0.073-0.53-0.22l-7.099-7.099l-4.54,4.549c-0.292,0.292-0.768,0.293-1.062,0.001c-0.293-0.293-0.293-0.768-0.001-1.062l5.07-5.08c0.141-0.141,0.332-0.22,0.531-0.22l0,0c0.199,0,0.39,0.079,0.53,0.22l7.63,7.63c0.293,0.293,0.293,0.768,0,1.061C16.934,22.967,16.742,23.04,16.55,23.04z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path></svg></div>\n            <div class=\"menu__text\">Watchlist</div>\n        </li>");
     lmeTrakt_watchlist.on('hover:enter', function () {
       if (!Array.isArray(Lampa.Storage.get('lmeTraktToken')) || !Lampa.Storage.get('lmeTraktToken').find(function (obj) {
         return Object.keys(obj)[0] === profileId.toString();
