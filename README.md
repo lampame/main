@@ -2,7 +2,7 @@
 
 Telegram chat - [https://t.me/lme_chat](https://t.me/lme_chat)
 
-[Torrent downloader](https://lampame.github.io/main/torrentmanager.js) `https://lampame.github.io/main/td.js` [About](https://teletype.in/@lme/torrentmanager)
+[Torrent downloader](https://lampame.github.io/main/torrentmanager.js) `https://lampame.github.io/main/torrentmanager.js` [About](https://teletype.in/@lme/torrentmanager)
 
 [Infuse saver](https://lampame.github.io/main/infuseSave.js) `https://lampame.github.io/main/infuseSave.js` [About](https://teletype.in/@lme/infusesave)
 
