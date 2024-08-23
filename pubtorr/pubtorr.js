@@ -35,29 +35,10 @@
 
     var proto = location.protocol === "https:" ? 'https://' : 'http://';
     var parsersInfo = [{
-      base: 'jac_lampa32_ru',
-      name: 'Lampa32',
-      settings: {
-        url: 'jac.lampa32.ru',
-        key: '',
-        parser_torrent_type: 'jackett'
-      }
-    },
-    //{base: 'lme_jackett', name: 'LME Jackett', settings: {url: 'https://gwynnbleiidd-jackett.elfhosted.com', key: 'plsgh9iiijchd8m9010b8cur7xqiq8d2', parser_torrent_type: 'jackett'}},
-    //{base: 'lme_prowlarr', name: 'LME Prowlarr', settings: {url: 'https://prowlarr-gwynnbleiidd.koyeb.app', key: '403aa11c34624659997411ef99aecc30', parser_torrent_type: 'prowlarr'}},
-    {
       base: 'jacred_xyz',
       name: 'Jacred.xyz',
       settings: {
         url: 'jacred.xyz',
-        key: '',
-        parser_torrent_type: 'jackett'
-      }
-    }, {
-      base: 'jacred_ru',
-      name: 'Jacred.ru',
-      settings: {
-        url: 'jacred.ru',
         key: '',
         parser_torrent_type: 'jackett'
       }
@@ -91,6 +72,62 @@
       settings: {
         url: '188.119.113.252:9117',
         key: '1',
+        parser_torrent_type: 'jackett'
+      }
+    }, {
+      base: 'maxvol',
+      name: 'Maxvol.pro',
+      settings: {
+        url: 'jr.maxvol.pro',
+        key: '',
+        parser_torrent_type: 'jackett'
+      }
+    }, {
+      base: 'trs_my_to',
+      name: 'trs.my.to',
+      settings: {
+        url: 'trs.my.to:9118',
+        key: '',
+        parser_torrent_type: 'jackett'
+      }
+    }, {
+      base: 'jacred_my_to',
+      name: 'jacred.my.to',
+      settings: {
+        url: 'jacred.my.to',
+        key: '',
+        parser_torrent_type: 'jackett'
+      }
+    }, {
+      base: 'jacred_freebie_tom_ru',
+      name: 'jacred.freebie.tom.ru',
+      settings: {
+        url: 'jacred.freebie.tom.ru',
+        key: '',
+        parser_torrent_type: 'jackett'
+      }
+    }, {
+      base: 'jackett_freebie_tom_ru',
+      name: 'freebie.tom.ru:9117u',
+      settings: {
+        url: 'freebie.tom.ru:9117',
+        key: 'freebie',
+        parser_torrent_type: 'jackett'
+      }
+    }, {
+      base: 'lampa_app',
+      name: 'lampa.app',
+      settings: {
+        url: 'lampa.app',
+        key: '',
+        parser_torrent_type: 'jackett'
+      }
+    }, {
+      base: 'jacred_my_to',
+      name: 'jacred.my.to',
+      settings: {
+        url: 'jacred.my.to',
+        key: '',
         parser_torrent_type: 'jackett'
       }
     }];
