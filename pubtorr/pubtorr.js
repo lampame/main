@@ -99,22 +99,6 @@
         parser_torrent_type: 'jackett'
       }
     }, {
-      base: 'jacred_freebie_tom_ru',
-      name: 'jacred.freebie.tom.ru',
-      settings: {
-        url: 'jacred.freebie.tom.ru',
-        key: '',
-        parser_torrent_type: 'jackett'
-      }
-    }, {
-      base: 'jackett_freebie_tom_ru',
-      name: 'freebie.tom.ru:9117u',
-      settings: {
-        url: 'freebie.tom.ru:9117',
-        key: 'freebie',
-        parser_torrent_type: 'jackett'
-      }
-    }, {
       base: 'lampa_app',
       name: 'lampa.app',
       settings: {
