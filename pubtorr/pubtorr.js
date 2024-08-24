@@ -33,7 +33,6 @@
       translate: translate
     };
 
-    var proto = location.protocol === "https:" ? 'https://' : 'http://';
     var parsersInfo = [{
       base: 'jacred_xyz',
       name: 'Jacred.xyz',
@@ -75,14 +74,6 @@
         parser_torrent_type: 'jackett'
       }
     }, {
-      base: 'maxvol',
-      name: 'Maxvol.pro',
-      settings: {
-        url: 'jr.maxvol.pro',
-        key: '',
-        parser_torrent_type: 'jackett'
-      }
-    }, {
       base: 'trs_my_to',
       name: 'trs.my.to',
       settings: {
@@ -106,35 +97,56 @@
         key: '',
         parser_torrent_type: 'jackett'
       }
-    }, {
-      base: 'jacred_my_to',
-      name: 'jacred.my.to',
-      settings: {
-        url: 'jacred.my.to',
-        key: '',
-        parser_torrent_type: 'jackett'
-      }
     }];
+
+    var proto = location.protocol === "https:" ? 'https://' : 'http://';
     function checkAlive(type) {
       if (type === 'parser') {
         var requests = parsersInfo.map(function (parser, index) {
           var protocol = parser.base === "lme_jackett" || parser.base === "lme_prowlarr" ? "" : proto;
-          var endPoint = parser.settings.parser_torrent_type === 'prowlarr' ? '/api/v1/health?apikey=' + parser.settings.key + '' : "/api/v2.0/indexers/status:healthy/results?apikey=".concat(parser.settings.url === 'spawn.pp.ua:59117' ? '2' : parser.base === 'lme_jackett' ? parser.settings.key : '');
+          var endPoint = parser.settings.parser_torrent_type === 'prowlarr' ? '/api/v1/health?apikey=' + parser.settings.key : "/api/v2.0/indexers/status:healthy/results?apikey=".concat(parser.settings.url === 'spawn.pp.ua:59117' ? '2' : parser.base === 'lme_jackett' ? parser.settings.key : '');
           var myLink = protocol + parser.settings.url + endPoint;
+          var mySelector = "body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(".concat(index + 2, ") > div");
+
+          // Проверяем наличие кеша
+          var cachedResponse = sessionStorage.getItem(myLink);
+          if (cachedResponse) {
+            var _JSON$parse = JSON.parse(cachedResponse),
+              color = _JSON$parse.color;
+            $(mySelector).css('color', color);
+            return Promise.resolve();
+          }
           return new Promise(function (resolve) {
             setTimeout(function () {
-              var mySelector = "body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(".concat(index + 2, ") > div");
               if ($('body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(1) > div').text() !== 'Не выбран') return resolve();
-              fetch(myLink).then(function (response) {
-                if (response.ok || response.status === 200) {
-                  $(mySelector).css('color', '1aff00');
-                } else if (response.status === 401) {
+              $.ajax({
+                url: myLink,
+                method: 'GET',
+                success: function success(response, textStatus, xhr) {
+                  var color;
+                  // Используем xhr для получения статуса
+                  if (xhr.status === 200) {
+                    color = '1aff00'; // Успех
+                  } else if (xhr.status === 401) {
+                    color = 'ff2e36'; // Ошибка авторизации
+                  } else {
+                    color = 'ff2e36'; // Другие ошибки
+                  }
+                  $(mySelector).css('color', color);
+
+                  // Кешируем ответ только в случае успеха или ошибки авторизации
+                  if (color) {
+                    sessionStorage.setItem(myLink, JSON.stringify({
+                      color: color
+                    }));
+                  }
+                },
+                error: function error() {
                   $(mySelector).css('color', 'ff2e36');
+                },
+                complete: function complete() {
+                  return resolve();
                 }
-              })["catch"](function () {
-                $(mySelector).css('color', 'ff2e36');
-              })["finally"](function () {
-                return resolve();
               });
             }, 1000);
           });
@@ -144,11 +156,10 @@
         });
       }
     }
+
     Lampa.Controller.listener.follow('toggle', function (e) {
       if (e.name === 'select') {
-        setTimeout(function () {
-          checkAlive("parser");
-        }, 10);
+        checkAlive("parser");
       }
     });
     function changeParser() {
@@ -196,8 +207,14 @@
             $('div[data-children="parser"]').on('hover:enter', function () {
               Lampa.Settings.update();
             });
-            if (Lampa.Storage.field('parser_use')) item.show() & $('.settings-param__name', item).css('color', 'f3d900') & $('div[data-name="jackett_url_two"]').insertAfter('div[data-children="parser"]');else item.hide();
-          }, 0);
+            if (Lampa.Storage.field('parser_use')) {
+              item.show();
+              $('.settings-param__name', item).css('color', 'f3d900');
+              $('div[data-name="jackett_url_two"]').insertAfter('div[data-children="parser"]');
+            } else {
+              item.hide();
+            }
+          });
         }
       });
       Lampa.Settings.listener.follow('open', function (e) {
