@@ -399,7 +399,7 @@
       }
 
       // Закрываем параметры и продолжаем запрос
-      query += ") {\n                    id\n                    name\n                    russian\n                    licenseNameRu\n                    english\n                    japanese\n                    kind\n                    score\n                    status\n                    season\n                    poster {\n                        originalUrl\n                    }\n                }\n            }\n        ";
+      query += ") {\n                    id\n                    name\n                    russian\n                    licenseNameRu\n                    english\n                    japanese\n                    kind\n                    score\n                    status\n                    season\n                    airedOn { year }\n                    poster {\n                        originalUrl\n                    }\n                }\n            }\n        ";
       $.ajax({
         url: 'https://shikimori.one/api/graphql',
         method: 'POST',
@@ -558,12 +558,15 @@
       status: capitalizeFirstLetter(data.status),
       rate: data.score,
       title: userLang === 'ru' ? data.russian || data.name || data.japanese : data.name || data.japanese,
-      seasonID: data.season,
-      season: formattedSeason
+      //seasonID: data.season,
+      //seasonID: data.season !== null ? data.season : data.airedOn.year, // Проверка на null
+      season: data.season !== null ? formattedSeason : data.airedOn.year // Проверка на null,
     });
+    /**
     if (!formattedSeason) {
-      $(item).find('.LMEShikimori.card__season').addClass('no-season');
+        $(item).find('.LMEShikimori.card__season').addClass('no-season');
     }
+    **/
     this.render = function () {
       return item;
     };
@@ -903,7 +906,7 @@
           while (1) switch (_context.prev = _context.next) {
             case 0:
               if (!(e.type === "complite")) {
-                _context.next = 18;
+                _context.next = 21;
                 break;
               }
               _context.prev = 1;
@@ -915,31 +918,37 @@
               });
             case 4:
               getMAL = _context.sent;
-              _context.next = 7;
+              if (getMAL.length) {
+                _context.next = 8;
+                break;
+              }
+              console.warn("No data found for the provided ID.");
+              return _context.abrupt("return");
+            case 8:
+              _context.next = 10;
               return $.ajax({
                 url: "https://shikimori.one/api/animes/".concat(getMAL[0].myanimelist),
                 method: "GET",
                 timeout: 0
               });
-            case 7:
+            case 10:
               response = _context.sent;
               dubbers = "\n                    <div class=\"full-descr__info\">\n                        <div class=\"full-descr__info-name\">Fan Dubbers</div>\n                        <div class=\"full-descr__text\">".concat(response.fandubbers.join(', '), "</div>\n                    </div>");
               subbers = "\n                    <div class=\"full-descr__info\">\n                        <div class=\"full-descr__info-name\">Fan Subbers</div>\n                        <div class=\"full-descr__text\">".concat(response.fansubbers.join(', '), "</div>\n                    </div>");
               e.object.activity.render().find(".full-descr__right").append(dubbers, subbers);
-              //full-start-new__rate-line
               shikimoriRates = "<div class=\"full-start__rate rate--shikimori\"><div>".concat(response.score, "</div><div>Shikimori</div></div>");
               e.object.activity.render().find(".full-start-new__rate-line").prepend(shikimoriRates);
-              _context.next = 18;
+              _context.next = 21;
               break;
-            case 15:
-              _context.prev = 15;
+            case 18:
+              _context.prev = 18;
               _context.t0 = _context["catch"](1);
               console.error("Error fetching data:", _context.t0);
-            case 18:
+            case 21:
             case "end":
               return _context.stop();
           }
-        }, _callee, null, [[1, 15]]);
+        }, _callee, null, [[1, 18]]);
       }));
       return function (_x) {
         return _ref.apply(this, arguments);
