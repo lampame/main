@@ -99,69 +99,15 @@
       }
     }];
 
-    var proto = location.protocol === "https:" ? 'https://' : 'http://';
-    function checkAlive(type) {
-      if (type === 'parser') {
-        var requests = parsersInfo.map(function (parser, index) {
-          var protocol = parser.base === "lme_jackett" || parser.base === "lme_prowlarr" ? "" : proto;
-          var endPoint = parser.settings.parser_torrent_type === 'prowlarr' ? '/api/v1/health?apikey=' + parser.settings.key : "/api/v2.0/indexers/status:healthy/results?apikey=".concat(parser.settings.url === 'spawn.pp.ua:59117' ? '2' : parser.base === 'lme_jackett' ? parser.settings.key : '');
-          var myLink = protocol + parser.settings.url + endPoint;
-          var mySelector = "body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(".concat(index + 2, ") > div");
-
-          // Проверяем наличие кеша
-          var cachedResponse = sessionStorage.getItem(myLink);
-          if (cachedResponse) {
-            var _JSON$parse = JSON.parse(cachedResponse),
-              color = _JSON$parse.color;
-            $(mySelector).css('color', color);
-            return Promise.resolve();
-          }
-          return new Promise(function (resolve) {
-            setTimeout(function () {
-              if ($('body > div.selectbox > div.selectbox__content.layer--height > div.selectbox__body.layer--wheight > div > div > div > div:nth-child(1) > div').text() !== 'Не выбран') return resolve();
-              $.ajax({
-                url: myLink,
-                method: 'GET',
-                success: function success(response, textStatus, xhr) {
-                  var color;
-                  // Используем xhr для получения статуса
-                  if (xhr.status === 200) {
-                    color = '1aff00'; // Успех
-                  } else if (xhr.status === 401) {
-                    color = 'ff2e36'; // Ошибка авторизации
-                  } else {
-                    color = 'ff2e36'; // Другие ошибки
-                  }
-                  $(mySelector).css('color', color);
-
-                  // Кешируем ответ только в случае успеха или ошибки авторизации
-                  if (color) {
-                    sessionStorage.setItem(myLink, JSON.stringify({
-                      color: color
-                    }));
-                  }
-                },
-                error: function error() {
-                  $(mySelector).css('color', 'ff2e36');
-                },
-                complete: function complete() {
-                  return resolve();
-                }
-              });
-            }, 1000);
-          });
-        });
-        return Promise.all(requests).then(function () {
-          return console.log('All requests completed');
-        });
-      }
-    }
-
-    Lampa.Controller.listener.follow('toggle', function (e) {
-      if (e.name === 'select') {
-        checkAlive("parser");
-      }
+    //TODO: Rework
+    /***
+    Lampa.Controller.listener.follow('toggle', (e) => {
+        if (e.name === 'select') {
+            checkAlive("parser");
+        }
     });
+    ***/
+
     function changeParser() {
       var jackettUrlTwo = Lampa.Storage.get("jackett_url_two");
       var selectedParser = parsersInfo.find(function (parser) {
@@ -202,6 +148,7 @@
           Lampa.Settings.update();
         },
         onRender: function onRender(item) {
+          $('.settings-param__value p.parserName').remove();
           changeParser();
           setTimeout(function () {
             $('div[data-children="parser"]').on('hover:enter', function () {
