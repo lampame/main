@@ -26,6 +26,12 @@
           en: 'Free servers from the LME project',
           uk: 'Безкоштовні сервери від проєкту LME',
           zh: '来自 LME 项目的免费服务器 '
+        },
+        lme_pubtorr_firstrun: {
+          "ru": "Привет! Ты установил плагин LME PubTorr, учти что если стоит Mods's то в разделе парсеров будет ошибка, которая не влияет на работу. Хочешь избавиться - оставь или LME PubTorr или Mods's.",
+          "en": "Hello! You have installed the LME PubTorr plugin. Note that if Mods's is enabled, there will be an error in the parsers section that does not affect functionality. If you want to get rid of it, keep either LME PubTorr or Mods's.",
+          "uk": "Привіт! Ви встановили плагін LME PubTorr, врахуйте, що якщо активовано Mods's, то в розділі парсерів буде помилка, яка не впливає на роботу. Якщо хочете позбутися - залиште або LME PubTorr, або Mods's.",
+          "zh": "你好！你安装了LME PubTorr插件，请注意，如果启用了Mods's，解析器部分将出现错误，但这不会影响功能。如果你想摆脱它，请保留LME PubTorr或Mods's。"
         }
       });
     }
@@ -178,6 +184,10 @@
     function add() {
       Lang.translate();
       Parser.parserSetting();
+      if (Lampa.Storage.field('lme_pubtorr_firstrun' !== true)) {
+        Lampa.Helper.show("LMEPubtorr", Lampa.Lang.translate('lme_pubtorr_firstrun'));
+        Lampa.Storage.set('lme_pubtorr_firstrun', true);
+      }
     }
     function startPlugin() {
       window.plugin_lmepublictorr_ready = true;
