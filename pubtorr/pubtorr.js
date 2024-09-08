@@ -41,7 +41,7 @@
 
     var parsersInfo = [{
       base: 'lampa_app',
-      name: 'lampa.app',
+      name: 'Lampa.app',
       settings: {
         url: 'lampa.app',
         key: '',
@@ -81,7 +81,7 @@
       }
     }, {
       base: 'trs_my_to',
-      name: 'trs.my.to',
+      name: 'Trs.my.to',
       settings: {
         url: 'trs.my.to:9118',
         key: '',
@@ -89,7 +89,7 @@
       }
     }, {
       base: 'jacred_my_to',
-      name: 'jacred.my.to',
+      name: 'Jacred.my.to',
       settings: {
         url: 'jacred.my.to',
         key: '',
@@ -105,14 +105,74 @@
       }
     }];
 
-    /**
-    Lampa.Controller.listener.follow('toggle', (e) => {
-        if (e.name === 'select') {
-            checkAlive("parser");
-        }
-    });
-    **/
+    var proto = location.protocol === "https:" ? 'https://' : 'http://';
 
+    // Объект для хранения кеша
+    var cache = {};
+    function checkAlive(type) {
+      if (type === 'parser') {
+        var requests = parsersInfo.map(function (parser) {
+          var protocol = parser.base === "lme_jackett" || parser.base === "lme_prowlarr" ? "" : proto;
+          var endPoint = parser.settings.parser_torrent_type === 'prowlarr' ? '/api/v1/health?apikey=' + parser.settings.key : "/api/v2.0/indexers/status:healthy/results?apikey=".concat(parser.settings.url === 'spawn.pp.ua:59117' ? '2' : parser.base === 'lme_jackett' ? parser.settings.key : '');
+          var myLink = protocol + parser.settings.url + endPoint;
+
+          // Используем jQuery для поиска элемента с текстом имени парсера
+          var mySelector = $('div.selectbox-item__title').filter(function () {
+            return $(this).text().trim() === parser.name;
+          });
+
+          // Проверяем наличие кеша
+          if (cache[myLink]) {
+            console.log('Using cached response for', myLink, cache[myLink]);
+            var color = cache[myLink].color;
+            $(mySelector).css('color', color);
+            return Promise.resolve();
+          }
+          return new Promise(function (resolve) {
+            //if ($(mySelector).text() !== 'Не выбран') return resolve();
+
+            $.ajax({
+              url: myLink,
+              method: 'GET',
+              success: function success(response, textStatus, xhr) {
+                var color;
+                if (xhr.status === 200) {
+                  color = '1aff00'; // Успех
+                } else if (xhr.status === 401) {
+                  color = 'ff2e36'; // Ошибка авторизации
+                } else {
+                  color = 'ff2e36'; // Другие ошибки
+                }
+                $(mySelector).css('color', color);
+
+                // Кешируем ответ только в случае успеха или ошибки авторизации
+                if (color) {
+                  cache[myLink] = {
+                    color: color
+                  };
+                }
+              },
+              error: function error() {
+                $(mySelector).css('color', 'ff2e36');
+              },
+              complete: function complete() {
+                return resolve();
+              }
+            });
+          });
+        });
+        return Promise.all(requests).then(function () {
+          return console.log('All requests completed');
+        });
+      }
+    }
+
+    /**/
+    Lampa.Controller.listener.follow('toggle', function (e) {
+      if (e.name === 'select') {
+        checkAlive("parser");
+      }
+    });
     function changeParser() {
       var jackettUrlTwo = Lampa.Storage.get("lme_url_two");
       var selectedParser = parsersInfo.find(function (parser) {
