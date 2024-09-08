@@ -40,10 +40,10 @@
     };
 
     var parsersInfo = [{
-      base: 'jacred_xyz',
-      name: 'Jacred.xyz',
+      base: 'lampa_app',
+      name: 'lampa.app',
       settings: {
-        url: 'jacred.xyz',
+        url: 'lampa.app',
         key: '',
         parser_torrent_type: 'jackett'
       }
@@ -96,26 +96,25 @@
         parser_torrent_type: 'jackett'
       }
     }, {
-      base: 'lampa_app',
-      name: 'lampa.app',
+      base: 'jacred_xyz',
+      name: 'Jacred.xyz',
       settings: {
-        url: 'lampa.app',
+        url: 'jacred.xyz',
         key: '',
         parser_torrent_type: 'jackett'
       }
     }];
 
-    //TODO: Rework
-    /***
+    /**
     Lampa.Controller.listener.follow('toggle', (e) => {
         if (e.name === 'select') {
             checkAlive("parser");
         }
     });
-    ***/
+    **/
 
     function changeParser() {
-      var jackettUrlTwo = Lampa.Storage.get("jackett_url_two");
+      var jackettUrlTwo = Lampa.Storage.get("lme_url_two");
       var selectedParser = parsersInfo.find(function (parser) {
         return parser.base === jackettUrlTwo;
       });
@@ -140,7 +139,7 @@
       Lampa.SettingsApi.addParam({
         component: 'parser',
         param: {
-          name: 'jackett_url_two',
+          name: 'lme_url_two',
           type: 'select',
           values: s_values,
           "default": 'no_parser'
@@ -163,16 +162,11 @@
             if (Lampa.Storage.field('parser_use')) {
               item.show();
               $('.settings-param__name', item).css('color', 'f3d900');
-              $('div[data-name="jackett_url_two"]').insertAfter('div[data-children="parser"]');
+              $('div[data-name="lme_url_two"]').insertAfter('div[data-children="parser"]');
             } else {
               item.hide();
             }
           });
-        }
-      });
-      Lampa.Settings.listener.follow('open', function (e) {
-        if (e.name === 'parser') {
-          e.body.find('[data-name="jackett_url2"]').remove();
         }
       });
     }
@@ -184,10 +178,6 @@
     function add() {
       Lang.translate();
       Parser.parserSetting();
-      if (Lampa.Storage.field('lme_pubtorr_firstrun' !== true)) {
-        Lampa.Helper.show("LMEPubtorr", Lampa.Lang.translate('lme_pubtorr_firstrun'));
-        Lampa.Storage.set('lme_pubtorr_firstrun', true);
-      }
     }
     function startPlugin() {
       window.plugin_lmepublictorr_ready = true;
