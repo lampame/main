@@ -445,7 +445,7 @@
 
   function Main$1(playlistId) {
     var settings = {
-      "url": "https://delicious-verene-gwynnbleiidd-fe8dd6c5.koyeb.app/playlists/".concat(playlistId),
+      "url": "https://yt-music-gateway.vercel.app/playlists/".concat(playlistId),
       "method": "GET",
       "timeout": 0
     };
@@ -912,7 +912,7 @@
 
   function Search(val) {
     var settings = {
-      "url": "https://delicious-verene-gwynnbleiidd-fe8dd6c5.koyeb.app/search/artists?query=".concat(val),
+      "url": "https://yt-music-gateway.vercel.app/search/artists?query=".concat(val),
       "method": "GET",
       "timeout": 0
     };
@@ -931,7 +931,7 @@
   }
   function Info(val) {
     var settings = {
-      "url": "https://delicious-verene-gwynnbleiidd-fe8dd6c5.koyeb.app/artists/".concat(val),
+      "url": "https://yt-music-gateway.vercel.app/artists/".concat(val),
       "method": "GET",
       "timeout": 0
     };
@@ -975,7 +975,7 @@
           case 0:
             this.activity.loader(true);
             settings = {
-              "url": "https://delicious-verene-gwynnbleiidd-fe8dd6c5.koyeb.app/home",
+              "url": "https://yt-music-gateway.vercel.app/home",
               "method": "GET",
               "timeout": 0
             };
