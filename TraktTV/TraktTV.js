@@ -681,7 +681,7 @@
       if (e.type === "complite") {
         var lookupWatchlistItem = function lookupWatchlistItem() {
           var settings = {
-            "url": "https://gwb-trakt.deno.dev/watchlistItem",
+            "url": "https://lme-trakt.deno.dev/watchlistItem",
             "method": "POST",
             "timeout": 0,
             "headers": {
@@ -708,17 +708,17 @@
           if (added) {
             //button.text(Lampa.Lang.translate('trakttv_remove_from_collection'));
             button.closest('.button--lmeTraktWatchlist').attr('data-action', 'delete');
-            button.closest('.button--lmeTraktWatchlist').attr('style', 'color:red');
+            button.closest('.button--lmeTraktWatchlist').attr('style', 'color:green');
           } else {
             //button.text(Lampa.Lang.translate('trakttv_add_to_collection'));
             button.closest('.button--lmeTraktWatchlist').attr('data-action', 'add');
-            button.closest('.button--lmeTraktWatchlist').attr('style', 'color:green');
+            button.closest('.button--lmeTraktWatchlist').attr('style', '');
           }
         };
         var handleButtonClick = function handleButtonClick() {
           var action = $(this).attr('data-action'); // Получаем data-action из контекста
           var settings = {
-            "url": "https://gwb-trakt.deno.dev/watchlistItem",
+            "url": "https://lme-trakt.deno.dev/watchlistItem",
             "method": "POST",
             "timeout": 0,
             "headers": {
@@ -787,7 +787,7 @@
             // Уведомление о начале поиска в ватчлисте
             Lampa.Noty.show('Ищем в ватчлисте...');
             lookupSettings = {
-              url: "https://gwb-trakt.deno.dev/watchlistItem",
+              url: "https://lme-trakt.deno.dev/watchlistItem",
               method: "POST",
               timeout: 0,
               headers: {
@@ -848,7 +848,7 @@
           case 0:
             Lampa.Noty.show(action === 'add' ? 'Добавляем...' : 'Удаляем...');
             updateSettings = {
-              url: "https://gwb-trakt.deno.dev/watchlistItem",
+              url: "https://lme-trakt.deno.dev/watchlistItem",
               method: "POST",
               timeout: 0,
               headers: {
