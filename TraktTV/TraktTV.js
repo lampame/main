@@ -706,11 +706,13 @@
         var updateButtonState = function updateButtonState(added) {
           var button = $('.button--lmeTraktWatchlist span');
           if (added) {
-            button.text(Lampa.Lang.translate('trakttv_remove_from_collection'));
+            //button.text(Lampa.Lang.translate('trakttv_remove_from_collection'));
             button.closest('.button--lmeTraktWatchlist').attr('data-action', 'delete');
+            button.closest('.button--lmeTraktWatchlist').attr('style', 'color:red');
           } else {
-            button.text(Lampa.Lang.translate('trakttv_add_to_collection'));
+            //button.text(Lampa.Lang.translate('trakttv_add_to_collection'));
             button.closest('.button--lmeTraktWatchlist').attr('data-action', 'add');
+            button.closest('.button--lmeTraktWatchlist').attr('style', 'color:green');
           }
         };
         var handleButtonClick = function handleButtonClick() {
