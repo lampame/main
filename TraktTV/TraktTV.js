@@ -468,6 +468,21 @@
         Lampa.Noty.show(Lampa.Lang.translate('traktLampaRestart'));
       }
     });
+    //Watchlist Sort
+    Lampa.SettingsApi.addParam({
+      component: "lmeTrakt",
+      param: {
+        name: "lmeTraktWatchlistSort",
+        type: "trigger",
+        "default": false
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttv_WatchlistSort')
+      },
+      onChange: function onChange(val) {
+        Lampa.Settings.update();
+      }
+    });
   }
   var config = {
     main: main
@@ -493,7 +508,8 @@
     }, oncomplite, onerror);
   }
   function watchlist$1(params, oncomplite, onerror) {
-    sendRequest("https://lme-trakt.deno.dev/my/watchlist", {
+    var endpoint = Lampa.Storage.get('lmeTraktWatchlistSort') ? '/watchlistAdded' : '/watchlist';
+    sendRequest("https://lme-trakt.deno.dev/my".concat(endpoint), {
       lang: tmdbLang,
       tokenData: token
     }, oncomplite, onerror);
@@ -660,6 +676,11 @@
         ru: "Добавить в watchlist",
         en: "Add to watchlist",
         uk: "Додати в watchlist"
+      },
+      trakttv_WatchlistSort: {
+        ru: "Сортировка watchlist",
+        en: "Sort watchlist",
+        uk: "Сортування watchlist"
       }
     });
   }
@@ -897,7 +918,7 @@
   }
   var manifest = {
     type: "video",
-    version: "0.2",
+    version: "0.2.5",
     author: '@lme_chat',
     name: "Trakt.TV",
     description: "Watchlist and UpNext",
@@ -922,8 +943,8 @@
   function add() {
     //Lang.main()
     Lampa.Manifest.plugins = manifest;
-    config.main();
     Main$1();
+    config.main();
     //Button Watchlist
     Main();
     //Refresh Auth
