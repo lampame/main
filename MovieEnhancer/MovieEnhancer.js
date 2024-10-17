@@ -94,7 +94,7 @@
           callback(new Error("Fetch error: ".concat(textStatus, ", ").concat(errorThrown)));
         });
       }
-      function appendQualityElement(release_quality, parentElement) {
+      function appendQualityElement(release_quality, parentElement, e) {
         if (!release_quality) return;
         var newDivider = $("<span>", {
           "class": 'full-start-new__split',
@@ -118,7 +118,10 @@
             }()
           }
         });
-        parentElement.append(newDivider, newSpan);
+        e.object.activity.render().find('.full-start-new__details').append(newDivider, newSpan);
+
+        //parentElement.append(newDivider, newSpan);
+
         if (Lampa.Platform.screen('mobile') !== true) {
           var quality = $("<div>", {
             "class": "card__quality",
@@ -141,7 +144,7 @@
                 console.error(err.message);
                 return;
               }
-              appendQualityElement(data.release_quality, $(".full-start-new__details"));
+              appendQualityElement(data.release_quality, $(".full-start-new__details"), e);
             });
           });
         }
@@ -196,10 +199,16 @@
           }).done(function (response) {
             var englishTitle = method === "movie" ? response.title : response.name || "Not found";
             var englishDesc = response.overview || "";
+            /**
             $("<div>", {
+                class: "english-title",
+                text: englishTitle,
+            }).appendTo(".full-start-new__head");
+            **/
+            cardData.object.activity.render().find('.full-start-new__head').append($("<div>", {
               "class": "english-title",
               text: englishTitle
-            }).appendTo(".full-start-new__head");
+            }));
             if (cardData.data.movie.overview === '') {
               $(".full-descr__text").html($("<div>", {
                 "class": "english-desc",
@@ -207,10 +216,17 @@
               }));
             }
           }).fail(function () {
+            /**
             $("<div>", {
+                class: "english-title",
+                text: "Not found",
+            }).appendTo(".full-start-new__head");
+            **/
+
+            cardData.object.activity.render().find('.full-start-new__head').append($("<div>", {
               "class": "english-title",
               text: "Not found"
-            }).appendTo(".full-start-new__head");
+            }));
           });
         }
       });
@@ -249,7 +265,12 @@
                 });
 
                 // Вставляем оба новых элемента в начало контейнера
-                $(".full-start-new__details").prepend(splitSpan).prepend(runtimeSpan);
+                /**
+                $(".full-start-new__details")
+                    .prepend(splitSpan)
+                    .prepend(runtimeSpan);
+                    **/
+                cardData.object.activity.render().find('.full-start-new__details').prepend(runtimeSpan, splitSpan);
               },
               error: function error(_error) {
                 console.error("Ошибка при выполнении запроса:", _error);
@@ -267,7 +288,7 @@
 
     var manifest = {
       type: "other",
-      version: "0.0.1",
+      version: "0.0.2",
       author: '@lme_chat',
       name: "Lampa Movie Enhancer",
       description: "Some tweaks for movie content",
