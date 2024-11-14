@@ -56,22 +56,6 @@
         parser_torrent_type: 'jackett'
       }
     }, {
-      base: 'spawn_jackett',
-      name: 'Spawn Jackett',
-      settings: {
-        url: 'spawn.pp.ua:59117',
-        key: '2',
-        parser_torrent_type: 'jackett'
-      }
-    }, {
-      base: 'spawn_jacred',
-      name: 'Spawn Jacred',
-      settings: {
-        url: 'spawn.pp.ua:59118',
-        key: '',
-        parser_torrent_type: 'jackett'
-      }
-    }, {
       base: 'unknown',
       name: 'Unknown',
       settings: {
