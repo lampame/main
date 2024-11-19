@@ -225,7 +225,8 @@
 
     function main$2() {
       Lampa.Listener.follow("full", function (cardData) {
-        if (cardData.type === "complite") {
+        //if (e.type === "complite" && Lampa.Storage.field('source') !== 'cub')
+        if (cardData.type === "complite" && Lampa.Storage.field('source') === 'tmdb') {
           var _cardData$object = cardData.object,
             method = _cardData$object.method,
             id = _cardData$object.id;
