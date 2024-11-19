@@ -375,7 +375,7 @@
 
         Lampa.Activity.replace({
           source: selectedSource,
-          title: "Главная - " + selectedSource.toUpperCase() // Название источника в верхнем регистре
+          title: Lampa.Lang.translate("title_main") + ' - ' + selectedSource.toUpperCase() // Название источника в верхнем регистре
         });
       });
     }
