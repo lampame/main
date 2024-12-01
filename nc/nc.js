@@ -234,6 +234,164 @@
         return $(item).insertAfter($(after));
       }, ITEM_MOVE_TIMEOUT);
     };
+    var Episode = function Episode(data) {
+      var card = data.card || data;
+      var episode = data.next_episode_to_air || data.episode || {};
+      if (card.source == undefined) card.source = 'tmdb';
+      Lampa.Arrays.extend(card, {
+        title: card.name,
+        original_title: card.original_name,
+        release_date: card.first_air_date
+      });
+      card.release_year = ((card.release_date || '0000') + '').slice(0, 4);
+      function remove(elem) {
+        if (elem) elem.remove();
+      }
+      this.build = function () {
+        this.card = Lampa.Template.js('card_episode');
+        this.img_poster = this.card.querySelector('.card__img') || {};
+        this.img_episode = this.card.querySelector('.full-episode__img img') || {};
+        this.card.querySelector('.card__title').innerText = card.title;
+        this.card.querySelector('.full-episode__num').innerText = card.unwatched || '';
+        if (episode && episode.air_date) {
+          this.card.querySelector('.full-episode__name').innerText = 's' + (episode.season_number || '?') + 'e' + (episode.episode_number || '?') + '. ' + (episode.name || Lampa.Lang.translate('noname'));
+          this.card.querySelector('.full-episode__date').innerText = episode.air_date ? Lampa.Utils.parseTime(episode.air_date).full : '----';
+        }
+        if (card.release_year == '0000') {
+          remove(this.card.querySelector('.card__age'));
+        } else {
+          this.card.querySelector('.card__age').innerText = card.release_year;
+        }
+        this.card.addEventListener('visible', this.visible.bind(this));
+      };
+      this.image = function () {
+        var _this = this;
+        this.img_poster.onload = function () {};
+        this.img_poster.onerror = function () {
+          _this.img_poster.src = './img/img_broken.svg';
+        };
+        this.img_episode.onload = function () {
+          _this.card.querySelector('.full-episode__img').classList.add('full-episode__img--loaded');
+        };
+        this.img_episode.onerror = function () {
+          _this.img_episode.src = './img/img_broken.svg';
+        };
+      };
+      this.create = function () {
+        var _this2 = this;
+        this.build();
+        this.card.addEventListener('hover:focus', function () {
+          if (_this2.onFocus) _this2.onFocus(_this2.card, card);
+        });
+        this.card.addEventListener('hover:hover', function () {
+          if (_this2.onHover) _this2.onHover(_this2.card, card);
+        });
+        this.card.addEventListener('hover:enter', function () {
+          if (_this2.onEnter) _this2.onEnter(_this2.card, card);
+        });
+        this.image();
+      };
+      this.visible = function () {
+        if (card.poster_path) this.img_poster.src = Lampa.Api.img(card.poster_path);else if (card.profile_path) this.img_poster.src = Lampa.Api.img(card.profile_path);else if (card.poster) this.img_poster.src = card.poster;else if (card.img) this.img_poster.src = card.img;else this.img_poster.src = './img/img_broken.svg';
+        if (card.still_path) this.img_episode.src = Lampa.Api.img(episode.still_path, 'w300');else if (card.backdrop_path) this.img_episode.src = Lampa.Api.img(card.backdrop_path, 'w300');else if (episode.img) this.img_episode.src = episode.img;else if (card.img) this.img_episode.src = card.img;else this.img_episode.src = './img/img_broken.svg';
+        if (this.onVisible) this.onVisible(this.card, card);
+      };
+      this.destroy = function () {
+        this.img_poster.onerror = function () {};
+        this.img_poster.onload = function () {};
+        this.img_episode.onerror = function () {};
+        this.img_episode.onload = function () {};
+        this.img_poster.src = '';
+        this.img_episode.src = '';
+        remove(this.card);
+        this.card = null;
+        this.img_poster = null;
+        this.img_episode = null;
+      };
+      this.render = function (js) {
+        return js ? this.card : $(this.card);
+      };
+    };
+    var SourceTMDB = function SourceTMDB(parrent) {
+      this.network = new Lampa.Reguest();
+      this.discovery = false;
+      this.main = function () {
+        var owner = this;
+        var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+        var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+        var onerror = arguments.length > 2 ? arguments[2] : undefined;
+        var parts_limit = 6;
+        console.log('LMENetworks', parts_limit);
+        var parts_data = [function (call) {
+          owner.get('movie/now_playing', params, function (json) {
+            json.title = Lampa.Lang.translate('title_now_watch');
+            call(json);
+          }, call);
+        }, function (call) {
+          call({
+            source: 'tmdb',
+            results: Lampa.TimeTable.lately().slice(0, 20),
+            title: Lampa.Lang.translate('title_upcoming_episodes'),
+            nomore: true,
+            cardClass: function cardClass(_elem, _params) {
+              return new Episode(_elem);
+            }
+          });
+        }, function (call) {
+          owner.get('trending/all/day', params, function (json) {
+            json.title = Lampa.Lang.translate('title_trend_day');
+            call(json);
+          }, call);
+        }, function (call) {
+          owner.get('trending/all/week', params, function (json) {
+            json.title = Lampa.Lang.translate('title_trend_week');
+            call(json);
+          }, call);
+        }];
+
+        //Integrate LME_Networks
+        function addNetworkFunctions() {
+          var networkLists = Lampa.Storage.get('nc_networkLists');
+          networkLists.forEach(function (networkOne) {
+            var withNetworks = networkOne.card_data.$id;
+            var sortBy = networkOne.type === 'now' ? 'first_air_date.desc' : undefined;
+            var params = {};
+            if (sortBy) {
+              params.sort_by = sortBy;
+            }
+
+            // Додаємо анонімну функцію до parts_data
+            parts_data.splice(1, 0, function (call) {
+              owner.get("discover/tv?with_networks=".concat(withNetworks), params, function (json) {
+                json.title = "".concat(networkOne.type.toUpperCase(), " ").concat(networkOne.card_data.name);
+                call(json);
+                parts_limit++; // Збільшуємо parts_limit
+              }, call);
+            });
+          });
+        }
+
+        // Виклик функції для додавання мереж
+        addNetworkFunctions();
+        //END Integrate LME_Networks
+
+        Lampa.Arrays.insert(parts_data, 0, Lampa.Api.partPersons(parts_data, parts_data.length - 1, 'movie'));
+        parrent.genres.movie.forEach(function (genre) {
+          var event = function event(call) {
+            owner.get('discover/movie?with_genres=' + genre.id, params, function (json) {
+              json.title = Lampa.Lang.translate(genre.title.replace(/[^a-z_]/g, ''));
+              call(json);
+            }, call);
+          };
+          parts_data.push(event);
+        });
+        function loadPart(partLoaded, partEmpty) {
+          Lampa.Api.partNext(parts_data, parts_limit, partLoaded, partEmpty);
+        }
+        loadPart(oncomplite, onerror);
+        return loadPart;
+      };
+    };
     function catSubmenu(type) {
       if (type === 'nc_cartoon') {
         var NEW_ITEM_ATTR = 'data-action="nc_cartoon"';
@@ -318,6 +476,20 @@
         });
         Lampa.Menu.render().find(ITEM_TV_SELECTOR).after(_field3);
         moveItemAfter(_NEW_ITEM_SELECTOR3, ITEM_TV_SELECTOR);
+        // Insert Home block's
+        console.log('LMENetworks', 'Try inject');
+        if (Lampa.Storage.get('nc_networkLists') !== []) {
+          var lme_networks = Object.assign({}, Lampa.Api.sources.tmdb, new SourceTMDB(Lampa.Api.sources.tmdb));
+          Lampa.Api.sources.lme_networks = lme_networks;
+          Object.defineProperty(Lampa.Api.sources, 'TMDBs', {
+            get: function get() {
+              return lme_networks;
+            }
+          });
+          Lampa.Params.select('source', Object.assign({}, Lampa.Params.values['source'], {
+            'TMDBs': 'TMDB + Streaming'
+          }), 'tmdb');
+        }
       }
       //nc_lmeCollection
       if (type === 'nc_lmeCollections') {
@@ -3066,7 +3238,7 @@
 
     var manifest = {
       type: "other",
-      version: "4.1.3",
+      version: "4.2.0",
       name: "New category",
       description: "Add new category and TV Show stream service",
       component: "nc"
