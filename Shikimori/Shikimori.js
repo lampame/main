@@ -381,6 +381,31 @@
     }
     return obj;
   }
+  function _toConsumableArray(arr) {
+    return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
+  }
+  function _arrayWithoutHoles(arr) {
+    if (Array.isArray(arr)) return _arrayLikeToArray(arr);
+  }
+  function _iterableToArray(iter) {
+    if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
+  }
+  function _unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+  }
+  function _arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+    return arr2;
+  }
+  function _nonIterableSpread() {
+    throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
 
   function main(params, oncomplite, onerror) {
     $(document).ready(function () {
@@ -396,6 +421,9 @@
       }
       if (params.genre) {
         query += ", genre: \"".concat(params.genre, "\"");
+      }
+      if (params.seasons) {
+        query += ", season: \"".concat(params.seasons, "\"");
       }
 
       // Закрываем параметры и продолжаем запрос
@@ -733,6 +761,59 @@
           code: "created_at_desc"
         }]
       };
+      /** Season Range **/
+      function getCurrentSeason() {
+        var now = new Date();
+        var month = now.getMonth();
+        var year = now.getFullYear();
+        var seasons = ['winter', 'spring', 'summer', 'fall'];
+        var seasonIndex = (month + 1) % 12 === 0 ? 0 : Math.floor((month + 1) / 3); // Визначення індексу сезону
+        return "".concat(seasons[seasonIndex], "_").concat(month === 11 ? year + 1 : year);
+      }
+      function generateDynamicSeasons() {
+        var now = new Date();
+        var seasons = new Set([getCurrentSeason()]);
+
+        // Додаємо наступні три сезони
+        for (var i = 1; i <= 3; i++) {
+          var nextDate = new Date(now);
+          nextDate.setMonth(now.getMonth() + 3 * i);
+          seasons.add(getCurrentSeason());
+        }
+        return Array.from(seasons); // Перетворюємо Set назад в масив
+      }
+      function generateYearRanges() {
+        var currentYear = new Date().getFullYear();
+        var ranges = [];
+
+        // Генеруємо діапазони по 10 років
+        for (var startYear = currentYear; startYear >= 2000; startYear -= 10) {
+          var endYear = Math.max(startYear - 9, 2000);
+          ranges.push("".concat(endYear, "_").concat(startYear));
+        }
+
+        // Додаємо статичні діапазони для старіших років
+        ranges.push("199x", "198x", "ancient");
+        return ranges;
+      }
+      function generateSeasonJSON() {
+        var dynamicSeasons = generateDynamicSeasons();
+        var yearRanges = generateYearRanges();
+        var allSeasons = _toConsumableArray(new Set([].concat(_toConsumableArray(dynamicSeasons), _toConsumableArray(yearRanges))));
+        return allSeasons.map(function (season) {
+          return {
+            "code": season,
+            "title": season.replace(/_/g, '-') // Замінюємо підкреслення на пробіли для читабельності
+          };
+        });
+      }
+
+      // Приклад використання
+      //console.log(generateSeasonJSON());
+      filters.seasons = {
+        title: 'Season',
+        items: generateSeasonJSON()
+      };
       var serverElement = head.find('.LMEShikimori__search');
       function queryForShikimori() {
         var query = {};
@@ -747,6 +828,9 @@
         });
         filters.sort.items.forEach(function (a) {
           if (a.selected) query.sort = a.code;
+        });
+        filters.seasons.items.forEach(function (a) {
+          if (a.selected) query.seasons = a.code;
         });
         return query;
       }
@@ -781,7 +865,7 @@
           items: [{
             title: Lampa.Lang.translate('search_start'),
             searchShikimori: true
-          }, filters.status, filters.AnimeKindEnum, filters.kind, filters.sort],
+          }, filters.status, filters.AnimeKindEnum, filters.kind, filters.sort, filters.seasons],
           onBack: function onBack() {
             Lampa.Controller.toggle("content");
           },
@@ -813,6 +897,9 @@
         }
         if (query.sort) {
           params.sort = query.sort;
+        }
+        if (query.seasons) {
+          params.seasons = query.seasons;
         }
         Lampa.Activity.push(params);
       }

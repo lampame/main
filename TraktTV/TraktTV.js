@@ -468,26 +468,6 @@
         Lampa.Noty.show(Lampa.Lang.translate('traktLampaRestart'));
       }
     });
-    //HardReset auth
-    Lampa.SettingsApi.addParam({
-      component: "lmeTrakt",
-      param: {
-        name: "lmeTraktHardReset",
-        type: "button"
-      },
-      field: {
-        name: 'HardReset'
-      },
-      onChange: function onChange(val) {
-        var keys = Object.keys(localStorage);
-        keys.forEach(function (key) {
-          if (key === 'lmeTraktToken' || key === 'lmeTraktDevice') {
-            localStorage.removeItem(key);
-          }
-        });
-        Lampa.Noty.show(Lampa.Lang.translate('traktLampaRestart'));
-      }
-    });
     //Watchlist Sort
     Lampa.SettingsApi.addParam({
       component: "lmeTrakt",
