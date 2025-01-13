@@ -3147,7 +3147,8 @@
             var fullDescrTextSelector = document.querySelector('.full-descr__text.selector');
 
             // Вставляем networksDiv после fullDescrTextSelector
-            fullDescrTextSelector.insertAdjacentElement('afterend', networksDiv);
+            //fullDescrTextSelector.insertAdjacentElement('afterend', networksDiv);
+            fullDescrTextSelector && fullDescrTextSelector.insertAdjacentElement('afterend', networksDiv);
             /* End */
             $(".button--nc_networksList").on("hover:enter", function (card) {
               var id = $(this).data('id');
