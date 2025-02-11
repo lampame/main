@@ -4,6 +4,7 @@
     var url;
     var network = new Lampa.Reguest();
     function init() {
+      Lampa.Storage.set('parser_torrent_type', Lampa.Storage.get('parser_torrent_type') || 'jackett');
       var source = {
         title: Lampa.Lang.translate('title_parser'),
         search: function search(params, oncomplite) {
@@ -27,6 +28,7 @@
           network.clear();
         },
         params: {
+          lazy: true,
           align_left: true,
           isparser: true,
           card_events: {
@@ -52,65 +54,35 @@
           });
         },
         onSelect: function onSelect(params, close) {
-          if (params.element.reguest && !params.element.MagnetUri) {
-            marnet(params.element, function () {
-              Lampa.Modal.close();
-              Lampa.Torrent.start(params.element, {
-                title: params.element.Title
-              });
-              Lampa.Torrent.back(params.line.toggle.bind(params.line));
-            }, function (text) {
-              Lampa.Modal.update(Template.get('error', {
-                title: Lampa.Lang.translate('title_error'),
-                text: text
-              }));
-            });
-            Lampa.Modal.open({
-              title: '',
-              html: Template.get('modal_pending', {
-                text: Lampa.Lang.translate('torrent_get_magnet')
-              }),
-              onBack: function onBack() {
-                Lampa.Modal.close();
-                params.line.toggle();
-              }
-            });
-          } else {
-            Lampa.Torrent.start(params.element, {
-              title: params.element.Title
-            });
-            Lampa.Torrent.back(params.line.toggle.bind(params.line));
-          }
+          Lampa.Torrent.start(params.element, {
+            title: params.element.Title
+          });
+          Lampa.Torrent.back(params.line.toggle.bind(params.line));
         }
       };
+      function addSource() {
+        var reg = Lampa.Platform.is('android') ? true : Lampa.Torserver.url();
+        if (Lampa.Storage.field('parse_in_search') && reg) Lampa.Search.addSource(source);
+      }
       Lampa.Storage.listener.follow('change', function (e) {
-        if (e.name === 'parse_in_search') {
+        if (e.name == 'parse_in_search' || e.name == 'torrserver_url' || e.name == 'torrserver_url_two' || e.name == 'torrserver_use_link') {
           Lampa.Search.removeSource(source);
-          if (Lampa.Storage.field('parse_in_search')) Lampa.Search.addSource(source);
+          addSource();
         }
       });
-      if (Lampa.Storage.field('parse_in_search')) {
-        Lampa.Search.addSource(source);
-      }
+      addSource();
     }
     function get() {
       var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
       var onerror = arguments.length > 2 ? arguments[2] : undefined;
       function complite(data) {
-        popular(params.movie, data, {}, oncomplite);
+        oncomplite(data);
       }
       function error(e) {
-        var data = {
-          Results: []
-        };
-        popular(params.movie, data, {
-          nolimit: true
-        }, function () {
-          if (data.Results.length) oncomplite(data);else onerror(e);
-        });
+        onerror(e);
       }
-      if (Lampa.Storage.field('parser_torrent_type') === 'jackett') {
+      if (Lampa.Storage.field('parser_torrent_type') == 'jackett') {
         if (Lampa.Storage.field('jackett_url')) {
           url = Lampa.Utils.checkEmptyUrl(Lampa.Storage.field('jackett_url'));
           var ignore = false; //params.from_search && !url.match(/\d+\.\d+\.\d+/g)
@@ -121,35 +93,21 @@
         } else {
           error(Lampa.Lang.translate('torrent_parser_set_link') + ': Jackett');
         }
-      } else {
-        if (Lampa.Storage.get('native')) {
-          torlook(params, complite, error);
-        } else if (Lampa.Storage.field('torlook_parse_type') === 'site' && Lampa.Storage.field('parser_website_url')) {
-          url = Lampa.Utils.checkEmptyUrl(Lampa.Storage.field('parser_website_url'));
-          torlook(params, complite, error);
-        } else if (Lampa.Storage.field('torlook_parse_type') === 'native') {
-          torlook(params, complite, error);
-        } else error(Lampa.Lang.translate('torrent_parser_set_link') + ': TorLook');
+      } else if (Lampa.Storage.field('parser_torrent_type') == 'prowlarr') {
+        if (Lampa.Storage.field('prowlarr_url')) {
+          url = Lampa.Utils.checkEmptyUrl(Lampa.Storage.field('prowlarr_url'));
+          prowlarr(params, complite, error);
+        } else {
+          error(Lampa.Lang.translate('torrent_parser_set_link') + ': Prowlarr');
+        }
+      } else if (Lampa.Storage.field('parser_torrent_type') == 'torrserver') {
+        if (Lampa.Storage.field(Lampa.Storage.field('torrserver_use_link') == 'two' ? 'torrserver_url_two' : 'torrserver_url')) {
+          url = Lampa.Utils.checkEmptyUrl(Lampa.Storage.field(Lampa.Storage.field('torrserver_use_link') == 'two' ? 'torrserver_url_two' : 'torrserver_url'));
+          torrserver(params, complite, error);
+        } else {
+          error(Lampa.Lang.translate('torrent_parser_set_link') + ': TorrServer');
+        }
       }
-    }
-    function popular(card, data, params, call) {
-      Lampa.Account.torrentPopular({
-        card: card
-      }, function (result) {
-        var torrents = result.result.torrents.filter(function (t) {
-          return t.viewing_request > (params.nolimit ? 0 : 3);
-        });
-        torrents.sort(function (a, b) {
-          return b.viewing_average - a.viewing_average;
-        });
-        torrents.forEach(function (t) {
-          delete t.viewed;
-        });
-        data.Results = data.Results.concat(params.nolimit ? torrents : torrents.slice(0, 3));
-        call(data);
-      }, function () {
-        call(data);
-      });
     }
     function viewed(hash) {
       var view = Lampa.Storage.cache('torrents_view', 5000, []);
@@ -160,7 +118,6 @@
       var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
       var onerror = arguments.length > 2 ? arguments[2] : undefined;
       network.timeout(1000 * Lampa.Storage.field('parse_timeout'));
-      //&Category%5B%5D=3020&Category%5B%5D=100048&Tracker%5B%5D=rutracker&Tracker%5B%5D=kinozal-magnet&Query="Madonna"
       var u = url + '/api/v2.0/indexers/' + (Lampa.Storage.field('jackett_interview') === 'healthy' ? 'status:healthy' : 'all') + '/results?apikey=' + Lampa.Storage.field('jackett_key') + '&Tracker%5B%5D=noname-clubl&Tracker%5B%5D=kinozal-magnet&Tracker%5B%5D=rutracker&Category%5B%5D=3020&Category%5B%5D=100048&Category%5B%5D=100258&Category%5B%5D=100883&Category%5B%5D=100955&Query=' + encodeURIComponent(params.search);
       if (!params.from_search) {
         var genres = params.movie.genres.map(function (a) {
@@ -171,12 +128,15 @@
           u = Lampa.Utils.addUrlComponent(u, 'title_original=' + encodeURIComponent(params.movie.original_title));
         }
         u = Lampa.Utils.addUrlComponent(u, 'year=' + encodeURIComponent(((params.movie.release_date || params.movie.first_air_date || '0000') + '').slice(0, 4)));
-        u = Lampa.Utils.addUrlComponent(u, 'is_serial=' + (params.movie.first_air_date || params.movie.last_air_date ? '2' : params.other ? '0' : '1'));
+        u = Lampa.Utils.addUrlComponent(u, 'is_serial=' + (params.movie.original_name ? '2' : params.other ? '0' : '1'));
         u = Lampa.Utils.addUrlComponent(u, 'genres=' + encodeURIComponent(genres.join(',')));
         u = Lampa.Utils.addUrlComponent(u, 'Category[]=' + (params.movie.number_of_seasons > 0 ? 5000 : 2000) + (params.movie.original_language == 'ja' ? ',5070' : ''));
       }
       network["native"](u, function (json) {
         if (json.Results) {
+          json.Results = json.Results.filter(function (element) {
+            return element.TrackerId !== "toloka";
+          });
           json.Results.forEach(function (element) {
             element.PublisTime = Lampa.Utils.strToTime(element.PublishDate);
             element.hash = Lampa.Utils.hash(element.Title);
@@ -189,22 +149,101 @@
         onerror(Lampa.Lang.translate('torrent_parser_no_responce') + ' (' + url + ')');
       });
     }
-    function marnet(element, oncomplite, onerror) {
-      network.timeout(1000 * 15);
-      var s = Lampa.Utils.checkHttp(Lampa.Storage.field('torlook_site')) + '/';
-      var u = Lampa.Storage.get('native') || Lampa.Storage.field('torlook_parse_type') === 'native' ? s + element.reguest : url.replace('{q}', encodeURIComponent(s + element.reguest));
-      network["native"](u, function (html) {
-        var math = html.match(/magnet:(.*?)'/);
-        if (math && math[1]) {
-          element.MagnetUri = 'magnet:' + math[1];
-          oncomplite();
-        } else {
-          onerror(Lampa.Lang.translate('torrent_parser_magnet_error'));
+
+    // доки https://wiki.servarr.com/en/prowlarr/search#search-feed
+    function prowlarr() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      var q = [];
+      q.push({
+        name: 'apikey',
+        value: Lampa.Storage.field('prowlarr_key')
+      });
+      q.push({
+        name: 'query',
+        value: params.search
+      });
+      if (!params.from_search) {
+        var isSerial = !!params.movie.original_name;
+        if (params.movie.number_of_seasons > 0) {
+          q.push({
+            name: 'categories',
+            value: '5000'
+          });
         }
+        if (params.movie.original_language == 'ja') {
+          q.push({
+            name: 'categories',
+            value: '5070'
+          });
+        }
+        q.push({
+          name: 'type',
+          value: isSerial ? 'tvsearch' : 'search'
+        });
+      }
+      var u = Lampa.Utils.buildUrl(url, '/api/v1/search', q);
+      network.timeout(1000 * Lampa.Storage.field('parse_timeout'));
+      network["native"](u, function (json) {
+        if (Array.isArray(json)) {
+          oncomplite({
+            Results: json.filter(function (e) {
+              return e.protocol === 'torrent';
+            }).map(function (e) {
+              var hash = Lampa.Utils.hash(e.title);
+              return {
+                Title: e.title,
+                Tracker: e.indexer,
+                size: Lampa.Utils.bytesToSize(e.size),
+                PublishDate: Lampa.Utils.strToTime(e.publishDate),
+                Seeders: parseInt(e.seeders),
+                Peers: parseInt(e.leechers),
+                MagnetUri: e.downloadUrl,
+                viewed: viewed(hash),
+                hash: hash
+              };
+            })
+          });
+        } else {
+          onerror(Lampa.Lang.translate('torrent_parser_request_error') + ' (' + JSON.stringify(json) + ')');
+        }
+      }, function () {
+        onerror(Lampa.Lang.translate('torrent_parser_no_responce') + ' (' + url + ')');
+      });
+    }
+    function torrserver() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      network.timeout(1000 * Lampa.Storage.field('parse_timeout'));
+      var u = Lampa.Utils.buildUrl(url, '/search/', [{
+        name: 'query',
+        value: params.search
+      }]);
+      network["native"](u, function (json) {
+        if (Array.isArray(json)) {
+          oncomplite({
+            Results: json.map(function (e) {
+              var hash = Lampa.Utils.hash(e.Title);
+              return {
+                Title: e.Title,
+                Tracker: e.Tracker,
+                size: e.Size,
+                PublishDate: Lampa.Utils.strToTime(e.CreateDate),
+                Seeders: parseInt(e.Seed),
+                Peers: parseInt(e.Peer),
+                MagnetUri: e.Magnet,
+                viewed: viewed(hash),
+                CategoryDesc: e.Categories,
+                bitrate: '-',
+                hash: hash
+              };
+            })
+          });
+        } else onerror(Lampa.Lang.translate('torrent_parser_request_error') + ' (' + JSON.stringify(json) + ')');
       }, function (a, c) {
-        onerror(network.errorDecode(a, c));
-      }, false, {
-        dataType: 'text'
+        onerror(Lampa.Lang.translate('torrent_parser_no_responce') + ' (' + url + ')');
       });
     }
     function clear() {
@@ -214,7 +253,6 @@
       init: init,
       get: get,
       jackett: jackett,
-      marnet: marnet,
       clear: clear
     };
 
