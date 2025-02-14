@@ -16,8 +16,6 @@ Telegram chat - [https://t.me/lme_chat](https://t.me/lme_chat)
 
 [Movie Enhancer](https://lampame.github.io/main/lme.js) `https://lampame.github.io/main/lme.js` [About](https://teletype.in/@lme/metweaks)
 
-[LME Music](https://lampame.github.io/main/music.js) `https://lampame.github.io/main/music.js` [About](https://teletype.in/@lme/music)
-
 [LME Shikimori](https://lampame.github.io/main/shikimori.js) `https://lampame.github.io/main/shikimori.js` [About](https://teletype.in/@lme/shikimori)
 
-[LME Shikimori](https://lampame.github.io/main/trakttv.js) `https://lampame.github.io/main/trakttv.js` [About](https://teletype.in/@lme/trakttv)
+[TraktTV](https://lampame.github.io/main/trakttv.js) `https://lampame.github.io/main/trakttv.js` [About](https://teletype.in/@lme/trakttv)
