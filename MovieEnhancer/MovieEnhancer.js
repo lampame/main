@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    function main$5() {
+    function main$6() {
       Lampa.Lang.add({
         lme_EngData_desc: {
           ru: "Добавляет английское название произведения, и заменяет описание если оно отсутсвует",
@@ -32,14 +32,24 @@
           ru: "При наличии NewCategory добавляет источник TMDB Streaming",
           en: "If install Modss add TMDB Streaming",
           uk: "Якщо є Modss додає джерелo TMDB Streaming"
+        },
+        lme_showbutton_desc: {
+          ru: "Выводит все кнопки действий в карточке",
+          en: "Show all action button in card",
+          uk: "Виводить усі кнопки дій у картці"
+        },
+        lme_showbuttonwn_desc: {
+          ru: "Показивать только иконки",
+          en: "Show only icon",
+          uk: "Відображати тільки іконки"
         }
       });
     }
     var Lang = {
-      main: main$5
+      main: main$6
     };
 
-    function main$4() {
+    function main$5() {
       Lampa.SettingsApi.addComponent({
         component: "lme",
         name: 'Movie Enhancer',
@@ -93,6 +103,39 @@
           Lampa.Settings.update();
         }
       });
+      //Button in one line
+      Lampa.SettingsApi.addParam({
+        component: "lme",
+        param: {
+          name: "lme_showbutton",
+          type: "trigger",
+          "default": false
+        },
+        field: {
+          name: 'All button in card',
+          description: Lampa.Lang.translate('lme_showbutton_desc')
+        },
+        onChange: function onChange(value) {
+          Lampa.Settings.update();
+        }
+      });
+      if (Lampa.Storage.get('lme_showbutton') == true) {
+        Lampa.SettingsApi.addParam({
+          component: "lme",
+          param: {
+            name: "lme_showbuttonwn",
+            type: "trigger",
+            "default": false
+          },
+          field: {
+            name: 'Hide text',
+            description: Lampa.Lang.translate('lme_showbuttonwn_desc')
+          },
+          onChange: function onChange(value) {
+            Lampa.Settings.update();
+          }
+        });
+      }
       //Switch Source
       Lampa.SettingsApi.addParam({
         component: "lme",
@@ -143,10 +186,10 @@
       });
     }
     var CONFIG = {
-      main: main$4
+      main: main$5
     };
 
-    function main$3() {
+    function main$4() {
       var apiKey = '4ef0d7355d9ffb5151e987764708ce96';
       var baseUrl = 'http://tmdb.cub.red/3/';
       function fetchMovieDetails(movieId, method, callback) {
@@ -241,10 +284,10 @@
       });
     }
     var Quality = {
-      main: main$3
+      main: main$4
     };
 
-    function main$2() {
+    function main$3() {
       Lampa.Listener.follow("full", function (cardData) {
         //if (e.type === "complite" && Lampa.Storage.field('source') !== 'cub')
         if (cardData.type === "complite" && Lampa.Storage.field('source') === 'tmdb') {
@@ -296,10 +339,10 @@
       });
     }
     var englishData = {
-      main: main$2
+      main: main$3
     };
 
-    function main$1() {
+    function main$2() {
       //averageRuntime
       Lampa.Listener.follow("full", function (cardData) {
         if (cardData.type === "complite") {
@@ -347,10 +390,10 @@
       });
     }
     var averageRuntime = {
-      main: main$1
+      main: main$2
     };
 
-    function main() {
+    function main$1() {
       var allSources = ['tmdb', 'cub']; // Усі плеери
       var logos = {
         tmdb: "<svg width=\"161\" height=\"37\" viewBox=\"0 0 161 37\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\"> <path d=\"M10.0846 35.8986H17.8727V7.01351H27.9572V0H0V6.99324H10.0846V35.8986ZM38.1417 35.8986H45.9298V8.36149H46.0296L54.9659 35.8784H60.9568L70.1927 8.36149H70.2925V35.8784H78.0806V0H66.3485L58.1611 23.4122H58.0612L49.9237 0H38.1417V35.8986ZM89.0039 0.121622H100.686C103.406 0.125865 106.115 0.466206 108.754 1.13514C111.157 1.7138 113.421 2.77522 115.414 4.25676C117.34 5.72744 118.892 7.64602 119.937 9.85135C121.118 12.4714 121.689 15.3326 121.604 18.2128C121.658 20.8662 121.104 23.4961 119.987 25.8953C118.946 28.0542 117.453 29.9565 115.613 31.4696C113.73 33.0023 111.579 34.1611 109.273 34.8851C106.835 35.6708 104.292 36.064 101.734 36.0507H89.0039V0.121622ZM96.792 28.7027H100.786C102.466 28.7143 104.141 28.5273 105.778 28.1453C107.239 27.8443 108.621 27.2329 109.832 26.3513C110.988 25.4631 111.908 24.2961 112.508 22.9561C113.209 21.335 113.55 19.5772 113.506 17.8074C113.536 16.2216 113.194 14.6514 112.508 13.2264C111.885 11.9635 110.987 10.8612 109.882 10.0034C108.733 9.13749 107.437 8.49491 106.058 8.10811C104.537 7.67642 102.964 7.46152 101.385 7.46959H96.792V28.7027ZM132.887 0.121622H146.067C147.613 0.122387 149.158 0.234152 150.69 0.456081C152.142 0.647089 153.551 1.09291 154.853 1.77365C156.07 2.41433 157.102 3.36414 157.849 4.5304C158.677 5.95358 159.076 7.59212 158.997 9.24324C159.065 11.0819 158.473 12.883 157.329 14.3108C156.163 15.6827 154.625 16.6765 152.906 17.1689V17.2297C154.012 17.39 155.084 17.7323 156.081 18.2432C157.002 18.7125 157.831 19.3479 158.528 20.1182C159.218 20.8897 159.75 21.7922 160.095 22.7736C160.467 23.8129 160.653 24.9112 160.644 26.0169C160.704 27.6822 160.288 29.3295 159.446 30.7601C158.663 32.0054 157.603 33.0468 156.351 33.8007C155.035 34.6026 153.593 35.1683 152.087 35.473C150.535 35.8108 148.952 35.9807 147.365 35.9797H132.887V0.121622ZM140.675 14.4628H146.316C146.914 14.4661 147.511 14.3981 148.094 14.2601C148.651 14.1373 149.182 13.9142 149.661 13.6014C150.129 13.2951 150.516 12.8776 150.789 12.3851C151.082 11.8239 151.226 11.1955 151.209 10.5608C151.241 9.91579 151.088 9.27513 150.769 8.71622C150.46 8.2373 150.038 7.8438 149.541 7.57095C148.985 7.28738 148.389 7.09253 147.774 6.99324C147.165 6.87376 146.547 6.81268 145.927 6.81081H140.635L140.675 14.4628ZM140.675 29.3108H147.664C148.279 29.3125 148.892 29.2445 149.491 29.1081C150.087 28.9843 150.654 28.7433 151.159 28.3986C151.663 28.0612 152.083 27.6103 152.387 27.0811C152.715 26.4768 152.877 25.7943 152.856 25.1047C152.883 24.3773 152.664 23.6623 152.237 23.0777C151.818 22.5517 151.276 22.1405 150.66 21.8818C150.02 21.6112 149.349 21.4239 148.663 21.3243C147.985 21.2266 147.301 21.1758 146.616 21.1723H140.725L140.675 29.3108Z\" fill=\"currentColor\"/> </svg>",
@@ -412,6 +455,31 @@
       });
     }
     var sourceSwitch = {
+      main: main$1
+    };
+
+    function main() {
+      Lampa.Listener.follow("full", function (e) {
+        $(".view--trailer").each(function () {
+          var div = $(this).parent("div");
+          div.find(".open--menu").insertBefore($(this));
+        });
+        setTimeout(function () {
+          // Отримуємо всі елементи з класом full-start__button
+          var buttons = $(".buttons--container .full-start__button");
+
+          // Видаляємо <span> елементи з всіх кнопок
+          if (Lampa.Storage.get('lme_showbuttonwn') == true) buttons.find("span").remove();
+
+          // Вставляємо всі отримані кнопки перед .button--play
+          buttons.insertBefore($(".button--play"));
+
+          // Змінюємо стан full_start
+          Lampa.Controller.toggle("full_start");
+        }, 10);
+      });
+    }
+    var showButton = {
       main: main
     };
 
@@ -427,10 +495,11 @@
       Lang.main();
       Lampa.Manifest.plugins = manifest;
       CONFIG.main();
-      if (Lampa.Storage.get('lme_quality') === true) Quality.main();
-      if (Lampa.Storage.get('lme_endata') === true) englishData.main();
-      if (Lampa.Storage.get('lme_averageRuntime') === true) averageRuntime.main();
-      if (Lampa.Storage.get('lme_switchsource') === true) sourceSwitch.main();
+      if (Lampa.Storage.get('lme_quality') == true) Quality.main();
+      if (Lampa.Storage.get('lme_endata') == true) englishData.main();
+      if (Lampa.Storage.get('lme_averageRuntime') == true) averageRuntime.main();
+      if (Lampa.Storage.get('lme_switchsource') == true) sourceSwitch.main();
+      if (Lampa.Storage.get('lme_showbutton') == true) showButton.main();
     }
     function startPlugin() {
       window.plugin_lme_ready = true;
