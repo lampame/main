@@ -191,9 +191,9 @@
 
     function main$4() {
       var apiKey = '4ef0d7355d9ffb5151e987764708ce96';
-      var baseUrl = "".concat(Lampa.Utils.protocol() + Lampa.Manifest.cub_domain, "/3/");
+      var baseUrl = 'tmdb.' + (Lampa.Storage && Lampa.Storage.get('cub_domain') ? Lampa.Storage.get('cub_domain') : 'cub.red') + '/3/';
       function fetchMovieDetails(movieId, method, callback) {
-        var apiUrl = "".concat(baseUrl).concat(method, "/").concat(movieId, "?api_key=").concat(apiKey);
+        var apiUrl = "".concat(Lampa.Utils.protocol() + baseUrl).concat(method, "/").concat(movieId, "?api_key=").concat(apiKey);
         $.getJSON(apiUrl).done(function (data) {
           return callback(null, data);
         }).fail(function (jqXHR, textStatus, errorThrown) {
@@ -296,7 +296,7 @@
             id = _cardData$object.id;
           var apiKey = "4ef0d7355d9ffb5151e987764708ce96";
           var apiUrlTMDB = 'https://api.themoviedb.org/3/';
-          var apiUrlProxy = 'apitmdb.' + (Lampa.Manifest && Lampa.Manifest.cub_domain ? Lampa.Manifest.cub_domain : 'cub.red') + '/3/';
+          var apiUrlProxy = 'apitmdb.' + (Lampa.Storage && Lampa.Storage.get('cub_domain') ? Lampa.Storage.get('cub_domain') : 'cub.red') + '/3/';
           var request = "".concat(method, "/").concat(id, "?api_key=").concat(apiKey, "&language=en");
           var url = Lampa.Storage.field('proxy_tmdb') ? Lampa.Utils.protocol() + apiUrlProxy + request : apiUrlTMDB + request;
           $.ajax({
