@@ -540,19 +540,14 @@
     var tokenObj = traktTokens.find(function (obj) {
       return obj.hasOwnProperty(profileId$1);
     });
-    if (tokenObj) {
-      token = tokenObj[profileId$1];
-    }
-    if (!token) {
+    if (!tokenObj) {
       console.error('TraktTV', 'Token not found for profile ID:', profileId$1);
       return;
     }
     var currentTime = Date.now();
-    var expiresIn = token.expires - currentTime;
-
-    // Если токен истекает в течение недели (7 дней * 24 часа * 60 минут * 60 секунд * 1000 миллисекунд)
-    var oneWeekInMillis = 7 * 24 * 60 * 60 * 1000;
-    if (expiresIn < oneWeekInMillis) {
+    var expiresIn = tokenObj[profileId$1].expires - currentTime;
+    var oneDayInMillis = 24 * 60 * 60 * 1000;
+    if (expiresIn < oneDayInMillis) {
       // Токен скоро истечет, нужно обновить
       var settings = {
         url: "https://lme-trakt.deno.dev/auth/refresh",
@@ -561,7 +556,7 @@
         headers: {
           "Content-Type": "application/json"
         },
-        data: JSON.stringify(token)
+        data: JSON.stringify(tokenObj[profileId$1])
       };
       $.ajax(settings).done(function (response) {
         // Обновляем токен в хранилище
@@ -570,14 +565,14 @@
         Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthUpdated'));
       }).fail(function (jqXHR, textStatus, errorThrown) {
         Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthError'));
-        console.log('TraktTV', 'TraktTV', textStatus, errorThrown);
+        console.log('TraktTV', textStatus, errorThrown);
       });
     } else {
       console.log('TraktTV', 'Token is still valid.');
     }
   }
   function clear() {
-    network.clear();
+    new Lampa.Reguest().clear();
   }
   var api = {
     upnext: upnext$1,
