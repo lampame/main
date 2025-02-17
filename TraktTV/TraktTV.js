@@ -361,37 +361,30 @@
     return obj;
   }
 
+  // plugins/TraktTV/config.js
+
   function main() {
-    //Get Account or Guest
+    // Get Account or Guest
     var account = Lampa.Storage.get('account');
     var profileId = account && Object.keys(account).length > 0 ? account.profile.id : null;
-    //const deviceCode = Lampa.Storage.get('lmeTraktDeviceCode')[profileId];
-
     Lampa.SettingsApi.addComponent({
       component: "lmeTrakt",
       name: 'Trakt.TV',
       icon: "<svg xmlns=\"http://www.w3.org/2000/svg\" enable-background=\"new 0 0 24 24\" viewBox=\"0 0 24 24\" id=\"Trakt\"><path d=\"M12,24C5.383,24,0,18.617,0,12S5.383,0,12,0s12,5.383,12,12S18.617,24,12,24z M12,1.5C6.21,1.5,1.5,6.21,1.5,12S6.21,22.5,12,22.5S22.5,17.79,22.5,12S17.79,1.5,12,1.5z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M4.383,14.003c-0.192,0-0.384-0.073-0.53-0.22c-0.293-0.293-0.293-0.768,0-1.061l10.36-10.36c0.293-0.293,0.768-0.293,1.061,0s0.293,0.768,0,1.061l-10.36,10.36C4.767,13.93,4.575,14.003,4.383,14.003z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M19.95 20.7c-.192 0-.384-.073-.53-.22L8.64 9.7c-.293-.293-.293-.768 0-1.061s.768-.293 1.061 0l10.78 10.78c.293.293.293.768 0 1.061C20.334 20.627 20.143 20.7 19.95 20.7zM11.793 9.672c-.192 0-.384-.073-.53-.22-.293-.293-.293-.768 0-1.061l4.229-4.229c.293-.293.768-.293 1.061 0s.293.768 0 1.061l-4.229 4.229C12.177 9.599 11.985 9.672 11.793 9.672zM13.207 11.086c-.192 0-.384-.073-.53-.22-.293-.293-.293-.768 0-1.061l2.828-2.828c.293-.293.768-.293 1.061 0s.293.768 0 1.061l-2.828 2.828C13.591 11.013 13.399 11.086 13.207 11.086zM18.39 22.01c-.192 0-.384-.073-.53-.22l-8.938-8.938-3.71 3.718c-.292.295-.769.293-1.061.002-.294-.293-.294-.768-.002-1.061l4.24-4.25c.141-.142.332-.221.531-.221l0 0c.199 0 .39.079.53.22l9.47 9.47c.293.293.293.768 0 1.061C18.773 21.937 18.582 22.01 18.39 22.01z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path><path d=\"M16.55,23.04c-0.192,0-0.384-0.073-0.53-0.22l-7.099-7.099l-4.54,4.549c-0.292,0.292-0.768,0.293-1.062,0.001c-0.293-0.293-0.293-0.768-0.001-1.062l5.07-5.08c0.141-0.141,0.332-0.22,0.531-0.22l0,0c0.199,0,0.39,0.079,0.53,0.22l7.63,7.63c0.293,0.293,0.293,0.768,0,1.061C16.934,22.967,16.742,23.04,16.55,23.04z\" fill=\"#ffffff\" class=\"color000000 svgShape\"></path></svg>"
     });
-    //Get Code
-    var lmeTraktDevices = Lampa.Storage.field('lmeTraktDevice');
-    if (!Array.isArray(lmeTraktDevices)) {
-      // Если lmeTraktDevices не массив, создаем пустой массив
-      lmeTraktDevices = [];
-    }
+    var lmeTraktDevices = Lampa.Storage.field('lmeTraktDevice') || [];
     function fetchAndSetDevice(isFirstTime) {
       $.get('https://lme-trakt.deno.dev/auth/codes', function (response) {
-        // Устанавливаем значение в Lampa.Storage
+        var deviceData = _defineProperty({}, profileId, response);
         if (isFirstTime) {
-          Lampa.Storage.set('lmeTraktDevice', [_defineProperty({}, profileId, response)]);
+          Lampa.Storage.set('lmeTraktDevice', [deviceData]);
         } else {
-          Lampa.Storage.add('lmeTraktDevice', _defineProperty({}, profileId, response));
+          Lampa.Storage.add('lmeTraktDevice', deviceData);
         }
         var device = Lampa.Storage.get('lmeTraktDevice').find(function (obj) {
           return obj.hasOwnProperty(profileId);
         })[profileId];
         console.log('Get device', device.user_code, device);
-
-        // Добавляем параметр в SettingsApi с полученным user_code
         Lampa.SettingsApi.addParam({
           component: "lmeTrakt",
           param: {
@@ -420,12 +413,7 @@
             };
             $.ajax(settings).done(function (response) {
               if (response.error) {
-                if (response.error === "Response code 409 (Conflict)") {
-                  console.log('TraktTV', 'Conflict Error:', response.error);
-                } else {
-                  Lampa.Noty.show('Error');
-                  console.log('TraktTV', response.error);
-                }
+                handleError(response.error);
               } else {
                 Lampa.Storage.add('lmeTraktToken', _defineProperty({}, profileId, response));
                 Lampa.Noty.show('Success');
@@ -439,14 +427,21 @@
         });
       });
     }
+    function handleError(error) {
+      if (error === "Response code 409 (Conflict)") {
+        console.log('TraktTV', 'Conflict Error:', error);
+      } else {
+        Lampa.Noty.show('Error');
+        console.log('TraktTV', error);
+      }
+    }
     if (lmeTraktDevices.length === 0) {
-      fetchAndSetDevice(true); // Первый раз, используем set
+      fetchAndSetDevice(true);
     } else if (!lmeTraktDevices.find(function (obj) {
       return obj.hasOwnProperty(profileId);
     })) {
-      fetchAndSetDevice(false); // Не первый раз, используем add
+      fetchAndSetDevice(false);
     }
-    //Reset auth
     Lampa.SettingsApi.addParam({
       component: "lmeTrakt",
       param: {
@@ -457,18 +452,14 @@
         name: 'Reset auth'
       },
       onChange: function onChange(val) {
-        // Получаем массив объектов
         var devices = Lampa.Storage.get('lmeTraktDevice');
-        // Фильтруем массив, исключая объект с нужным profileId
         var updatedDevices = devices.filter(function (obj) {
           return !obj.hasOwnProperty(profileId);
         });
-        // Сохраняем обновленный массив обратно в хранилище
         Lampa.Storage.set('lmeTraktDevice', updatedDevices);
         Lampa.Noty.show(Lampa.Lang.translate('traktLampaRestart'));
       }
     });
-    //Watchlist Sort
     Lampa.SettingsApi.addParam({
       component: "lmeTrakt",
       param: {
@@ -488,31 +479,21 @@
     main: main
   };
 
+  // plugins/TraktTV/utils/api.js
+
   var account$1 = Lampa.Storage.get('account');
   var profileId$1 = account$1 && Object.keys(account$1).length > 0 ? account$1.profile.id : null;
   var traktTokens = Lampa.Storage.get('lmeTraktToken');
-  var token = null;
-  if (traktTokens && profileId$1) {
-    var tokenObj = traktTokens.find(function (obj) {
-      return obj.hasOwnProperty(profileId$1);
-    });
-    if (tokenObj) {
-      token = tokenObj[profileId$1];
-    }
-  }
+  var token = getToken(traktTokens, profileId$1);
   var tmdbLang = Lampa.Storage.field('tmdb_lang');
-  function upnext$1(params, oncomplite, onerror) {
-    sendRequest("https://lme-trakt.deno.dev/my/upnext", {
-      lang: tmdbLang,
-      tokenData: token
-    }, oncomplite, onerror);
-  }
-  function watchlist$1(params, oncomplite, onerror) {
-    var endpoint = Lampa.Storage.get('lmeTraktWatchlistSort') ? '/watchlistAdded' : '/watchlist';
-    sendRequest("https://lme-trakt.deno.dev/my".concat(endpoint), {
-      lang: tmdbLang,
-      tokenData: token
-    }, oncomplite, onerror);
+  function getToken(traktTokens, profileId) {
+    if (traktTokens && profileId) {
+      var tokenObj = traktTokens.find(function (obj) {
+        return obj.hasOwnProperty(profileId);
+      });
+      return tokenObj ? tokenObj[profileId] : null;
+    }
+    return null;
   }
   function sendRequest(url, data, oncomplite, onerror) {
     Lampa.Noty.show(Lampa.Lang.translate('trakttvLoading'));
@@ -532,6 +513,19 @@
       onerror(errorThrown);
     });
   }
+  function upnext$1(params, oncomplite, onerror) {
+    sendRequest("https://lme-trakt.deno.dev/my/upnext", {
+      lang: tmdbLang,
+      tokenData: token
+    }, oncomplite, onerror);
+  }
+  function watchlist$1(params, oncomplite, onerror) {
+    var endpoint = Lampa.Storage.get('lmeTraktWatchlistSort') ? '/watchlistAdded' : '/watchlist';
+    sendRequest("https://lme-trakt.deno.dev/my".concat(endpoint), {
+      lang: tmdbLang,
+      tokenData: token
+    }, oncomplite, onerror);
+  }
   function updateTokenIfNeeded() {
     if (!profileId$1 || !traktTokens) {
       console.error('TraktTV', 'Profile ID or tokens not available.');
@@ -548,28 +542,29 @@
     var expiresIn = tokenObj[profileId$1].expires - currentTime;
     var oneDayInMillis = 24 * 60 * 60 * 1000;
     if (expiresIn < oneDayInMillis) {
-      // Токен скоро истечет, нужно обновить
-      var settings = {
-        url: "https://lme-trakt.deno.dev/auth/refresh",
-        method: "POST",
-        timeout: 0,
-        headers: {
-          "Content-Type": "application/json"
-        },
-        data: JSON.stringify(tokenObj[profileId$1])
-      };
-      $.ajax(settings).done(function (response) {
-        // Обновляем токен в хранилище
-        tokenObj[profileId$1] = response;
-        Lampa.Storage.set('lmeTraktToken', traktTokens);
-        Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthUpdated'));
-      }).fail(function (jqXHR, textStatus, errorThrown) {
-        Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthError'));
-        console.log('TraktTV', textStatus, errorThrown);
-      });
+      refreshAuthToken(tokenObj[profileId$1]);
     } else {
       console.log('TraktTV', 'Token is still valid.');
     }
+  }
+  function refreshAuthToken(tokenData) {
+    var settings = {
+      url: "https://lme-trakt.deno.dev/auth/refresh",
+      method: "POST",
+      timeout: 0,
+      headers: {
+        "Content-Type": "application/json"
+      },
+      data: JSON.stringify(tokenData)
+    };
+    $.ajax(settings).done(function (response) {
+      tokenData = response;
+      Lampa.Storage.set('lmeTraktToken', traktTokens);
+      Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthUpdated'));
+    }).fail(function (jqXHR, textStatus, errorThrown) {
+      Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthError'));
+      console.log('TraktTV', textStatus, errorThrown);
+    });
   }
   function clear() {
     new Lampa.Reguest().clear();
