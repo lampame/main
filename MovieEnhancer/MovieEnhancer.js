@@ -506,7 +506,7 @@
       Lampa.Listener.follow("full", function (e) {
         var cardData = e.object;
         console.log('cardData.type', e.type);
-        if (e.type == "complite" && (cardData.source == 'tmdb' || cardData.source == 'cub')) {
+        if (e.type == "complite") {
           var settings = {
             url: "https://api.mdblist.com/tmdb/".concat(cardData.method == 'tv' ? 'show' : cardData.method, "/").concat(cardData.id, "?apikey=92rbbm5yovqvrjm9wx5ue4ad2"),
             method: "GET",
