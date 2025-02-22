@@ -461,20 +461,18 @@
     function main() {
       Lampa.Listener.follow("full", function (e) {
         $(".view--trailer").each(function () {
-          var div = $(this).parent("div");
-          div.find(".open--menu").insertBefore($(this));
+          $(this).parent("div").find(".open--menu").insertBefore($(this));
         });
         setTimeout(function () {
-          // Отримуємо всі елементи з класом full-start__button
           var buttons = $(".buttons--container .full-start__button");
-
-          // Видаляємо <span> елементи з всіх кнопок
-          if (Lampa.Storage.get('lme_showbuttonwn') == true) buttons.find("span").remove();
-
-          // Вставляємо всі отримані кнопки перед .button--play
           buttons.insertBefore($(".button--play"));
-
-          // Змінюємо стан full_start
+          var renderPanel = $('.full-start-new__buttons');
+          if (renderPanel[0].scrollWidth > renderPanel[0].clientWidth) {
+            renderPanel.css('flex-wrap', 'wrap');
+          }
+          if (Lampa.Storage.get('lme_showbuttonwn') == true) {
+            renderPanel.find("span").remove();
+          }
           Lampa.Controller.toggle("full_start");
         }, 10);
       });
