@@ -481,21 +481,23 @@
 
     function main$1() {
       Lampa.Listener.follow("full", function (e) {
-        $(".view--trailer").each(function () {
-          $(this).parent("div").find(".open--menu").insertBefore($(this));
-        });
-        setTimeout(function () {
-          var buttons = $(".buttons--container .full-start__button");
-          buttons.insertBefore($(".button--play"));
-          var renderPanel = $('.full-start-new__buttons');
-          if (renderPanel[0].scrollWidth > renderPanel[0].clientWidth) {
-            renderPanel.css('flex-wrap', 'wrap');
-          }
-          if (Lampa.Storage.get('lme_showbuttonwn') == true) {
-            renderPanel.find("span").remove();
-          }
-          Lampa.Controller.toggle("full_start");
-        }, 10);
+        if (e.type === 'complite') {
+          $(".view--trailer").each(function () {
+            $(this).parent("div").find(".open--menu").insertBefore($(this));
+          });
+          setTimeout(function () {
+            var buttons = $(".buttons--container .full-start__button");
+            buttons.insertBefore($(".button--play"));
+            var renderPanel = $('.full-start-new__buttons');
+            if (renderPanel[0].scrollWidth > renderPanel[0].clientWidth) {
+              renderPanel.css('flex-wrap', 'wrap');
+            }
+            if (Lampa.Storage.get('lme_showbuttonwn') == true) {
+              renderPanel.find("span").remove();
+            }
+            Lampa.Controller.toggle("full_start");
+          }, 10);
+        }
       });
     }
     var showButton = {
