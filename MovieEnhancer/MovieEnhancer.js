@@ -505,34 +505,63 @@
     };
 
     function main() {
+      /**
       Lampa.Listener.follow("full", function (e) {
-        var cardData = e.object;
-        console.log('cardData.type', e.type);
-        if (e.type == "complite") {
-          var settings = {
-            url: "https://api.mdblist.com/tmdb/".concat(cardData.method == 'tv' ? 'show' : cardData.method, "/").concat(cardData.id, "?apikey=92rbbm5yovqvrjm9wx5ue4ad2"),
-            method: "GET",
-            timeout: 0
-          };
-          $.ajax(settings).done(function (response) {
-            console.log(response);
-            var ratings = response.ratings;
-            var validRatings = ratings.filter(function (rating) {
-              if (cardData.source === 'cub') {
-                return rating.value !== null && rating.source !== 'tmdb' && rating.source !== 'imdb';
-              }
-              return rating.value !== null && rating.source !== 'tmdb';
-            });
-            var rateLine = $(".full-start-new__rate-line");
-            rateLine.css({
-              'display': 'flex',
-              'flex-wrap': 'wrap',
-              'gap': '10px'
-            });
-            validRatings.forEach(function (rating) {
-              var rateElement = $("\n                    <div class=\"full-start__rate rate--".concat(rating.source, "\">\n                        <div>").concat(rating.value, "</div>\n                        <div class=\"source--name\">").concat(rating.source.toUpperCase(), "</div>\n                    </div>\n                "));
-              rateLine.prepend(rateElement);
-            });
+          let cardData = e.object;
+          console.log('cardData.type', e.type);
+          if (e.type == "complite") {
+              let settings = {
+                  url: `https://api.mdblist.com/tmdb/${cardData.method == 'tv' ? 'show' : cardData.method}/${cardData.id}?apikey=92rbbm5yovqvrjm9wx5ue4ad2`,
+                  method: "GET",
+                  timeout: 0,
+              };
+               $.ajax(settings).done(function (response) {
+                  console.log(response);
+                  const ratings = response.ratings;
+                  const validRatings = ratings.filter((rating) => {
+                      if (cardData.source === 'cub') {
+                          return rating.value !== null && rating.source !== 'tmdb' && rating.source !== 'imdb';
+                      }
+                      return rating.value !== null && rating.source !== 'tmdb';
+                  });
+                  const rateLine = $(".full-start-new__rate-line");
+                  rateLine.css({
+                      'display': 'flex',
+                      'flex-wrap': 'wrap',
+                      'gap': '10px'
+                  });
+                   validRatings.forEach((rating) => {
+                      const rateElement = $(`
+                      <div class="full-start__rate rate--${rating.source}">
+                          <div>${rating.value}</div>
+                          <div class="source--name">${rating.source.toUpperCase()}</div>
+                      </div>
+                  `);
+                      rateLine.prepend(rateElement);
+                  });
+              });
+          }
+      });
+      */
+      Lampa.Listener.follow("full", function (e) {
+        e.object;
+        console.log("cardData.type", e.type, e);
+        if (e.type == 'complete' && !e.name) {
+          console.log("Build.type", e.type, e);
+          $('.full--poster').each(function () {
+            var $img = $(this);
+            var currentSrc = $img.attr('src');
+
+            // Извлекаем media_id из текущего src
+            var mediaIdMatch = currentSrc.match(/([^/]+)\.jpg$/);
+            if (!mediaIdMatch) return;
+            var apiKey = 'aior_sk_5BDPfo7BnjSe1-Gvc9BsPYKsVIqOIBlj6dvJW_ZMqYQ'; // Замените на свой API ключ
+
+            // Формируем новый URL
+            var newSrc = "https://api.aioratings.com/poster/".concat(apiKey, "/default/tmdb/").concat(e.object.method !== 'movie' ? "tv-".concat(e.object.id) : "movie-".concat(e.object.id), ".jpg");
+
+            // Устанавливаем новый src
+            $img.attr('src', newSrc);
           });
         }
       });
