@@ -544,10 +544,7 @@
       });
       */
       Lampa.Listener.follow("full", function (e) {
-        e.object;
-        console.log("cardData.type", e.type, e);
-        if (e.type == 'complete' && !e.name) {
-          console.log("Build.type", e.type, e);
+        if (e.type == 'complite' && !e.name) {
           $('.full--poster').each(function () {
             var $img = $(this);
             var currentSrc = $img.attr('src');
