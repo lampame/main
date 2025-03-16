@@ -49,9 +49,9 @@
           uk: "Відображати тільки іконки"
         },
         lme_ratings_desc: {
-          ru: "Добавляет дополнительные рейтинги",
-          en: "Adds additional ratings",
-          uk: "Додає додаткові рейтинги"
+          ru: "Добавляет рейтинги от mdblist.com. Бесплатный ключ можно получить на сайте",
+          en: "Adds ratings from mdblist.com. You can get a free key on the site",
+          uk: "Додає рейтинги від mdblist.com. Безкоштовний ключ можна отримати на сайті"
         }
       });
     }
@@ -136,8 +136,9 @@
         component: "lme",
         param: {
           name: "lme_ratings",
-          type: "trigger",
-          "default": false
+          type: "input",
+          placeholder: '',
+          values: ''
         },
         field: {
           name: 'Show additional ratings',
@@ -946,60 +947,37 @@
     };
 
     function main() {
-      /**
+      // Add CSS styles first
+      var styleElement = $('<style>').text("\n        .card__lmerating {\n            position: absolute;\n            right: -0.8em;\n            padding: 0.4em 0.4em;\n            background: linear-gradient(90deg, #2c2c2c, #1a1a1a);\n            color: #fff;\n            font-size: 0.8em;\n            border-radius: 0.3em;\n            text-transform: uppercase;\n            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);\n        }\n    ");
+      $('head').append(styleElement);
+
+      // Add ratings listener
       Lampa.Listener.follow("full", function (e) {
-          let cardData = e.object;
-          console.log('cardData.type', e.type);
-          if (e.type == "complite") {
-              let settings = {
-                  url: `https://api.mdblist.com/tmdb/${cardData.method == 'tv' ? 'show' : cardData.method}/${cardData.id}?apikey=92rbbm5yovqvrjm9wx5ue4ad2`,
-                  method: "GET",
-                  timeout: 0,
-              };
-               $.ajax(settings).done(function (response) {
-                  console.log(response);
-                  const ratings = response.ratings;
-                  const validRatings = ratings.filter((rating) => {
-                      if (cardData.source === 'cub') {
-                          return rating.value !== null && rating.source !== 'tmdb' && rating.source !== 'imdb';
-                      }
-                      return rating.value !== null && rating.source !== 'tmdb';
-                  });
-                  const rateLine = $(".full-start-new__rate-line");
-                  rateLine.css({
-                      'display': 'flex',
-                      'flex-wrap': 'wrap',
-                      'gap': '10px'
-                  });
-                   validRatings.forEach((rating) => {
-                      const rateElement = $(`
-                      <div class="full-start__rate rate--${rating.source}">
-                          <div>${rating.value}</div>
-                          <div class="source--name">${rating.source.toUpperCase()}</div>
-                      </div>
-                  `);
-                      rateLine.prepend(rateElement);
-                  });
-              });
-          }
-      });
-      */
-      Lampa.Listener.follow("full", function (e) {
-        if (e.type == 'complite' && !e.name) {
-          $('.full--poster').each(function () {
-            var $img = $(this);
-            var currentSrc = $img.attr('src');
-
-            // Извлекаем media_id из текущего src
-            var mediaIdMatch = currentSrc.match(/([^/]+)\.jpg$/);
-            if (!mediaIdMatch) return;
-            var apiKey = 'aior_sk_5BDPfo7BnjSe1-Gvc9BsPYKsVIqOIBlj6dvJW_ZMqYQ'; // Замените на свой API ключ
-
-            // Формируем новый URL
-            var newSrc = "https://api.aioratings.com/poster/".concat(apiKey, "/default/tmdb/").concat(e.object.method !== 'movie' ? "tv-".concat(e.object.id) : "movie-".concat(e.object.id), ".jpg");
-
-            // Устанавливаем новый src
-            $img.attr('src', newSrc);
+        var cardData = e.object;
+        if (e.type == "complite") {
+          var settings = {
+            url: "https://api.mdblist.com/tmdb/".concat(cardData.method == 'tv' ? 'show' : cardData.method, "/").concat(cardData.id, "?apikey=").concat(Lampa.Storage.get('lme_ratings')),
+            method: "GET",
+            timeout: 0
+          };
+          $.ajax(settings).done(function (response) {
+            var ratings = response.ratings;
+            var validRatings = ratings.filter(function (rating) {
+              if (cardData.source === 'cub') {
+                return rating.value !== null && rating.source !== 'tmdb' && rating.source !== 'imdb';
+              }
+              return rating.value !== null && rating.source !== 'tmdb';
+            });
+            var posterContainer = $('.full-start-new__poster.loaded');
+            var topOffset = 1;
+            var spacing = 2;
+            validRatings.forEach(function (rating, index) {
+              if (rating.value) {
+                var topPosition = topOffset + index * spacing;
+                var ratingElement = $("<div class=\"card__lmerating ".concat(rating.source, "\" style=\"top: ").concat(topPosition, "em; bottom: auto;\">").concat(rating.source, ": ").concat(rating.value, "</div>"));
+                posterContainer.append(ratingElement);
+              }
+            });
           });
         }
       });
@@ -1026,7 +1004,7 @@
       if (Lampa.Storage.get('lme_averageRuntime') == true) averageRuntime.main();
       if (Lampa.Storage.get('lme_switchsource') == true) sourceSwitch.main();
       if (Lampa.Storage.get('lme_showbutton') == true) showButton.main();
-      if (Lampa.Storage.get('lme_ratings') == true) ratings.main();
+      if (Lampa.Storage.get('lme_ratings') !== null && Lampa.Storage.get('lme_ratings') !== undefined && Lampa.Storage.get('lme_ratings') !== '') ratings.main();
     }
     function startPlugin() {
       window.plugin_lme_ready = true;
