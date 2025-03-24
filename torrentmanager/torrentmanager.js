@@ -683,7 +683,7 @@
     var url$1 = Lampa.Storage.field("lmetorrenttransmissionUrl");
     var user$1 = Lampa.Storage.field("lmetorrenttransmissionUser");
     var pass$1 = Lampa.Storage.field("lmetorrenttransmissionPass");
-    var path = "".concat(Lampa.Storage.get("transmissionPath") || "/transmission/rpc");
+    var path = "".concat(Lampa.Storage.get("lmetorrenttransmissionPath") || "/transmission/rpc");
     var proxy$1 = "";
     var transmissionStatus = {
       0: "Torrent is stopped",
