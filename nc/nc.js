@@ -3085,12 +3085,38 @@
       var controller = Lampa.Controller.enabled().name;
       elem.on('hover:enter', function () {
         if (items.length > 1) {
+          // const select = items.map(a => ({
+          //     title: $('<img/>').attr({
+          //         src: Lampa.TMDB.image("t/p/w154" + a.logo_path),
+          //         alt: a.name
+          //     })[0].outerHTML,
+          //     elem: a
+          // }));
           var select = items.map(function (a) {
+            var img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.src = Lampa.TMDB.image("t/p/w154" + a.logo_path);
+            img.onload = function () {
+              var canvas = document.createElement('canvas');
+              var context = canvas.getContext('2d');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              context.drawImage(img, 0, 0, img.width, img.height);
+              var imageData = context.getImageData(0, 0, img.width, img.height);
+              var data = imageData.data;
+              var isDark = true;
+              for (var i = 0; i < data.length; i += 4) {
+                if (brightness > 50) {
+                  isDark = false;
+                  break;
+                }
+              }
+              if (isDark) {
+                document.getElementById("logo-".concat(a.id)).style.filter = 'invert(1)';
+              }
+            };
             return {
-              title: $('<img/>').attr({
-                src: Lampa.TMDB.image("t/p/w154" + a.logo_path),
-                alt: a.name
-              })[0].outerHTML,
+              title: "<div id=\"logo-".concat(a.id, "\" style=\"display: inline-block; padding: 5px;\">\n                    <img src=\"").concat(img.src, "\" alt=\"").concat(a.name, "\" />\n                </div>"),
               elem: a
             };
           });
