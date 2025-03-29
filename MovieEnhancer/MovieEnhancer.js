@@ -788,9 +788,8 @@
     };
 
     function main$3() {
-      //averageRuntime
       Lampa.Listener.follow("full", function (cardData) {
-        if (cardData.type === "complite") {
+        if (cardData.type === "complite" && cardData.object.method === "tv") {
           var imdbId = cardData.data.movie.imdb_id;
           if (imdbId) {
             $.ajax({
@@ -798,38 +797,25 @@
               method: "GET",
               success: function success(response) {
                 var averageRuntime = response.averageRuntime;
-                //const formattedRuntime = `00:${averageRuntime}`;
-                // Преобразование в формат HH:mm
                 var hours = Math.floor(averageRuntime / 60);
                 var minutes = averageRuntime % 60;
                 var formattedRuntime = "".concat(hours.toString().padStart(2, '0'), ":").concat(minutes.toString().padStart(2, '0'));
-
-                // Создаем новый span для времени
                 var runtimeSpan = $("<span>", {
                   id: "averageRuntime",
                   text: formattedRuntime
                 });
-
-                // Создаем новый span для разделителя
                 var splitSpan = $("<span>", {
                   "class": "full-start-new__split",
                   text: "●"
                 });
-
-                // Вставляем оба новых элемента в начало контейнера
-                /**
-                $(".full-start-new__details")
-                    .prepend(splitSpan)
-                    .prepend(runtimeSpan);
-                    **/
                 cardData.object.activity.render().find('.full-start-new__details').prepend(runtimeSpan, splitSpan);
               },
               error: function error(_error) {
-                console.error("Ошибка при выполнении запроса:", _error);
+                console.error("Error during request:", _error);
               }
             });
           } else {
-            console.warn("IMDB ID отсутствует в данных фильма.");
+            console.warn("IMDB ID is missing in movie data.");
           }
         }
       });
