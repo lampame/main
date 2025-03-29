@@ -3038,200 +3038,163 @@
       };
     }
 
-    function main$1() {
-      Lampa.Listener.follow('full', function (e) {
-        //Collection
-        if (e.type === 'complite' && e.object.method === 'movie' && Lampa.Storage.field('nc_networksList') === true) {
-          if (e.data.movie.belongs_to_collection) {
-            var handleLongHover = function handleLongHover() {
-              var result = Api.collectionBookmarkSave('collectionBookmarkAdd', card_data);
-              if (result === true) {
-                console.log('Запись была успешно добавлена.');
-                Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
-              } else if (result === false) {
-                console.error('Не удалось добавить запись.');
-                Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDuplicate'));
-              }
+    function createCollectionButton(e) {
+      var nc_collection = "<div class=\"full-start__button selector button--nc_collection\">\n        <svg width=\"191\" height=\"239\" viewBox=\"0 0 191 239\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n            <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M35.3438 35.3414V26.7477C35.3438 19.9156 38.0594 13.3543 42.8934 8.51604C47.7297 3.68251 54.2874 0.967027 61.125 0.966431H164.25C171.086 0.966431 177.643 3.68206 182.482 8.51604C187.315 13.3524 190.031 19.91 190.031 26.7477V186.471C190.031 189.87 189.022 193.192 187.133 196.018C185.245 198.844 182.561 201.046 179.421 202.347C176.28 203.647 172.825 203.988 169.492 203.325C166.158 202.662 163.096 201.026 160.692 198.623L155.656 193.587V220.846C155.656 224.245 154.647 227.567 152.758 230.393C150.87 233.219 148.186 235.421 145.046 236.722C141.905 238.022 138.45 238.363 135.117 237.7C131.783 237.037 128.721 235.401 126.317 232.998L78.3125 184.993L30.3078 232.998C27.9041 235.401 24.8419 237.037 21.5084 237.7C18.1748 238.363 14.7195 238.022 11.5794 236.722C8.43922 235.421 5.75517 233.219 3.86654 230.393C1.9779 227.567 0.969476 224.245 0.96875 220.846V61.1227C0.96875 54.2906 3.68437 47.7293 8.51836 42.891C13.3547 38.0575 19.9124 35.342 26.75 35.3414H35.3438ZM138.469 220.846V61.1227C138.469 58.8435 137.563 56.6576 135.952 55.046C134.34 53.4343 132.154 52.5289 129.875 52.5289H26.75C24.4708 52.5289 22.2849 53.4343 20.6733 55.046C19.0617 56.6576 18.1562 58.8435 18.1562 61.1227V220.846L66.1609 172.841C69.3841 169.619 73.755 167.809 78.3125 167.809C82.87 167.809 87.2409 169.619 90.4641 172.841L138.469 220.846ZM155.656 169.284L172.844 186.471V26.7477C172.844 24.4685 171.938 22.2826 170.327 20.671C168.715 19.0593 166.529 18.1539 164.25 18.1539H61.125C58.8458 18.1539 56.6599 19.0593 55.0483 20.671C53.4367 22.2826 52.5312 24.4685 52.5312 26.7477V35.3414H129.875C136.711 35.3414 143.268 38.0571 148.107 42.891C152.94 47.7274 155.656 54.285 155.656 61.1227V169.284Z\" fill=\"currentColor\"/>\n        </svg>\n        <span>".concat(Lampa.Lang.translate('title_collection'), "</span>\n    </div>");
+      e.object.activity.render().find('.full-start-new__buttons').append(nc_collection);
+      return {
+        $id: e.data.movie.belongs_to_collection.id,
+        poster_path: e.data.movie.belongs_to_collection.poster_path,
+        backdrop_path: e.data.movie.belongs_to_collection.backdrop_path,
+        name: e.data.movie.belongs_to_collection.name
+      };
+    }
+    function handleLongHover(card_data) {
+      var result = Api.collectionBookmarkSave('collectionBookmarkAdd', card_data);
+      if (result === true) {
+        console.log('Запись была успешно добавлена.');
+        Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
+      } else if (result === false) {
+        console.error('Не удалось добавить запись.');
+        Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDuplicate'));
+      }
+    }
+    function handleEnterHover(card_data) {
+      Lampa.Activity.push({
+        url: '',
+        title: card_data.name,
+        collectionID: card_data.$id,
+        component: 'lmeCollection',
+        page: 1
+      });
+    }
+    function setupCollectionButtonHandlers(card_data) {
+      $(".button--nc_collection").on("hover:long hover:enter", function (event) {
+        if (event.type === "hover:long") {
+          handleLongHover(card_data);
+        } else if (event.type === "hover:enter") {
+          handleEnterHover(card_data);
+        }
+      });
+    }
+    function createNetworkTag(name, items, call) {
+      var logo = $('<img/>').attr({
+        src: Lampa.TMDB.image("t/p/w92" + items[0].logo_path),
+        alt: items[0].name
+      })[0].outerHTML;
+      var elem = $("<div class=\"tag-count selector\">\n        <div class=\"tag-count__name\">".concat(name, "</div>\n        <div class=\"tag-count__count\">").concat(items.length > 1 ? items.length : logo, "</div>\n    </div>"));
+      var controller = Lampa.Controller.enabled().name;
+      elem.on('hover:enter', function () {
+        if (items.length > 1) {
+          var select = items.map(function (a) {
+            return {
+              title: $('<img/>').attr({
+                src: Lampa.TMDB.image("t/p/w154" + a.logo_path),
+                alt: a.name
+              })[0].outerHTML,
+              elem: a
             };
-            var handleEnterHover = function handleEnterHover() {
-              Lampa.Activity.push({
-                url: '',
-                title: card_data.name,
-                collectionID: card_data.$id,
-                component: 'lmeCollection',
-                page: 1
-              });
-            };
-            var nc_collection = "<div class=\"full-start__button selector button--nc_collection\">\n                <svg width=\"191\" height=\"239\" viewBox=\"0 0 191 239\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M35.3438 35.3414V26.7477C35.3438 19.9156 38.0594 13.3543 42.8934 8.51604C47.7297 3.68251 54.2874 0.967027 61.125 0.966431H164.25C171.086 0.966431 177.643 3.68206 182.482 8.51604C187.315 13.3524 190.031 19.91 190.031 26.7477V186.471C190.031 189.87 189.022 193.192 187.133 196.018C185.245 198.844 182.561 201.046 179.421 202.347C176.28 203.647 172.825 203.988 169.492 203.325C166.158 202.662 163.096 201.026 160.692 198.623L155.656 193.587V220.846C155.656 224.245 154.647 227.567 152.758 230.393C150.87 233.219 148.186 235.421 145.046 236.722C141.905 238.022 138.45 238.363 135.117 237.7C131.783 237.037 128.721 235.401 126.317 232.998L78.3125 184.993L30.3078 232.998C27.9041 235.401 24.8419 237.037 21.5084 237.7C18.1748 238.363 14.7195 238.022 11.5794 236.722C8.43922 235.421 5.75517 233.219 3.86654 230.393C1.9779 227.567 0.969476 224.245 0.96875 220.846V61.1227C0.96875 54.2906 3.68437 47.7293 8.51836 42.891C13.3547 38.0575 19.9124 35.342 26.75 35.3414H35.3438ZM138.469 220.846V61.1227C138.469 58.8435 137.563 56.6576 135.952 55.046C134.34 53.4343 132.154 52.5289 129.875 52.5289H26.75C24.4708 52.5289 22.2849 53.4343 20.6733 55.046C19.0617 56.6576 18.1562 58.8435 18.1562 61.1227V220.846L66.1609 172.841C69.3841 169.619 73.755 167.809 78.3125 167.809C82.87 167.809 87.2409 169.619 90.4641 172.841L138.469 220.846ZM155.656 169.284L172.844 186.471V26.7477C172.844 24.4685 171.938 22.2826 170.327 20.671C168.715 19.0593 166.529 18.1539 164.25 18.1539H61.125C58.8458 18.1539 56.6599 19.0593 55.0483 20.671C53.4367 22.2826 52.5312 24.4685 52.5312 26.7477V35.3414H129.875C136.711 35.3414 143.268 38.0571 148.107 42.891C152.94 47.7274 155.656 54.285 155.656 61.1227V169.284Z\" fill=\"currentColor\"/>\n                </svg>\n                <span>".concat(Lampa.Lang.translate('title_collection'), "</span>\n                </div>");
-
-            //$(".full-start-new__buttons").append(nc_collection);
-            e.object.activity.render().find('.full-start-new__buttons').append(nc_collection);
-            var card_data = {
-              $id: e.data.movie.belongs_to_collection.id,
-              poster_path: e.data.movie.belongs_to_collection.poster_path,
-              backdrop_path: e.data.movie.belongs_to_collection.backdrop_path,
-              name: e.data.movie.belongs_to_collection.name
-            };
-            $(".button--nc_collection").on("hover:long hover:enter", function (event, card_data) {
-              if (event.type === "hover:long") {
-                handleLongHover(card_data);
-              } else if (event.type === "hover:enter") {
-                handleEnterHover(card_data);
-              }
+          });
+          Lampa.Select.show({
+            title: name,
+            items: select,
+            onSelect: function onSelect(a) {
+              Lampa.Controller.toggle(controller);
+              call(a.elem);
+            },
+            onBack: function onBack() {
+              Lampa.Controller.toggle(controller);
+            }
+          });
+        } else {
+          call(items[0]);
+        }
+      });
+      return elem;
+    }
+    function handleNetworkClick(network) {
+      var card_data = {
+        $id: network.id,
+        logo_path: network.logo_path,
+        poster_path: network.logo_path,
+        name: "".concat(network.name, " ").concat(network.origin_country),
+        title: "".concat(network.name, " ").concat(network.origin_country),
+        origin_country: network.origin_country
+      };
+      var enabled = Lampa.Controller.enabled().name;
+      var menu = [{
+        title: "".concat(Lampa.Lang.translate('nc_openAction'), " New"),
+        action: 'open',
+        sort_by: 'first_air_date.desc',
+        type: 'New',
+        card_data: card_data
+      }, {
+        title: "".concat(Lampa.Lang.translate('nc_openAction'), " Top"),
+        action: 'open',
+        sort_by: '',
+        type: 'Top',
+        card_data: card_data
+      }, {
+        title: Lampa.Lang.translate('nc_bookmarkAdd'),
+        action: 'bookmarkAdd',
+        card_data: card_data
+      }, {
+        title: Lampa.Lang.translate('nc_favoriteAdd') + ' New',
+        action: 'favorite',
+        card_data: card_data,
+        type: 'new'
+      }, {
+        title: Lampa.Lang.translate('nc_favoriteAdd') + ' Top',
+        action: 'favorite',
+        card_data: card_data,
+        type: 'top'
+      }];
+      Lampa.Select.show({
+        title: card_data.name,
+        items: menu,
+        onBack: function onBack() {
+          Lampa.Controller.toggle(enabled);
+        },
+        onSelect: function onSelect(a) {
+          if (a.action === 'favorite') {
+            Favorites$1.add(a);
+          }
+          if (a.action === 'bookmarkAdd') {
+            var result = Api.bookmarkSave(a);
+            if (result === true) {
+              console.log('Запись была успешно добавлена.');
+              Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
+            } else if (result === false) {
+              console.error('Не удалось добавить запись.');
+              Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDuplicate'));
+            }
+          }
+          if (a.action === 'open') {
+            Lampa.Activity.push({
+              url: 'discover/tv',
+              title: "".concat(a.type, " ").concat(a.card_data.name),
+              component: "category_full",
+              networks: a.card_data.$id,
+              sort_by: a.sort_by,
+              source: 'tmdb',
+              card_type: true,
+              page: 1
             });
-            /* End */
           }
         }
-        //Networks
+      });
+    }
+    function main$1() {
+      Lampa.Listener.follow('full', function (e) {
+        if (e.type === 'complite' && e.object.method === 'movie' && Lampa.Storage.field('nc_networksList') === true) {
+          if (e.data.movie.belongs_to_collection) {
+            var card_data = createCollectionButton(e);
+            setupCollectionButtonHandlers(card_data);
+          }
+        }
         if (e.type === 'complite' && e.object.method === 'tv' && Lampa.Storage.field('nc_networksList') === true) {
           if (e.data.movie.networks && e.data.movie.networks.length > 0) {
-            /* New css */
-            var btn = document.createElement('div');
-            btn.className = 'full-start__button selector button--nc_networksList';
-            btn.style.backgroundColor = "#fff";
-            btn.setAttribute('data-id', e.data.movie.networks[0].id);
-            btn.setAttribute('data-logo-path', e.data.movie.networks[0].logo_path);
-            btn.setAttribute('data-name', e.data.movie.networks[0].name);
-            btn.setAttribute('data-origin-country', e.data.movie.networks[0].origin_country);
-            var img = document.createElement('img');
-            img.src = Lampa.TMDB.image("t/p/w300" + e.data.movie.networks[0].logo_path);
-            img.alt = e.data.movie.networks[0].name;
-            img.height = 24;
-            btn.appendChild(img);
-
-            //$(".full-start-new__buttons").append(btn);
-            e.object.activity.render().find('.full-start-new__buttons').append(btn);
-            /* End */
-            /* Try insert in body */
-            // Создаем div для сетей
-            var networksDiv = document.createElement('div');
-            networksDiv.className = 'full-descr__line full--networks';
-
-            // Создаем название строки
-            var lineNameDiv = document.createElement('div');
-            lineNameDiv.className = 'full-descr__line-name';
-            lineNameDiv.textContent = Lampa.Lang.translate('nc_networksList');
-            networksDiv.appendChild(lineNameDiv);
-
-            // Создаем тело строки
-            var lineBodyDiv = document.createElement('div');
-            lineBodyDiv.className = 'full-descr__line-body';
-
-            // Для каждого элемента в массиве networks создаем div и добавляем его в lineBodyDiv
-            e.data.movie.networks.forEach(function (network, index) {
-              var networkDiv = document.createElement('div');
-              networkDiv.className = 'full-descr__tag button--nc_networksList selector';
-
-              // Добавляем данные в атрибуты data-*
-              networkDiv.setAttribute('data-id', network.id);
-              networkDiv.setAttribute('data-logo-path', network.logo_path);
-              networkDiv.setAttribute('data-name', network.name);
-              networkDiv.setAttribute('data-origin-country', network.origin_country);
-              if (index < 3) {
-                var _img = document.createElement('img');
-                _img.src = Lampa.TMDB.image("t/p/w300" + network.logo_path);
-                _img.alt = e.data.movie.networks[0].name;
-                _img.height = 24;
-                networkDiv.style.backgroundColor = "#fff";
-                networkDiv.appendChild(_img);
-              } else {
-                networkDiv.textContent = network.name;
-              }
-              lineBodyDiv.appendChild(networkDiv);
-            });
-
-            // Добавляем lineBodyDiv в networksDiv
-            networksDiv.appendChild(lineBodyDiv);
-
-            // Находим элемент full-descr__text selector
-            var fullDescrTextSelector = document.querySelector('.full-descr__text.selector');
-
-            // Вставляем networksDiv после fullDescrTextSelector
-            //fullDescrTextSelector.insertAdjacentElement('afterend', networksDiv);
-            fullDescrTextSelector && fullDescrTextSelector.insertAdjacentElement('afterend', networksDiv);
-            /* End */
-            $(".button--nc_networksList").on("hover:enter", function (card) {
-              var id = $(this).data('id');
-              var logoPath = $(this).data('logo-path');
-              var name = $(this).data('name');
-              var originCountry = $(this).data('origin-country');
-              var card_data = {
-                $id: id,
-                logo_path: logoPath,
-                poster_path: logoPath,
-                name: "".concat(name, " ").concat(originCountry),
-                title: "".concat(name, " ").concat(originCountry),
-                origin_country: originCountry
-              };
-              console.log('card_data', card_data);
-              var enabled = Lampa.Controller.enabled().name;
-              var menu = [];
-              menu.push({
-                title: "".concat(Lampa.Lang.translate('nc_openAction'), " New"),
-                action: 'open',
-                sort_by: 'first_air_date.desc',
-                type: 'New',
-                card_data: card_data
-              });
-              menu.push({
-                title: "".concat(Lampa.Lang.translate('nc_openAction'), " Top"),
-                action: 'open',
-                sort_by: '',
-                type: 'Top',
-                card_data: card_data
-              });
-              menu.push({
-                title: Lampa.Lang.translate('nc_bookmarkAdd'),
-                action: 'bookmarkAdd',
-                card_data: card_data
-              });
-              menu.push({
-                title: Lampa.Lang.translate('nc_favoriteAdd') + ' New',
-                action: 'favorite',
-                card_data: card_data,
-                type: 'new'
-              });
-              menu.push({
-                title: Lampa.Lang.translate('nc_favoriteAdd') + ' Top',
-                action: 'favorite',
-                card_data: card_data,
-                type: 'top'
-              });
-              Lampa.Select.show({
-                title: card_data.name,
-                items: menu,
-                onBack: function onBack() {
-                  Lampa.Controller.toggle(enabled);
-                },
-                onSelect: function onSelect(a) {
-                  if (a.action === 'favorite') {
-                    Favorites$1.add(a);
-                  }
-                  if (a.action === 'bookmarkAdd') {
-                    var result = Api.bookmarkSave(a);
-                    if (result === true) {
-                      console.log('Запись была успешно добавлена.');
-                      Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
-                    } else if (result === false) {
-                      console.error('Не удалось добавить запись.');
-                      Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkDuplicate'));
-                    }
-                  }
-                  if (a.action === 'open') {
-                    Lampa.Activity.push({
-                      url: 'discover/tv',
-                      title: "".concat(a.type, " ").concat(a.card_data.name),
-                      component: "category_full",
-                      networks: a.card_data.$id,
-                      sort_by: a.sort_by,
-                      source: 'tmdb',
-                      card_type: true,
-                      page: 1
-                    });
-                  }
-                }
-              });
-            });
+            var networkTag = createNetworkTag('Networks', e.data.movie.networks, handleNetworkClick);
+            e.object.activity.render().find('.full-descr__tags').append(networkTag);
           }
         }
       });

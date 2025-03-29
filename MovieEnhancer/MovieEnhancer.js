@@ -711,24 +711,6 @@
           console.log("quality", e);
           findBestQualityItem().then(function (bestItem) {
             console.log("response", bestItem.format);
-            // Делайте что-то с bestItem после получения
-            /**
-            const newDivider = $("<span>", { class: 'full-start-new__split', html: `●` });
-            const newSpan = $("<span>", {
-                class: 'full-start__pg',
-                html: `${Lampa.Lang.translate('player_quality')}: ${bestItem.format.toUpperCase()}`,
-                css: {
-                    'border-color': (() => {
-                        switch (bestItem.format.toLowerCase()) {
-                            case 'sd': return 'red';
-                            case 'hd': return 'yellow';
-                            case '4k': return 'green';
-                        }
-                    })()
-                }
-            });
-             e.object.activity.render().find('.full-start-new__details').append(newDivider, newSpan);
-             */
             if (Lampa.Platform.screen('mobile') !== true) {
               var quality = $("<div>", {
                 "class": "card__quality",
