@@ -922,23 +922,53 @@
     };
 
     function main$1() {
-      Lampa.Listener.follow("full", function (e) {
+      Lampa.Listener.follow('full', function (e) {
         if (e.type === 'complite') {
-          $(".view--trailer").each(function () {
-            $(this).parent("div").find(".open--menu").insertBefore($(this));
-          });
           setTimeout(function () {
-            var buttons = $(".buttons--container .full-start__button");
-            buttons.insertBefore($(".button--play"));
-            var renderPanel = $('.full-start-new__buttons');
-            if (renderPanel[0].scrollWidth > renderPanel[0].clientWidth) {
-              renderPanel.css('flex-wrap', 'wrap');
-            }
+            var fullContainer = e.object.activity.render();
+            var targetContainer = fullContainer.find('.full-start-new__buttons');
+            fullContainer.find('.button--play').remove();
+            var allButtons = fullContainer.find('.buttons--container .full-start__button').add(targetContainer.find('.full-start__button'));
+
+            // Визначаємо категорії кнопок за наявністю слів у класах
+            var categories = {
+              online: [],
+              torrent: [],
+              trailer: [],
+              other: []
+            };
+            allButtons.each(function () {
+              var $button = $(this);
+              var className = $button.attr('class');
+              if (className.includes('online')) {
+                categories.online.push($button);
+              } else if (className.includes('torrent')) {
+                categories.torrent.push($button);
+              } else if (className.includes('trailer')) {
+                categories.trailer.push($button);
+              } else {
+                categories.other.push($button.clone(true)); // Клонуємо з подіями
+              }
+            });
+
+            // Отримуємо порядок кнопок з Storage або використовуємо стандартний
+            var buttonSortOrder = Lampa.Storage.get('lme_buttonsort') || ['torrent', 'online', 'trailer', 'other'];
+
+            // Очищаємо та заповнюємо контейнер у відповідності до порядку
+            targetContainer.empty();
+            buttonSortOrder.forEach(function (category) {
+              categories[category].forEach(function ($button) {
+                targetContainer.append($button);
+              });
+            });
+            // Перевіряємо змінну lme_showbuttonwn
             if (Lampa.Storage.get('lme_showbuttonwn') == true) {
-              renderPanel.find("span").remove();
+              targetContainer.find("span").remove();
             }
+
+            // Вмикаємо "full_start" після виконання
             Lampa.Controller.toggle("full_start");
-          }, 10);
+          }, 100); // Таймаут 100 мс для стабільності
         }
       });
     }
@@ -948,7 +978,7 @@
 
     function main() {
       // Add CSS styles first
-      var styleElement = $('<style>').text("\n        .card__lmerating {\n            position: absolute;\n            right: -0.8em;\n            padding: 0.4em 0.4em;\n            background: linear-gradient(90deg, #2c2c2c, #1a1a1a);\n            color: #fff;\n            font-size: 0.8em;\n            border-radius: 0.3em;\n            text-transform: uppercase;\n            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);\n        }\n    ");
+      var styleElement = $('<style>').text("\n        .card__lmerating {\n            position: absolute;\n            right: -0.8em;\n            padding: 0.4em 0.4em;\n            background: linear-gradient(90deg, #2c2c2c, #1a1a1a);\n            color: #fff;\n            font-size: 0.8em;\n            border-radius: 0.3em;\n            text-transform: uppercase;\n            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);\n        }\n\n        @media (max-width: 768px) {\n            .card__lmerating {\n                right: 0.2em;\n                font-size: 0.7em;\n            }\n        }\n\n        @media (max-width: 480px) {\n            .card__lmerating {\n                right: 0.5em;\n                font-size: 0.6em;\n            }\n        }\n    ");
       $('head').append(styleElement);
 
       // Add ratings listener
