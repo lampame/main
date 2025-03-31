@@ -934,6 +934,13 @@
               targetContainer.find("span").remove();
             }
 
+            // Додаємо стиль для переносу кнопок на наступний рядок
+            targetContainer.css({
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '10px' // Optional: adds space between buttons
+            });
+
             // Вмикаємо "full_start" після виконання
             Lampa.Controller.toggle("full_start");
           }, 100); // Таймаут 100 мс для стабільності
