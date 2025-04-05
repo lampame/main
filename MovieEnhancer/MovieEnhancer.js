@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    function main$8() {
+    function main$7() {
       Lampa.Lang.add({
         lme_EngData_desc: {
           ru: "Добавляет английское название произведения, и заменяет описание если оно отсутсвует",
@@ -56,10 +56,10 @@
       });
     }
     var Lang = {
-      main: main$8
+      main: main$7
     };
 
-    function main$7() {
+    function main$6() {
       Lampa.SettingsApi.addComponent({
         component: "lme",
         name: 'Movie Enhancer',
@@ -231,104 +231,6 @@
       });
     }
     var CONFIG = {
-      main: main$7
-    };
-
-    function main$6() {
-      var apiKey = '4ef0d7355d9ffb5151e987764708ce96';
-      var baseUrl = 'tmdb.' + (Lampa.Storage && Lampa.Storage.get('cub_domain') ? Lampa.Storage.get('cub_domain') : 'cub.red') + '/3/';
-      function fetchMovieDetails(movieId, method, callback) {
-        var apiUrl = "".concat(Lampa.Utils.protocol() + baseUrl).concat(method, "/").concat(movieId, "?api_key=").concat(apiKey);
-        $.getJSON(apiUrl).done(function (data) {
-          return callback(null, data);
-        }).fail(function (jqXHR, textStatus, errorThrown) {
-          callback(new Error("Fetch error: ".concat(textStatus, ", ").concat(errorThrown)));
-        });
-      }
-      function appendQualityElement(release_quality, parentElement, e) {
-        if (!release_quality) return;
-        var newDivider = $("<span>", {
-          "class": 'full-start-new__split',
-          html: "\u25CF"
-        });
-        var newSpan = $("<span>", {
-          "class": 'full-start__pg',
-          html: "".concat(Lampa.Lang.translate('player_quality'), ": ").concat(release_quality.toUpperCase()),
-          css: {
-            'border-color': function () {
-              switch (release_quality.toLowerCase()) {
-                case 'ts':
-                  return 'red';
-                case 'webdl':
-                case 'dvdrip':
-                  return 'yellow';
-                case '4k':
-                case 'bd':
-                  return 'green';
-              }
-            }()
-          }
-        });
-        e.object.activity.render().find('.full-start-new__details').append(newDivider, newSpan);
-
-        //parentElement.append(newDivider, newSpan);
-
-        if (Lampa.Platform.screen('mobile') !== true) {
-          var quality = $("<div>", {
-            "class": "card__quality",
-            css: {
-              zIndex: 999,
-              fontSize: "75%"
-            }
-          });
-          quality.append($("<div>", {
-            text: release_quality
-          }));
-          $(".full-start-new__poster").append(quality);
-        }
-      }
-      Lampa.Listener.follow("full", function (e) {
-        if (e.type === "complite" && Lampa.Storage.field('source') !== 'cub') {
-          $(document).ready(function () {
-            fetchMovieDetails(e.data.movie.id, e.object.method, function (err, data) {
-              if (err) {
-                console.error(err.message);
-                return;
-              }
-              appendQualityElement(data.release_quality, $(".full-start-new__details"), e);
-            });
-          });
-        }
-      });
-      Lampa.Listener.follow("line", function (e) {
-        if (e.type === "append" && Lampa.Storage.field("source") !== "cub") {
-          $.each(e.items, function (_, movieCard) {
-            if (movieCard.data && (movieCard.data.id || movieCard.data.number_of_seasons)) {
-              var id = movieCard.data.id || 0;
-              var mediaType = movieCard.data.media_type || (movieCard.data.number_of_seasons ? "tv" : "movie");
-              fetchMovieDetails(id, mediaType, function (err, data) {
-                if (err) {
-                  console.error(err.message);
-                  return;
-                }
-                if (data.release_quality) {
-                  var quality = $("<div>", {
-                    "class": "card__quality"
-                  });
-                  quality.append($("<div>", {
-                    text: data.release_quality
-                  }));
-                  $(movieCard.card).find(".card__view").append(quality);
-                }
-              });
-            } else {
-              console.warn("movieCard.data is undefined or missing id/number_of_seasons:", movieCard);
-            }
-          });
-        }
-      });
-    }
-    var Quality = {
       main: main$6
     };
 
@@ -1003,8 +905,9 @@
       Lang.main();
       Lampa.Manifest.plugins = manifest;
       CONFIG.main();
-      if (Lampa.Storage.get('lme_quality') == true) Quality.main();
-      if (Lampa.Storage.get('lme_wmquality') !== null && Lampa.Storage.get('lme_wmquality') !== undefined && Lampa.Storage.get('lme_wmquality') !== '') StreamQuality.main();
+      if (Lampa.Storage.get('lme_quality')) Lampa.Storage.get('lme_quality');
+      //if(Lampa.Storage.get('lme_quality')==true) Quality.main()
+      if (Lampa.Storage.get('lme_wmquality')) StreamQuality.main();
       if (Lampa.Storage.get('lme_endata') == true) englishData.main();
       if (Lampa.Storage.get('lme_averageRuntime') == true) averageRuntime.main();
       if (Lampa.Storage.get('lme_switchsource') == true) sourceSwitch.main();
