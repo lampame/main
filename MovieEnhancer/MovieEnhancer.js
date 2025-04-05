@@ -571,48 +571,43 @@
         if (e.type === "complite") {
           var findBestQualityItem = /*#__PURE__*/function () {
             var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-              var _e$object, tid, settings, response, qualityOrder, bestItem;
+              var _e$object, tid, settings, response, bestItem;
               return _regeneratorRuntime().wrap(function _callee$(_context) {
                 while (1) switch (_context.prev = _context.next) {
                   case 0:
                     _context.prev = 0;
                     tid = ((_e$object = e.object) === null || _e$object === void 0 || (_e$object = _e$object.card) === null || _e$object === void 0 ? void 0 : _e$object.imdb_id) || "".concat(e.object.method, "-").concat(e.object.id);
                     settings = {
-                      url: "https://api.watchmode.com/v1/title/".concat(tid, "/sources/?apiKey=").concat(Lampa.Storage.get('lme_wmquality')),
+                      url: "https://lme-quality.deno.dev?tid=".concat(tid, "&apiKey=").concat(Lampa.Storage.get('lme_wmquality')),
                       method: "GET",
                       timeout: 0
-                    }; // Возвращаем промис, чтобы можно было ждать завершения
+                    };
                     _context.next = 5;
                     return $.ajax(settings);
                   case 5:
                     response = _context.sent;
                     // Обработка данных
-                    qualityOrder = ["SD", "HD", "4K"];
-                    bestItem = response.reduce(function (best, current) {
-                      var currentPriority = qualityOrder.indexOf(current.format);
-                      var bestPriority = qualityOrder.indexOf((best === null || best === void 0 ? void 0 : best.format) || "");
-                      return currentPriority > bestPriority ? current : best;
-                    }, response[0]); // Проверьте, что response не пуст
+                    bestItem = response.quality;
                     return _context.abrupt("return", bestItem);
-                  case 11:
-                    _context.prev = 11;
+                  case 10:
+                    _context.prev = 10;
                     _context.t0 = _context["catch"](0);
                     console.error("Ошибка:", _context.t0);
                     return _context.abrupt("return", null);
-                  case 15:
+                  case 14:
                   case "end":
                     return _context.stop();
                 }
-              }, _callee, null, [[0, 11]]);
+              }, _callee, null, [[0, 10]]);
             }));
             return function findBestQualityItem() {
               return _ref.apply(this, arguments);
             };
-          }(); // Ждём выполнения асинхронной функции
+          }();
           // Проверьте, возможно, опечатка "complite" → "complete"
           console.log("quality", e);
           findBestQualityItem().then(function (bestItem) {
-            console.log("response", bestItem.format);
+            console.log("response", bestItem);
             if (Lampa.Platform.screen('mobile') !== true) {
               var quality = $("<div>", {
                 "class": "card__quality",
@@ -622,7 +617,7 @@
                 }
               });
               quality.append($("<div>", {
-                text: bestItem.format
+                text: bestItem
               }));
               $(".full-start-new__poster").append(quality);
             }
