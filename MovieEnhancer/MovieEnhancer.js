@@ -566,60 +566,75 @@
       };
     }
 
+    function findBestQualityItem(_x) {
+      return _findBestQualityItem.apply(this, arguments);
+    }
+    function _findBestQualityItem() {
+      _findBestQualityItem = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(object) {
+        var _object$card, mediaType, tid, settings, response;
+        return _regeneratorRuntime().wrap(function _callee$(_context) {
+          while (1) switch (_context.prev = _context.next) {
+            case 0:
+              _context.prev = 0;
+              mediaType = (object === null || object === void 0 ? void 0 : object.media_type) || (object !== null && object !== void 0 && object.first_air_date ? "tv" : "movie");
+              tid = (object === null || object === void 0 || (_object$card = object.card) === null || _object$card === void 0 ? void 0 : _object$card.imdb_id) || "".concat(mediaType, "-").concat(object.id);
+              settings = {
+                url: "https://lme-quality.deno.dev?tid=".concat(tid, "&apiKey=").concat(Lampa.Storage.get('lme_wmquality')),
+                method: "GET",
+                timeout: 0
+              };
+              _context.next = 6;
+              return $.ajax(settings);
+            case 6:
+              response = _context.sent;
+              return _context.abrupt("return", response.quality);
+            case 10:
+              _context.prev = 10;
+              _context.t0 = _context["catch"](0);
+              console.error("Ошибка:", _context.t0);
+              return _context.abrupt("return", null);
+            case 14:
+            case "end":
+              return _context.stop();
+          }
+        }, _callee, null, [[0, 10]]);
+      }));
+      return _findBestQualityItem.apply(this, arguments);
+    }
+    function appendQualityElement(bestItem, selector) {
+      if (!bestItem) return; // Check if bestItem is empty
+      if (Lampa.Platform.screen('mobile') !== true) {
+        var quality = $("<div>", {
+          "class": "card__quality",
+          css: {
+            zIndex: 999,
+            fontSize: "75%"
+          }
+        });
+        quality.append($("<div>", {
+          text: bestItem
+        }));
+        $(selector).append(quality);
+      }
+    }
     function main$5() {
       Lampa.Listener.follow("full", function (e) {
         if (e.type === "complite") {
-          var findBestQualityItem = /*#__PURE__*/function () {
-            var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-              var _e$object, tid, settings, response, bestItem;
-              return _regeneratorRuntime().wrap(function _callee$(_context) {
-                while (1) switch (_context.prev = _context.next) {
-                  case 0:
-                    _context.prev = 0;
-                    tid = ((_e$object = e.object) === null || _e$object === void 0 || (_e$object = _e$object.card) === null || _e$object === void 0 ? void 0 : _e$object.imdb_id) || "".concat(e.object.method, "-").concat(e.object.id);
-                    settings = {
-                      url: "https://lme-quality.deno.dev?tid=".concat(tid, "&apiKey=").concat(Lampa.Storage.get('lme_wmquality')),
-                      method: "GET",
-                      timeout: 0
-                    };
-                    _context.next = 5;
-                    return $.ajax(settings);
-                  case 5:
-                    response = _context.sent;
-                    // Обработка данных
-                    bestItem = response.quality;
-                    return _context.abrupt("return", bestItem);
-                  case 10:
-                    _context.prev = 10;
-                    _context.t0 = _context["catch"](0);
-                    console.error("Ошибка:", _context.t0);
-                    return _context.abrupt("return", null);
-                  case 14:
-                  case "end":
-                    return _context.stop();
-                }
-              }, _callee, null, [[0, 10]]);
-            }));
-            return function findBestQualityItem() {
-              return _ref.apply(this, arguments);
-            };
-          }();
-          // Проверьте, возможно, опечатка "complite" → "complete"
-          console.log("quality", e);
-          findBestQualityItem().then(function (bestItem) {
+          findBestQualityItem(e.object).then(function (bestItem) {
             console.log("response", bestItem);
-            if (Lampa.Platform.screen('mobile') !== true) {
-              var quality = $("<div>", {
-                "class": "card__quality",
-                css: {
-                  zIndex: 999,
-                  fontSize: "75%"
-                }
+            appendQualityElement(bestItem, ".full-start-new__poster");
+          });
+        }
+      });
+      Lampa.Listener.follow("line", function (e) {
+        if (e.type === "append" && Lampa.Storage.field("source") !== "cub") {
+          $.each(e.items, function (_, movieCard) {
+            if (movieCard.data && (movieCard.data.id || movieCard.data.number_of_seasons)) {
+              findBestQualityItem(movieCard.data).then(function (bestItem) {
+                appendQualityElement(bestItem, movieCard.card.find(".card__view"));
               });
-              quality.append($("<div>", {
-                text: bestItem
-              }));
-              $(".full-start-new__poster").append(quality);
+            } else {
+              console.warn("movieCard.data is undefined or missing id/number_of_seasons:", movieCard);
             }
           });
         }
