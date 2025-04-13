@@ -958,7 +958,7 @@
                               labels: torrent.labels,
                               image: imageUrl,
                               // Используем результат
-                              completed: torrent.percentComplete
+                              completed: torrent.percentDone
                             });
                           case 4:
                           case "end":
