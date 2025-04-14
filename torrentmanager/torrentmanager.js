@@ -630,142 +630,17 @@
       throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
     }
 
-    // Constant
-    var url$2 = Lampa.Storage.field("lmetorrentqBittorentUrl");
-    var proxy$2 = "";
-    if (Lampa.Storage.field("lmetorrentqBittorentProxy") === true) {
-      proxy$2 = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
-    }
-    function getHeaders$2(type) {
-      var headers = {};
-      if (type) headers["Content-Type"] = type;
-      if (Lampa.Storage.get("lmetorrentqBittorentKey")) headers["set-cookie"] = Lampa.Storage.get("lmetorrenttransmissionKey");
-      if (Lampa.Storage.field('lmetorrentqBittorentProxy') === true) headers["x-requested-with"] = "lampame";
-      return headers;
-    }
-    function auth$2() {}
-    function GetData$2() {
-      var settings = {
-        url: "".concat(proxy$2).concat(url$2, "/api/v2/torrents/info"),
-        method: "GET",
-        timeout: 0,
-        headers: getHeaders$2()
-      };
-      return new Promise(function (resolve, reject) {
-        $.ajax(settings).done(function (response) {
-          try {
-            var standardizedResponse = response.map(function (torrent) {
-              return {
-                name: torrent.name,
-                id: torrent.hash,
-                size: torrent.size,
-                state: torrent.state.charAt(0).toUpperCase() + torrent.state.slice(1),
-                completed: torrent.progress // или другой соответствующий атрибут
-              };
-            });
-            resolve(standardizedResponse);
-          } catch (error) {
-            reject(new Error('Ошибка при обработке данных'));
-          }
-        }).fail(function (jqXHR, textStatus, errorThrown) {
-          reject(new Error("\u041E\u0448\u0438\u0431\u043A\u0430 AJAX \u0437\u0430\u043F\u0440\u043E\u0441\u0430: ".concat(textStatus, " - ").concat(errorThrown)));
-        });
-      });
-    }
-    function GetInfo$1() {
-      var settings = {
-        url: "".concat(proxy$2).concat(url$2, "/api/v2/sync/maindata"),
-        method: "GET",
-        timeout: 0,
-        headers: getHeaders$2()
-      };
-      return new Promise(function (resolve, reject) {
-        $.ajax(settings).done(function (response) {
-          try {
-            var standardizedResponse = {
-              "space": response.server_state.free_space_on_disk
-            };
-            resolve(standardizedResponse);
-          } catch (error) {
-            reject(new Error('Ошибка при обработке данных'));
-          }
-        }).fail(function (jqXHR, textStatus, errorThrown) {
-          reject(new Error("\u041E\u0448\u0438\u0431\u043A\u0430 AJAX \u0437\u0430\u043F\u0440\u043E\u0441\u0430: ".concat(textStatus, " - ").concat(errorThrown)));
-        });
-      });
-    }
-    function SendCommand$2(btn, torrent_data) {
-      var deleteFiles = btn.deleteFiles ? "true" : "";
-      var settings = {
-        url: "".concat(proxy$2).concat(url$2, "/api/v2/torrents/").concat(btn.action),
-        method: "POST",
-        timeout: 0,
-        headers: getHeaders$2("application/x-www-form-urlencoded"),
-        "data": {
-          "hashes": torrent_data.id,
-          deleteFiles: deleteFiles
-        }
-      };
-      return new Promise(function (resolve, reject) {
-        $.ajax(settings).done(function (response) {
-          try {
-            resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
-          } catch (error) {
-            console.log('LME Torrent manager', 'Send command:', error);
-            reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
-          }
-        }).fail(function (jqXHR, textStatus, errorThrown) {
-          console.log('LME Torrent manager', 'Send command: Fail', textStatus, errorThrown, jqXHR);
-          reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
-        });
-      });
-    }
-    function SendTask$2(selectedTorrent, labels) {
-      if (!selectedTorrent) {
-        return;
-      }
-      var settings = {
-        url: "".concat(proxy$2).concat(url$2, "/api/v2/torrents/add"),
-        method: "POST",
-        timeout: 0,
-        headers: getHeaders$2("application/x-www-form-urlencoded"),
-        "data": {
-          "urls": selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link,
-          "category": selectedTorrent.CategoryDesc ? Lampa.Storage.get("lmetorrentqBittorent".concat(selectedTorrent.CategoryDesc)) : '',
-          "firstLastPiecePrio": Lampa.Storage.field("lmetorrentqBittorentfirstLastPiecePrio") ? "true" : "false",
-          "sequentialDownload": Lampa.Storage.field("lmetorrentqBittorentSequentialDownload") ? "true" : "false"
-        }
-      };
-      return new Promise(function (resolve, reject) {
-        $.ajax(settings).done(function (response) {
-          try {
-            resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
-          } catch (error) {
-            console.log('LME Torrent manager', 'Send file:', error);
-            reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
-          }
-        }).fail(function (jqXHR, textStatus, errorThrown) {
-          console.log('LME Torrent manager', 'Send file:', textStatus, errorThrown, jqXHR);
-          reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
-        });
-      });
-    }
-    var Qbittorent = {
-      auth: auth$2,
-      GetData: GetData$2,
-      GetInfo: GetInfo$1,
-      SendCommand: SendCommand$2,
-      SendTask: SendTask$2
-    };
-
     function getPosterFromLabels(labels) {
       return new Promise(function (resolve, reject) {
         // Ищем лейблы, которые начинаются на tv или movie и содержат цифры после косой
-        var label = labels.find(function (label) {
+        var labelArray = Array.isArray(labels) ? labels : labels.split(',');
+
+        // Find label matching tv/movie pattern
+        var label = labelArray.find(function (label) {
           return /^(tv|movie)\/\d+$/.test(label);
         });
         if (!label) {
-          return resolve('./img/img_load.svg'); // Возвращаем путь к картинке по умолчанию, если лейбл не найден
+          return resolve('./img/img_load.svg');
         }
 
         //const media = label.split('/')[1]; // Извлекаем ID из лейбла
@@ -796,6 +671,228 @@
         });
       });
     }
+
+    var url$2 = Lampa.Storage.field("lmetorrentqBittorentUrl");
+    var proxy$2 = "";
+    if (Lampa.Storage.field("lmetorrentqBittorentProxy") === true) {
+      proxy$2 = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
+    }
+    function getHeaders$2(type) {
+      var headers = {};
+      if (type) headers["Content-Type"] = type;
+      if (Lampa.Storage.get("lmetorrentqBittorentKey")) headers["set-cookie"] = Lampa.Storage.get("lmetorrenttransmissionKey");
+      if (Lampa.Storage.field('lmetorrentqBittorentProxy') === true) headers["x-requested-with"] = "lampame";
+      return headers;
+    }
+    function auth$2() {}
+    function GetData$2() {
+      var settings = {
+        url: "".concat(proxy$2).concat(url$2, "/api/v2/sync/maindata"),
+        method: "GET",
+        timeout: 0,
+        headers: getHeaders$2()
+      };
+      return new Promise(function (resolve, reject) {
+        $.ajax(settings).done( /*#__PURE__*/function () {
+          var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(response) {
+            var torrents, standardizedResponse;
+            return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+              while (1) switch (_context2.prev = _context2.next) {
+                case 0:
+                  _context2.prev = 0;
+                  if (response.torrents) {
+                    _context2.next = 4;
+                    break;
+                  }
+                  resolve([]);
+                  return _context2.abrupt("return");
+                case 4:
+                  torrents = Object.values(response.torrents);
+                  _context2.next = 7;
+                  return Promise.all(torrents.map( /*#__PURE__*/function () {
+                    var _ref2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(torrent) {
+                      return _regeneratorRuntime().wrap(function _callee$(_context) {
+                        while (1) switch (_context.prev = _context.next) {
+                          case 0:
+                            _context.t0 = torrent.name;
+                            _context.t1 = torrent.infohash_v1;
+                            _context.t2 = torrent.size;
+                            _context.t3 = torrent.state.charAt(0).toUpperCase() + torrent.state.slice(1);
+                            _context.t4 = torrent.tags;
+                            _context.next = 7;
+                            return getPosterFromLabels(torrent.tags);
+                          case 7:
+                            _context.t5 = _context.sent;
+                            _context.t6 = torrent.progress;
+                            return _context.abrupt("return", {
+                              name: _context.t0,
+                              id: _context.t1,
+                              size: _context.t2,
+                              state: _context.t3,
+                              labels: _context.t4,
+                              image: _context.t5,
+                              completed: _context.t6
+                            });
+                          case 10:
+                          case "end":
+                            return _context.stop();
+                        }
+                      }, _callee);
+                    }));
+                    return function (_x2) {
+                      return _ref2.apply(this, arguments);
+                    };
+                  }()));
+                case 7:
+                  standardizedResponse = _context2.sent;
+                  resolve(standardizedResponse);
+                  _context2.next = 15;
+                  break;
+                case 11:
+                  _context2.prev = 11;
+                  _context2.t0 = _context2["catch"](0);
+                  console.log('LME Torrent manager', 'GetData:', _context2.t0, response);
+                  reject(new Error('Ошибка при обработке данных'));
+                case 15:
+                case "end":
+                  return _context2.stop();
+              }
+            }, _callee2, null, [[0, 11]]);
+          }));
+          return function (_x) {
+            return _ref.apply(this, arguments);
+          };
+        }()).fail(function (jqXHR, textStatus, errorThrown) {
+          reject(new Error("\u041E\u0448\u0438\u0431\u043A\u0430 AJAX \u0437\u0430\u043F\u0440\u043E\u0441\u0430: ".concat(textStatus, " - ").concat(errorThrown)));
+        });
+      });
+    }
+    function GetInfo$1() {
+      var settings = {
+        url: "".concat(proxy$2).concat(url$2, "/api/v2/sync/maindata"),
+        method: "GET",
+        timeout: 0,
+        headers: getHeaders$2()
+      };
+      return new Promise(function (resolve, reject) {
+        $.ajax(settings).done(function (response) {
+          try {
+            var standardizedResponse = {
+              "space": response.server_state.free_space_on_disk
+            };
+            resolve(standardizedResponse);
+          } catch (error) {
+            reject(new Error('Ошибка при обработке данных'));
+          }
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+          reject(new Error("\u041E\u0448\u0438\u0431\u043A\u0430 AJAX \u0437\u0430\u043F\u0440\u043E\u0441\u0430: ".concat(textStatus, " - ").concat(errorThrown)));
+        });
+      });
+    }
+    function SendCommand$2(btn, torrent_data) {
+      return new Promise(function (resolve, reject) {
+        // First check qBittorrent version
+        $.ajax({
+          url: "".concat(proxy$2).concat(url$2, "/api/v2/app/version"),
+          method: "GET",
+          headers: getHeaders$2()
+        }).then(function (version) {
+          var versionNumber = parseInt(version.split('.')[0]);
+
+          // Adjust action based on version
+          if (versionNumber >= 5) {
+            if (btn.action === 'resume') btn.action = 'start';
+            if (btn.action === 'pause') btn.action = 'stop';
+          }
+
+          // Then send the command
+          var deleteFiles = btn.deleteFiles ? "true" : "";
+          return $.ajax({
+            url: "".concat(proxy$2).concat(url$2, "/api/v2/torrents/").concat(btn.action),
+            method: "POST",
+            timeout: 0,
+            headers: getHeaders$2("application/x-www-form-urlencoded"),
+            data: {
+              "hashes": torrent_data.id,
+              deleteFiles: deleteFiles
+            }
+          });
+        }).then(function () {
+          resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
+        })["catch"](function (error) {
+          console.log('LME Torrent manager', 'Send command:', error);
+          reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+        });
+      });
+    }
+
+    // function SendCommand (btn, torrent_data) {
+    //     const deleteFiles = (btn.deleteFiles) ? `true` : "";
+    //     const settings = {
+    //         url: `${proxy}${url}/api/v2/torrents/${btn.action}`,
+    //         method: "POST",
+    //         timeout: 0,
+    //         headers: getHeaders("application/x-www-form-urlencoded"),
+    //         "data": {
+    //             "hashes": torrent_data.id,
+    //             deleteFiles
+    //         }
+    //     };
+    //
+    //     return new Promise((resolve, reject) => {
+    //         $.ajax(settings).done(function(response) {
+    //             try {
+    //                 resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
+    //             } catch (error) {
+    //                 console.log('LME Torrent manager', 'Send command:',error)
+    //                 reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+    //             }
+    //         }).fail(function(jqXHR, textStatus, errorThrown) {
+    //             console.log('LME Torrent manager',  'Send command: Fail',textStatus, errorThrown,jqXHR)
+    //             reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+    //         });
+    //     });
+    // }
+
+    function SendTask$2(selectedTorrent, labels) {
+      if (!selectedTorrent) {
+        return;
+      }
+      var settings = {
+        url: "".concat(proxy$2).concat(url$2, "/api/v2/torrents/add"),
+        method: "POST",
+        timeout: 0,
+        headers: getHeaders$2("application/x-www-form-urlencoded"),
+        "data": {
+          "tags": labels,
+          "urls": selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link,
+          "category": selectedTorrent.CategoryDesc ? Lampa.Storage.get("lmetorrentqBittorent".concat(selectedTorrent.CategoryDesc)) : '',
+          "firstLastPiecePrio": Lampa.Storage.field("lmetorrentqBittorentfirstLastPiecePrio") ? "true" : "false",
+          "sequentialDownload": Lampa.Storage.field("lmetorrentqBittorentSequentialDownload") ? "true" : "false"
+        }
+      };
+      return new Promise(function (resolve, reject) {
+        $.ajax(settings).done(function (response) {
+          try {
+            console.log('LME Torrent manager', 'Send file:', response);
+            resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
+          } catch (error) {
+            console.log('LME Torrent manager', 'Send file:', error);
+            reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+          }
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+          console.log('LME Torrent manager', 'Send file:', textStatus, errorThrown, jqXHR);
+          reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+        });
+      });
+    }
+    var Qbittorent = {
+      auth: auth$2,
+      GetData: GetData$2,
+      GetInfo: GetInfo$1,
+      SendCommand: SendCommand$2,
+      SendTask: SendTask$2
+    };
 
     function cleanName(name) {
       // Оновлений регулярний вираз для видалення інформації про сезон, рік, якість та інші зайві частини
@@ -1337,15 +1434,18 @@
     }
 
     function parseLabels(labels) {
-      if (!Array.isArray(labels)) return null;
+      if (!labels) return null;
 
-      // Шукаємо перший label, який містить 'tv/' або 'movie/'
-      var matchedLabel = labels.find(function (label) {
+      // Convert string to array if needed
+      var labelArray = Array.isArray(labels) ? labels : labels.split(',');
+
+      // Find label matching tv/movie pattern
+      var matchedLabel = labelArray.find(function (label) {
         return /^(tv|movie)\/\d+$/.test(label);
       });
       if (!matchedLabel) return null;
 
-      // Розбиваємо знайдений label на частини
+      // Split matched label into parts
       var _matchedLabel$split = matchedLabel.split('/'),
         _matchedLabel$split2 = _slicedToArray(_matchedLabel$split, 2),
         method = _matchedLabel$split2[0],
