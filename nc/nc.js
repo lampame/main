@@ -699,25 +699,98 @@
         "X-Appwrite-Project": "65fd523956f5ca97eaff"
       }
     };
+    var allNetworks = []; // Store all networks globally
+
     function main$2(params, oncomplite, onerror) {
-      var apiUrl = api_url;
-      if (params.searchQuery && params.searchQuery !== "") {
-        apiUrl += "&queries[]={\"method\":\"search\",\"attribute\":\"name\",\"values\":[\"".concat(params.searchQuery, "\"]}");
-      }
-      if (!params.searchQuery && (params.geoSearchQuery && params.geoSearchQuery !== "" || Lampa.Storage.get('nc_networksListGeo') && Lampa.Storage.get('nc_networksListGeo') !== "null")) {
-        apiUrl += "&queries[]={\"method\":\"equal\",\"attribute\":\"origin_country\",\"values\":[\"".concat(Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery, "\"]}");
-      }
-      network.silent(encodeURI(apiUrl), function (data) {
-        data.collection = true;
-        data.total_pages = data.total / 36;
-        data.documents.forEach(function (element) {
-          element.poster_path = element.logo_path;
-          if (element.origin_country !== null) {
-            element.name = "".concat(element.name, " ").concat(element.origin_country);
+      var trakt_headers = {
+        'Content-Type': 'application/json',
+        'trakt-api-version': '2',
+        'trakt-api-key': 'a77093dcf5db97106d9303f3ab7d46a80a93a6e0c1d7a2ff8a1aacebe0dc161b'
+      };
+      if (allNetworks.length > 0 && !params.searchQuery && !params.geoSearchQuery) {
+        // Use cached networks
+        processPage(params.page || 0);
+      } else {
+        // Fetch networks from API
+        $.ajax({
+          url: 'https://api.trakt.tv/networks',
+          method: 'GET',
+          headers: trakt_headers,
+          success: function success(networks) {
+            if (params.searchQuery) {
+              networks = networks.filter(function (network) {
+                return network.name.toLowerCase().includes(params.searchQuery.toLowerCase());
+              });
+            }
+            if (!params.searchQuery && (params.geoSearchQuery || Lampa.Storage.get('nc_networksListGeo'))) {
+              var countryCode = (Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery).toLowerCase();
+              networks = networks.filter(function (network) {
+                return network.country && network.country.toLowerCase() === countryCode;
+              });
+            }
+            allNetworks = networks; // Store all filtered networks
+            processPage(params.page || 0);
+          },
+          error: function error(jqXHR, textStatus, errorThrown) {
+            onerror(new Error("".concat(textStatus, ": ").concat(errorThrown)));
           }
         });
-        oncomplite(data);
-      }, onerror, false, auth);
+      }
+      function processPage(page) {
+        var start = page * 36;
+        var pageNetworks = allNetworks.slice(start, start + 36);
+        var data = {
+          collection: true,
+          total_pages: Math.ceil(allNetworks.length / 36),
+          total: allNetworks.length,
+          documents: []
+        };
+        var promises = pageNetworks.map(function (network) {
+          return new Promise(function (resolve) {
+            if (network.ids.tmdb) {
+              $.ajax({
+                url: "".concat(Lampa.TMDB.api('network/' + network.ids.tmdb + '/images' + '?api_key=' + Lampa.TMDB.key())),
+                success: function success(json) {
+                  var _json$logos, _network$country;
+                  resolve({
+                    name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
+                    logo_path: ((_json$logos = json.logos) === null || _json$logos === void 0 || (_json$logos = _json$logos[0]) === null || _json$logos === void 0 ? void 0 : _json$logos.file_path) || '',
+                    origin_country: ((_network$country = network.country) === null || _network$country === void 0 ? void 0 : _network$country.toUpperCase()) || null,
+                    $id: network.ids.trakt,
+                    tmdb_id: network.ids.tmdb
+                  });
+                },
+                error: function error() {
+                  var _network$country2;
+                  resolve({
+                    name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
+                    logo_path: '',
+                    origin_country: ((_network$country2 = network.country) === null || _network$country2 === void 0 ? void 0 : _network$country2.toUpperCase()) || null,
+                    $id: network.ids.trakt,
+                    tmdb_id: network.ids.tmdb
+                  });
+                }
+              });
+            } else {
+              var _network$country3;
+              resolve({
+                name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
+                logo_path: '',
+                origin_country: ((_network$country3 = network.country) === null || _network$country3 === void 0 ? void 0 : _network$country3.toUpperCase()) || null,
+                $id: network.ids.trakt,
+                tmdb_id: null
+              });
+            }
+          });
+        });
+        Promise.all(promises).then(function (documents) {
+          data.documents = documents;
+          data.documents.forEach(function (element) {
+            element.poster_path = element.logo_path;
+          });
+          oncomplite(data);
+        });
+      }
     }
     function full(params, oncomplite, onerror) {
       var apiUrl = api_url;
@@ -3221,7 +3294,7 @@
 
     var manifest = {
       type: "other",
-      version: "4.2.0",
+      version: "4.2.2",
       name: "New category",
       description: "Add new category and TV Show stream service",
       component: "nc"
