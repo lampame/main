@@ -849,7 +849,7 @@
               success: function success(json) {
                 var _json$logos, _network$country;
                 resolve({
-                  name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
+                  name: network.name,
                   logo_path: ((_json$logos = json.logos) === null || _json$logos === void 0 || (_json$logos = _json$logos[0]) === null || _json$logos === void 0 ? void 0 : _json$logos.file_path) || '',
                   origin_country: ((_network$country = network.country) === null || _network$country === void 0 ? void 0 : _network$country.toUpperCase()) || null,
                   $id: network.ids.tmdb,
@@ -859,7 +859,7 @@
               error: function error() {
                 var _network$country2;
                 resolve({
-                  name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
+                  name: network.name,
                   logo_path: '',
                   origin_country: ((_network$country2 = network.country) === null || _network$country2 === void 0 ? void 0 : _network$country2.toUpperCase()) || null,
                   $id: network.ids.tmdb,
@@ -870,7 +870,7 @@
           } else {
             var _network$country3;
             resolve({
-              name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
+              name: network.name,
               logo_path: '',
               origin_country: ((_network$country3 = network.country) === null || _network$country3 === void 0 ? void 0 : _network$country3.toUpperCase()) || null,
               $id: network.ids.tmdb,
@@ -1747,6 +1747,13 @@
               card.card.removeChild(titleElement);
               // Додаємо до icons
               iconsContainer.appendChild(titleElement);
+
+              // Add flag image if country exists
+              if (card.data.origin_country) {
+                var flagImg = document.createElement('img');
+                flagImg.src = "https://flagsapi.com/".concat(card.data.origin_country, "/flat/64.png");
+                iconsContainer.appendChild(flagImg);
+              }
             }
           }
           card.onFocus = function (target, card_data) {
