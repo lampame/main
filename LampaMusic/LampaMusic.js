@@ -1,6 +1,31 @@
 (function () {
   'use strict';
 
+  function asyncGeneratorStep(n, t, e, r, o, a, c) {
+    try {
+      var i = n[a](c),
+        u = i.value;
+    } catch (n) {
+      return void e(n);
+    }
+    i.done ? t(u) : Promise.resolve(u).then(r, o);
+  }
+  function _asyncToGenerator(n) {
+    return function () {
+      var t = this,
+        e = arguments;
+      return new Promise(function (r, o) {
+        var a = n.apply(t, e);
+        function _next(n) {
+          asyncGeneratorStep(a, r, o, _next, _throw, "next", n);
+        }
+        function _throw(n) {
+          asyncGeneratorStep(a, r, o, _next, _throw, "throw", n);
+        }
+        _next(void 0);
+      });
+    };
+  }
   function _regeneratorRuntime() {
     _regeneratorRuntime = function () {
       return e;
@@ -302,36 +327,6 @@
       }
     }, e;
   }
-  function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
-    try {
-      var info = gen[key](arg);
-      var value = info.value;
-    } catch (error) {
-      reject(error);
-      return;
-    }
-    if (info.done) {
-      resolve(value);
-    } else {
-      Promise.resolve(value).then(_next, _throw);
-    }
-  }
-  function _asyncToGenerator(fn) {
-    return function () {
-      var self = this,
-        args = arguments;
-      return new Promise(function (resolve, reject) {
-        var gen = fn.apply(self, args);
-        function _next(value) {
-          asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
-        }
-        function _throw(err) {
-          asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err);
-        }
-        _next(undefined);
-      });
-    };
-  }
 
   function Item(data, typeCat) {
     var item = Lampa.Template.get("lmeMusic_item", {
@@ -353,7 +348,7 @@
     return _Main.apply(this, arguments);
   }
   function _Main() {
-    _Main = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(data, itemNumber) {
+    _Main = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(data, itemNumber) {
       var cache, delay, results, i, item, id, lmeMusicHSL, response, result, formattedResult, progress;
       return _regeneratorRuntime().wrap(function _callee$(_context) {
         while (1) switch (_context.prev = _context.next) {
@@ -502,7 +497,7 @@
     var head = $("<div class='lmeMusic-head torrent-filter'><div class='lmeMusic-head__home simple-button simple-button--filter selector'>Home</div><div class='lmeMusic-head__search simple-button simple-button--filter selector'>".concat(Lampa.Lang.translate('LMEM_searchPerformer'), "</div></div>"));
     var body = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var active, last;
-    this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+    this.create = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
       return _regeneratorRuntime().wrap(function _callee$(_context) {
         while (1) switch (_context.prev = _context.next) {
           case 0:
@@ -562,7 +557,7 @@
           last = item.render()[0];
           active = items.indexOf(item);
           scroll.update(items[active].render(), true);
-        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
           return _regeneratorRuntime().wrap(function _callee2$(_context2) {
             while (1) switch (_context2.prev = _context2.next) {
               case 0:
@@ -647,7 +642,7 @@
     var topVideos = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var similarArtists = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var active, last;
-    this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+    this.create = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
       return _regeneratorRuntime().wrap(function _callee3$(_context3) {
         while (1) switch (_context3.prev = _context3.next) {
           case 0:
@@ -732,7 +727,7 @@
           last = item.render()[0];
           active = items.indexOf(item);
           scroll.update(items[active].render(), true);
-        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
           return _regeneratorRuntime().wrap(function _callee4$(_context4) {
             while (1) switch (_context4.prev = _context4.next) {
               case 0:
@@ -755,7 +750,7 @@
           last = item.render()[0];
           active = items.indexOf(item);
           scroll.update(items[active].render(), true);
-        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
           return _regeneratorRuntime().wrap(function _callee5$(_context5) {
             while (1) switch (_context5.prev = _context5.next) {
               case 0:
@@ -779,7 +774,7 @@
           last = item.render()[0];
           active = items.indexOf(item);
           scroll.update(items[active].render(), true);
-        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
           return _regeneratorRuntime().wrap(function _callee6$(_context6) {
             while (1) switch (_context6.prev = _context6.next) {
               case 0:
@@ -801,7 +796,7 @@
           last = item.render()[0];
           active = items.indexOf(item);
           scroll.update(items[active].render(), true);
-        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7() {
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee7() {
           return _regeneratorRuntime().wrap(function _callee7$(_context7) {
             while (1) switch (_context7.prev = _context7.next) {
               case 0:
@@ -823,7 +818,7 @@
           last = item.render()[0];
           active = items.indexOf(item);
           scroll.update(items[active].render(), true);
-        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee8() {
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee8() {
           return _regeneratorRuntime().wrap(function _callee8$(_context8) {
             while (1) switch (_context8.prev = _context8.next) {
               case 0:
@@ -846,7 +841,7 @@
           last = item.render()[0];
           active = items.indexOf(item);
           scroll.update(items[active].render(), true);
-        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee9() {
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee9() {
           return _regeneratorRuntime().wrap(function _callee9$(_context9) {
             while (1) switch (_context9.prev = _context9.next) {
               case 0:
@@ -968,7 +963,7 @@
     var blockTwoBody = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var blockThreeBody = $('<div class="lmeMusic-catalog--list category-full"></div>');
     var active, last;
-    this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+    this.create = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
       var settings;
       return _regeneratorRuntime().wrap(function _callee$(_context) {
         while (1) switch (_context.prev = _context.next) {
@@ -1102,7 +1097,7 @@
           last = item.render()[0];
           active = items.indexOf(item);
           scroll.update(items[active].render(), true);
-        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
           return _regeneratorRuntime().wrap(function _callee2$(_context2) {
             while (1) switch (_context2.prev = _context2.next) {
               case 0:
@@ -1138,7 +1133,7 @@
           last = item.render()[0];
           active = items.indexOf(item);
           scroll.update(items[active].render(), true);
-        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
           return _regeneratorRuntime().wrap(function _callee3$(_context3) {
             while (1) switch (_context3.prev = _context3.next) {
               case 0:
@@ -1174,7 +1169,7 @@
           last = item.render()[0];
           active = items.indexOf(item);
           scroll.update(items[active].render(), true);
-        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+        }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
           return _regeneratorRuntime().wrap(function _callee4$(_context4) {
             while (1) switch (_context4.prev = _context4.next) {
               case 0:
@@ -1210,7 +1205,7 @@
             last = item.render()[0];
             active = items.indexOf(item);
             scroll.update(items[active].render(), true);
-          }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+          }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
             return _regeneratorRuntime().wrap(function _callee5$(_context5) {
               while (1) switch (_context5.prev = _context5.next) {
                 case 0:

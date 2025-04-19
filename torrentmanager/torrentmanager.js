@@ -121,6 +121,59 @@
       });
     }
 
+    function _arrayLikeToArray(r, a) {
+      (null == a || a > r.length) && (a = r.length);
+      for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
+      return n;
+    }
+    function _arrayWithHoles(r) {
+      if (Array.isArray(r)) return r;
+    }
+    function asyncGeneratorStep(n, t, e, r, o, a, c) {
+      try {
+        var i = n[a](c),
+          u = i.value;
+      } catch (n) {
+        return void e(n);
+      }
+      i.done ? t(u) : Promise.resolve(u).then(r, o);
+    }
+    function _asyncToGenerator(n) {
+      return function () {
+        var t = this,
+          e = arguments;
+        return new Promise(function (r, o) {
+          var a = n.apply(t, e);
+          function _next(n) {
+            asyncGeneratorStep(a, r, o, _next, _throw, "next", n);
+          }
+          function _throw(n) {
+            asyncGeneratorStep(a, r, o, _next, _throw, "throw", n);
+          }
+          _next(void 0);
+        });
+      };
+    }
+    function _defineProperty(e, r, t) {
+      return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+        value: t,
+        enumerable: !0,
+        configurable: !0,
+        writable: !0
+      }) : e[r] = t, e;
+    }
+    function _inherits(t, e) {
+      if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function");
+      t.prototype = Object.create(e && e.prototype, {
+        constructor: {
+          value: t,
+          writable: !0,
+          configurable: !0
+        }
+      }), Object.defineProperty(t, "prototype", {
+        writable: !1
+      }), e && _setPrototypeOf(t, e);
+    }
     function _iterableToArrayLimit(r, l) {
       var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
       if (null != t) {
@@ -147,6 +200,9 @@
         }
         return a;
       }
+    }
+    function _nonIterableRest() {
+      throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
     }
     function ownKeys(e, r) {
       var t = Object.keys(e);
@@ -470,6 +526,14 @@
         }
       }, e;
     }
+    function _setPrototypeOf(t, e) {
+      return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) {
+        return t.__proto__ = e, t;
+      }, _setPrototypeOf(t, e);
+    }
+    function _slicedToArray(r, e) {
+      return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest();
+    }
     function _toPrimitive(t, r) {
       if ("object" != typeof t || !t) return t;
       var e = t[Symbol.toPrimitive];
@@ -492,6 +556,13 @@
       } : function (o) {
         return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
       }, _typeof(o);
+    }
+    function _unsupportedIterableToArray(r, a) {
+      if (r) {
+        if ("string" == typeof r) return _arrayLikeToArray(r, a);
+        var t = {}.toString.call(r).slice(8, -1);
+        return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;
+      }
     }
     function _wrapRegExp() {
       _wrapRegExp = function (e, r) {
@@ -525,9 +596,10 @@
       }, BabelRegExp.prototype[Symbol.replace] = function (t, p) {
         if ("string" == typeof p) {
           var o = r.get(this);
-          return e[Symbol.replace].call(this, t, p.replace(/\$<([^>]+)>/g, function (e, r) {
-            var t = o[r];
-            return "$" + (Array.isArray(t) ? t.join("$") : t);
+          return e[Symbol.replace].call(this, t, p.replace(/\$<([^>]+)(>|$)/g, function (e, r, t) {
+            if ("" === t) return e;
+            var p = o[r];
+            return Array.isArray(p) ? "$" + p.join("$") : "number" == typeof p ? "$" + p : "";
           }));
         }
         if ("function" == typeof p) {
@@ -539,95 +611,6 @@
         }
         return e[Symbol.replace].call(this, t, p);
       }, _wrapRegExp.apply(this, arguments);
-    }
-    function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
-      try {
-        var info = gen[key](arg);
-        var value = info.value;
-      } catch (error) {
-        reject(error);
-        return;
-      }
-      if (info.done) {
-        resolve(value);
-      } else {
-        Promise.resolve(value).then(_next, _throw);
-      }
-    }
-    function _asyncToGenerator(fn) {
-      return function () {
-        var self = this,
-          args = arguments;
-        return new Promise(function (resolve, reject) {
-          var gen = fn.apply(self, args);
-          function _next(value) {
-            asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
-          }
-          function _throw(err) {
-            asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err);
-          }
-          _next(undefined);
-        });
-      };
-    }
-    function _defineProperty(obj, key, value) {
-      key = _toPropertyKey(key);
-      if (key in obj) {
-        Object.defineProperty(obj, key, {
-          value: value,
-          enumerable: true,
-          configurable: true,
-          writable: true
-        });
-      } else {
-        obj[key] = value;
-      }
-      return obj;
-    }
-    function _inherits(subClass, superClass) {
-      if (typeof superClass !== "function" && superClass !== null) {
-        throw new TypeError("Super expression must either be null or a function");
-      }
-      subClass.prototype = Object.create(superClass && superClass.prototype, {
-        constructor: {
-          value: subClass,
-          writable: true,
-          configurable: true
-        }
-      });
-      Object.defineProperty(subClass, "prototype", {
-        writable: false
-      });
-      if (superClass) _setPrototypeOf(subClass, superClass);
-    }
-    function _setPrototypeOf(o, p) {
-      _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) {
-        o.__proto__ = p;
-        return o;
-      };
-      return _setPrototypeOf(o, p);
-    }
-    function _slicedToArray(arr, i) {
-      return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
-    }
-    function _arrayWithHoles(arr) {
-      if (Array.isArray(arr)) return arr;
-    }
-    function _unsupportedIterableToArray(o, minLen) {
-      if (!o) return;
-      if (typeof o === "string") return _arrayLikeToArray(o, minLen);
-      var n = Object.prototype.toString.call(o).slice(8, -1);
-      if (n === "Object" && o.constructor) n = o.constructor.name;
-      if (n === "Map" || n === "Set") return Array.from(o);
-      if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
-    }
-    function _arrayLikeToArray(arr, len) {
-      if (len == null || len > arr.length) len = arr.length;
-      for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
-      return arr2;
-    }
-    function _nonIterableRest() {
-      throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
     }
 
     function getPosterFromLabels(labels) {
@@ -693,8 +676,8 @@
         headers: getHeaders$2()
       };
       return new Promise(function (resolve, reject) {
-        $.ajax(settings).done( /*#__PURE__*/function () {
-          var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(response) {
+        $.ajax(settings).done(/*#__PURE__*/function () {
+          var _ref = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(response) {
             var torrents, standardizedResponse;
             return _regeneratorRuntime().wrap(function _callee2$(_context2) {
               while (1) switch (_context2.prev = _context2.next) {
@@ -709,8 +692,8 @@
                 case 4:
                   torrents = Object.values(response.torrents);
                   _context2.next = 7;
-                  return Promise.all(torrents.map( /*#__PURE__*/function () {
-                    var _ref2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(torrent) {
+                  return Promise.all(torrents.map(/*#__PURE__*/function () {
+                    var _ref2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(torrent) {
                       return _regeneratorRuntime().wrap(function _callee$(_context) {
                         while (1) switch (_context.prev = _context.next) {
                           case 0:
@@ -896,7 +879,7 @@
 
     function cleanName(name) {
       // Оновлений регулярний вираз для видалення інформації про сезон, рік, якість та інші зайві частини
-      var regex = /*#__PURE__*/_wrapRegExp(/(.*?)(?:[.\s]S\d{1,2}(?:E\d{1,2})?|[.\s]\d{4}|[.\s](?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB\x2DRip|WEB\x2DDL|WEB|TS|(?:PPV )?WEB\x2D?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv).*$/i, {
+      var regex = /*#__PURE__*/_wrapRegExp(/(.*?)(?:[.\s]S\d{1,2}(?:E\d{1,2})?|[.\s]\d{4}|[.\s](?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB-Rip|WEB-DL|WEB|TS|(?:PPV )?WEB-?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv).*$/i, {
         title: 1
       });
       var match = name.match(regex);
@@ -1029,16 +1012,16 @@
         })
       };
       return new Promise(function (resolve, reject) {
-        $.ajax(settings).done( /*#__PURE__*/function () {
-          var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(response) {
+        $.ajax(settings).done(/*#__PURE__*/function () {
+          var _ref = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(response) {
             var standardizedResponse;
             return _regeneratorRuntime().wrap(function _callee2$(_context2) {
               while (1) switch (_context2.prev = _context2.next) {
                 case 0:
                   _context2.prev = 0;
                   _context2.next = 3;
-                  return Promise.all(response.arguments.torrents.map( /*#__PURE__*/function () {
-                    var _ref2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(torrent) {
+                  return Promise.all(response.arguments.torrents.map(/*#__PURE__*/function () {
+                    var _ref2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(torrent) {
                       var imageUrl;
                       return _regeneratorRuntime().wrap(function _callee$(_context) {
                         while (1) switch (_context.prev = _context.next) {
@@ -1468,13 +1451,13 @@
       var head = $("<div class='lmetorrent-head'></div>");
       var body = $('<div class="lmetorrent-catalog--list category-full"></div>');
       var active, last;
-      this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+      this.create = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
         var startClient, _startClient, result;
         return _regeneratorRuntime().wrap(function _callee2$(_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
               _startClient = function _startClient3() {
-                _startClient = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(client) {
+                _startClient = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(client) {
                   var _yield$Promise$all, _yield$Promise$all2, qbData, qbInfo, _yield$Promise$all3, _yield$Promise$all4, trData, trInfo;
                   return _regeneratorRuntime().wrap(function _callee$(_context) {
                     while (1) switch (_context.prev = _context.next) {
@@ -1602,7 +1585,7 @@
             last = item.render()[0];
             active = items.indexOf(item);
             scroll.update(items[active].render(), true);
-          }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+          }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
             var enabled, menu;
             return _regeneratorRuntime().wrap(function _callee3$(_context3) {
               while (1) switch (_context3.prev = _context3.next) {
@@ -2353,7 +2336,7 @@
       return _startClient.apply(this, arguments);
     }
     function _startClient() {
-      _startClient = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(client) {
+      _startClient = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(client) {
         var result, _yield$Promise$all, _yield$Promise$all2, qbData, qbInfo, _yield$Promise$all3, _yield$Promise$all4, trData, trInfo;
         return _regeneratorRuntime().wrap(function _callee2$(_context2) {
           while (1) switch (_context2.prev = _context2.next) {
@@ -2430,7 +2413,7 @@
                   var $button = $("<div class=\"full-start__button selector button--lme_torrent\">\n                                <svg fill=\"currentColor\" version=\"1.1\" id=\"Capa_1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 588.601 588.6\" xml:space=\"preserve\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <g> <path d=\"M168.405,288.048c-3.019,0.084-4.936,0.419-5.864,0.728v20.174l5.632-0.059c6.463-0.078,10.558-4.35,10.558-10.768 C178.73,291.017,174.636,287.869,168.405,288.048z\"></path> <path d=\"M82.324,290.445c-8.177,0.227-12.49,10.278-12.49,22.491c0,12.045,4.588,21.674,12.49,21.737 c8.089,0.079,12.701-9.761,12.701-22.412C95.018,300.86,90.688,290.213,82.324,290.445z\"></path> <path d=\"M125.722,289.235c-2.813,0.082-4.617,0.396-5.484,0.696v19.515l5.276-0.059c6.03-0.074,9.858-4.203,9.858-10.404 C135.372,292.117,131.544,289.074,125.722,289.235z\"></path> <path d=\"M539.568,49.201h-178.2c-0.786,0-1.561,0.074-2.347,0.124V0L11.228,46.419v494.562L359.032,588.6v-50.814 c0.78,0.053,1.55,0.115,2.341,0.115h178.2c20.852,0,37.8-16.959,37.8-37.8v-413.1C577.368,66.161,560.425,49.201,539.568,49.201z M361.368,70.801h178.2c8.928,0,16.2,7.267,16.2,16.2v271.329c-23.272-58.704-70.2-90.393-132.864-99.347 c-18.879-2.705-21.79,0.886-19.687,19.517c1.482,13.252,11.786,9.158,18.747,10.022c56.574,7.085,103.982,49.642,115.288,104.147 c7.267,34.974-1.266,71.872-21.305,101.05h-14.08c36.64-49.116,38.834-102.389,2.964-149.575 c-33.307-43.802-99.62-61.505-145.8-42.604V71.043C359.797,70.93,360.572,70.801,361.368,70.801z M359.032,333.687 c2.226-0.891,4.25-1.703,6.265-2.479c45.752-17.649,97.817-0.606,122.096,39.946c23.757,39.726,14.223,90.034-22.892,122.565 h-14.122c3.912-2.942,7.73-6.181,11.411-9.734c26.314-25.376,35.374-56.162,24.01-90.925 c-11.527-35.258-37.446-55.244-74.007-60.592c-18.114-2.647-36.956,1.244-52.761,9.661V333.687z M359.032,378.891 c0.169-0.163,0.327-0.354,0.506-0.517c22.939-22.17,62.259-21.479,84.555,1.397c22.687,23.277,22.887,60.307-2.479,81.949 c-13.11,11.175-29.995,20.408-46.659,24.49c-11.935,2.921-23.905,4.777-35.923,6.021V378.891z M296.331,275.25l49.401-1.7v11.156 l-19.232,0.514v61.077l-11.938-0.19v-60.57l-18.236,0.493V275.25H296.331z M60.247,292.37l-12.49,0.332v49.265l-7.771-0.11v-48.953 l-11.929,0.321V284.5l32.189-1.113V292.37z M81.857,343.459c-12.677-0.211-20.545-12.983-20.545-30.26 c0-18.077,8.521-31.118,21.209-31.572c13.458-0.466,21.526,12.714,21.526,30.085C104.048,332.153,94.521,343.67,81.857,343.459z M136.836,343.343c-0.738-1.867-1.917-6.982-3.31-14.776c-1.395-8.147-3.73-10.721-8.819-10.895l-4.47,0.025v25.393l-8.701-0.138 v-60.515c3.267-0.828,8.208-1.55,13.324-1.73c7.056-0.242,11.907,1.071,15.238,4.504c2.745,2.797,4.316,7.148,4.316,12.469 c0,8.137-4.398,13.685-9.042,15.868v0.284c3.533,1.641,5.688,6.012,6.951,12.056c1.572,7.857,2.911,15.161,3.963,17.607 L136.836,343.343z M180.312,344.023c-0.788-1.935-2.059-7.229-3.554-15.298c-1.484-8.427-3.995-11.096-9.429-11.264l-4.788,0.021 v26.262l-9.305-0.143v-62.574c3.488-0.865,8.754-1.608,14.241-1.798c7.549-0.274,12.738,1.086,16.313,4.627 c2.942,2.896,4.617,7.394,4.617,12.906c0,8.412-4.704,14.16-9.682,16.428v0.295c3.783,1.688,6.096,6.207,7.446,12.477 c1.68,8.127,3.119,15.684,4.237,18.22L180.312,344.023z M231.742,344.82l-33.874-0.533v-65.646l32.598-1.118v10.083l-22.539,0.609 v17.075l21.266-0.306v9.978l-21.266,0.137v19.438l23.815,0.189V344.82z M241.052,277.151l12.234-0.422l15.515,29.141 c4.061,7.668,7.604,15.688,10.434,23.235h0.19c-0.73-9.313-1.004-18.299-1.004-28.94v-24.301l10.491-0.366v70.208l-11.675-0.18 l-15.881-30.47c-3.828-7.515-7.791-15.884-10.702-23.535l-0.264,0.105c0.43,8.812,0.517,17.819,0.517,29.072v24.421l-9.848-0.152 v-67.816H241.052z M539.568,516.301h-4.915c8.644-11.56,15.746-23.467,21.115-35.743v19.543 C555.769,509.035,548.507,516.301,539.568,516.301z\"></path> </g> </g></svg>\n                                <span>".concat(torrent.completed > 0 ? "".concat(torrent.state, " - ").concat(Number((torrent.completed * 100).toFixed(2)), "%") : torrent.state, "</span>\n                            </div>"));
 
                   // Attach event handlers
-                  $button.on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+                  $button.on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
                     var enabled, menu;
                     return _regeneratorRuntime().wrap(function _callee$(_context) {
                       while (1) switch (_context.prev = _context.next) {

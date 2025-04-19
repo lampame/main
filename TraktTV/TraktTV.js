@@ -1,6 +1,39 @@
 (function () {
   'use strict';
 
+  function asyncGeneratorStep(n, t, e, r, o, a, c) {
+    try {
+      var i = n[a](c),
+        u = i.value;
+    } catch (n) {
+      return void e(n);
+    }
+    i.done ? t(u) : Promise.resolve(u).then(r, o);
+  }
+  function _asyncToGenerator(n) {
+    return function () {
+      var t = this,
+        e = arguments;
+      return new Promise(function (r, o) {
+        var a = n.apply(t, e);
+        function _next(n) {
+          asyncGeneratorStep(a, r, o, _next, _throw, "next", n);
+        }
+        function _throw(n) {
+          asyncGeneratorStep(a, r, o, _next, _throw, "throw", n);
+        }
+        _next(void 0);
+      });
+    };
+  }
+  function _defineProperty(e, r, t) {
+    return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+      value: t,
+      enumerable: !0,
+      configurable: !0,
+      writable: !0
+    }) : e[r] = t, e;
+  }
   function _regeneratorRuntime() {
     _regeneratorRuntime = function () {
       return e;
@@ -315,50 +348,6 @@
   function _toPropertyKey(t) {
     var i = _toPrimitive(t, "string");
     return "symbol" == typeof i ? i : i + "";
-  }
-  function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
-    try {
-      var info = gen[key](arg);
-      var value = info.value;
-    } catch (error) {
-      reject(error);
-      return;
-    }
-    if (info.done) {
-      resolve(value);
-    } else {
-      Promise.resolve(value).then(_next, _throw);
-    }
-  }
-  function _asyncToGenerator(fn) {
-    return function () {
-      var self = this,
-        args = arguments;
-      return new Promise(function (resolve, reject) {
-        var gen = fn.apply(self, args);
-        function _next(value) {
-          asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
-        }
-        function _throw(err) {
-          asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err);
-        }
-        _next(undefined);
-      });
-    };
-  }
-  function _defineProperty(obj, key, value) {
-    key = _toPropertyKey(key);
-    if (key in obj) {
-      Object.defineProperty(obj, key, {
-        value: value,
-        enumerable: true,
-        configurable: true,
-        writable: true
-      });
-    } else {
-      obj[key] = value;
-    }
-    return obj;
   }
 
   // plugins/TraktTV/config.js
@@ -777,7 +766,7 @@
     return _handleWatchlistAction.apply(this, arguments);
   }
   function _handleWatchlistAction() {
-    _handleWatchlistAction = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(e) {
+    _handleWatchlistAction = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(e) {
       var account, profileId, traktTokens, tokenData, tokenObj, lookupSettings, response;
       return _regeneratorRuntime().wrap(function _callee$(_context) {
         while (1) switch (_context.prev = _context.next) {
@@ -852,7 +841,7 @@
     return _updateWatchlist.apply(this, arguments);
   }
   function _updateWatchlist() {
-    _updateWatchlist = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(action, e, tokenData) {
+    _updateWatchlist = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(action, e, tokenData) {
       var updateSettings, response;
       return _regeneratorRuntime().wrap(function _callee2$(_context2) {
         while (1) switch (_context2.prev = _context2.next) {
