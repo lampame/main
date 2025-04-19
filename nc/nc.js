@@ -691,6 +691,95 @@
       setting: setting
     };
 
+    function _arrayLikeToArray(r, a) {
+      (null == a || a > r.length) && (a = r.length);
+      for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
+      return n;
+    }
+    function _arrayWithHoles(r) {
+      if (Array.isArray(r)) return r;
+    }
+    function _arrayWithoutHoles(r) {
+      if (Array.isArray(r)) return _arrayLikeToArray(r);
+    }
+    function _classCallCheck(a, n) {
+      if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function");
+    }
+    function _defineProperties(e, r) {
+      for (var t = 0; t < r.length; t++) {
+        var o = r[t];
+        o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o);
+      }
+    }
+    function _createClass(e, r, t) {
+      return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", {
+        writable: !1
+      }), e;
+    }
+    function _iterableToArray(r) {
+      if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r);
+    }
+    function _iterableToArrayLimit(r, l) {
+      var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
+      if (null != t) {
+        var e,
+          n,
+          i,
+          u,
+          a = [],
+          f = !0,
+          o = !1;
+        try {
+          if (i = (t = t.call(r)).next, 0 === l) {
+            if (Object(t) !== t) return;
+            f = !1;
+          } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0);
+        } catch (r) {
+          o = !0, n = r;
+        } finally {
+          try {
+            if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return;
+          } finally {
+            if (o) throw n;
+          }
+        }
+        return a;
+      }
+    }
+    function _nonIterableRest() {
+      throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+    }
+    function _nonIterableSpread() {
+      throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+    }
+    function _slicedToArray(r, e) {
+      return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest();
+    }
+    function _toConsumableArray(r) {
+      return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread();
+    }
+    function _toPrimitive(t, r) {
+      if ("object" != typeof t || !t) return t;
+      var e = t[Symbol.toPrimitive];
+      if (void 0 !== e) {
+        var i = e.call(t, r || "default");
+        if ("object" != typeof i) return i;
+        throw new TypeError("@@toPrimitive must return a primitive value.");
+      }
+      return ("string" === r ? String : Number)(t);
+    }
+    function _toPropertyKey(t) {
+      var i = _toPrimitive(t, "string");
+      return "symbol" == typeof i ? i : i + "";
+    }
+    function _unsupportedIterableToArray(r, a) {
+      if (r) {
+        if ("string" == typeof r) return _arrayLikeToArray(r, a);
+        var t = {}.toString.call(r).slice(8, -1);
+        return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;
+      }
+    }
+
     var network = new Lampa.Reguest();
     var api_url = 'https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/TVNetworksSource/documents?queries[0]={"method":"limit","values":[36]}&queries[]={"method":"orderDesc","values":["$createdAt"]}';
     var api_urlCollection = 'https://cloud.appwrite.io/v1/databases/65fd540d95317ea2a89f/collections/CollectionSource/documents?queries[0]={"method":"limit","values":[36]}&queries[]={"method":"orderDesc","values":["$createdAt"]}';
@@ -728,23 +817,47 @@
                 return network.country && network.country.toLowerCase() === countryCode;
               });
             }
-            allNetworks = networks; // Store all filtered networks
-            processPage(params.page || 0);
+
+            // allNetworks = networks; // Store all filtered networks
+            // processPage(params.page || 0);
+            if (allNetworks.length > 0 && !params.searchQuery && !params.geoSearchQuery) {
+              // Use cached networks
+              processPage(params.page || 0, _toConsumableArray(allNetworks)); // Передаємо копію allNetworks
+            } else {
+              // Fetch networks from API
+              $.ajax({
+                url: 'https://api.trakt.tv/networks',
+                method: 'GET',
+                headers: trakt_headers,
+                success: function success(networks) {
+                  if (params.searchQuery) {
+                    networks = networks.filter(function (network) {
+                      return network.name.toLowerCase().includes(params.searchQuery.toLowerCase());
+                    });
+                  }
+                  if (!params.searchQuery && (params.geoSearchQuery || Lampa.Storage.get('nc_networksListGeo'))) {
+                    var _countryCode = (Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery).toLowerCase();
+                    networks = networks.filter(function (network) {
+                      return network.country && network.country.toLowerCase() === _countryCode;
+                    });
+                  }
+                  allNetworks = networks; // Зберігаємо всі відфільтровані мережі
+                  processPage(params.page || 0, _toConsumableArray(allNetworks)); // Передаємо копію allNetworks
+                },
+                error: function error(jqXHR, textStatus, errorThrown) {
+                  onerror(new Error("".concat(textStatus, ": ").concat(errorThrown)));
+                }
+              });
+            }
           },
           error: function error(jqXHR, textStatus, errorThrown) {
             onerror(new Error("".concat(textStatus, ": ").concat(errorThrown)));
           }
         });
       }
-      function processPage(page) {
+      function processPage(page, networks) {
         var start = page * 36;
-        var pageNetworks = allNetworks.slice(start, start + 36);
-        var data = {
-          collection: true,
-          total_pages: Math.ceil(allNetworks.length / 36),
-          total: allNetworks.length,
-          documents: []
-        };
+        var pageNetworks = networks.slice(start, start + 36);
         var promises = pageNetworks.map(function (network) {
           return new Promise(function (resolve) {
             if (network.ids.tmdb) {
@@ -752,45 +865,112 @@
                 url: "".concat(Lampa.TMDB.api('network/' + network.ids.tmdb + '/images' + '?api_key=' + Lampa.TMDB.key())),
                 success: function success(json) {
                   var _json$logos, _network$country;
+                  console.log('TMDB response success for', network.name, json);
                   resolve({
                     name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
                     logo_path: ((_json$logos = json.logos) === null || _json$logos === void 0 || (_json$logos = _json$logos[0]) === null || _json$logos === void 0 ? void 0 : _json$logos.file_path) || '',
                     origin_country: ((_network$country = network.country) === null || _network$country === void 0 ? void 0 : _network$country.toUpperCase()) || null,
-                    $id: network.ids.trakt,
+                    $id: network.ids.tmdb,
                     tmdb_id: network.ids.tmdb
                   });
                 },
                 error: function error() {
                   var _network$country2;
+                  console.log('TMDB response error for', network.name);
                   resolve({
                     name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
                     logo_path: '',
                     origin_country: ((_network$country2 = network.country) === null || _network$country2 === void 0 ? void 0 : _network$country2.toUpperCase()) || null,
-                    $id: network.ids.trakt,
+                    $id: network.ids.tmdb,
                     tmdb_id: network.ids.tmdb
                   });
                 }
               });
             } else {
               var _network$country3;
+              console.log('No TMDB ID for', network.name);
               resolve({
                 name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
                 logo_path: '',
                 origin_country: ((_network$country3 = network.country) === null || _network$country3 === void 0 ? void 0 : _network$country3.toUpperCase()) || null,
-                $id: network.ids.trakt,
+                $id: network.ids.tmdb,
                 tmdb_id: null
               });
             }
           });
         });
         Promise.all(promises).then(function (documents) {
-          data.documents = documents;
+          console.log('documents promises', documents);
+          var data = {
+            collection: true,
+            total_pages: Math.ceil(networks.length / 36),
+            total: networks.length,
+            documents: documents
+          };
           data.documents.forEach(function (element) {
             element.poster_path = element.logo_path;
           });
           oncomplite(data);
         });
       }
+      // function processPage(page) {
+      //     const start = page * 36;
+      //     const pageNetworks = allNetworks.slice(start, start + 36);
+      //
+      //     let promises = pageNetworks.map(network => {
+      //         return new Promise((resolve) => {
+      //             if (network.ids.tmdb) {
+      //                 $.ajax({
+      //                     url: `${Lampa.TMDB.api('network/' + network.ids.tmdb + '/images' + '?api_key=' + Lampa.TMDB.key())}`,
+      //                     success: function(json) {
+      //                         console.log('TMDB response success for', network.name, json);
+      //                         resolve({
+      //                             name: network.name + (network.country ? ` ${network.country.toUpperCase()}` : ''),
+      //                             logo_path: json.logos?.[0]?.file_path || '',
+      //                             origin_country: network.country?.toUpperCase() || null,
+      //                             $id: network.ids.tmdb,
+      //                             tmdb_id: network.ids.tmdb
+      //                         });
+      //                     },
+      //                     error: function() {
+      //                         console.log('TMDB response error for', network.name);
+      //                         resolve({
+      //                             name: network.name + (network.country ? ` ${network.country.toUpperCase()}` : ''),
+      //                             logo_path: '',
+      //                             origin_country: network.country?.toUpperCase() || null,
+      //                             $id: network.ids.tmdb,
+      //                             tmdb_id: network.ids.tmdb
+      //                         });
+      //                     }
+      //                 });
+      //             } else {
+      //                 console.log('No TMDB ID for', network.name);
+      //                 resolve({
+      //                     name: network.name + (network.country ? ` ${network.country.toUpperCase()}` : ''),
+      //                     logo_path: '',
+      //                     origin_country: network.country?.toUpperCase() || null,
+      //                     $id: network.ids.tmdb,
+      //                     tmdb_id: null
+      //                 });
+      //             }
+      //         });
+      //     });
+      //
+      //     Promise.all(promises).then((documents) => {
+      //         console.log('documents promises', documents);
+      //         let data = {
+      //             collection: true,
+      //             total_pages: Math.ceil(allNetworks.length / 36),
+      //             total: allNetworks.length,
+      //             documents: documents // Використовуємо результати з Promise.all
+      //         };
+      //         //data.documents = documents;
+      //         data.documents.forEach(element => {
+      //             element.poster_path = element.logo_path;
+      //         });
+      //         oncomplite(data);
+      //     });
+      // }
     }
     function full(params, oncomplite, onerror) {
       var apiUrl = api_url;
@@ -959,35 +1139,6 @@
       collectionBookmarkRemove: collectionBookmarkRemove,
       clear: clear
     };
-
-    function _classCallCheck(a, n) {
-      if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function");
-    }
-    function _defineProperties(e, r) {
-      for (var t = 0; t < r.length; t++) {
-        var o = r[t];
-        o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o);
-      }
-    }
-    function _createClass(e, r, t) {
-      return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", {
-        writable: !1
-      }), e;
-    }
-    function _toPrimitive(t, r) {
-      if ("object" != typeof t || !t) return t;
-      var e = t[Symbol.toPrimitive];
-      if (void 0 !== e) {
-        var i = e.call(t, r || "default");
-        if ("object" != typeof i) return i;
-        throw new TypeError("@@toPrimitive must return a primitive value.");
-      }
-      return ("string" === r ? String : Number)(t);
-    }
-    function _toPropertyKey(t) {
-      var i = _toPrimitive(t, "string");
-      return "symbol" == typeof i ? i : i + "";
-    }
 
     var Favorites$1 = /*#__PURE__*/function () {
       function Favorites() {
@@ -1650,7 +1801,7 @@
         }
       };
       this.nextPageReuest = function (object, resolve, reject) {
-        Api.full(object, resolve.bind(this), reject.bind(this));
+        Api.main(object, resolve.bind(this), reject.bind(this));
       };
       this.append = function (data, append) {
         var _this2 = this;
@@ -1663,6 +1814,21 @@
             card_collection: data.collection
           });
           card.create();
+          var _card$card$children = _slicedToArray(card.card.children, 2),
+            viewElement = _card$card$children[0],
+            titleElement = _card$card$children[1];
+
+          // Перевірка наявності елементів
+          if (viewElement && titleElement) {
+            var iconsContainer = viewElement.querySelector('.card__icons');
+            if (iconsContainer) {
+              titleElement.classList.add('networkTitle');
+              // Видаляємо title з попереднього місця
+              card.card.removeChild(titleElement);
+              // Додаємо до icons
+              iconsContainer.appendChild(titleElement);
+            }
+          }
           card.onFocus = function (target, card_data) {
             last = target;
             active = items.indexOf(card);
@@ -1935,7 +2101,8 @@
         geo.on('hover:long', function () {
           nullGeo();
         });
-        header.appendChild(search);
+
+        // header.appendChild(search)
         header.appendChild(clear);
         header.appendChild(geo);
         header.appendChild(favorites);
@@ -3301,7 +3468,7 @@
       Lampa.Component.add('lmeCollections', component$2);
       Lampa.Component.add('lmeCollection', component$1);
       Lampa.Component.add('lmeCollectionBookmark', component);
-      Lampa.Template.add('ncStyle', "\n        <style>\n            @charset 'UTF-8';.panelNC.blockNC{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-around;-ms-flex-pack:distribute;justify-content:space-around;gap:10px;padding:10px}@media(max-width:767px){.nc_tv{display:none}}.nc-empty,.nc-main{margin:0 5px}.nc-empty svg,.nc-main svg{display:block;margin:0 auto}.nc-empty div,.nc-main div{text-align:center}div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}.lme-catalog.lme-header.lme-error{margin-bottom:2%}.lme-catalog.lme-header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.lme-baseInfo{padding:0 0 0 2%}.empty.simple-button.simple-button--invisible.selector.button--clear{margin:auto}.lme-baseInfo,.lme-favorites,.lme-search,.lme-clear,.lme-filter{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;padding-left:1.5em;padding-right:1.5em;margin-left:.5em;margin-right:.5em}.lme-clear div,.lme-filter div{margin-left:1em}.lme-catalog.category-full .card__img{-o-object-fit:contain;object-fit:contain;padding:5%}.networkLogo{-o-object-fit:contain;object-fit:contain;padding:2%}\n        </style>\n    ");
+      Lampa.Template.add('ncStyle', "\n        <style>\n            @charset 'UTF-8';.panelNC.blockNC{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-around;-ms-flex-pack:distribute;justify-content:space-around;gap:10px;padding:10px}@media(max-width:767px){.nc_tv{display:none}}.nc-empty,.nc-main{margin:0 5px}.nc-empty svg,.nc-main svg{display:block;margin:0 auto}.nc-empty div,.nc-main div{text-align:center}div.ncSubmenu{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.ncSubmenu>svg.ncIcon{margin-right:5px;width:36px;height:36px}div.nc_bookmark{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}div.nc_menu{position:relative}div.nc_badge{left:100%;top:0;margin-left:.5em;margin-top:-1em;background-color:#fff;color:#000;padding:.2em .4em;font-size:.5em;-webkit-border-radius:.5em;border-radius:.5em;font-weight:700;text-transform:uppercase}.lme-catalog.lme-header.lme-error{margin-bottom:2%}.lme-catalog.lme-header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.lme-baseInfo{padding:0 0 0 2%}.empty.simple-button.simple-button--invisible.selector.button--clear{margin:auto}.lme-baseInfo,.lme-favorites,.lme-search,.lme-clear,.lme-filter{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;padding-left:1.5em;padding-right:1.5em;margin-left:.5em;margin-right:.5em}.lme-clear div,.lme-filter div{margin-left:1em}.lme-catalog.category-full .card__img{-o-object-fit:contain;object-fit:contain;padding:5%}.networkLogo{-o-object-fit:contain;object-fit:contain;padding:2%}.networkTitle{position:absolute;top:8px;left:8px;background-color:rgba(0,0,0,0.6);color:white;padding:4px 8px;-webkit-border-radius:4px;border-radius:4px;line-height:1.2;z-index:1}\n        </style>\n    ");
       lang.data();
       config.setting();
       // Menu 2.0
