@@ -796,181 +796,101 @@
         'trakt-api-version': '2',
         'trakt-api-key': 'a77093dcf5db97106d9303f3ab7d46a80a93a6e0c1d7a2ff8a1aacebe0dc161b'
       };
-      if (allNetworks.length > 0 && !params.searchQuery && !params.geoSearchQuery) {
-        // Use cached networks
-        processPage(params.page || 0);
-      } else {
-        // Fetch networks from API
-        $.ajax({
-          url: 'https://api.trakt.tv/networks',
-          method: 'GET',
-          headers: trakt_headers,
-          success: function success(networks) {
-            if (params.searchQuery) {
-              networks = networks.filter(function (network) {
-                return network.name.toLowerCase().includes(params.searchQuery.toLowerCase());
-              });
-            }
-            if (!params.searchQuery && (params.geoSearchQuery || Lampa.Storage.get('nc_networksListGeo'))) {
-              var countryCode = (Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery).toLowerCase();
-              networks = networks.filter(function (network) {
-                return network.country && network.country.toLowerCase() === countryCode;
-              });
-            }
 
-            // allNetworks = networks; // Store all filtered networks
-            // processPage(params.page || 0);
-            if (allNetworks.length > 0 && !params.searchQuery && !params.geoSearchQuery) {
-              // Use cached networks
-              processPage(params.page || 0, _toConsumableArray(allNetworks)); // Передаємо копію allNetworks
-            } else {
-              // Fetch networks from API
-              $.ajax({
-                url: 'https://api.trakt.tv/networks',
-                method: 'GET',
-                headers: trakt_headers,
-                success: function success(networks) {
-                  if (params.searchQuery) {
-                    networks = networks.filter(function (network) {
-                      return network.name.toLowerCase().includes(params.searchQuery.toLowerCase());
-                    });
-                  }
-                  if (!params.searchQuery && (params.geoSearchQuery || Lampa.Storage.get('nc_networksListGeo'))) {
-                    var _countryCode = (Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery).toLowerCase();
-                    networks = networks.filter(function (network) {
-                      return network.country && network.country.toLowerCase() === _countryCode;
-                    });
-                  }
-                  allNetworks = networks; // Зберігаємо всі відфільтровані мережі
-                  processPage(params.page || 0, _toConsumableArray(allNetworks)); // Передаємо копію allNetworks
-                },
-                error: function error(jqXHR, textStatus, errorThrown) {
-                  onerror(new Error("".concat(textStatus, ": ").concat(errorThrown)));
-                }
-              });
-            }
-          },
-          error: function error(jqXHR, textStatus, errorThrown) {
-            onerror(new Error("".concat(textStatus, ": ").concat(errorThrown)));
+      // Ensure page starts from 0
+      var page = Math.max(0, (params.page || 1) - 1);
+      $.ajax({
+        url: 'https://api.trakt.tv/networks',
+        method: 'GET',
+        headers: trakt_headers,
+        success: function success(networks) {
+          if (params.searchQuery) {
+            console.log('Search query:', params.searchQuery);
+            networks = networks.filter(function (network) {
+              return network.name.toLowerCase().includes(params.searchQuery.toLowerCase());
+            });
+            console.log('Filtered networks by searchQuery:', networks);
+          }
+          if (!params.searchQuery && (params.geoSearchQuery || Lampa.Storage.get('nc_networksListGeo'))) {
+            var countryCode = (Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery).toLowerCase();
+            networks = networks.filter(function (network) {
+              return network.country && network.country.toLowerCase() === countryCode;
+            });
+          }
+          allNetworks = networks;
+          processPage(page, _toConsumableArray(allNetworks), oncomplite);
+        },
+        error: function error(jqXHR, textStatus, errorThrown) {
+          onerror(new Error("".concat(textStatus, ": ").concat(errorThrown)));
+        }
+      });
+    }
+    function processPage(page, networks, oncomplite) {
+      var itemsPerPage = 36;
+      var start = page * itemsPerPage;
+      var end = start + itemsPerPage;
+
+      // If no networks or start index is out of bounds
+      if (!networks.length || start >= networks.length) {
+        oncomplite({
+          collection: true,
+          total_pages: Math.max(1, Math.ceil(networks.length / itemsPerPage)),
+          total: networks.length,
+          documents: []
+        });
+        return;
+      }
+      var pageNetworks = networks.slice(start, end);
+      var promises = pageNetworks.map(function (network) {
+        return new Promise(function (resolve) {
+          if (network.ids.tmdb) {
+            $.ajax({
+              url: "".concat(Lampa.TMDB.api('network/' + network.ids.tmdb + '/images' + '?api_key=' + Lampa.TMDB.key())),
+              success: function success(json) {
+                var _json$logos, _network$country;
+                resolve({
+                  name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
+                  logo_path: ((_json$logos = json.logos) === null || _json$logos === void 0 || (_json$logos = _json$logos[0]) === null || _json$logos === void 0 ? void 0 : _json$logos.file_path) || '',
+                  origin_country: ((_network$country = network.country) === null || _network$country === void 0 ? void 0 : _network$country.toUpperCase()) || null,
+                  $id: network.ids.tmdb,
+                  tmdb_id: network.ids.tmdb
+                });
+              },
+              error: function error() {
+                var _network$country2;
+                resolve({
+                  name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
+                  logo_path: '',
+                  origin_country: ((_network$country2 = network.country) === null || _network$country2 === void 0 ? void 0 : _network$country2.toUpperCase()) || null,
+                  $id: network.ids.tmdb,
+                  tmdb_id: network.ids.tmdb
+                });
+              }
+            });
+          } else {
+            var _network$country3;
+            resolve({
+              name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
+              logo_path: '',
+              origin_country: ((_network$country3 = network.country) === null || _network$country3 === void 0 ? void 0 : _network$country3.toUpperCase()) || null,
+              $id: network.ids.tmdb,
+              tmdb_id: null
+            });
           }
         });
-      }
-      function processPage(page, networks) {
-        var start = page * 36;
-        var pageNetworks = networks.slice(start, start + 36);
-        var promises = pageNetworks.map(function (network) {
-          return new Promise(function (resolve) {
-            if (network.ids.tmdb) {
-              $.ajax({
-                url: "".concat(Lampa.TMDB.api('network/' + network.ids.tmdb + '/images' + '?api_key=' + Lampa.TMDB.key())),
-                success: function success(json) {
-                  var _json$logos, _network$country;
-                  console.log('TMDB response success for', network.name, json);
-                  resolve({
-                    name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
-                    logo_path: ((_json$logos = json.logos) === null || _json$logos === void 0 || (_json$logos = _json$logos[0]) === null || _json$logos === void 0 ? void 0 : _json$logos.file_path) || '',
-                    origin_country: ((_network$country = network.country) === null || _network$country === void 0 ? void 0 : _network$country.toUpperCase()) || null,
-                    $id: network.ids.tmdb,
-                    tmdb_id: network.ids.tmdb
-                  });
-                },
-                error: function error() {
-                  var _network$country2;
-                  console.log('TMDB response error for', network.name);
-                  resolve({
-                    name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
-                    logo_path: '',
-                    origin_country: ((_network$country2 = network.country) === null || _network$country2 === void 0 ? void 0 : _network$country2.toUpperCase()) || null,
-                    $id: network.ids.tmdb,
-                    tmdb_id: network.ids.tmdb
-                  });
-                }
-              });
-            } else {
-              var _network$country3;
-              console.log('No TMDB ID for', network.name);
-              resolve({
-                name: network.name + (network.country ? " ".concat(network.country.toUpperCase()) : ''),
-                logo_path: '',
-                origin_country: ((_network$country3 = network.country) === null || _network$country3 === void 0 ? void 0 : _network$country3.toUpperCase()) || null,
-                $id: network.ids.tmdb,
-                tmdb_id: null
-              });
-            }
-          });
+      });
+      Promise.all(promises).then(function (documents) {
+        var data = {
+          collection: true,
+          total_pages: Math.ceil(networks.length / itemsPerPage),
+          total: networks.length,
+          documents: documents
+        };
+        data.documents.forEach(function (element) {
+          element.poster_path = element.logo_path;
         });
-        Promise.all(promises).then(function (documents) {
-          console.log('documents promises', documents);
-          var data = {
-            collection: true,
-            total_pages: Math.ceil(networks.length / 36),
-            total: networks.length,
-            documents: documents
-          };
-          data.documents.forEach(function (element) {
-            element.poster_path = element.logo_path;
-          });
-          oncomplite(data);
-        });
-      }
-      // function processPage(page) {
-      //     const start = page * 36;
-      //     const pageNetworks = allNetworks.slice(start, start + 36);
-      //
-      //     let promises = pageNetworks.map(network => {
-      //         return new Promise((resolve) => {
-      //             if (network.ids.tmdb) {
-      //                 $.ajax({
-      //                     url: `${Lampa.TMDB.api('network/' + network.ids.tmdb + '/images' + '?api_key=' + Lampa.TMDB.key())}`,
-      //                     success: function(json) {
-      //                         console.log('TMDB response success for', network.name, json);
-      //                         resolve({
-      //                             name: network.name + (network.country ? ` ${network.country.toUpperCase()}` : ''),
-      //                             logo_path: json.logos?.[0]?.file_path || '',
-      //                             origin_country: network.country?.toUpperCase() || null,
-      //                             $id: network.ids.tmdb,
-      //                             tmdb_id: network.ids.tmdb
-      //                         });
-      //                     },
-      //                     error: function() {
-      //                         console.log('TMDB response error for', network.name);
-      //                         resolve({
-      //                             name: network.name + (network.country ? ` ${network.country.toUpperCase()}` : ''),
-      //                             logo_path: '',
-      //                             origin_country: network.country?.toUpperCase() || null,
-      //                             $id: network.ids.tmdb,
-      //                             tmdb_id: network.ids.tmdb
-      //                         });
-      //                     }
-      //                 });
-      //             } else {
-      //                 console.log('No TMDB ID for', network.name);
-      //                 resolve({
-      //                     name: network.name + (network.country ? ` ${network.country.toUpperCase()}` : ''),
-      //                     logo_path: '',
-      //                     origin_country: network.country?.toUpperCase() || null,
-      //                     $id: network.ids.tmdb,
-      //                     tmdb_id: null
-      //                 });
-      //             }
-      //         });
-      //     });
-      //
-      //     Promise.all(promises).then((documents) => {
-      //         console.log('documents promises', documents);
-      //         let data = {
-      //             collection: true,
-      //             total_pages: Math.ceil(allNetworks.length / 36),
-      //             total: allNetworks.length,
-      //             documents: documents // Використовуємо результати з Promise.all
-      //         };
-      //         //data.documents = documents;
-      //         data.documents.forEach(element => {
-      //             element.poster_path = element.logo_path;
-      //         });
-      //         oncomplite(data);
-      //     });
-      // }
+        oncomplite(data);
+      });
     }
     function full(params, oncomplite, onerror) {
       var apiUrl = api_url;
@@ -2068,9 +1988,12 @@
         clear.className = 'lme-clear simple-button simple-button--invisible selector button--clear';
         clear.innerHTML = "\n                <svg width=\"48\" height=\"43\" viewBox=\"0 0 48 43\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path d=\"M8.11178 23.9546L7.10608 24.9852L8.137 25.9913L9.1427 24.96L8.11178 23.9546ZM20.9815 29.7729L35.3816 15.3729L33.3449 13.3364L18.945 27.7363L20.9815 29.7729ZM18.945 15.3728L33.3449 29.7729L35.3816 27.7363L20.9815 13.3364L18.945 15.3728ZM44.9232 21.5546C44.9232 31.3632 36.9718 39.3146 27.1632 39.3146V42.1946C38.5623 42.1946 47.8032 32.9537 47.8032 21.5546H44.9232ZM9.40324 21.5546C9.40324 11.746 17.3547 3.79461 27.1632 3.79461V0.914612C15.7641 0.914612 6.52324 10.1555 6.52324 21.5546H9.40324ZM27.1632 3.79461C36.9718 3.79461 44.9232 11.746 44.9232 21.5546H47.8032C47.8032 10.1555 38.5623 0.914612 27.1632 0.914612V3.79461ZM9.54071 23.7765C9.45004 23.0491 9.40324 22.3077 9.40324 21.5546H6.52324C6.52324 22.427 6.57746 23.2877 6.68284 24.1327L9.54071 23.7765ZM27.1632 39.3146C21.0603 39.3146 15.6756 36.2376 12.4764 31.5437L10.0966 33.1656C13.8093 38.6129 20.0678 42.1946 27.1632 42.1946V39.3146ZM9.1427 24.96L14.9942 18.96L12.9323 16.9493L7.08088 22.9493L9.1427 24.96ZM9.1175 22.9241L2.96896 16.9241L0.95752 18.9852L7.10608 24.9852L9.1175 22.9241Z\"/>\n                </svg>\n                <div class=\"nc_tv\">Reset search</div>\n        ";
         clear.on('hover:enter', function () {
-          object.searchQuery = "";
-          object.geoSearchQuery = "";
-          Lampa.Activity.replace(object);
+          Lampa.Activity.push({
+            url: '',
+            title: Lampa.Lang.translate('nc_networksList'),
+            component: 'lmeNetworks',
+            page: 1
+          });
         });
         var geo = document.createElement('div');
         geo.className = 'lme-clear simple-button simple-button--invisible selector button--clear';
@@ -2101,8 +2024,7 @@
         geo.on('hover:long', function () {
           nullGeo();
         });
-
-        // header.appendChild(search)
+        header.appendChild(search);
         header.appendChild(clear);
         header.appendChild(geo);
         header.appendChild(favorites);
