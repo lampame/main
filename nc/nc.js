@@ -354,7 +354,7 @@
           var networkLists = Lampa.Storage.get('nc_networkLists');
           networkLists.forEach(function (networkOne) {
             var withNetworks = networkOne.card_data.$id;
-            var sortBy = networkOne.type === 'now' ? 'first_air_date.desc' : undefined;
+            var sortBy = networkOne.type === 'new' ? 'first_air_date.desc' : undefined;
             var params = {};
             if (sortBy) {
               params.sort_by = sortBy;
