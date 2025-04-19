@@ -797,7 +797,7 @@
           method: "GET",
           headers: getHeaders$2()
         }).then(function (version) {
-          var versionNumber = parseInt(version.split('.')[0]);
+          var versionNumber = parseFloat(version.replace(/[^\d.]/g, ''));
 
           // Adjust action based on version
           if (versionNumber >= 5) {
@@ -854,7 +854,7 @@
     //     });
     // }
 
-    function SendTask$2(selectedTorrent, labels) {
+    function SendTask$2(selectedTorrent, labels, dtype) {
       if (!selectedTorrent) {
         return;
       }
@@ -866,7 +866,7 @@
         "data": {
           "tags": labels,
           "urls": selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link,
-          "category": selectedTorrent.CategoryDesc ? Lampa.Storage.get("lmetorrentqBittorent".concat(selectedTorrent.CategoryDesc)) : '',
+          "category": Lampa.Storage.get("lmetorrentqBittorent".concat(dtype)) ? Lampa.Storage.get("lmetorrentqBittorent".concat(dtype)) : '',
           "firstLastPiecePrio": Lampa.Storage.field("lmetorrentqBittorentfirstLastPiecePrio") ? "true" : "false",
           "sequentialDownload": Lampa.Storage.field("lmetorrentqBittorentSequentialDownload") ? "true" : "false"
         }
@@ -1181,7 +1181,7 @@
         });
       });
     }
-    function SendTask$1(selectedTorrent, labels) {
+    function SendTask$1(selectedTorrent, labels, dtype) {
       if (!selectedTorrent) {
         return;
       }
@@ -1197,8 +1197,8 @@
             sequentialDownload: Lampa.Storage.field("lmetorrenttransmissionSequentialDownload") ? "true" : "false",
             filename: selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link,
             labels: [labels]
-          }, Lampa.Storage.get("lmetorrenttransmission".concat(selectedTorrent.CategoryDesc)) ? {
-            "download-dir": Lampa.Storage.get("lmetorrenttransmission".concat(selectedTorrent.CategoryDesc))
+          }, Lampa.Storage.get("lmetorrenttransmission".concat(dtype)) ? {
+            "download-dir": Lampa.Storage.get("lmetorrenttransmission".concat(dtype))
           } : {})
         })
       };
@@ -1372,8 +1372,8 @@
         });
       });
     }
-    function SendTask(selectedTorrent, labels) {
-      var path = selectedTorrent.CategoryDesc ? "&destination=".concat(Lampa.Storage.get("lmetorrentsynologyPath".concat(selectedTorrent.CategoryDesc))) : '';
+    function SendTask(selectedTorrent, labels, dtype) {
+      var path = Lampa.Storage.get("lmetorrentqBittorent".concat(dtype)) ? "&destination=".concat(Lampa.Storage.get("lmetorrentqBittorent".concat(dtype))) : '';
       var settings = {
         url: "".concat(proxy).concat(url, "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=create&uri=").concat(encodeURIComponent(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link)).concat(path, "&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID),
         method: "GET",
@@ -2294,25 +2294,26 @@
 
     //Import Clients
     function Send() {
-      function send2qBittorrent(selectedTorrent, labels) {
-        Qbittorent.SendTask(selectedTorrent, labels);
+      function send2qBittorrent(selectedTorrent, labels, dtype) {
+        Qbittorent.SendTask(selectedTorrent, labels, dtype);
       }
-      function send2synology(selectedTorrent, labels) {
-        Synology.SendTask(selectedTorrent, labels);
+      function send2synology(selectedTorrent, labels, dtype) {
+        Synology.SendTask(selectedTorrent, labels, dtype);
       }
-      function send2transmission(selectedTorrent, labels) {
-        Transmission.SendTask(selectedTorrent, labels);
+      function send2transmission(selectedTorrent, labels, dtype) {
+        Transmission.SendTask(selectedTorrent, labels, dtype);
       }
       function send2universal(selectedTorrent, labels) {
         Main(selectedTorrent);
       }
       Lampa.Listener.follow('torrent', function (e) {
         if (e.type === 'onlong') {
-          var _Lampa$Activity$activ, _Lampa$Activity$activ2;
+          var _Lampa$Activity$activ, _Lampa$Activity$activ2, _Lampa$Activity$activ3;
           var selectedTorrent = e.element;
           var labels = "".concat((_Lampa$Activity$activ = Lampa.Activity.active().movie) !== null && _Lampa$Activity$activ !== void 0 && _Lampa$Activity$activ.first_air_date ? "tv" : "movie", "/").concat((_Lampa$Activity$activ2 = Lampa.Activity.active().movie) === null || _Lampa$Activity$activ2 === void 0 ? void 0 : _Lampa$Activity$activ2.id);
+          var dtype = (_Lampa$Activity$activ3 = Lampa.Activity.active().movie) !== null && _Lampa$Activity$activ3 !== void 0 && _Lampa$Activity$activ3.first_air_date ? "TV" : "Movies";
           var onSelectApp = function onSelectApp(a) {
-            a.send2app(selectedTorrent, labels ? labels : null);
+            a.send2app(selectedTorrent, labels ? labels : null, dtype);
           };
           if (Lampa.Storage.field("lmetorrentSelect") === 'qBittorent') {
             e.menu.push({
