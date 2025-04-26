@@ -734,7 +734,7 @@
                 case 11:
                   _context2.prev = 11;
                   _context2.t0 = _context2["catch"](0);
-                  console.log('LME Torrent manager', 'GetData:', _context2.t0, response);
+                  console.log('TDM', 'GetData:', _context2.t0, response);
                   reject(new Error('Ошибка при обработке данных'));
                 case 15:
                 case "end":
@@ -803,40 +803,11 @@
         }).then(function () {
           resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
         })["catch"](function (error) {
-          console.log('LME Torrent manager', 'Send command:', error);
+          console.log('TDM', 'Send command:', error);
           reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
         });
       });
     }
-
-    // function SendCommand (btn, torrent_data) {
-    //     const deleteFiles = (btn.deleteFiles) ? `true` : "";
-    //     const settings = {
-    //         url: `${proxy}${url}/api/v2/torrents/${btn.action}`,
-    //         method: "POST",
-    //         timeout: 0,
-    //         headers: getHeaders("application/x-www-form-urlencoded"),
-    //         "data": {
-    //             "hashes": torrent_data.id,
-    //             deleteFiles
-    //         }
-    //     };
-    //
-    //     return new Promise((resolve, reject) => {
-    //         $.ajax(settings).done(function(response) {
-    //             try {
-    //                 resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
-    //             } catch (error) {
-    //                 console.log('LME Torrent manager', 'Send command:',error)
-    //                 reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
-    //             }
-    //         }).fail(function(jqXHR, textStatus, errorThrown) {
-    //             console.log('LME Torrent manager',  'Send command: Fail',textStatus, errorThrown,jqXHR)
-    //             reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
-    //         });
-    //     });
-    // }
-
     function SendTask$2(selectedTorrent, labels, dtype) {
       if (!selectedTorrent) {
         return;
@@ -857,14 +828,14 @@
       return new Promise(function (resolve, reject) {
         $.ajax(settings).done(function (response) {
           try {
-            console.log('LME Torrent manager', 'Send file:', response);
+            console.log('TDM', 'Send file:', response);
             resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
           } catch (error) {
-            console.log('LME Torrent manager', 'Send file:', error);
+            console.log('TDM', 'Send file:', error);
             reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
           }
         }).fail(function (jqXHR, textStatus, errorThrown) {
-          console.log('LME Torrent manager', 'Send file:', textStatus, errorThrown, jqXHR);
+          console.log('TDM', 'Send file:', textStatus, errorThrown, jqXHR);
           reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
         });
       });
@@ -890,7 +861,7 @@
       return name.replace(/\./g, ' ').trim();
     }
     function processTorrents(torrentData) {
-      console.log("Processing torrents:", _typeof(torrentData), torrentData);
+      console.log("TDM:", _typeof(torrentData), torrentData);
       var torrents = Array.isArray(torrentData) ? torrentData : [torrentData];
       return Promise.all(torrents.map(function (torrent) {
         var clearName = cleanName(torrent.name || torrent);
@@ -992,7 +963,7 @@
             Lampa.Noty.show(Lampa.Lang.translate('AuthSuccess'));
           }
           if (jqXHR.status !== 200 && jqXHR.status !== 409) {
-            console.log('LME Torrent manager', 'Transmission auth', jqXHR.status, jqXHR);
+            console.log('TDM', 'Transmission auth', jqXHR.status, jqXHR);
             Lampa.Noty.show(Lampa.Lang.translate('AuthDenied'));
           }
         }
@@ -1106,7 +1077,7 @@
       if (btn.action === 'parse' || btn.action === 'parse-all') {
         return processTorrents(torrent_data).then(function (response) {
           if (response && response.length > 0) {
-            console.log('Parsed response:', torrent_data, response);
+            console.log('TDM:', torrent_data, response);
             var mediaTypeId = "".concat(response[0].media_type, "/").concat(response[0].id); // Assuming processTorrents returns an array of media_type/id
             var _settings = {
               url: "".concat(proxy$1).concat(url$1).concat(path),
@@ -1125,7 +1096,7 @@
               $.ajax(_settings).done(function () {
                 resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
               }).fail(function (jqXHR, textStatus, errorThrown) {
-                console.log('LME Torrent manager', 'Send file:', textStatus, errorThrown, jqXHR);
+                console.log('TDM', 'Send file:', textStatus, errorThrown, jqXHR);
                 reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
               });
             });
@@ -1155,11 +1126,11 @@
           try {
             resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
           } catch (error) {
-            console.log('LME Torrent manager', 'Send action:', error);
+            console.log('TDM', 'Send action:', error);
             reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
           }
         }).fail(function (jqXHR, textStatus, errorThrown) {
-          console.log('LME Torrent manager', 'Send file:', textStatus, errorThrown, jqXHR);
+          console.log('TDM', 'Send file:', textStatus, errorThrown, jqXHR);
           reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
         });
       });
@@ -1209,48 +1180,11 @@
             reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
           }
         })["catch"](function (error) {
-          console.log('LME Torrent manager', 'Send file error:', error);
+          console.log('TDM', 'Send file error:', error);
           reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
         });
       });
     }
-
-    // function SendTask(selectedTorrent, labels) {
-    //     if (!selectedTorrent) {
-    //         return;
-    //     }
-    //     const settings = {
-    //         url: `${proxy}${url}${path}`,
-    //         method: "POST",
-    //         timeout: 0,
-    //         headers: getHeaders(),
-    //         data: JSON.stringify({
-    //             method: "torrent-add",
-    //             arguments: {
-    //                 paused: Lampa.Storage.field("lmetorrenttransmissionAutostart") ? "true" : "false",
-    //                 sequentialDownload: Lampa.Storage.field("lmetorrenttransmissionSequentialDownload") ? "true" : "false",
-    //                 filename: selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link,
-    //                 labels: [labels],
-    //                 ...(Lampa.Storage.get(`lmetorrenttransmission${selectedTorrent.CategoryDesc}`) ? { "download-dir": Lampa.Storage.get(`lmetorrenttransmission${selectedTorrent.CategoryDesc}`) } : {})
-    //             }
-    //         }),
-    //     };
-    //
-    //     return new Promise((resolve, reject) => {
-    //         $.ajax(settings).done(function(response) {
-    //             try {
-    //                 resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
-    //             } catch (error) {
-    //                 console.log('LME Torrent manager', 'Send action:',error)
-    //                 reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
-    //             }
-    //         }).fail(function(jqXHR, textStatus, errorThrown) {
-    //             console.log('LME Torrent manager', 'Send file:', textStatus, errorThrown,jqXHR)
-    //             reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
-    //         });
-    //     });
-    // }
-
     var Transmission = {
       auth: auth$1,
       GetData: GetData$1,
@@ -1298,7 +1232,7 @@
         },
         error: function error(jqXHR) {
           if (jqXHR.status !== 200) {
-            console.log('LME Torrent manager', 'Synology auth', jqXHR.status, jqXHR);
+            console.log('TDM', 'Synology auth', jqXHR.status, jqXHR);
             Lampa.Noty.show(Lampa.Lang.translate('AuthDenied'));
           }
         }
@@ -1346,11 +1280,11 @@
           try {
             resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
           } catch (error) {
-            console.log('LME Torrent manager', 'Send action:', error);
+            console.log('TDM', 'Send action:', error);
             reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
           }
         }).fail(function (jqXHR, textStatus, errorThrown) {
-          console.log('LME Torrent manager', 'Send file:', textStatus, errorThrown, jqXHR);
+          console.log('TDM', 'Send file:', textStatus, errorThrown, jqXHR);
           reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
         });
       });
@@ -1369,11 +1303,11 @@
           try {
             resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
           } catch (error) {
-            console.log('LME Torrent manager', 'Send action:', error);
+            console.log('TDM', 'Send action:', error);
             reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
           }
         }).fail(function (jqXHR, textStatus, errorThrown) {
-          console.log('LME Torrent manager', 'Send file:', textStatus, errorThrown, jqXHR);
+          console.log('TDM', 'Send file:', textStatus, errorThrown, jqXHR);
           reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
         });
       });
@@ -1530,7 +1464,7 @@
         }, _callee2, this, [[3, 10]]);
       }));
       this.errorClient = function (data) {
-        console.log('LME Torrent manager', 'Try get data:', data);
+        console.log('TDM', 'Try get data:', data);
         scroll.append(body);
         //Put all in page
         html.append(scroll.render());
@@ -2380,7 +2314,7 @@
             case 24:
               throw new Error('Unknown client type');
             case 25:
-              console.log('Torrent client data:', result);
+              console.log('TDM:', result);
               return _context2.abrupt("return", result);
             case 29:
               _context2.prev = 29;
