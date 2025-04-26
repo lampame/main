@@ -1340,6 +1340,8 @@
 
     var regexp2 = /(?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB-Rip|WEB-DL|WEB|TS|(?:PPV )?WEB-?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv/;
     function Item(data) {
+      this.id = data.id; // зберігаємо ідентифікатор торренту
+
       var itemN = Lampa.Template.get('lmetorrent_item__card', {
         title: data.name,
         size: Lampa.Utils.bytesToSize(data.size, 0),
@@ -1351,6 +1353,15 @@
       });
       this.render = function () {
         return itemN;
+      };
+
+      // Метод для оновлення статусу та прогресу
+      this.update = function (newData) {
+        // Припускається, що відповідні елементи мають класи для статусу та прогресу
+        itemN.find('.lmetorrent_card__state').text(newData.state);
+        var progress = Number((newData.completed * 100).toFixed(2));
+        itemN.attr("data-completed", progress);
+        itemN.find('.lmetorrent_card__completed').text(progress + "%");
       };
       this.destroy = function () {
         itemN.remove();
@@ -1399,6 +1410,7 @@
         over: true,
         step: 250
       });
+      var updateInterval; // Змінна для setInterval
       var items = [];
       var html = $("<div class='lmetorrent-module'></div>");
       var head = $("<div class='lmetorrent-head'></div>");
@@ -1510,6 +1522,8 @@
         html.append(scroll.render());
         this.activity.loader(false);
         this.activity.toggle();
+        // Запуск автооновлення після первинного завантаження
+        startAutoUpdate();
       };
       this.header = function (data) {
         var item = new Header(data);
@@ -1649,11 +1663,62 @@
       this.render = function () {
         return html;
       };
+
+      // Функція автооновлення
+      function startAutoUpdate() {
+        var getDataFunc;
+        switch (client) {
+          case 'qBittorent':
+            getDataFunc = Qbittorent.GetData;
+            break;
+          case 'transmission':
+            getDataFunc = Transmission.GetData;
+            break;
+          case 'synology':
+            getDataFunc = Synology.GetData;
+            break;
+          default:
+            console.error('Неизвестный клиент');
+            return;
+        }
+        updateInterval = setInterval( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+          var result;
+          return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+            while (1) switch (_context4.prev = _context4.next) {
+              case 0:
+                _context4.prev = 0;
+                _context4.next = 3;
+                return getDataFunc();
+              case 3:
+                result = _context4.sent;
+                // Якщо для transmission/qBittorent отримуємо масив даних
+                // Проходимо по новому набору даних і оновлюємо існуючі елементи за id
+                result.forEach(function (newTorrent) {
+                  items.forEach(function (item) {
+                    if (item.id === newTorrent.id) {
+                      item.update(newTorrent);
+                    }
+                  });
+                });
+                _context4.next = 10;
+                break;
+              case 7:
+                _context4.prev = 7;
+                _context4.t0 = _context4["catch"](0);
+                console.error('Auto update error:', _context4.t0);
+              case 10:
+              case "end":
+                return _context4.stop();
+            }
+          }, _callee4, null, [[0, 7]]);
+        })), 5000);
+      }
       this.destroy = function () {
         network.clear();
         Lampa.Arrays.destroy(items);
         scroll.destroy();
         html.remove();
+        if (updateInterval) clearInterval(updateInterval);
         items = null;
         network = null;
       };
