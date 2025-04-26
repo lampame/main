@@ -1176,8 +1176,19 @@
         })
       };
       return new Promise(function (resolve, reject) {
+        // Крок 1: Виконуємо перший запит до initialSettings
         $.ajax(initialSettings).then(function (response) {
-          var torrentId = response.arguments['torrent-added'].id;
+          var _response$arguments$t;
+          // Перевірка першого відповіді
+          if (response.result !== "success" || Object.keys(response.arguments).length === 0) {
+            // Якщо помилка — викидаємо помилку, щоб зупинити цілісно
+            throw new Error("".concat(Lampa.Lang.translate('actionReturnedError'), ": ").concat(response.result));
+          }
+
+          // Отримуємо torrentId або null, якщо його немає
+          var torrentId = ((_response$arguments$t = response.arguments['torrent-added']) === null || _response$arguments$t === void 0 ? void 0 : _response$arguments$t.id) || null;
+
+          // Створюємо налаштування для другого запиту
           var labelSettings = {
             url: "".concat(proxy$1).concat(url$1).concat(path),
             method: "POST",
@@ -1191,18 +1202,70 @@
               }
             })
           };
+
+          // Виконуємо другий запит
           return $.ajax(labelSettings);
         }).then(function (response) {
+          // Перевірка другого відповіді
           if (response.result === "success") {
-            resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
+            // Успішна відповідь — показуємо повідомлення
+            Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully'));
+            resolve();
           } else {
-            reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+            // Якщо помилка — викидаємо помилку
+            throw new Error("".concat(Lampa.Lang.translate('actionReturnedError'), ": ").concat(response.result));
           }
         })["catch"](function (error) {
-          console.log('TDM', 'Send file error:', error);
-          reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+          // Ловимо будь-яку помилку з двох запитів
+          console.log('TDM', 'Error:', error);
+          Lampa.Noty.show(error.message || error);
+          reject(error); // Відхиляємо Promise
+        })["finally"](function () {
+          // Виконується завжди, незалежно від результату
+          console.log('Promise execution completed');
         });
       });
+      // return new Promise((resolve, reject) => {
+      //             $.ajax(initialSettings)
+      //                 .then(function(response) {
+      //                     if (response.result !== "success" || Object.keys(response.arguments).length === 0) {
+      //                         reject(Lampa.Noty.show(`${Lampa.Lang.translate('actionReturnedError')}: ${response.result}`));
+      //                     }
+      //                     const torrentId = response.arguments['torrent-added'] ? response.arguments['torrent-added'].id : null;
+
+      //                     const labelSettings = {
+      //                         url: `${proxy}${url}${path}`,
+      //                         method: "POST",
+      //                         timeout: 0,
+      //                         headers: getHeaders(),
+      //                         data: JSON.stringify({
+      //                             method: "torrent-set",
+      //                             arguments: {
+      //                                 ids: torrentId,
+      //                                 labels: [labels]
+      //                             }
+      //                         }),
+      //                     };
+
+      //                     return $.ajax(labelSettings);
+      //                 })
+      //                 .then(function(response) {
+      //                     if (response.result === "success") {
+      //                         resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
+      //                     } else {
+      //                         reject(`${Lampa.Lang.translate('actionReturnedError')}: ${response.result}`);
+      //                     }
+      //                 })
+      //                 .catch(function(error) {
+      //                     console.log('TDM', 'Send file error:', error);
+      //                     Lampa.Noty.show(error);
+      //                     reject(error);
+      //                 })
+      //                 .finally(() => {
+      //                     // Ensure all promises are handled
+      //                     console.log('Promise execution completed');
+      //                 });
+      //         });
     }
     var Transmission = {
       auth: auth$1,
@@ -2496,6 +2559,7 @@
     function add() {
       // Lang
       Component$1();
+      //live.torrentList();
       // Style
       Lampa.Template.add('lmemStyle', "\n        <style>\n            @charset 'UTF-8';.btnTDdownload{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}svg.btnTDdownload{width:36px;height:36px;margin-right:5%}.lmetorrent-error_body{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center}.lmetorrent-error_body .lmetorrent-error_result{margin-top:2em}.lmetorrent-head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;padding:0 2% 0 2%;margin:0 2% 2% 2%}.lmetorrent-header__update{white-space:nowrap}.lmetorrent-header__space{margin-left:auto}.lmetorrent-catalog--list.category-full{margin-left:2%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:start;-webkit-justify-content:start;-ms-flex-pack:start;justify-content:start}.lmetorrent_card__completed{position:absolute;right:0;bottom:0;font-size:.8em;-webkit-border-radius:.3em;-moz-border-radius:.3em;padding:.4em .4em;border-radius:.3em;text-align:center;font-weight:bold;background-color:var(--background-color);color:var(--text-color)}.lmetorrent_card__completed[data-completed]:nth-child(n):nth-last-child(n+51){--background-color:#fcc;--text-color:#900}.lmetorrent_card__completed[data-completed]:nth-child(n+51):nth-last-child(n+2){--background-color:#ffc;--text-color:#990}.lmetorrent_card__completed[data-completed='100']{--background-color:#cfc;--text-color:#090}.lmetorrent_card__state{left:0;top:0}.lmetorrent_card__size{left:0;bottom:0}.lmetorrent_card__size,.lmetorrent_card__state{position:absolute;padding:.4em .4em;background:#fff;color:#000;font-size:.8em;-webkit-border-radius:.3em;border-radius:.3em}.lmetorrent-item{margin-right:.5em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;border:solid .01em #fff;-webkit-border-radius:.8em;border-radius:.8em}.lmetorrent-item.focus{border:solid .26em #fff}.lmetorrent-item__data{margin-bottom:.4em}.lmetorrent-item__state{top:.5em;left:.5em;padding:.1em .3em;font-weight:bold;-webkit-border-radius:.25em;border-radius:.25em;color:#292d32;background-color:#eee}.lmetorrent-item__badge>svg{width:1em;height:1em;vertical-align:bottom}.lmetorrent-item__name{font-size:1.1em;margin-top:.8em;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}@media screen and (max-width:580px){.lmetorrent-item{width:21%}}@media screen and (max-width:385px){.lmetorrent-item__name{display:none}}\n        </style>\n    ");
       Lampa.Template.add("lmetorrent_header", "<div class=\"lmetorrent-header__data lmetorrent-header__update simple-button selector\">Update</div>\n              <div class=\"lmetorrent-header__data lmetorrent-header__space\">Free space: {space}</div>\n            ");
@@ -2507,7 +2571,7 @@
       // Manifest
       var manifest = {
         type: "other",
-        version: "2.2",
+        version: "2.3",
         author: '@lme_chat',
         name: "LME Torrent Manager",
         description: "Manager and Runner query",
