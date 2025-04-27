@@ -642,21 +642,30 @@
         if (!label) {
           return resolve('./img/img_load.svg');
         }
-
-        //const media = label.split('/')[1]; // Извлекаем ID из лейбла
-        var apiUrl = "".concat(Lampa.TMDB.api(label), "/images?api_key=").concat(Lampa.TMDB.key());
+        var directTMDBApi = "".concat(Lampa.TMDB.api(label), "/images?api_key=").concat(Lampa.TMDB.key()); // Прямой запрос к API TMDB
+        var directTMDBImage = Lampa.TMDB.image("t/p/"); // Прямой запрос к API TMDB для получения изображения
+        var proxyTMDBApi;
+        var proxyTMDBImage;
+        if (Lampa.Storage.field('lmetorrentproxyTMDB') == true) {
+          proxyTMDBApi = "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key());
+          proxyTMDBImage = 'https://tmdb.melonhu.cn/img/t/p/';
+        }
 
         // Делаем GET-запрос к API TMDB
         $.ajax({
-          url: apiUrl,
+          url: Lampa.Storage.field('lmetorrentproxyTMDB') == true ? proxyTMDBApi : directTMDBApi,
           method: 'GET',
+          headers: {
+            "x-requested-with": "lampame"
+          },
           success: function success(response) {
             try {
               // Проверяем, есть ли постеры в ответе
               var poster = response.posters && response.posters[0];
               if (poster && poster.file_path) {
                 // Формируем ссылку на изображение
-                var imageUrl = Lampa.TMDB.image("t/p/".concat((Lampa.Storage.field('poster_size') || 'w200') + poster.file_path));
+                //const imageUrl = Lampa.TMDB.image(`t/p/${(Lampa.Storage.field('poster_size')||'w200')+poster.file_path}`);
+                var imageUrl = Lampa.Storage.field('lmetorrentproxyTMDB') == true ? proxyTMDBImage + (Lampa.Storage.field('poster_size') || 'w200') + poster.file_path : directTMDBImage + (Lampa.Storage.field('poster_size') || 'w200') + poster.file_path;
                 resolve(imageUrl);
               } else {
                 resolve('./img/img_load.svg'); // Если постеров нет, возвращаем картинку по умолчанию
@@ -1225,47 +1234,6 @@
           console.log('Promise execution completed');
         });
       });
-      // return new Promise((resolve, reject) => {
-      //             $.ajax(initialSettings)
-      //                 .then(function(response) {
-      //                     if (response.result !== "success" || Object.keys(response.arguments).length === 0) {
-      //                         reject(Lampa.Noty.show(`${Lampa.Lang.translate('actionReturnedError')}: ${response.result}`));
-      //                     }
-      //                     const torrentId = response.arguments['torrent-added'] ? response.arguments['torrent-added'].id : null;
-
-      //                     const labelSettings = {
-      //                         url: `${proxy}${url}${path}`,
-      //                         method: "POST",
-      //                         timeout: 0,
-      //                         headers: getHeaders(),
-      //                         data: JSON.stringify({
-      //                             method: "torrent-set",
-      //                             arguments: {
-      //                                 ids: torrentId,
-      //                                 labels: [labels]
-      //                             }
-      //                         }),
-      //                     };
-
-      //                     return $.ajax(labelSettings);
-      //                 })
-      //                 .then(function(response) {
-      //                     if (response.result === "success") {
-      //                         resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
-      //                     } else {
-      //                         reject(`${Lampa.Lang.translate('actionReturnedError')}: ${response.result}`);
-      //                     }
-      //                 })
-      //                 .catch(function(error) {
-      //                     console.log('TDM', 'Send file error:', error);
-      //                     Lampa.Noty.show(error);
-      //                     reject(error);
-      //                 })
-      //                 .finally(() => {
-      //                     // Ensure all promises are handled
-      //                     console.log('Promise execution completed');
-      //                 });
-      //         });
     }
     var Transmission = {
       auth: auth$1,
@@ -1811,6 +1779,33 @@
         },
         field: {
           name: "Выбор клиента"
+        },
+        onChange: function onChange(value) {
+          Lampa.Settings.update();
+        }
+      });
+      //Proxy TMDB
+      Lampa.SettingsApi.addParam({
+        component: manifest.component,
+        param: {
+          name: manifest.component + 'proxyTMDB',
+          type: 'trigger',
+          "default": 'false',
+          values: {
+            "true": Lampa.Lang.translate('true'),
+            "false": Lampa.Lang.translate('false')
+          }
+        },
+        field: {
+          name: 'Proxy TMDB posters'
+        },
+        onRender: function onRender(item) {
+          var forbiddenValues = ["universalClient", "synology", "no_client"];
+          var clientValue = Lampa.Storage.field(manifest.component + 'proxyTMDB');
+          // indexOf возвращает -1, если значения нет в массиве
+          if (forbiddenValues.indexOf(clientValue) === -1) {
+            item.show();
+          } else item.hide();
         },
         onChange: function onChange(value) {
           Lampa.Settings.update();
