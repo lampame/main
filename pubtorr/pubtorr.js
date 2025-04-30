@@ -87,6 +87,14 @@
         key: '',
         parser_torrent_type: 'jackett'
       }
+    }, {
+      base: 'jac_red_ru',
+      name: 'jac-red.ru',
+      settings: {
+        url: 'jac-red.ru',
+        key: '',
+        parser_torrent_type: 'jackett'
+      }
     }];
 
     var proto = location.protocol === "https:" ? 'https://' : 'http://';
