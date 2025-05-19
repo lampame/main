@@ -881,7 +881,7 @@
       Lampa.Manifest.plugins = manifest;
       CONFIG.main();
       //if(Lampa.Storage.get('lme_quality')) Lampa.Storage.get('lme_quality')
-      if (Lampa.Storage.get('lme_quality')) localStorage.removeItem('lme_quality');
+      if (Lampa.Storage.get('lme_quality') == true) localStorage.removeItem('lme_quality');
       if (Lampa.Storage.get('lme_wmquality')) StreamQuality.main();
       if (Lampa.Storage.get('lme_endata') == true) englishData.main();
       if (Lampa.Storage.get('lme_averageRuntime') == true) averageRuntime.main();
