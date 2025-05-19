@@ -1,6 +1,14 @@
 (function () {
   'use strict';
 
+  function _arrayLikeToArray(r, a) {
+    (null == a || a > r.length) && (a = r.length);
+    for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
+    return n;
+  }
+  function _arrayWithHoles(r) {
+    if (Array.isArray(r)) return r;
+  }
   function _defineProperty(e, r, t) {
     return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
       value: t,
@@ -8,6 +16,36 @@
       configurable: !0,
       writable: !0
     }) : e[r] = t, e;
+  }
+  function _iterableToArrayLimit(r, l) {
+    var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
+    if (null != t) {
+      var e,
+        n,
+        i,
+        u,
+        a = [],
+        f = !0,
+        o = !1;
+      try {
+        if (i = (t = t.call(r)).next, 0 === l) {
+          if (Object(t) !== t) return;
+          f = !1;
+        } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0);
+      } catch (r) {
+        o = !0, n = r;
+      } finally {
+        try {
+          if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return;
+        } finally {
+          if (o) throw n;
+        }
+      }
+      return a;
+    }
+  }
+  function _nonIterableRest() {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
   function ownKeys(e, r) {
     var t = Object.keys(e);
@@ -30,6 +68,9 @@
     }
     return e;
   }
+  function _slicedToArray(r, e) {
+    return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest();
+  }
   function _toPrimitive(t, r) {
     if ("object" != typeof t || !t) return t;
     var e = t[Symbol.toPrimitive];
@@ -43,6 +84,13 @@
   function _toPropertyKey(t) {
     var i = _toPrimitive(t, "string");
     return "symbol" == typeof i ? i : i + "";
+  }
+  function _unsupportedIterableToArray(r, a) {
+    if (r) {
+      if ("string" == typeof r) return _arrayLikeToArray(r, a);
+      var t = {}.toString.call(r).slice(8, -1);
+      return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;
+    }
   }
 
   var CLIENT_ID = 'a77093dcf5db97106d9303f3ab7d46a80a93a6e0c1d7a2ff8a1aacebe0dc161b';
@@ -86,6 +134,10 @@
     };
   }
   var api = {
+    get: function get(url) {
+      var unauthorized = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+      return requestApi('GET', url, {}, unauthorized);
+    },
     watchlist: function watchlist(params, oncomplete, onerror) {
       requestApi('GET', '/sync/watchlist/movies,shows/added/asc?extended=images').then(function (response) {
         oncomplete(formatTraktResults(response));
@@ -252,16 +304,60 @@
     }
   };
 
+  function insertUserInfoBlock(body, user, stats) {
+    // Видаляємо попередній блок, якщо є
+    body.find('.trakt-user-info-block').remove();
+    var html = $('<div class="trakt-user-info-block settings-param"></div>');
+    if (user) {
+      var minutes = 0;
+      if (stats) {
+        var _stats$movies, _stats$episodes;
+        var movieMinutes = ((_stats$movies = stats.movies) === null || _stats$movies === void 0 ? void 0 : _stats$movies.minutes) || 0;
+        var episodeMinutes = ((_stats$episodes = stats.episodes) === null || _stats$episodes === void 0 ? void 0 : _stats$episodes.minutes) || 0;
+        minutes = movieMinutes + episodeMinutes;
+      }
+      var funnyLine = '';
+      if (minutes > 0) {
+        // Наприклад, у Lampa.Lang має бути trakttvHumorMinutes з плейсхолдером {time}
+        funnyLine = "<span style=\"color:#f39c12;\">".concat(Lampa.Lang.translate('trakttvHumorMinutes').replace('{time}', minutes), "</span>");
+      }
+      html.append("<div class=\"settings-param__name\"><b>Trakt.TV User</b></div>");
+      html.append("<div class=\"settings-param__value\">Username: ".concat(user.username, " ").concat(user.vip ? 'VIP' : '', "</div><br />"));
+      html.append("<div class=\"settings-param__value\">".concat(funnyLine, "</div><br />"));
+      if (stats) {
+        var _stats$movies2, _stats$movies3, _stats$episodes2, _stats$episodes3;
+        html.append("\n                <div class=\"settings-param__value\">\n                    <b>Movies:</b>\n                    ".concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$movies2 = stats.movies) === null || _stats$movies2 === void 0 ? void 0 : _stats$movies2.watched) || 0, ", \n                    ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$movies3 = stats.movies) === null || _stats$movies3 === void 0 ? void 0 : _stats$movies3.minutes) || 0, "\n                </div><br />\n                <div class=\"settings-param__value\">\n                    <b>Episodes:</b>\n                    ").concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$episodes2 = stats.episodes) === null || _stats$episodes2 === void 0 ? void 0 : _stats$episodes2.watched) || 0, ", \n                    ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$episodes3 = stats.episodes) === null || _stats$episodes3 === void 0 ? void 0 : _stats$episodes3.minutes) || 0, "\n                </div>\n            "));
+      }
+    } else {
+      html.append("<div>Not authorized</div>");
+    }
+
+    // Вставляємо перед кнопкою Logout
+    body.find('.settings-param[data-name="trakt_logout"]').before(html);
+  }
+  function fetchAndShowUserInfo(body) {
+    // Отримаємо обидва запити паралельно
+    Promise.all([api.get('/users/me'), api.get('/users/me/stats')]).then(function (_ref) {
+      var _ref2 = _slicedToArray(_ref, 2),
+        user = _ref2[0],
+        stats = _ref2[1];
+      insertUserInfoBlock(body, user, stats);
+    })["catch"](function () {
+      insertUserInfoBlock(body, null, null);
+    });
+  }
   function main() {
     Lampa.Settings.listener.follow('open', function (e) {
       if (e.name == 'trakt') {
-        // Check auth status and refresh token if needed
         if (Lampa.Storage.get('trakt_token')) {
+          fetchAndShowUserInfo(e.body);
           api.refresh().then(function () {
             $('.settings-param__status', e.body).removeClass('active error wait').addClass('active');
           })["catch"](function () {
             $('.settings-param__status', e.body).removeClass('active error wait').addClass('error');
           });
+        } else {
+          insertUserInfoBlock(e.body, null, null);
         }
       }
     });
@@ -441,6 +537,26 @@
         ru: "Вы вышли из Trakt.TV",
         en: "You have logged out from Trakt.TV",
         uk: "Ви вийшли з Trakt.TV"
+      },
+      trakttvHumorMinutes: {
+        ru: "Потрачено {time} минут на просмотр! Уже почти Netflix-чемпион",
+        en: "Spent {time} minutes watching! Almost a Netflix champion",
+        uk: "Витрачено {time} хвилин на перегляд! Ти вже майже Netflix-чемпіон"
+      },
+      trakttvStatPlays: {
+        ru: "просмотров",
+        en: "plays",
+        uk: "переглядів"
+      },
+      trakttvStatWatched: {
+        ru: "просмотрено",
+        en: "watched",
+        uk: "переглянуто"
+      },
+      trakttvStatMinutes: {
+        ru: "минут",
+        en: "minutes",
+        uk: "хвилин"
       }
     });
   }
