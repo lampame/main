@@ -362,7 +362,6 @@
       api[type](object, this.build.bind(this), this.empty.bind(this));
     };
     comp.cardRender = function (object, element, card) {
-      console.log('Card data', card.data);
       card.onMenu = false;
       card.onEnter = function () {
         Lampa.Activity.push(card.data);
@@ -453,7 +452,6 @@
 
     // Перевіряємо чи є в списку
     api.inWatchlist(card.movie, function (isAdded) {
-      console.log('inWatchlist', card.movie);
       updateButtonStyle(button, isAdded);
     }, function () {
       button.style.display = 'none';
