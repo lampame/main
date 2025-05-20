@@ -870,6 +870,11 @@
         ru: "Нет сериалов",
         en: "No series",
         uk: "Немає серіалів"
+      },
+      trakttv_episodes_on: {
+        ru: "Серии на",
+        en: "Episodes on",
+        uk: "Серії на"
       }
     });
   }
