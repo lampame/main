@@ -611,68 +611,65 @@
     }
   };
 
-  function insertUserInfoBlock(body, user, stats) {
-    // Видаляємо попередній блок, якщо є
-    body.find('.trakt-user-info-block').remove();
-    var html = $('<div class="trakt-user-info-block settings-param"></div>');
-    if (user) {
-      var minutes = 0;
-      if (stats) {
-        var _stats$movies, _stats$episodes;
-        var movieMinutes = ((_stats$movies = stats.movies) === null || _stats$movies === void 0 ? void 0 : _stats$movies.minutes) || 0;
-        var episodeMinutes = ((_stats$episodes = stats.episodes) === null || _stats$episodes === void 0 ? void 0 : _stats$episodes.minutes) || 0;
-        minutes = movieMinutes + episodeMinutes;
-      }
-      var funnyLine = '';
-      if (minutes > 0) {
-        // Наприклад, у Lampa.Lang має бути trakttvHumorMinutes з плейсхолдером {time}
-        funnyLine = "<span style=\"color:#f39c12;\">".concat(Lampa.Lang.translate('trakttvHumorMinutes').replace('{time}', minutes), "</span>");
-      }
-      html.append("<div class=\"settings-param__name\"><b>Trakt.TV User</b></div>");
-      html.append("<div class=\"settings-param__value\">Username: ".concat(user.username, " ").concat(user.vip ? 'VIP' : '', "</div><br />"));
-      html.append("<div class=\"settings-param__value\">".concat(funnyLine, "</div><br />"));
-      if (stats) {
-        var _stats$movies2, _stats$movies3, _stats$episodes2, _stats$episodes3;
-        html.append("\n                <div class=\"settings-param__value\">\n                    <b>Movies:</b>\n                    ".concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$movies2 = stats.movies) === null || _stats$movies2 === void 0 ? void 0 : _stats$movies2.watched) || 0, ", \n                    ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$movies3 = stats.movies) === null || _stats$movies3 === void 0 ? void 0 : _stats$movies3.minutes) || 0, "\n                </div><br />\n                <div class=\"settings-param__value\">\n                    <b>Episodes:</b>\n                    ").concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$episodes2 = stats.episodes) === null || _stats$episodes2 === void 0 ? void 0 : _stats$episodes2.watched) || 0, ", \n                    ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$episodes3 = stats.episodes) === null || _stats$episodes3 === void 0 ? void 0 : _stats$episodes3.minutes) || 0, "\n                </div>\n            "));
-      }
-    } else {
-      html.append("<div>Not authorized</div>");
-    }
-
-    // Вставляємо перед кнопкою Logout
-    body.find('.settings-param[data-name="trakt_logout"]').before(html);
-  }
-  function fetchAndShowUserInfo(body) {
-    // Отримаємо обидва запити паралельно
-    Promise.all([api.get('/users/me'), api.get('/users/me/stats')]).then(function (_ref) {
-      var _ref2 = _slicedToArray(_ref, 2),
-        user = _ref2[0],
-        stats = _ref2[1];
-      insertUserInfoBlock(body, user, stats);
-    })["catch"](function () {
-      insertUserInfoBlock(body, null, null);
-    });
-  }
   function main() {
-    Lampa.Settings.listener.follow('open', function (e) {
-      if (e.name == 'trakt') {
-        if (Lampa.Storage.get('trakt_token')) {
-          fetchAndShowUserInfo(e.body);
-          api.refresh().then(function () {
-            $('.settings-param__status', e.body).removeClass('active error wait').addClass('active');
-          })["catch"](function () {
-            $('.settings-param__status', e.body).removeClass('active error wait').addClass('error');
-          });
-        } else {
-          insertUserInfoBlock(e.body, null, null);
-        }
-      }
-    });
+    // Додаємо компонент Trakt.TV у налаштування
     Lampa.SettingsApi.addComponent({
       component: 'trakt',
       name: 'Trakt.TV',
-      icon: "<svg style=\"filter:invert(0);\" fill=\"#ffffff\" viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.52.679.684v-.005z\"></path></g></svg>"
+      icon: "<svg style=\"filter:invert(0);\" fill=\"#ffffff\" viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><path d=\"M12 22.036A10.036 10.036 0 1 1 22.036 12 10.047 10.047 0 0 1 12 22.036zm0-18.072A8.036 8.036 0 1 0 20.036 12 8.045 8.045 0 0 0 12 3.964zm5.529 13.764a.999.999 0 0 1-1.414 0L12 13.612l-4.115 4.116a1 1 0 0 1-1.414-1.414l4.116-4.116-4.116-4.115a1 1 0 0 1 1.414-1.414L12 10.588l4.115-4.116a1 1 0 1 1 1.414 1.414l-4.116 4.116 4.116 4.115a1 1 0 0 1 0 1.414z\"></path></g></svg>"
     });
+
+    //Користувацька інфа (user + stats) через custom param
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_userinfo',
+        type: 'static'
+      },
+      field: {
+        name: ''
+      },
+      onRender: function onRender(item) {
+        item.empty();
+        var token = Lampa.Storage.get('trakt_token');
+        if (!token) {
+          item.append("<div>Not authorized</div>");
+          return;
+        }
+        // Показати лоадер
+        var loading = $('<div class="settings-param__value">Loading...</div>');
+        item.append(loading);
+        Promise.all([api.get('/users/me'), api.get('/users/me/stats')]).then(function (_ref) {
+          var _ref2 = _slicedToArray(_ref, 2),
+            user = _ref2[0],
+            stats = _ref2[1];
+          loading.remove();
+          var minutes = 0;
+          if (stats) {
+            var _stats$movies, _stats$episodes;
+            var movieMinutes = ((_stats$movies = stats.movies) === null || _stats$movies === void 0 ? void 0 : _stats$movies.minutes) || 0;
+            var episodeMinutes = ((_stats$episodes = stats.episodes) === null || _stats$episodes === void 0 ? void 0 : _stats$episodes.minutes) || 0;
+            minutes = movieMinutes + episodeMinutes;
+          }
+          var funnyLine = '';
+          if (minutes > 0) {
+            funnyLine = "<span style=\"color:#f39c12;\">".concat(Lampa.Lang.translate('trakttvHumorMinutes').replace('{time}', minutes), "</span>");
+          }
+          item.append("<div class=\"settings-param__name\"><b>Trakt.TV User</b></div>");
+          item.append("<div class=\"settings-param__value\">Username: ".concat(user.username, " ").concat(user.vip ? 'VIP' : '', "</div>"));
+          if (funnyLine) item.append("<div class=\"settings-param__value\">".concat(funnyLine, "</div>"));
+          if (stats) {
+            var _stats$movies2, _stats$movies3, _stats$episodes2, _stats$episodes3;
+            item.append("\n                        <div class=\"settings-param__value\">\n                            <b>Movies:</b>\n                            ".concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$movies2 = stats.movies) === null || _stats$movies2 === void 0 ? void 0 : _stats$movies2.watched) || 0, ", \n                            ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$movies3 = stats.movies) === null || _stats$movies3 === void 0 ? void 0 : _stats$movies3.minutes) || 0, "\n                        </div>\n                        <div class=\"settings-param__value\">\n                            <b>Episodes:</b>\n                            ").concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$episodes2 = stats.episodes) === null || _stats$episodes2 === void 0 ? void 0 : _stats$episodes2.watched) || 0, ", \n                            ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$episodes3 = stats.episodes) === null || _stats$episodes3 === void 0 ? void 0 : _stats$episodes3.minutes) || 0, "\n                        </div>\n                    "));
+          }
+        })["catch"](function () {
+          loading.remove();
+          item.append('<div>Помилка отримання даних.</div>');
+        });
+      }
+    });
+
+    // Кнопка авторизації
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -712,7 +709,7 @@
       }
     });
 
-    // Додаємо кнопки імпорту/експорту якщо є токен Trakt
+    // // Кнопка імпорту закладок з Trakt
     // Lampa.SettingsApi.addParam({
     //     component: 'trakt',
     //     param: {
@@ -734,6 +731,7 @@
     //     }
     // });
 
+    // // Кнопка експорту закладок у Trakt
     // Lampa.SettingsApi.addParam({
     //     component: 'trakt',
     //     param: {
@@ -755,6 +753,7 @@
     //     }
     // });
 
+    // Кнопка logout
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -777,6 +776,8 @@
         Lampa.Settings.update();
       }
     });
+
+    // Кнопка повного очищення Trakt
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -790,7 +791,6 @@
         item.show();
       },
       onChange: function onChange() {
-        // Очищаємо всі ключі Trakt.TV у localStorage та Lampa.Storage
         Object.keys(localStorage).forEach(function (key) {
           if (key.toLowerCase().includes('trakt')) {
             localStorage.removeItem(key);
@@ -805,6 +805,8 @@
       }
     });
   }
+
+  // Окрема функція для poll авторизації
   function pollAuth(data) {
     var interval = setInterval(function () {
       api.auth.poll(data.device_code).then(function (response) {
@@ -816,8 +818,7 @@
         Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthOk'));
       })["catch"](function (err) {
         if (err.status == 400) {
-          // Keep polling
-          return;
+          return; // Очікуємо
         }
         clearInterval(interval);
         Lampa.Modal.close();
