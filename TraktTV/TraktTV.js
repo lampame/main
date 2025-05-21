@@ -711,6 +711,50 @@
         });
       }
     });
+
+    // Додаємо кнопки імпорту/експорту якщо є токен Trakt
+    // Lampa.SettingsApi.addParam({
+    //     component: 'trakt',
+    //     param: {
+    //         name: 'trakt_import',
+    //         type: 'button'
+    //     },
+    //     field: {
+    //         name: 'Імпортувати закладки з Trakt'
+    //     },
+    //     onRender: function(item){
+    //         if(Lampa.Storage.get('trakt_token')){
+    //             item.show();
+    //         } else {
+    //             item.hide();
+    //         }
+    //     },
+    //     onChange: function(){
+    //         importTraktToLampa();
+    //     }
+    // });
+
+    // Lampa.SettingsApi.addParam({
+    //     component: 'trakt',
+    //     param: {
+    //         name: 'trakt_export',
+    //         type: 'button'
+    //     },
+    //     field: {
+    //         name: 'Експортувати закладки у Trakt'
+    //     },
+    //     onRender: function(item){
+    //         if(Lampa.Storage.get('trakt_token')){
+    //             item.show();
+    //         } else {
+    //             item.hide();
+    //         }
+    //     },
+    //     onChange: function(){
+    //         exportLampaToTrakt();
+    //     }
+    // });
+
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -730,6 +774,33 @@
       onChange: function onChange() {
         api.auth.logout();
         Lampa.Noty.show(Lampa.Lang.translate('trakttvLogoutNoty'));
+        Lampa.Settings.update();
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_full_clear',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttvFullClear')
+      },
+      onRender: function onRender(item) {
+        item.show();
+      },
+      onChange: function onChange() {
+        // Очищаємо всі ключі Trakt.TV у localStorage та Lampa.Storage
+        Object.keys(localStorage).forEach(function (key) {
+          if (key.toLowerCase().includes('trakt')) {
+            localStorage.removeItem(key);
+          }
+        });
+        if (typeof Lampa.Storage.set === 'function') {
+          Lampa.Storage.set('trakt_token', null);
+          Lampa.Storage.set('trakt_refresh_token', null);
+        }
+        Lampa.Noty.show('Всі ключі Trakt.TV очищено!');
         Lampa.Settings.update();
       }
     });
@@ -875,6 +946,11 @@
         ru: "Серии на",
         en: "Episodes on",
         uk: "Серії на"
+      },
+      trakttvFullClear: {
+        ru: "Очистить все ключи Trakt.TV",
+        en: "Clear all Trakt.TV keys",
+        uk: "Очистити всі ключі Trakt.TV"
       }
     });
   }
