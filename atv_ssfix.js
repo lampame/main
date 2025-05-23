@@ -5,7 +5,7 @@ function add() {
     }
 }
 function startPlugin() {
-    window.plugin_its_ready = true;
+    window.plugin_atvss_ready = true;
 
     Lampa.Manifest.plugins = {
         type: "other",
@@ -21,4 +21,4 @@ function startPlugin() {
         });
     }
 }
-if (!window.plugin_its_ready) startPlugin();
+if (!window.plugin_atvss_ready) startPlugin();
