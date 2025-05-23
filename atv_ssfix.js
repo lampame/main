@@ -1,6 +1,6 @@
 Lampa.Platform.tv();
 function add() {
-    if (Lampa.Platform.is('apple_tv') === false) {
+    if (Lampa.Platform.is('apple_tv') == true) {
       Lampa.Storage.set("screensaver", false)
     }
 }
