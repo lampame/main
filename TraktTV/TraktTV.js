@@ -402,6 +402,104 @@
   var CLIENT_ID = 'a77093dcf5db97106d9303f3ab7d46a80a93a6e0c1d7a2ff8a1aacebe0dc161b';
   var CLIENT_SECRET = 'a8cf25070f8c9a609782deecf56197f99e96084b080c1c86fccf9dc682465f1b';
   var API_URL = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://api.trakt.tv';
+  function addToHistory(data) {
+    var mode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+    var body = {
+      movies: [],
+      shows: []
+    };
+    if (data.method === 'movie') {
+      body.movies.push({
+        ids: {
+          tmdb: data.id
+        },
+        watched_at: new Date().toISOString()
+      });
+    } else if (data.method === 'show') {
+      if (mode === 'all') {
+        // Додати весь серіал
+        body.shows.push({
+          ids: {
+            tmdb: data.id
+          },
+          watched_at: new Date().toISOString()
+        });
+      } else if (mode === 'last_season') {
+        // Додати останній сезон
+        body.shows.push({
+          ids: {
+            tmdb: data.id
+          },
+          seasons: [{
+            number: data.season,
+            watched_at: new Date().toISOString()
+          }]
+        });
+      } else if (mode === 'last_episode') {
+        // Додати останній епізод
+        body.shows.push({
+          ids: {
+            tmdb: data.id
+          },
+          seasons: [{
+            number: data.season,
+            episodes: [{
+              number: data.episode,
+              watched_at: new Date().toISOString()
+            }]
+          }]
+        });
+      }
+    }
+    return requestApi('POST', '/sync/history', body);
+  }
+  function removeFromHistory(data) {
+    var mode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+    var body = {
+      movies: [],
+      shows: []
+    };
+    if (data.method === 'movie') {
+      body.movies.push({
+        ids: {
+          tmdb: data.id
+        }
+      });
+    } else if (data.method === 'show') {
+      if (mode === 'all') {
+        // Видалити весь серіал з історії
+        body.shows.push({
+          ids: {
+            tmdb: data.id
+          }
+        });
+      } else if (mode === 'last_season') {
+        // Видалити останній сезон з історії
+        body.shows.push({
+          ids: {
+            tmdb: data.id
+          },
+          seasons: [{
+            number: data.season
+          }]
+        });
+      } else if (mode === 'last_episode') {
+        // Видалити останній епізод з історії
+        body.shows.push({
+          ids: {
+            tmdb: data.id
+          },
+          seasons: [{
+            number: data.season,
+            episodes: [{
+              number: data.episode
+            }]
+          }]
+        });
+      }
+    }
+    return requestApi('POST', '/sync/history/remove', body);
+  }
   function requestApi(method, url) {
     var params = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var unauthorized = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
@@ -536,6 +634,8 @@
         Lampa.Storage.set('trakt_refresh_token', null);
       }
     },
+    addToHistory: addToHistory,
+    removeFromHistory: removeFromHistory,
     refresh: function refresh() {
       return requestApi('POST', '/oauth/token', {
         refresh_token: Lampa.Storage.get('trakt_refresh_token'),
@@ -603,6 +703,19 @@
         var found = response.find(function (item) {
           var _item$movie, _item$show;
           return ((_item$movie = item.movie) === null || _item$movie === void 0 ? void 0 : _item$movie.ids.tmdb) === params.id || ((_item$show = item.show) === null || _item$show === void 0 ? void 0 : _item$show.ids.tmdb) === params.id;
+        });
+        oncomplete(!!found);
+      })["catch"](function (error) {
+        onerror(error);
+      });
+    },
+    inHistory: function inHistory(params, oncomplete, onerror) {
+      var type = params.method === 'movie' ? 'movies' : 'shows';
+      var url = "/sync/history/".concat(type, "?extended=full");
+      requestApi('GET', url).then(function (response) {
+        var found = response.find(function (item) {
+          var _item$movie2, _item$show2;
+          return ((_item$movie2 = item.movie) === null || _item$movie2 === void 0 ? void 0 : _item$movie2.ids.tmdb) === params.id || ((_item$show2 = item.show) === null || _item$show2 === void 0 ? void 0 : _item$show2.ids.tmdb) === params.id;
         });
         oncomplete(!!found);
       })["catch"](function (error) {
@@ -952,6 +1065,76 @@
         ru: "Очистить все ключи Trakt.TV",
         en: "Clear all Trakt.TV keys",
         uk: "Очистити всі ключі Trakt.TV"
+      },
+      trakt_componentDisable: {
+        ru: "Компонент отключен",
+        en: "Component disabled",
+        uk: "Компонент вимкнено"
+      },
+      trakt_componentEnable: {
+        ru: "Компонент включен",
+        en: "Component enabled",
+        uk: "Компонент увімкнено"
+      },
+      trakt_history_added: {
+        ru: "Добавлено в историю просмотров",
+        en: "Added to watch history",
+        uk: "Додано до історії переглядів"
+      },
+      trakt_history_addError: {
+        ru: "Ошибка добавления в историю",
+        en: "Error adding to history",
+        uk: "Помилка додавання до історії"
+      },
+      trakt_history_all: {
+        ru: "Весь сериал",
+        en: "Entire series",
+        uk: "Весь серіал"
+      },
+      trakt_history_season: {
+        ru: "Последний сезон",
+        en: "Last season",
+        uk: "Останній сезон"
+      },
+      trakt_history_episodes: {
+        ru: "Последний эпизод",
+        en: "Last episode",
+        uk: "Остання серія"
+      },
+      trakt_history_title: {
+        ru: "Что отправить в историю?",
+        en: "What to send to history?",
+        uk: "Що відправити до історії?"
+      },
+      trakt_history_button: {
+        ru: "Добавить в историю",
+        en: "Add to history",
+        uk: "Додати до історії"
+      },
+      trakt_watchlist_button: {
+        ru: "Добавить в watchlist",
+        en: "Add to watchlist",
+        uk: "Додати до watchlist"
+      },
+      trakt_watchlist_remove: {
+        ru: "Удалить из watchlist",
+        en: "Remove from watchlist",
+        uk: "Видалити з watchlist"
+      },
+      trakt_watchlist_add: {
+        ru: "Добавлено в watchlist",
+        en: "Added to watchlist",
+        uk: "Додано до watchlist"
+      },
+      trakt_history_in: {
+        ru: "В истории",
+        en: "In history",
+        uk: "В історії"
+      },
+      trakt_history_not_in: {
+        ru: "Добавить в историю",
+        en: "Add to history",
+        uk: "Додати до історії"
       }
     });
   }
@@ -1285,7 +1468,7 @@
   function addWatchlistButton(card) {
     var button = document.createElement('div');
     button.className = 'full-start__button selector watchlist-button';
-    button.innerHTML = "\n        <svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d=\"M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32l288 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-288 0c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z\"/></svg>\n    ";
+    button.innerHTML = "\n        <svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d=\"M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32l288 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-288 0c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z\"/></svg>\n        <span>".concat(Lampa.Lang.translate('trakt_watchlist_button'), "</span>\n    ");
 
     // Перевіряємо чи є в списку
     api.inWatchlist(card.movie, function (isAdded) {
@@ -1299,14 +1482,14 @@
       var isAdded = button.classList.contains('added');
       if (isAdded) {
         api.removeFromWatchlist(card.movie, function () {
-          Lampa.Noty.show('Видалено з watchlist');
+          Lampa.Noty.show(Lampa.Lang.translate('trakt_watchlist_remove'));
           updateButtonStyle(button, false);
         }, function () {
           return Lampa.Noty.show('Помилка при видаленні');
         });
       } else {
         api.addToWatchlist(card.movie, function () {
-          Lampa.Noty.show('Додано до watchlist');
+          Lampa.Noty.show(Lampa.Lang.translate('trakt_watchlist_add'));
           updateButtonStyle(button, true);
         }, function () {
           return Lampa.Noty.show('Помилка при додаванні');
@@ -1328,6 +1511,123 @@
     addWatchlistButton: addWatchlistButton
   };
 
+  var TraktHistory = {
+    addHistoryButton: function addHistoryButton(data) {
+      var button = document.createElement('div');
+      button.className = 'full-start__button selector trakt_history-button';
+      button.innerHTML = "\n               <svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 448 512\"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d=\"M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z\"/></svg> \n                <span>".concat(Lampa.Lang.translate('trakt_history_not_in'), "</span>\n");
+
+      // Перевіряємо чи є в історії
+      api.inHistory(data.movie, function (isInHistory) {
+        updateButtonStyle(button, isInHistory);
+      }, function () {
+        button.style.display = 'none';
+      });
+      function updateButtonStyle(button, isInHistory) {
+        if (isInHistory) {
+          button.classList.add('added');
+          button.style.color = '#37ff54';
+          button.querySelector('span').textContent = Lampa.Lang.translate('trakt_history_in');
+        } else {
+          button.classList.remove('added');
+          button.style.color = '';
+          button.querySelector('span').textContent = Lampa.Lang.translate('trakt_history_not_in');
+        }
+      }
+      button.addEventListener('hover:enter', function () {
+        var isInHistory = button.classList.contains('added');
+        if (isInHistory) {
+          // Вже в історії, видаляємо
+          var _type = data.movie.first_air_date ? 'show' : 'movie';
+
+          // Створюємо об'єкт для передачі в API
+          var _apiData = {
+            method: _type === 'movie' ? 'movie' : 'show',
+            id: data.movie.id,
+            season: data.movie.season_number || 1,
+            episode: data.movie.episode_number || 1
+          };
+          if (_type === 'movie') {
+            api.removeFromHistory(_apiData).then(function () {
+              Lampa.Noty.show(Lampa.Lang.translate('trakt_history_removed'));
+              updateButtonStyle(button, false);
+            })["catch"](function (err) {
+              Lampa.Noty.show(Lampa.Lang.translate('trakt_history_removeError'), err);
+            });
+          } else if (_type === 'show') {
+            Lampa.Select.show({
+              title: Lampa.Lang.translate('trakt_history_title'),
+              items: [{
+                title: Lampa.Lang.translate('trakt_history_all'),
+                action: 'all'
+              }
+              // { title: Lampa.Lang.translate('trakt_history_season'), action: 'last_season'},
+              // { title: Lampa.Lang.translate('trakt_history_episodes'), action: 'last_episode'}
+              ],
+              onSelect: function onSelect(a) {
+                api.removeFromHistory(_apiData, a.action).then(function () {
+                  Lampa.Noty.show(Lampa.Lang.translate('trakt_history_removed', {
+                    type: a.title
+                  }));
+                  updateButtonStyle(button, false);
+                })["catch"](function (err) {
+                  Lampa.Noty.show(Lampa.Lang.translate('trakt_history_removeError'), err);
+                });
+              },
+              onBack: function onBack() {
+                Lampa.Controller.toggle('menu');
+              }
+            });
+          }
+          return;
+        }
+        var type = data.movie.first_air_date ? 'show' : 'movie';
+
+        // Створюємо об'єкт для передачі в API
+        var apiData = {
+          method: type === 'movie' ? 'movie' : 'show',
+          id: data.movie.id,
+          season: data.movie.season_number || 1,
+          episode: data.movie.episode_number || 1
+        };
+        if (type === 'movie') {
+          api.addToHistory(apiData).then(function () {
+            Lampa.Noty.show(Lampa.Lang.translate('trakt_history_added'));
+            updateButtonStyle(button, true);
+          })["catch"](function (err) {
+            Lampa.Noty.show(Lampa.Lang.translate('trakt_history_addError'), err);
+          });
+        } else if (type === 'show') {
+          Lampa.Select.show({
+            title: Lampa.Lang.translate('trakt_history_title'),
+            items: [{
+              title: Lampa.Lang.translate('trakt_history_all'),
+              action: 'all'
+            }
+            // { title: Lampa.Lang.translate('trakt_history_season'), action: 'last_season'},
+            // { title: Lampa.Lang.translate('trakt_history_episodes'), action: 'last_episode'}
+            ],
+            onSelect: function onSelect(a) {
+              api.addToHistory(apiData, a.action).then(function () {
+                Lampa.Noty.show(Lampa.Lang.translate('trakt_history_added', {
+                  type: a.title
+                }));
+                updateButtonStyle(button, true);
+              })["catch"](function (err) {
+                Lampa.Noty.show(Lampa.Lang.translate('trakt_history_addError'), err);
+              });
+            },
+            onBack: function onBack() {
+              Lampa.Controller.toggle('menu');
+            }
+          });
+        }
+      });
+      return button;
+    }
+  };
+
+  //LampaJS plugin for Trakt.TV
   function startPlugin() {
     window.plugin_trakt_ready = true;
     // Фонове оновлення токена при старті
@@ -1359,6 +1659,9 @@
       if (e.type === 'complite' && Lampa.Storage.get('trakt_token')) {
         var button = watchlist.addWatchlistButton(e.data);
         e.object.activity.render().find('.full-start-new__buttons').append(button);
+        // Додаємо нову кнопку
+        var historyButton = TraktHistory.addHistoryButton(e.data);
+        e.object.activity.render().find('.full-start-new__buttons').append(historyButton);
       }
     });
   }
@@ -1390,10 +1693,59 @@
         page: 1
       });
     });
+    // Combine menu items
+    var items = [{
+      title: 'Up Next',
+      component: 'trakt_upnext'
+    }, {
+      title: 'Watchlist',
+      component: 'trakt_watchlist'
+    }, {
+      title: 'Calendar',
+      component: 'trakt_timetable_all'
+    }];
+    var combineButton = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.52.679.684v-.005z\"></path></g></svg></div>\n    </div>\n    <div class=\"menu__text\">TraktTV</div>\n    </li>");
+    combineButton.on('hover:enter', function () {
+      Lampa.Select.show({
+        title: 'TraktTV',
+        items: items,
+        onSelect: function onSelect(a) {
+          Lampa.Activity.push({
+            url: '',
+            title: a.title,
+            component: a.component
+          });
+        },
+        onLong: function onLong(a) {
+          items.forEach(function (item) {
+            var currentValue = Lampa.Storage.get(a.component);
+            if (currentValue === true) {
+              Lampa.Noty.show(Lampa.Lang.translate('trakt_componentDisable'));
+              Lampa.Storage.set(a.component, false);
+            } else {
+              Lampa.Noty.show(Lampa.Lang.translate('trakt_componentEnable'));
+              Lampa.Storage.set(a.component, true);
+            }
+          });
+        },
+        onBack: function onBack() {
+          Lampa.Controller.toggle('menu');
+        }
+      });
+    });
     var menuList = $('.menu .menu__list').eq(0);
-    menuList.append(watchlist);
-    menuList.append(upnext);
-    menuList.append(timetable);
+    menuList.append(combineButton);
+
+    // Перевіряємо кожен елемент локального сховища і додаємо відповідні пункти меню
+    items.forEach(function (item) {
+      var key = item.component;
+      if (Lampa.Storage.get(key) === true) {
+        // Якщо значення true, додаємо пункт меню
+        if (key === 'trakt_watchlist') menuList.append(watchlist);
+        if (key === 'trakt_upnext') menuList.append(upnext);
+        if (key === 'trakt_timetable_all') menuList.append(timetable);
+      }
+    });
   }
   if (!window.plugin_trakt_ready) startPlugin();
 
