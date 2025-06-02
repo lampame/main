@@ -551,12 +551,9 @@
           var _ref2 = _slicedToArray(_ref, 2),
             moviesResponse = _ref2[0],
             showsResponse = _ref2[1];
-          console.log('Movies response:', moviesResponse);
-          console.log('Shows response:', showsResponse);
-
           // Форматуємо фільми
           var formattedMovies = moviesResponse.map(function (movie) {
-            var _movie$images, _movie$images2;
+            var _movie$images;
             return {
               component: 'full',
               id: movie.ids.tmdb,
@@ -565,14 +562,13 @@
               release_date: movie.year + '',
               vote_average: movie.rating || 0,
               poster: Array.isArray((_movie$images = movie.images) === null || _movie$images === void 0 ? void 0 : _movie$images.poster) ? "https://".concat(movie.images.poster[0]) : '',
-              image: Array.isArray((_movie$images2 = movie.images) === null || _movie$images2 === void 0 ? void 0 : _movie$images2.fanart) ? "https://".concat(movie.images.fanart[0]) : '',
               method: 'movie'
             };
           });
 
           // Форматуємо серіали
           var formattedShows = showsResponse.map(function (show) {
-            var _show$images, _show$images2;
+            var _show$images;
             return {
               component: 'full',
               id: show.ids.tmdb,
@@ -581,14 +577,10 @@
               release_date: show.year + '',
               vote_average: show.rating || 0,
               poster: Array.isArray((_show$images = show.images) === null || _show$images === void 0 ? void 0 : _show$images.poster) ? "https://".concat(show.images.poster[0]) : '',
-              image: Array.isArray((_show$images2 = show.images) === null || _show$images2 === void 0 ? void 0 : _show$images2.fanart) ? "https://".concat(show.images.fanart[0]) : '',
-              method: 'tv',
-              card__type: 'TV' // Додаємо мітку для серіалів
+              type: 'tv',
+              method: 'tv'
             };
           });
-          console.log('Formatted movies:', formattedMovies);
-          console.log('Formatted shows:', formattedShows);
-
           // Об'єднуємо результати і перемішуємо їх
           var combinedResults = [].concat(_toConsumableArray(formattedMovies), _toConsumableArray(formattedShows));
 
@@ -606,12 +598,12 @@
             results: finalResults
           });
         })["catch"](function (error) {
-          console.error('TraktTV API Error:', error);
+          console.error('TraktTV', error);
 
           // Якщо один з запитів не вдався, спробуємо отримати хоча б один тип контенту
           requestApi('GET', '/recommendations/movies?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=50').then(function (response) {
             var formattedResults = response.map(function (movie) {
-              var _movie$images3, _movie$images4;
+              var _movie$images2;
               return {
                 component: 'full',
                 id: movie.ids.tmdb,
@@ -619,8 +611,7 @@
                 original_title: movie.title,
                 release_date: movie.year + '',
                 vote_average: movie.rating || 0,
-                poster: Array.isArray((_movie$images3 = movie.images) === null || _movie$images3 === void 0 ? void 0 : _movie$images3.poster) ? "https://".concat(movie.images.poster[0]) : '',
-                image: Array.isArray((_movie$images4 = movie.images) === null || _movie$images4 === void 0 ? void 0 : _movie$images4.fanart) ? "https://".concat(movie.images.fanart[0]) : '',
+                poster: Array.isArray((_movie$images2 = movie.images) === null || _movie$images2 === void 0 ? void 0 : _movie$images2.poster) ? "https://".concat(movie.images.poster[0]) : '',
                 method: 'movie'
               };
             });
@@ -628,7 +619,7 @@
               results: formattedResults.slice(0, 20)
             });
           })["catch"](function (fallbackError) {
-            console.error('Fallback request also failed:', fallbackError);
+            console.error('TraktTV', fallbackError);
             reject(fallbackError);
           });
         });
@@ -1064,14 +1055,13 @@
       api.recommendations().then(function (recommendations) {
         // Перевіряємо чи є results і чи він не порожній
         if (recommendations && recommendations.results && recommendations.results.length > 0) {
-          // Кешуємо рекомендації
-          Lampa.Storage.set('trakttv_cached_recommendations', JSON.stringify(recommendations.results));
+          // Кешування видалено - рекомендації завантажуються кожен раз заново
           _this.build(recommendations); // Передаємо весь об'єкт з results
         } else {
           _this.empty();
         }
       })["catch"](function (error) {
-        console.error('Error getting recommendations:', error);
+        console.error('TraktTV', error);
         _this.empty();
       });
     };
@@ -1784,16 +1774,179 @@
 
   function startPlugin() {
     window.plugin_trakt_ready = true;
+    Lampa.Manifest.plugins = {
+      type: "video",
+      version: "2.4",
+      author: '@lme_chat',
+      name: "LME TraktTV",
+      onMain: function onMain() {
+        if (!Lampa.Storage.field('trakttv_show_on_main', true)) return {
+          results: []
+        };
+        var userHasPermission = Lampa.Storage.get('trakt_token') && Lampa.Storage.field('trakttv_show_recommendations', true);
+        if (!userHasPermission) return {
+          results: []
+        };
+
+        // Отримуємо кешовані дані
+        var recommendations = Lampa.Storage.get('trakttv_cached_recommendations', []);
+        if (typeof recommendations === 'string') {
+          try {
+            recommendations = JSON.parse(recommendations);
+          } catch (e) {
+            recommendations = [];
+          }
+        }
+
+        // Запускаємо оновлення в фоні (не блокуючи onMain)
+        this.updateRecommendationsInBackground();
+        if (!Array.isArray(recommendations) || recommendations.length === 0) {
+          return {
+            results: []
+          };
+        }
+
+        // Нормалізуємо дані
+        var normalizedResults = recommendations.map(function (item) {
+          var normalized = _objectSpread2({}, item);
+          if (item.type === 'tv' || item.card_type === 'tv') {
+            normalized.name = item.title || item.original_title;
+            normalized.first_air_date = item.release_date;
+            normalized.title = '[TV] ' + (item.title || item.original_title);
+          }
+          if (item.type === 'movie' || item.card_type === 'movie') {
+            delete normalized.name;
+            normalized.release_date = item.release_date;
+            normalized.title = item.title || item.original_title;
+          }
+          return normalized;
+        });
+        return {
+          title: Lampa.Lang.translate('trakttv_recommendations'),
+          results: normalizedResults,
+          nomore: true,
+          line_type: 'trakttv_recommendations',
+          cardClass: function cardClass(item, params) {
+            var card = new Lampa.Card(item, params);
+            card.onEnter = function (target, card_data) {
+              Lampa.Activity.push({
+                url: card_data.url,
+                component: 'full',
+                id: card_data.id,
+                method: card_data.type || card_data.card_type || (card_data.name ? 'tv' : 'movie'),
+                card: card_data,
+                source: card_data.source || params.object.source
+              });
+            };
+            return card;
+          }
+        };
+      },
+      updateRecommendationsInBackground: function updateRecommendationsInBackground() {
+        // Оновлюємо дані в фоні
+        api.recommendations().then(function (data) {
+          if (data && data.results && data.results.length > 0) {
+            Lampa.Storage.set('trakttv_cached_recommendations', data.results);
+
+            // Оновлюємо головну сторінку якщо вона активна
+            // if (Lampa.Activity.active().component === 'main') {
+            //     // Можна тригернути оновлення інтерфейсу
+            //     console.log('TraktTV: рекомендації оновлено');
+            // }
+          }
+        })["catch"](function (error) {
+          console.error('TraktTV', error);
+        });
+      }
+    };
+
+    // Додаємо другий плагін для виведення UpNext на головній
+    Lampa.Manifest.plugins = {
+      type: "video",
+      version: "1.0",
+      author: '@lme_chat',
+      name: "LME TraktTV Up Next",
+      onMain: function onMain() {
+        if (!Lampa.Storage.field('trakttv_show_on_main', true)) return {
+          results: []
+        };
+        var userHasPermission = Lampa.Storage.get('trakt_token');
+        if (!userHasPermission) return {
+          results: []
+        };
+
+        // Отримуємо список серій Up Next
+        var upnext = Lampa.Storage.get('trakttv_cached_upnext', []);
+        if (typeof upnext === 'string') {
+          try {
+            upnext = JSON.parse(upnext);
+          } catch (e) {
+            upnext = [];
+          }
+        }
+
+        // Завантажуємо Up Next в фоні
+        this.updateUpNextInBackground();
+        if (!Array.isArray(upnext) || upnext.length === 0) {
+          return {
+            results: []
+          };
+        }
+
+        // Нормалізуємо дані
+        var normalizedResults = upnext.map(function (item) {
+          return _objectSpread2(_objectSpread2({}, item), {}, {
+            name: item.title || item.original_title,
+            first_air_date: item.release_date,
+            title: item.title || item.original_title
+          });
+        });
+        return {
+          title: 'TraktTV Up Next',
+          nomore: true,
+          results: normalizedResults,
+          line_type: 'trakttv_upnext',
+          cardClass: function cardClass(item, params) {
+            var card = new Lampa.Card(item, params);
+            card.onEnter = function (target, card_data) {
+              Lampa.Activity.push({
+                url: card_data.url,
+                component: 'full',
+                id: card_data.id,
+                method: 'tv',
+                card: card_data,
+                source: card_data.source || params.object.source,
+                season: card_data.season,
+                episode: card_data.episode
+              });
+            };
+            return card;
+          }
+        };
+      },
+      updateUpNextInBackground: function updateUpNextInBackground() {
+        // Отримуємо UpNext від API - використовуємо правильний метод
+        api.upnext({}, function (data) {
+          if (data && data.results && data.results.length > 0) {
+            Lampa.Storage.set('trakttv_cached_upnext', data.results);
+
+            // Оновлюємо головну сторінку якщо вона активна
+            if (Lampa.Activity.active().component === 'main') {
+              console.log('TraktTV: Up Next оновлено');
+            }
+          }
+        }, function (error) {
+          console.error('TraktTV', error);
+        });
+      }
+    };
+
     // Фонове оновлення токена при старті
     if (Lampa.Storage.get('trakt_refresh_token')) {
       api.refresh()["catch"](function () {});
     }
 
-    // Завантаження рекомендацій при старті
-    loadRecommendations();
-
-    // Оновлення рекомендацій кожні 30 хвилин
-    setInterval(loadRecommendations, 30 * 60 * 1000);
+    // Рекомендації завантажуються динамічно при потребі
     // Добавляем компоненты
     Lampa.Component.add('trakt_watchlist', function (object) {
       return new Catalog.watchlist(object);
@@ -1825,33 +1978,11 @@
         e.object.activity.render().find('.full-start-new__buttons').append(historyButton);
       }
     });
-
-    // Додаємо блок з рекомендаціями на головній сторінці
-    Lampa.Listener.follow('main', function (e) {
-      if (e.type === 'ready') {
-        if (!Lampa.Storage.field('trakttv_show_on_main', true)) return;
-        var recommendations = Lampa.Storage.get('trakttv_cached_recommendations', '[]');
-        try {
-          recommendations = JSON.parse(recommendations);
-        } catch (e) {
-          recommendations = [];
-        }
-        if (recommendations.length) {
-          // Перевіряємо чи користувач має дозвіл на відображення рекомендацій
-          var userHasPermission = Lampa.Storage.get('trakt_token') && Lampa.Storage.field('trakttv_show_recommendations', true);
-          if (userHasPermission) {
-            e.body.render().find('.activity__body').append(createRecommendationBlock(recommendations, e.data));
-          } else {
-            console.log('TraktTV: recommendations are not displayed due to lack of permission or token');
-          }
-        }
-      }
-    });
   }
   function addMenuItems() {
-    var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.52.679.684v-.005z\"></path></g></svg></div>\n        <div class=\"menu__text\">Watchlist</div>\n    </li>");
-    var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.52.679.684v-.005z\"></path></g></svg></div>\n        <div class=\"menu__text\">Up Next</div>\n    </li>");
-    var timetable = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.52.679.684v-.005z\"></path></g></svg></div>\n    </div>\n    <div class=\"menu__text\">Calendar</div>\n    </li>");
+    var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.520.679.684v-.005z\"></path></g></svg></div>\n        <div class=\"menu__text\">Watchlist</div>\n    </li>");
+    var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.520.679.684v-.005z\"></path></g></svg></div>\n        <div class=\"menu__text\">Up Next</div>\n    </li>");
+    var timetable = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.520.679.684v-.005z\"></path></g></svg></div>\n    </div>\n    <div class=\"menu__text\">Calendar</div>\n    </li>");
     timetable.on('hover:enter', function () {
       Lampa.Activity.push({
         url: '',
@@ -1891,7 +2022,7 @@
       component: 'trakttv_recommendations',
       toggleOption: 'trakttv_show_recommendations'
     }];
-    var combineButton = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.52.679.684v-.005z\"></path></g></svg></div>\n    </div>\n    <div class=\"menu__text\">TraktTV</div>\n    </li>");
+    var combineButton = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.520.679.684v-.005z\"></path></g></svg></div>\n    </div>\n    <div class=\"menu__text\">TraktTV</div>\n    </li>");
     combineButton.on('hover:enter', function () {
       Lampa.Select.show({
         title: 'TraktTV',
@@ -1937,101 +2068,6 @@
         if (key === 'trakt_timetable_all') menuList.append(timetable);
       }
     });
-  }
-
-  // Функція для завантаження рекомендацій
-  function loadRecommendations() {
-    var force = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
-    if (!Lampa.Storage.field('trakttv_show_on_main', true) && !force) return;
-
-    // Перевіряємо коли були останні оновлення рекомендацій
-    var lastUpdate = Lampa.Storage.get('trakttv_recommendations_updated', 0);
-    var now = Date.now();
-    var updateInterval = 12 * 60 * 60 * 1000; // 12 годин
-
-    // Не оновлюємо якщо пройшло менше часу ніж updateInterval і не вимагалось примусове оновлення
-    if (!force && now - lastUpdate < updateInterval) {
-      console.log('TraktTV: рекомендації було оновлено менш ніж 12 годин тому');
-      return;
-    }
-
-    // Отримуємо різні типи рекомендацій
-    Promise.all([api.recommendations('movies'), api.recommendations('shows')]).then(function (_ref) {
-      var _ref2 = _slicedToArray(_ref, 2),
-        movies = _ref2[0],
-        shows = _ref2[1];
-      // Об'єднуємо фільми та серіали, додаємо тип до кожного елемента
-      var moviesWithType = movies.map(function (item) {
-        return _objectSpread2(_objectSpread2({}, item), {}, {
-          type: 'movie'
-        });
-      });
-      var showsWithType = shows.map(function (item) {
-        return _objectSpread2(_objectSpread2({}, item), {}, {
-          type: 'show'
-        });
-      });
-
-      // Змішуємо і обмежуємо до 20 елементів
-      var combined = [].concat(_toConsumableArray(moviesWithType), _toConsumableArray(showsWithType)).sort(function () {
-        return Math.random() - 0.5;
-      }).slice(0, 20);
-      Lampa.Storage.set('trakttv_cached_recommendations', JSON.stringify(combined));
-      Lampa.Storage.set('trakttv_recommendations_updated', now);
-      if (force) {
-        Lampa.Noty.show('Рекомендації оновлено');
-      }
-    })["catch"](function (error) {
-      console.error('Не вдалося завантажити рекомендації TraktTV:', error);
-      if (force) {
-        Lampa.Noty.show('Помилка оновлення рекомендацій');
-      }
-    });
-  }
-  function createRecommendationBlock(recommendations, data) {
-    var block = $('<div class="category-full"></div>');
-    var heading = $('<div class="category-full__title"></div>');
-    heading.text(Lampa.Lang.translate('trakttv_recommendations'));
-    block.append(heading);
-    var items = recommendations.map(function (item) {
-      var _item$images;
-      return {
-        id: item.ids.tmdb,
-        title: item.title,
-        original_title: item.title,
-        poster: Array.isArray((_item$images = item.images) === null || _item$images === void 0 ? void 0 : _item$images.poster) ? 'https://' + item.images.poster[0].replace(/^\/*/, '') : '',
-        overview: item.overview,
-        release_date: item.year || '',
-        vote_average: item.rating || 0,
-        method: 'movie'
-      };
-    });
-
-    // Створюємо колекцію карток
-    var collection = new Lampa.Collection({
-      url: '',
-      title: Lampa.Lang.translate('trakttv_recommendations'),
-      card_type: true,
-      scroll_type: 'horizontal',
-      forced: true,
-      view_more: true,
-      results: items,
-      nomore: true,
-      line_type: 'trakttv',
-      cardClass: function cardClass(item) {
-        return new Lampa.Card(item, {
-          object: data,
-          card_wide: true,
-          card_small: true,
-          cardBack: true
-        });
-      }
-    });
-
-    // Додаємо колекцію до блоку
-    block.append(collection.render());
-    collection.render().find('.card').attr('data-genre', 'trakttv');
-    return block;
   }
   if (!window.plugin_trakt_ready) startPlugin();
 
