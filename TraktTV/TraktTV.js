@@ -539,6 +539,8 @@
     };
   }
   var api = {
+    addToHistory: addToHistory,
+    removeFromHistory: removeFromHistory,
     get: function get(url) {
       var unauthorized = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
       return requestApi('GET', url, {}, unauthorized);
@@ -636,60 +638,76 @@
     upnext: function upnext(params, oncomplete, onerror) {
       requestApi('GET', '/sync/watched/shows?extended=images,full,seasons').then(function (watchedResponse) {
         var watched = Array.isArray(watchedResponse) ? watchedResponse : [];
-        Promise.all(watched.map(function (item) {
-          return requestApi('GET', "/shows/".concat(item.show.ids.slug, "/progress/watched?extended=full")).then(function (progress) {
-            return _objectSpread2(_objectSpread2({}, item), {}, {
-              progress: progress
+
+        // Фільтруємо серіали, які переглядаються, але не повністю
+        var watching = watched.filter(function (item) {
+          // Перевіряємо, чи є aired_episodes в відповіді
+          if (!item.show || typeof item.show.aired_episodes !== 'number') return false;
+          var totalEpisodes = item.show.aired_episodes;
+
+          // Підраховуємо кількість переглянутих епізодів з усіх сезонів
+          var watchedEpisodes = 0;
+          if (Array.isArray(item.seasons)) {
+            // Підраховуємо тільки основні сезони (виключаємо сезон 0)
+            item.seasons.forEach(function (season) {
+              if (Array.isArray(season.episodes) && season.number > 0) {
+                // Додати перевірку season.number > 0
+                watchedEpisodes += season.episodes.length;
+              }
             });
-          })["catch"](function () {
-            return item;
-          });
-        })).then(function (shows) {
-          var watching = shows.filter(function (item) {
-            if (!item.progress) return false;
+          }
 
-            // Загальна кількість епізодів
-            var aired = item.progress.aired;
+          // Порівнюємо кількість епізодів та переглянутих
+          return totalEpisodes > watchedEpisodes;
+        });
+        var results = watching.map(function (item) {
+          var _item$show$images, _item$show$images2;
+          // Підраховуємо кількість переглянутих епізодів
+          var watchedEpisodes = 0;
+          var lastWatchedDate = null;
+          if (Array.isArray(item.seasons)) {
+            item.seasons.forEach(function (season) {
+              // Виключаємо сезон 0 (спеціальний контент)
+              if (Array.isArray(season.episodes) && season.number > 0) {
+                watchedEpisodes += season.episodes.length;
 
-            // Кількість переглянутих епізодів
-            var watched = item.progress.completed;
+                // Знаходимо останню дату перегляду
+                season.episodes.forEach(function (episode) {
+                  if (episode.last_watched_at) {
+                    var episodeDate = new Date(episode.last_watched_at);
+                    if (!lastWatchedDate || episodeDate > lastWatchedDate) {
+                      lastWatchedDate = episodeDate;
+                    }
+                  }
+                });
+              }
+            });
+          }
+          return {
+            component: 'full',
+            id: item.show.ids.tmdb || item.show.ids.trakt,
+            title: item.show.title,
+            original_title: item.show.original_title || item.show.title,
+            release_date: item.show.year ? String(item.show.year) : '',
+            vote_average: item.show.rating || 0,
+            poster: Array.isArray((_item$show$images = item.show.images) === null || _item$show$images === void 0 ? void 0 : _item$show$images.poster) ? "https://".concat(item.show.images.poster[0]) : '',
+            image: Array.isArray((_item$show$images2 = item.show.images) === null || _item$show$images2 === void 0 ? void 0 : _item$show$images2.fanart) ? "https://".concat(item.show.images.fanart[0]) : '',
+            method: 'tv',
+            release_quality: "".concat(watchedEpisodes, "/").concat(item.show.aired_episodes),
+            status: item.show.status,
+            last_watched: lastWatchedDate
+          };
+        });
 
-            // Пропускаємо тільки якщо немає даних про кількість епізодів
-            return aired && aired > watched;
-          });
-          var results = watching.map(function (item) {
-            var _item$show$images, _item$show$images2;
-            // Отримуємо дату наступного епізоду
-            var next_episode = item.progress.next_episode;
-            var air_date = next_episode ? next_episode.first_aired : '';
-            return {
-              component: 'full',
-              id: item.show.ids.tmdb || item.show.ids.trakt,
-              title: item.show.title,
-              original_title: item.show.original_title || item.show.title,
-              release_date: item.show.year ? String(item.show.year) : '',
-              vote_average: item.show.rating || 0,
-              poster: Array.isArray((_item$show$images = item.show.images) === null || _item$show$images === void 0 ? void 0 : _item$show$images.poster) ? "https://".concat(item.show.images.poster[0]) : '',
-              image: Array.isArray((_item$show$images2 = item.show.images) === null || _item$show$images2 === void 0 ? void 0 : _item$show$images2.fanart) ? "https://".concat(item.show.images.fanart[0]) : '',
-              method: 'tv',
-              release_quality: "".concat(item.progress.completed, "/").concat(item.progress.aired),
-              air_date: air_date,
-              status: item.show.status
-            };
-          });
-
-          // Сортуємо за датою виходу наступного епізоду (від нових до старих)
-          results.sort(function (a, b) {
-            var dateA = new Date(a.air_date).getTime();
-            var dateB = new Date(b.air_date).getTime();
-            if (!a.air_date) return 1; // Якщо немає дати - в кінець
-            if (!b.air_date) return -1; // Якщо немає дати - в кінець
-
-            return dateB - dateA;
-          });
-          oncomplete({
-            results: results
-          });
+        // Сортуємо за останньою активністю (від нових до старих)
+        results.sort(function (a, b) {
+          if (!a.last_watched && !b.last_watched) return 0;
+          if (!a.last_watched) return 1;
+          if (!b.last_watched) return -1;
+          return new Date(b.last_watched) - new Date(a.last_watched);
+        });
+        oncomplete({
+          results: results
         });
       })["catch"](onerror);
     },
@@ -711,8 +729,6 @@
         Lampa.Storage.set('trakt_refresh_token', null);
       }
     },
-    addToHistory: addToHistory,
-    removeFromHistory: removeFromHistory,
     refresh: function refresh() {
       return requestApi('POST', '/oauth/token', {
         refresh_token: Lampa.Storage.get('trakt_refresh_token'),
