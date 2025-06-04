@@ -545,11 +545,20 @@
       var unauthorized = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
       return requestApi('GET', url, {}, unauthorized);
     },
+    /**
+     * Отримує рекомендації від Trakt.TV
+     * @param {Object} options - Опції запиту
+     * @param {number} options.limit - Кількість результатів (за замовчуванням 50)
+     * @returns {Promise} Проміс з результатами
+     */
     recommendations: function recommendations() {
+      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      // Встановлюємо ліміт за замовчуванням 50, якщо не вказано
+      var limit = options.limit || 50;
       return new Promise(function (resolve, reject) {
-        // Робимо два паралельні запити з лімітом 50
-        var moviesRequest = requestApi('GET', '/recommendations/movies?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=50');
-        var showsRequest = requestApi('GET', '/recommendations/shows?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=50');
+        // Робимо два паралельні запити з вказаним лімітом
+        var moviesRequest = requestApi('GET', "/recommendations/movies?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=".concat(limit));
+        var showsRequest = requestApi('GET', "/recommendations/shows?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=".concat(limit));
         Promise.all([moviesRequest, showsRequest]).then(function (_ref) {
           var _ref2 = _slicedToArray(_ref, 2),
             moviesResponse = _ref2[0],
@@ -565,7 +574,8 @@
               release_date: movie.year + '',
               vote_average: movie.rating || 0,
               poster: Array.isArray((_movie$images = movie.images) === null || _movie$images === void 0 ? void 0 : _movie$images.poster) ? "https://".concat(movie.images.poster[0]) : '',
-              method: 'movie'
+              method: 'movie',
+              card_type: 'movie'
             };
           });
 
@@ -581,9 +591,11 @@
               vote_average: show.rating || 0,
               poster: Array.isArray((_show$images = show.images) === null || _show$images === void 0 ? void 0 : _show$images.poster) ? "https://".concat(show.images.poster[0]) : '',
               type: 'tv',
-              method: 'tv'
+              method: 'tv',
+              card_type: 'tv'
             };
           });
+
           // Об'єднуємо результати і перемішуємо їх
           var combinedResults = [].concat(_toConsumableArray(formattedMovies), _toConsumableArray(formattedShows));
 
@@ -595,8 +607,8 @@
             combinedResults[j] = _ref3[1];
           }
 
-          // Обрізаємо до 20 результатів після змішування
-          var finalResults = combinedResults;
+          // Обрізаємо до вказаного ліміту після змішування, якщо потрібно
+          var finalResults = limit ? combinedResults.slice(0, limit) : combinedResults;
           resolve({
             results: finalResults
           });
@@ -604,7 +616,7 @@
           console.error('TraktTV', error);
 
           // Якщо один з запитів не вдався, спробуємо отримати хоча б один тип контенту
-          requestApi('GET', '/recommendations/movies?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=50').then(function (response) {
+          requestApi('GET', "/recommendations/movies?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=".concat(limit)).then(function (response) {
             var formattedResults = response.map(function (movie) {
               var _movie$images2;
               return {
@@ -615,11 +627,14 @@
                 release_date: movie.year + '',
                 vote_average: movie.rating || 0,
                 poster: Array.isArray((_movie$images2 = movie.images) === null || _movie$images2 === void 0 ? void 0 : _movie$images2.poster) ? "https://".concat(movie.images.poster[0]) : '',
-                method: 'movie'
+                method: 'movie',
+                card_type: 'movie'
               };
             });
+
+            // Обрізаємо до вказаного ліміту
             resolve({
-              results: formattedResults.slice(0, 20)
+              results: limit ? formattedResults.slice(0, limit) : formattedResults
             });
           })["catch"](function (fallbackError) {
             console.error('TraktTV', fallbackError);
@@ -635,7 +650,16 @@
         onerror(error);
       });
     },
+    /**
+     * Отримує список серіалів, які користувач дивиться, але не закінчив
+     * @param {Object} params - Параметри запиту
+     * @param {number} params.limit - Кількість результатів (за замовчуванням 20)
+     * @param {Function} oncomplete - Функція, яка викликається при успішному завершенні
+     * @param {Function} onerror - Функція, яка викликається при помилці
+     */
     upnext: function upnext(params, oncomplete, onerror) {
+      // Встановлюємо ліміт за замовчуванням 20, якщо не вказано
+      var limit = params.limit || 20;
       requestApi('GET', '/sync/watched/shows?extended=images,full,seasons').then(function (watchedResponse) {
         var watched = Array.isArray(watchedResponse) ? watchedResponse : [];
 
@@ -706,8 +730,11 @@
           if (!b.last_watched) return -1;
           return new Date(b.last_watched) - new Date(a.last_watched);
         });
+
+        // Обмежуємо кількість результатів
+        var limitedResults = limit ? results.slice(0, limit) : results;
         oncomplete({
-          results: results
+          results: limitedResults
         });
       })["catch"](onerror);
     },
@@ -817,245 +844,17 @@
     }
   };
 
-  function main() {
-    // Додаємо компонент Trakt.TV у налаштування
-    Lampa.SettingsApi.addComponent({
-      component: 'trakt',
-      name: 'Trakt.TV',
-      icon: "<svg style=\"filter:invert(0);\" fill=\"currentColor\" viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.52.679.684v-.005z\"></path></g></svg>"
-    });
-
-    //Користувацька інфа (user + stats) через custom param
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_userinfo',
-        type: 'static'
-      },
-      field: {
-        name: ''
-      },
-      onRender: function onRender(item) {
-        item.empty();
-        var token = Lampa.Storage.get('trakt_token');
-        if (!token) {
-          item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthMissed'), "</div>"));
-          return;
-        }
-        // Показати лоадер
-        var loading = $('<div class="settings-param__value">Loading...</div>');
-        item.append(loading);
-        Promise.all([api.get('/users/me'), api.get('/users/me/stats')]).then(function (_ref) {
-          var _ref2 = _slicedToArray(_ref, 2),
-            user = _ref2[0],
-            stats = _ref2[1];
-          loading.remove();
-          var minutes = 0;
-          if (stats) {
-            var _stats$movies, _stats$episodes;
-            var movieMinutes = ((_stats$movies = stats.movies) === null || _stats$movies === void 0 ? void 0 : _stats$movies.minutes) || 0;
-            var episodeMinutes = ((_stats$episodes = stats.episodes) === null || _stats$episodes === void 0 ? void 0 : _stats$episodes.minutes) || 0;
-            minutes = movieMinutes + episodeMinutes;
-          }
-          var funnyLine = '';
-          if (minutes > 0) {
-            funnyLine = "<span style=\"color:#f39c12;\">".concat(Lampa.Lang.translate('trakttvHumorMinutes').replace('{time}', minutes), "</span>");
-          }
-          item.append("<div class=\"settings-param__name\"><b>Trakt.TV User</b></div>");
-          item.append("<div class=\"settings-param__value\">Username: ".concat(user.username, " ").concat(user.vip ? 'VIP' : '', "</div>"));
-          if (funnyLine) item.append("<div class=\"settings-param__value\">".concat(funnyLine, "</div>"));
-          if (stats) {
-            var _stats$movies2, _stats$movies3, _stats$episodes2, _stats$episodes3;
-            item.append("\n                        <div class=\"settings-param__value\">\n                            <b>Movies:</b>\n                            ".concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$movies2 = stats.movies) === null || _stats$movies2 === void 0 ? void 0 : _stats$movies2.watched) || 0, ", \n                            ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$movies3 = stats.movies) === null || _stats$movies3 === void 0 ? void 0 : _stats$movies3.minutes) || 0, "\n                        </div>\n                        <div class=\"settings-param__value\">\n                            <b>Episodes:</b>\n                            ").concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$episodes2 = stats.episodes) === null || _stats$episodes2 === void 0 ? void 0 : _stats$episodes2.watched) || 0, ", \n                            ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$episodes3 = stats.episodes) === null || _stats$episodes3 === void 0 ? void 0 : _stats$episodes3.minutes) || 0, "\n                        </div>\n                    "));
-          }
-        })["catch"](function () {
-          loading.remove();
-          item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthError'), "</div>"));
-        });
-      }
-    });
-
-    // Кнопка авторизації
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_login',
-        type: 'button'
-      },
-      field: {
-        name: Lampa.Lang.translate('trakttvLogin')
-      },
-      onRender: function onRender(item) {
-        var status = $('<div class="settings-param__status"></div>');
-        item.find('.settings-param__value').append(status);
-        if (!Lampa.Storage.get('trakt_token')) {
-          item.show();
-          status.removeClass('active error wait').addClass('wait');
-        } else {
-          item.hide();
-        }
-      },
-      onChange: function onChange() {
-        if (Lampa.Storage.get('trakt_token')) return;
-        api.auth.login().then(function (response) {
-          var modal = $("<div class=\"about\">\n                        <div class=\"about__text\">".concat(response.verification_url, "</div>\n                        <div class=\"about__text\">Code: ").concat(response.user_code, "</div>\n                    </div>"));
-          Lampa.Modal.open({
-            title: 'Trakt Auth',
-            html: modal,
-            size: 'small',
-            onBack: function onBack() {
-              Lampa.Modal.close();
-              Lampa.Controller.toggle('settings_component');
-            }
-          });
-          pollAuth(response);
-        })["catch"](function (err) {
-          Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthError'));
-        });
-      }
-    });
-
-    // // Кнопка імпорту закладок з Trakt
-    // Lampa.SettingsApi.addParam({
-    //     component: 'trakt',
-    //     param: {
-    //         name: 'trakt_import',
-    //         type: 'button'
-    //     },
-    //     field: {
-    //         name: 'Імпортувати закладки з Trakt'
-    //     },
-    //     onRender: function(item){
-    //         if(Lampa.Storage.get('trakt_token')){
-    //             item.show();
-    //         } else {
-    //             item.hide();
-    //         }
-    //     },
-    //     onChange: function(){
-    //         importTraktToLampa();
-    //     }
-    // });
-
-    // // Кнопка експорту закладок у Trakt
-    // Lampa.SettingsApi.addParam({
-    //     component: 'trakt',
-    //     param: {
-    //         name: 'trakt_export',
-    //         type: 'button'
-    //     },
-    //     field: {
-    //         name: 'Експортувати закладки у Trakt'
-    //     },
-    //     onRender: function(item){
-    //         if(Lampa.Storage.get('trakt_token')){
-    //             item.show();
-    //         } else {
-    //             item.hide();
-    //         }
-    //     },
-    //     onChange: function(){
-    //         exportLampaToTrakt();
-    //     }
-    // });
-
-    // Кнопка logout
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_logout',
-        type: 'button'
-      },
-      field: {
-        name: Lampa.Lang.translate('trakttvLogout')
-      },
-      onRender: function onRender(item) {
-        if (Lampa.Storage.get('trakt_token')) {
-          item.show();
-        } else {
-          item.hide();
-        }
-      },
-      onChange: function onChange() {
-        api.auth.logout();
-        Lampa.Noty.show(Lampa.Lang.translate('trakttvLogoutNoty'));
-        Lampa.Settings.update();
-      }
-    });
-
-    // Кнопка повного очищення Trakt
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_full_clear',
-        type: 'button'
-      },
-      field: {
-        name: Lampa.Lang.translate('trakttvFullClear')
-      },
-      onRender: function onRender(item) {
-        item.show();
-      },
-      onChange: function onChange() {
-        Object.keys(localStorage).forEach(function (key) {
-          if (key.toLowerCase().includes('trakt')) {
-            localStorage.removeItem(key);
-          }
-        });
-        if (typeof Lampa.Storage.set === 'function') {
-          Lampa.Storage.set('trakt_token', null);
-          Lampa.Storage.set('trakt_refresh_token', null);
-        }
-        Lampa.Noty.show(Lampa.Lang.translate('trakttvFullClearNoty'));
-        Lampa.Settings.update();
-      }
-    });
-
-    // Параметр для відображення рекомендацій на головній
-    Lampa.SettingsApi.addParam({
-      component: 'interface',
-      param: {
-        name: 'trakttv_show_on_main',
-        type: 'trigger',
-        "default": true
-      },
-      field: {
-        name: Lampa.Lang.translate('trakttv_show_recommendations'),
-        description: Lampa.Lang.translate('trakttv_show_recommendations')
-      }
-    });
-  }
-
-  // Окрема функція для poll авторизації
-  function pollAuth(data) {
-    var interval = setInterval(function () {
-      api.auth.poll(data.device_code).then(function (response) {
-        clearInterval(interval);
-        Lampa.Storage.set('trakt_token', response.access_token);
-        Lampa.Storage.set('trakt_refresh_token', response.refresh_token);
-        Lampa.Modal.close();
-        Lampa.Settings.update();
-        Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthOk'));
-      })["catch"](function (err) {
-        if (err.status == 400) {
-          return; // Очікуємо
-        }
-        clearInterval(interval);
-        Lampa.Modal.close();
-        Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthError'));
-      });
-    }, (data.interval + 1) * 1000);
-  }
-  var config = {
-    main: main
-  };
-
   var _Lampa = Lampa,
     InteractionCategory = _Lampa.InteractionCategory;
   function baseComponent(object, type) {
     var comp = new InteractionCategory(object);
     comp.create = function () {
-      api[type](object, this.build.bind(this), this.empty.bind(this));
+      // Для сторінки Up Next встановлюємо ліміт 50
+      var params = _objectSpread2({}, object);
+      if (type === 'upnext') {
+        params.limit = 100;
+      }
+      api[type](params, this.build.bind(this), this.empty.bind(this));
     };
     comp.cardRender = function (object, element, card) {
       card.onMenu = false;
@@ -1069,7 +868,10 @@
     var comp = new Lampa.InteractionCategory(object);
     comp.create = function () {
       var _this = this;
-      api.recommendations().then(function (recommendations) {
+      // Використовуємо ліміт 50 для сторінки рекомендацій
+      api.recommendations({
+        limit: 50
+      }).then(function (recommendations) {
         // Перевіряємо чи є results і чи він не порожній
         if (recommendations && recommendations.results && recommendations.results.length > 0) {
           // Кешування видалено - рекомендації завантажуються кожен раз заново
@@ -1637,6 +1439,228 @@
     };
   }
 
+  /**
+   * Плагін для відображення рекомендацій на головній сторінці
+   */
+  var recommendationsPlugin = {
+    type: "video",
+    version: "2.4",
+    author: '@lme_chat',
+    name: "LME TraktTV",
+    /**
+     * Функція для відображення рекомендацій на головній сторінці
+     * @returns {Object} Об'єкт з результатами для відображення
+     */
+    onMain: function onMain() {
+      if (!Lampa.Storage.field('trakttv_show_on_main', true)) return {
+        results: []
+      };
+      var userHasPermission = Lampa.Storage.get('trakt_token') && Lampa.Storage.field('trakttv_show_recommendations', true);
+      if (!userHasPermission) return {
+        results: []
+      };
+
+      // Отримуємо кешовані дані
+      var recommendations = Lampa.Storage.get('trakttv_cached_recommendations', []);
+      if (typeof recommendations === 'string') {
+        try {
+          recommendations = JSON.parse(recommendations);
+        } catch (e) {
+          recommendations = [];
+        }
+      }
+
+      // Запускаємо оновлення в фоні (не блокуючи onMain)
+      this.updateRecommendationsInBackground();
+      if (!Array.isArray(recommendations) || recommendations.length === 0) {
+        return {
+          results: []
+        };
+      }
+
+      // Нормалізуємо дані
+      var normalizedResults = recommendations.map(function (item) {
+        var normalized = _objectSpread2({}, item);
+        if (item.type === 'tv' || item.card_type === 'tv') {
+          normalized.name = item.title || item.original_title;
+          normalized.first_air_date = item.release_date;
+        }
+        if (item.type === 'movie' || item.card_type === 'movie') {
+          delete normalized.name;
+          normalized.release_date = item.release_date;
+          normalized.title = item.title || item.original_title;
+        }
+        return normalized;
+      });
+      return {
+        title: Lampa.Lang.translate('trakttv_recommendations'),
+        results: normalizedResults,
+        line_type: 'trakttv_recommendations',
+        onMore: function onMore() {
+          Lampa.Activity.push({
+            title: 'Recommendations',
+            component: "trakttv_recommendations"
+          });
+        },
+        cardClass: function cardClass(item, params) {
+          var card = new Lampa.Card(item, params);
+          card.onEnter = function (target, card_data) {
+            Lampa.Activity.push({
+              url: card_data.url,
+              component: 'full',
+              id: card_data.id,
+              method: card_data.type || card_data.card_type || (card_data.name ? 'tv' : 'movie'),
+              card: card_data,
+              source: card_data.source || params.object.source
+            });
+          };
+          setTimeout(function () {
+            // Отримуємо рендер-картку (елемент)
+            var card_element = card.render();
+
+            // Додаємо клас, якщо потрібно
+            if ((item.method || item.type || item.card_type || (item.name ? 'tv' : 'movie')) === 'tv') {
+              $(card_element).addClass('card--tv');
+
+              // Створюємо елемент типу
+              var cardTypeElement = $("<div>", {
+                "class": "card__type",
+                text: "TV"
+              });
+
+              // Додаємо у .card__view якщо знайдено
+              $(card_element).find(".card__view").append(cardTypeElement);
+            }
+          }, 1); // Можливо треба більшу затримку, якщо картка ще не в DOM (наприклад, 50 чи 100 мс)
+          return card;
+        }
+      };
+    },
+    /**
+     * Оновлює рекомендації в фоновому режимі
+     * @param {boolean} isMainPage - Чи викликається з головної сторінки
+     */
+    updateRecommendationsInBackground: function updateRecommendationsInBackground() {
+      var isMainPage = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
+      // Оновлюємо дані в фоні
+      // Якщо запит з головної сторінки, обмежуємо до 10 результатів
+      // Якщо запит зі сторінки рекомендацій, отримуємо 50 результатів
+      var limit = isMainPage ? 20 : 50;
+      api.recommendations({
+        limit: limit
+      }).then(function (data) {
+        if (data && data.results && data.results.length > 0) {
+          Lampa.Storage.set('trakttv_cached_recommendations', data.results);
+        }
+      })["catch"](function (error) {
+        console.error('TraktTV', error);
+      });
+    }
+  };
+
+  /**
+   * Плагін для відображення Up Next на головній сторінці
+   */
+  var upnextPlugin = {
+    type: "video",
+    version: "1.0",
+    author: '@lme_chat',
+    name: "LME TraktTV Up Next",
+    /**
+     * Функція для відображення Up Next на головній сторінці
+     * @returns {Object} Об'єкт з результатами для відображення
+     */
+    onMain: function onMain() {
+      if (!Lampa.Storage.field('trakttv_show_on_main', true)) return {
+        results: []
+      };
+      var userHasPermission = Lampa.Storage.get('trakt_token');
+      if (!userHasPermission) return {
+        results: []
+      };
+
+      // Отримуємо список серій Up Next
+      var upnext = Lampa.Storage.get('trakttv_cached_upnext', []);
+      if (typeof upnext === 'string') {
+        try {
+          upnext = JSON.parse(upnext);
+        } catch (e) {
+          upnext = [];
+        }
+      }
+
+      // Завантажуємо Up Next в фоні
+      this.updateUpNextInBackground();
+      if (!Array.isArray(upnext) || upnext.length === 0) {
+        return {
+          results: []
+        };
+      }
+
+      // Нормалізуємо дані
+      var normalizedResults = upnext.map(function (item) {
+        return _objectSpread2(_objectSpread2({}, item), {}, {
+          name: item.title || item.original_title,
+          first_air_date: item.release_date,
+          title: item.title || item.original_title
+        });
+      });
+      return {
+        title: 'TraktTV Up Next',
+        results: normalizedResults,
+        line_type: 'trakttv_upnext',
+        onMore: function onMore() {
+          Lampa.Activity.push({
+            title: 'Up Next',
+            component: "trakt_upnext"
+          });
+        },
+        cardClass: function cardClass(item, params) {
+          var card = new Lampa.Card(item, params);
+          card.onEnter = function (target, card_data) {
+            Lampa.Activity.push({
+              url: card_data.url,
+              component: 'full',
+              id: card_data.id,
+              method: 'tv',
+              card: card_data,
+              source: card_data.source || params.object.source,
+              season: card_data.season,
+              episode: card_data.episode
+            });
+          };
+          return card;
+        }
+      };
+    },
+    /**
+     * Оновлює Up Next в фоновому режимі
+     * @param {boolean} isMainPage - Чи викликається з головної сторінки
+     */
+    updateUpNextInBackground: function updateUpNextInBackground() {
+      var isMainPage = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
+      // Якщо запит з головної сторінки, обмежуємо до 20 результатів
+      // Якщо запит зі сторінки Up Next, отримуємо 50 результатів
+      var limit = isMainPage ? 20 : 50;
+
+      // Отримуємо UpNext від API - використовуємо правильний метод
+      api.upnext({
+        limit: limit
+      }, function (data) {
+        if (data && data.results && data.results.length > 0) {
+          Lampa.Storage.set('trakttv_cached_upnext', data.results);
+
+          // Оновлюємо головну сторінку якщо вона активна
+          if (Lampa.Activity.active().component === 'main') {
+            console.log('TraktTV: Up Next оновлено');
+          }
+        }
+      }, function (error) {
+        console.error('TraktTV', error);
+      });
+    }
+  };
+
   function addWatchlistButton(card) {
     var button = document.createElement('div');
     button.className = 'full-start__button selector watchlist-button';
@@ -1799,213 +1823,9 @@
     }
   };
 
-  function startPlugin() {
-    window.plugin_trakt_ready = true;
-    Lampa.Manifest.plugins = {
-      type: "video",
-      version: "2.4",
-      author: '@lme_chat',
-      name: "LME TraktTV",
-      onMain: function onMain() {
-        if (!Lampa.Storage.field('trakttv_show_on_main', true)) return {
-          results: []
-        };
-        var userHasPermission = Lampa.Storage.get('trakt_token') && Lampa.Storage.field('trakttv_show_recommendations', true);
-        if (!userHasPermission) return {
-          results: []
-        };
-
-        // Отримуємо кешовані дані
-        var recommendations = Lampa.Storage.get('trakttv_cached_recommendations', []);
-        if (typeof recommendations === 'string') {
-          try {
-            recommendations = JSON.parse(recommendations);
-          } catch (e) {
-            recommendations = [];
-          }
-        }
-
-        // Запускаємо оновлення в фоні (не блокуючи onMain)
-        this.updateRecommendationsInBackground();
-        if (!Array.isArray(recommendations) || recommendations.length === 0) {
-          return {
-            results: []
-          };
-        }
-
-        // Нормалізуємо дані
-        var normalizedResults = recommendations.map(function (item) {
-          var normalized = _objectSpread2({}, item);
-          if (item.type === 'tv' || item.card_type === 'tv') {
-            normalized.name = item.title || item.original_title;
-            normalized.first_air_date = item.release_date;
-            normalized.title = '[TV] ' + (item.title || item.original_title);
-          }
-          if (item.type === 'movie' || item.card_type === 'movie') {
-            delete normalized.name;
-            normalized.release_date = item.release_date;
-            normalized.title = item.title || item.original_title;
-          }
-          return normalized;
-        });
-        return {
-          title: Lampa.Lang.translate('trakttv_recommendations'),
-          results: normalizedResults,
-          nomore: true,
-          line_type: 'trakttv_recommendations',
-          cardClass: function cardClass(item, params) {
-            var card = new Lampa.Card(item, params);
-            card.onEnter = function (target, card_data) {
-              Lampa.Activity.push({
-                url: card_data.url,
-                component: 'full',
-                id: card_data.id,
-                method: card_data.type || card_data.card_type || (card_data.name ? 'tv' : 'movie'),
-                card: card_data,
-                source: card_data.source || params.object.source
-              });
-            };
-            return card;
-          }
-        };
-      },
-      updateRecommendationsInBackground: function updateRecommendationsInBackground() {
-        // Оновлюємо дані в фоні
-        api.recommendations().then(function (data) {
-          if (data && data.results && data.results.length > 0) {
-            Lampa.Storage.set('trakttv_cached_recommendations', data.results);
-
-            // Оновлюємо головну сторінку якщо вона активна
-            // if (Lampa.Activity.active().component === 'main') {
-            //     // Можна тригернути оновлення інтерфейсу
-            //     console.log('TraktTV: рекомендації оновлено');
-            // }
-          }
-        })["catch"](function (error) {
-          console.error('TraktTV', error);
-        });
-      }
-    };
-
-    // Додаємо другий плагін для виведення UpNext на головній
-    Lampa.Manifest.plugins = {
-      type: "video",
-      version: "1.0",
-      author: '@lme_chat',
-      name: "LME TraktTV Up Next",
-      onMain: function onMain() {
-        if (!Lampa.Storage.field('trakttv_show_on_main', true)) return {
-          results: []
-        };
-        var userHasPermission = Lampa.Storage.get('trakt_token');
-        if (!userHasPermission) return {
-          results: []
-        };
-
-        // Отримуємо список серій Up Next
-        var upnext = Lampa.Storage.get('trakttv_cached_upnext', []);
-        if (typeof upnext === 'string') {
-          try {
-            upnext = JSON.parse(upnext);
-          } catch (e) {
-            upnext = [];
-          }
-        }
-
-        // Завантажуємо Up Next в фоні
-        this.updateUpNextInBackground();
-        if (!Array.isArray(upnext) || upnext.length === 0) {
-          return {
-            results: []
-          };
-        }
-
-        // Нормалізуємо дані
-        var normalizedResults = upnext.map(function (item) {
-          return _objectSpread2(_objectSpread2({}, item), {}, {
-            name: item.title || item.original_title,
-            first_air_date: item.release_date,
-            title: item.title || item.original_title
-          });
-        });
-        return {
-          title: 'TraktTV Up Next',
-          nomore: true,
-          results: normalizedResults,
-          line_type: 'trakttv_upnext',
-          cardClass: function cardClass(item, params) {
-            var card = new Lampa.Card(item, params);
-            card.onEnter = function (target, card_data) {
-              Lampa.Activity.push({
-                url: card_data.url,
-                component: 'full',
-                id: card_data.id,
-                method: 'tv',
-                card: card_data,
-                source: card_data.source || params.object.source,
-                season: card_data.season,
-                episode: card_data.episode
-              });
-            };
-            return card;
-          }
-        };
-      },
-      updateUpNextInBackground: function updateUpNextInBackground() {
-        // Отримуємо UpNext від API - використовуємо правильний метод
-        api.upnext({}, function (data) {
-          if (data && data.results && data.results.length > 0) {
-            Lampa.Storage.set('trakttv_cached_upnext', data.results);
-
-            // Оновлюємо головну сторінку якщо вона активна
-            if (Lampa.Activity.active().component === 'main') {
-              console.log('TraktTV: Up Next оновлено');
-            }
-          }
-        }, function (error) {
-          console.error('TraktTV', error);
-        });
-      }
-    };
-
-    // Фонове оновлення токена при старті
-    if (Lampa.Storage.get('trakt_refresh_token')) {
-      api.refresh()["catch"](function () {});
-    }
-
-    // Рекомендації завантажуються динамічно при потребі
-    // Добавляем компоненты
-    Lampa.Component.add('trakt_watchlist', function (object) {
-      return new Catalog.watchlist(object);
-    });
-    Lampa.Component.add('trakt_upnext', function (object) {
-      return new Catalog.upnext(object);
-    });
-
-    // Додаємо нові компоненти
-    Lampa.Component.add('trakt_timetable_all', TraktTimetableAll);
-    Lampa.Component.add('trakttv_recommendations', Catalog.recommendations);
-    //Добавляем переводы
-    Main();
-    // Следим за готовностью приложения
-    Lampa.Listener.follow('app', function (e) {
-      if (e.type === 'ready') {
-        config.main();
-        addMenuItems();
-      }
-    });
-
-    // Додаємо кнопку watchlist на картку
-    Lampa.Listener.follow('full', function (e) {
-      if (e.type === 'complite' && Lampa.Storage.get('trakt_token')) {
-        var button = watchlist.addWatchlistButton(e.data);
-        e.object.activity.render().find('.full-start-new__buttons').append(button);
-        // Додаємо нову кнопку
-        var historyButton = TraktHistory.addHistoryButton(e.data);
-        e.object.activity.render().find('.full-start-new__buttons').append(historyButton);
-      }
-    });
-  }
+  /**
+   * Модуль для роботи з меню TraktTV
+   */
   function addMenuItems() {
     var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.520.679.684v-.005z\"></path></g></svg></div>\n        <div class=\"menu__text\">Watchlist</div>\n    </li>");
     var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.520.679.684v-.005z\"></path></g></svg></div>\n        <div class=\"menu__text\">Up Next</div>\n    </li>");
@@ -2034,6 +1854,7 @@
         page: 1
       });
     });
+
     // Combine menu items
     var items = [{
       title: 'Up Next',
@@ -2095,6 +1916,321 @@
         if (key === 'trakt_timetable_all') menuList.append(timetable);
       }
     });
+  }
+
+  function main() {
+    // Додаємо компонент Trakt.TV у налаштування
+    Lampa.SettingsApi.addComponent({
+      component: 'trakt',
+      name: 'Trakt.TV',
+      icon: "<svg style=\"filter:invert(0);\" fill=\"currentColor\" viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.52.679.684v-.005z\"></path></g></svg>"
+    });
+
+    //Користувацька інфа (user + stats) через custom param
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_userinfo',
+        type: 'static'
+      },
+      field: {
+        name: ''
+      },
+      onRender: function onRender(item) {
+        item.empty();
+        var token = Lampa.Storage.get('trakt_token');
+        if (!token) {
+          item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthMissed'), "</div>"));
+          return;
+        }
+        // Показати лоадер
+        var loading = $('<div class="settings-param__value">Loading...</div>');
+        item.append(loading);
+        Promise.all([api.get('/users/me'), api.get('/users/me/stats')]).then(function (_ref) {
+          var _ref2 = _slicedToArray(_ref, 2),
+            user = _ref2[0],
+            stats = _ref2[1];
+          loading.remove();
+          var minutes = 0;
+          if (stats) {
+            var _stats$movies, _stats$episodes;
+            var movieMinutes = ((_stats$movies = stats.movies) === null || _stats$movies === void 0 ? void 0 : _stats$movies.minutes) || 0;
+            var episodeMinutes = ((_stats$episodes = stats.episodes) === null || _stats$episodes === void 0 ? void 0 : _stats$episodes.minutes) || 0;
+            minutes = movieMinutes + episodeMinutes;
+          }
+          var funnyLine = '';
+          if (minutes > 0) {
+            funnyLine = "<span style=\"color:#f39c12;\">".concat(Lampa.Lang.translate('trakttvHumorMinutes').replace('{time}', minutes), "</span>");
+          }
+          item.append("<div class=\"settings-param__name\"><b>Trakt.TV User</b></div>");
+          item.append("<div class=\"settings-param__value\">Username: ".concat(user.username, " ").concat(user.vip ? 'VIP' : '', "</div>"));
+          if (funnyLine) item.append("<div class=\"settings-param__value\">".concat(funnyLine, "</div>"));
+          if (stats) {
+            var _stats$movies2, _stats$movies3, _stats$episodes2, _stats$episodes3;
+            item.append("\n                        <div class=\"settings-param__value\">\n                            <b>Movies:</b>\n                            ".concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$movies2 = stats.movies) === null || _stats$movies2 === void 0 ? void 0 : _stats$movies2.watched) || 0, ", \n                            ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$movies3 = stats.movies) === null || _stats$movies3 === void 0 ? void 0 : _stats$movies3.minutes) || 0, "\n                        </div>\n                        <div class=\"settings-param__value\">\n                            <b>Episodes:</b>\n                            ").concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$episodes2 = stats.episodes) === null || _stats$episodes2 === void 0 ? void 0 : _stats$episodes2.watched) || 0, ", \n                            ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$episodes3 = stats.episodes) === null || _stats$episodes3 === void 0 ? void 0 : _stats$episodes3.minutes) || 0, "\n                        </div>\n                    "));
+          }
+        })["catch"](function () {
+          loading.remove();
+          item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthError'), "</div>"));
+        });
+      }
+    });
+
+    // Кнопка авторизації
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_login',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttvLogin')
+      },
+      onRender: function onRender(item) {
+        var status = $('<div class="settings-param__status"></div>');
+        item.find('.settings-param__value').append(status);
+        if (!Lampa.Storage.get('trakt_token')) {
+          item.show();
+          status.removeClass('active error wait').addClass('wait');
+        } else {
+          item.hide();
+        }
+      },
+      onChange: function onChange() {
+        if (Lampa.Storage.get('trakt_token')) return;
+        api.auth.login().then(function (response) {
+          var modal = $("<div class=\"about\">\n                        <div class=\"about__text\">".concat(response.verification_url, "</div>\n                        <div class=\"about__text\">Code: ").concat(response.user_code, "</div>\n                    </div>"));
+          Lampa.Modal.open({
+            title: 'Trakt Auth',
+            html: modal,
+            size: 'small',
+            onBack: function onBack() {
+              Lampa.Modal.close();
+              Lampa.Controller.toggle('settings_component');
+            }
+          });
+          pollAuth(response);
+        })["catch"](function (err) {
+          Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthError'));
+        });
+      }
+    });
+
+    // // Кнопка імпорту закладок з Trakt
+    // Lampa.SettingsApi.addParam({
+    //     component: 'trakt',
+    //     param: {
+    //         name: 'trakt_import',
+    //         type: 'button'
+    //     },
+    //     field: {
+    //         name: 'Імпортувати закладки з Trakt'
+    //     },
+    //     onRender: function(item){
+    //         if(Lampa.Storage.get('trakt_token')){
+    //             item.show();
+    //         } else {
+    //             item.hide();
+    //         }
+    //     },
+    //     onChange: function(){
+    //         importTraktToLampa();
+    //     }
+    // });
+
+    // // Кнопка експорту закладок у Trakt
+    // Lampa.SettingsApi.addParam({
+    //     component: 'trakt',
+    //     param: {
+    //         name: 'trakt_export',
+    //         type: 'button'
+    //     },
+    //     field: {
+    //         name: 'Експортувати закладки у Trakt'
+    //     },
+    //     onRender: function(item){
+    //         if(Lampa.Storage.get('trakt_token')){
+    //             item.show();
+    //         } else {
+    //             item.hide();
+    //         }
+    //     },
+    //     onChange: function(){
+    //         exportLampaToTrakt();
+    //     }
+    // });
+
+    // Кнопка logout
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_logout',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttvLogout')
+      },
+      onRender: function onRender(item) {
+        if (Lampa.Storage.get('trakt_token')) {
+          item.show();
+        } else {
+          item.hide();
+        }
+      },
+      onChange: function onChange() {
+        api.auth.logout();
+        Lampa.Noty.show(Lampa.Lang.translate('trakttvLogoutNoty'));
+        Lampa.Settings.update();
+      }
+    });
+
+    // Кнопка повного очищення Trakt
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_full_clear',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttvFullClear')
+      },
+      onRender: function onRender(item) {
+        item.show();
+      },
+      onChange: function onChange() {
+        Object.keys(localStorage).forEach(function (key) {
+          if (key.toLowerCase().includes('trakt')) {
+            localStorage.removeItem(key);
+          }
+        });
+        if (typeof Lampa.Storage.set === 'function') {
+          Lampa.Storage.set('trakt_token', null);
+          Lampa.Storage.set('trakt_refresh_token', null);
+        }
+        Lampa.Noty.show(Lampa.Lang.translate('trakttvFullClearNoty'));
+        Lampa.Settings.update();
+      }
+    });
+
+    // Параметр для відображення рекомендацій на головній
+    Lampa.SettingsApi.addParam({
+      component: 'interface',
+      param: {
+        name: 'trakttv_show_on_main',
+        type: 'trigger',
+        "default": true
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttv_show_recommendations'),
+        description: Lampa.Lang.translate('trakttv_show_recommendations')
+      }
+    });
+  }
+
+  // Окрема функція для poll авторизації
+  function pollAuth(data) {
+    var interval = setInterval(function () {
+      api.auth.poll(data.device_code).then(function (response) {
+        clearInterval(interval);
+        Lampa.Storage.set('trakt_token', response.access_token);
+        Lampa.Storage.set('trakt_refresh_token', response.refresh_token);
+        Lampa.Modal.close();
+        Lampa.Settings.update();
+        Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthOk'));
+      })["catch"](function (err) {
+        if (err.status == 400) {
+          return; // Очікуємо
+        }
+        clearInterval(interval);
+        Lampa.Modal.close();
+        Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthError'));
+      });
+    }, (data.interval + 1) * 1000);
+  }
+  var config = {
+    main: main
+  };
+
+  /**
+   * Модуль для обробки подій плагіна
+   */
+  var events = {
+    /**
+     * Ініціалізує обробники подій
+     */
+    init: function init() {
+      var _this = this;
+      // Следим за готовностью приложения
+      if (window.appready) this.onAppReady();else {
+        Lampa.Listener.follow('app', function (e) {
+          if (e.type === 'ready') _this.onAppReady();
+        });
+      }
+
+      // Додаємо кнопку watchlist на картку
+      Lampa.Listener.follow('full', function (e) {
+        if (e.type === 'complite' && Lampa.Storage.get('trakt_token')) {
+          _this.onFullCardReady(e);
+        }
+      });
+    },
+    /**
+     * Обробник події готовності додатку
+     */
+    onAppReady: function onAppReady() {
+      // Імпортуємо config динамічно, щоб уникнути циклічних залежностей
+      config.main();
+
+      // Імпортуємо addMenuItems динамічно
+      addMenuItems();
+    },
+    /**
+     * Обробник події готовності картки фільму/серіалу
+     * @param {Object} e - Об'єкт події
+     */
+    onFullCardReady: function onFullCardReady(e) {
+      var button = watchlist.addWatchlistButton(e.data);
+      e.object.activity.render().find('.full-start-new__buttons').append(button);
+
+      // Додаємо нову кнопку
+      var historyButton = TraktHistory.addHistoryButton(e.data);
+      e.object.activity.render().find('.full-start-new__buttons').append(historyButton);
+    }
+  };
+
+  //LampaJS plugin for Trakt.TV
+  function startPlugin() {
+    window.plugin_trakt_ready = true;
+
+    // Реєструємо плагін для рекомендацій
+    Lampa.Manifest.plugins = recommendationsPlugin;
+
+    // Реєструємо плагін для Up Next
+    Lampa.Manifest.plugins = upnextPlugin;
+
+    // Фонове оновлення токена при старті
+    if (Lampa.Storage.get('trakt_refresh_token')) {
+      api.refresh()["catch"](function () {});
+    }
+
+    // Рекомендації завантажуються динамічно при потребі
+    // Добавляем компоненты
+    Lampa.Component.add('trakt_watchlist', function (object) {
+      return new Catalog.watchlist(object);
+    });
+    Lampa.Component.add('trakt_upnext', function (object) {
+      return new Catalog.upnext(object);
+    });
+
+    // Додаємо нові компоненти
+    Lampa.Component.add('trakt_timetable_all', TraktTimetableAll);
+    Lampa.Component.add('trakttv_recommendations', Catalog.recommendations);
+
+    // Додаємо переклади
+    Main();
+
+    // Ініціалізуємо обробники подій
+    events.init();
   }
   if (!window.plugin_trakt_ready) startPlugin();
 
