@@ -417,7 +417,6 @@
       });
     } else if (data.method === 'show') {
       if (mode === 'all') {
-        // Додати весь серіал
         body.shows.push({
           ids: {
             tmdb: data.id
@@ -425,7 +424,6 @@
           watched_at: new Date().toISOString()
         });
       } else if (mode === 'last_season') {
-        // Додати останній сезон
         body.shows.push({
           ids: {
             tmdb: data.id
@@ -436,7 +434,6 @@
           }]
         });
       } else if (mode === 'last_episode') {
-        // Додати останній епізод
         body.shows.push({
           ids: {
             tmdb: data.id
@@ -467,14 +464,12 @@
       });
     } else if (data.method === 'show') {
       if (mode === 'all') {
-        // Видалити весь серіал з історії
         body.shows.push({
           ids: {
             tmdb: data.id
           }
         });
       } else if (mode === 'last_season') {
-        // Видалити останній сезон з історії
         body.shows.push({
           ids: {
             tmdb: data.id
@@ -484,7 +479,6 @@
           }]
         });
       } else if (mode === 'last_episode') {
-        // Видалити останній епізод з історії
         body.shows.push({
           ids: {
             tmdb: data.id
@@ -503,22 +497,30 @@
   function requestApi(method, url) {
     var params = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var unauthorized = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
-    var settings = {
-      url: API_URL + url,
-      type: method,
-      timeout: 15000,
-      headers: {
+    return new Promise(function (resolve, reject) {
+      var network = new Lampa.Reguest();
+      var headers = {
         'Content-Type': 'application/json',
         'trakt-api-version': '2',
         'trakt-api-key': CLIENT_ID,
         'x-requested-with': "lampame"
-      },
-      data: JSON.stringify(params)
-    };
-    if (!unauthorized && Lampa.Storage.get('trakt_token')) {
-      settings.headers['Authorization'] = 'Bearer ' + Lampa.Storage.get('trakt_token');
-    }
-    return $.ajax(settings);
+      };
+      if (!unauthorized && Lampa.Storage.get('trakt_token')) {
+        headers['Authorization'] = 'Bearer ' + Lampa.Storage.get('trakt_token');
+      }
+      var requestParams = {
+        timeout: 15000,
+        headers: headers,
+        type: method,
+        dataType: 'json'
+      };
+      var postData = method === 'POST' ? JSON.stringify(params) : null;
+      network.quiet(API_URL + url, function (data) {
+        resolve(data);
+      }, function (error) {
+        reject(error);
+      }, postData, requestParams);
+    });
   }
   function formatTraktResults(items) {
     return {
@@ -545,25 +547,16 @@
       var unauthorized = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
       return requestApi('GET', url, {}, unauthorized);
     },
-    /**
-     * Отримує рекомендації від Trakt.TV
-     * @param {Object} options - Опції запиту
-     * @param {number} options.limit - Кількість результатів (за замовчуванням 50)
-     * @returns {Promise} Проміс з результатами
-     */
     recommendations: function recommendations() {
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      // Встановлюємо ліміт за замовчуванням 50, якщо не вказано
       var limit = options.limit || 50;
       return new Promise(function (resolve, reject) {
-        // Робимо два паралельні запити з вказаним лімітом
         var moviesRequest = requestApi('GET', "/recommendations/movies?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=".concat(limit));
         var showsRequest = requestApi('GET', "/recommendations/shows?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=".concat(limit));
         Promise.all([moviesRequest, showsRequest]).then(function (_ref) {
           var _ref2 = _slicedToArray(_ref, 2),
             moviesResponse = _ref2[0],
             showsResponse = _ref2[1];
-          // Форматуємо фільми
           var formattedMovies = moviesResponse.map(function (movie) {
             var _movie$images;
             return {
@@ -578,8 +571,6 @@
               card_type: 'movie'
             };
           });
-
-          // Форматуємо серіали
           var formattedShows = showsResponse.map(function (show) {
             var _show$images;
             return {
@@ -595,27 +586,21 @@
               card_type: 'tv'
             };
           });
-
-          // Об'єднуємо результати і перемішуємо їх
           var combinedResults = [].concat(_toConsumableArray(formattedMovies), _toConsumableArray(formattedShows));
 
-          // Перемішуємо масив для різноманітності
+          // Перемішування результатів
           for (var i = combinedResults.length - 1; i > 0; i--) {
             var j = Math.floor(Math.random() * (i + 1));
             var _ref3 = [combinedResults[j], combinedResults[i]];
             combinedResults[i] = _ref3[0];
             combinedResults[j] = _ref3[1];
           }
-
-          // Обрізаємо до вказаного ліміту після змішування, якщо потрібно
           var finalResults = limit ? combinedResults.slice(0, limit) : combinedResults;
           resolve({
             results: finalResults
           });
         })["catch"](function (error) {
           console.error('TraktTV', error);
-
-          // Якщо один з запитів не вдався, спробуємо отримати хоча б один тип контенту
           requestApi('GET', "/recommendations/movies?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=".concat(limit)).then(function (response) {
             var formattedResults = response.map(function (movie) {
               var _movie$images2;
@@ -631,8 +616,6 @@
                 card_type: 'movie'
               };
             });
-
-            // Обрізаємо до вказаного ліміту
             resolve({
               results: limit ? formattedResults.slice(0, limit) : formattedResults
             });
@@ -650,52 +633,31 @@
         onerror(error);
       });
     },
-    /**
-     * Отримує список серіалів, які користувач дивиться, але не закінчив
-     * @param {Object} params - Параметри запиту
-     * @param {number} params.limit - Кількість результатів (за замовчуванням 20)
-     * @param {Function} oncomplete - Функція, яка викликається при успішному завершенні
-     * @param {Function} onerror - Функція, яка викликається при помилці
-     */
     upnext: function upnext(params, oncomplete, onerror) {
-      // Встановлюємо ліміт за замовчуванням 20, якщо не вказано
       var limit = params.limit || 20;
       requestApi('GET', '/sync/watched/shows?extended=images,full,seasons').then(function (watchedResponse) {
         var watched = Array.isArray(watchedResponse) ? watchedResponse : [];
-
-        // Фільтруємо серіали, які переглядаються, але не повністю
         var watching = watched.filter(function (item) {
-          // Перевіряємо, чи є aired_episodes в відповіді
           if (!item.show || typeof item.show.aired_episodes !== 'number') return false;
           var totalEpisodes = item.show.aired_episodes;
-
-          // Підраховуємо кількість переглянутих епізодів з усіх сезонів
           var watchedEpisodes = 0;
           if (Array.isArray(item.seasons)) {
-            // Підраховуємо тільки основні сезони (виключаємо сезон 0)
             item.seasons.forEach(function (season) {
               if (Array.isArray(season.episodes) && season.number > 0) {
-                // Додати перевірку season.number > 0
                 watchedEpisodes += season.episodes.length;
               }
             });
           }
-
-          // Порівнюємо кількість епізодів та переглянутих
           return totalEpisodes > watchedEpisodes;
         });
         var results = watching.map(function (item) {
           var _item$show$images, _item$show$images2;
-          // Підраховуємо кількість переглянутих епізодів
           var watchedEpisodes = 0;
           var lastWatchedDate = null;
           if (Array.isArray(item.seasons)) {
             item.seasons.forEach(function (season) {
-              // Виключаємо сезон 0 (спеціальний контент)
               if (Array.isArray(season.episodes) && season.number > 0) {
                 watchedEpisodes += season.episodes.length;
-
-                // Знаходимо останню дату перегляду
                 season.episodes.forEach(function (episode) {
                   if (episode.last_watched_at) {
                     var episodeDate = new Date(episode.last_watched_at);
@@ -722,16 +684,12 @@
             last_watched: lastWatchedDate
           };
         });
-
-        // Сортуємо за останньою активністю (від нових до старих)
         results.sort(function (a, b) {
           if (!a.last_watched && !b.last_watched) return 0;
           if (!a.last_watched) return 1;
           if (!b.last_watched) return -1;
           return new Date(b.last_watched) - new Date(a.last_watched);
         });
-
-        // Обмежуємо кількість результатів
         var limitedResults = limit ? results.slice(0, limit) : results;
         oncomplete({
           results: limitedResults
