@@ -225,274 +225,115 @@
       }
       return e;
     }
-    function _regeneratorRuntime() {
-      _regeneratorRuntime = function () {
-        return r;
-      };
-      var t,
-        r = {},
-        e = Object.prototype,
-        n = e.hasOwnProperty,
-        o = "function" == typeof Symbol ? Symbol : {},
-        i = o.iterator || "@@iterator",
-        a = o.asyncIterator || "@@asyncIterator",
-        u = o.toStringTag || "@@toStringTag";
-      function c(t, r, e, n) {
-        return Object.defineProperty(t, r, {
-          value: e,
-          enumerable: !n,
-          configurable: !n,
-          writable: !n
-        });
-      }
-      try {
-        c({}, "");
-      } catch (t) {
-        c = function (t, r, e) {
-          return t[r] = e;
-        };
-      }
-      function h(r, e, n, o) {
-        var i = e && e.prototype instanceof Generator ? e : Generator,
-          a = Object.create(i.prototype);
-        return c(a, "_invoke", function (r, e, n) {
-          var o = 1;
-          return function (i, a) {
-            if (3 === o) throw Error("Generator is already running");
-            if (4 === o) {
-              if ("throw" === i) throw a;
-              return {
-                value: t,
-                done: !0
-              };
-            }
-            for (n.method = i, n.arg = a;;) {
-              var u = n.delegate;
-              if (u) {
-                var c = d(u, n);
-                if (c) {
-                  if (c === f) continue;
-                  return c;
-                }
+    function _regenerator() {
+      /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */
+      var e,
+        t,
+        r = "function" == typeof Symbol ? Symbol : {},
+        n = r.iterator || "@@iterator",
+        o = r.toStringTag || "@@toStringTag";
+      function i(r, n, o, i) {
+        var c = n && n.prototype instanceof Generator ? n : Generator,
+          u = Object.create(c.prototype);
+        return _regeneratorDefine(u, "_invoke", function (r, n, o) {
+          var i,
+            c,
+            u,
+            f = 0,
+            p = o || [],
+            y = !1,
+            G = {
+              p: 0,
+              n: 0,
+              v: e,
+              a: d,
+              f: d.bind(e, 4),
+              d: function (t, r) {
+                return i = t, c = 0, u = e, G.n = r, a;
               }
-              if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) {
-                if (1 === o) throw o = 4, n.arg;
-                n.dispatchException(n.arg);
-              } else "return" === n.method && n.abrupt("return", n.arg);
-              o = 3;
-              var h = s(r, e, n);
-              if ("normal" === h.type) {
-                if (o = n.done ? 4 : 2, h.arg === f) continue;
-                return {
-                  value: h.arg,
-                  done: n.done
-                };
-              }
-              "throw" === h.type && (o = 4, n.method = "throw", n.arg = h.arg);
+            };
+          function d(r, n) {
+            for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) {
+              var o,
+                i = p[t],
+                d = G.p,
+                l = i[2];
+              r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0));
             }
+            if (o || r > 1) return a;
+            throw y = !0, n;
+          }
+          return function (o, p, l) {
+            if (f > 1) throw TypeError("Generator is already running");
+            for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) {
+              i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u);
+              try {
+                if (f = 2, i) {
+                  if (c || (o = "next"), t = i[o]) {
+                    if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object");
+                    if (!t.done) return t;
+                    u = t.value, c < 2 && (c = 0);
+                  } else 1 === c && (t = i.return) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1);
+                  i = e;
+                } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break;
+              } catch (t) {
+                i = e, c = 1, u = t;
+              } finally {
+                f = 1;
+              }
+            }
+            return {
+              value: t,
+              done: y
+            };
           };
-        }(r, n, new Context(o || [])), !0), a;
+        }(r, o, i), !0), u;
       }
-      function s(t, r, e) {
-        try {
-          return {
-            type: "normal",
-            arg: t.call(r, e)
-          };
-        } catch (t) {
-          return {
-            type: "throw",
-            arg: t
-          };
-        }
-      }
-      r.wrap = h;
-      var f = {};
+      var a = {};
       function Generator() {}
       function GeneratorFunction() {}
       function GeneratorFunctionPrototype() {}
-      var l = {};
-      c(l, i, function () {
+      t = Object.getPrototypeOf;
+      var c = [][n] ? t(t([][n]())) : (_regeneratorDefine(t = {}, n, function () {
+          return this;
+        }), t),
+        u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c);
+      function f(e) {
+        return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e;
+      }
+      return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine(u), _regeneratorDefine(u, o, "Generator"), _regeneratorDefine(u, n, function () {
         return this;
-      });
-      var p = Object.getPrototypeOf,
-        y = p && p(p(x([])));
-      y && y !== e && n.call(y, i) && (l = y);
-      var v = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(l);
-      function g(t) {
-        ["next", "throw", "return"].forEach(function (r) {
-          c(t, r, function (t) {
-            return this._invoke(r, t);
-          });
-        });
-      }
-      function AsyncIterator(t, r) {
-        function e(o, i, a, u) {
-          var c = s(t[o], t, i);
-          if ("throw" !== c.type) {
-            var h = c.arg,
-              f = h.value;
-            return f && "object" == typeof f && n.call(f, "__await") ? r.resolve(f.__await).then(function (t) {
-              e("next", t, a, u);
-            }, function (t) {
-              e("throw", t, a, u);
-            }) : r.resolve(f).then(function (t) {
-              h.value = t, a(h);
-            }, function (t) {
-              return e("throw", t, a, u);
-            });
-          }
-          u(c.arg);
-        }
-        var o;
-        c(this, "_invoke", function (t, n) {
-          function i() {
-            return new r(function (r, o) {
-              e(t, n, r, o);
-            });
-          }
-          return o = o ? o.then(i, i) : i();
-        }, !0);
-      }
-      function d(r, e) {
-        var n = e.method,
-          o = r.i[n];
-        if (o === t) return e.delegate = null, "throw" === n && r.i.return && (e.method = "return", e.arg = t, d(r, e), "throw" === e.method) || "return" !== n && (e.method = "throw", e.arg = new TypeError("The iterator does not provide a '" + n + "' method")), f;
-        var i = s(o, r.i, e.arg);
-        if ("throw" === i.type) return e.method = "throw", e.arg = i.arg, e.delegate = null, f;
-        var a = i.arg;
-        return a ? a.done ? (e[r.r] = a.value, e.next = r.n, "return" !== e.method && (e.method = "next", e.arg = t), e.delegate = null, f) : a : (e.method = "throw", e.arg = new TypeError("iterator result is not an object"), e.delegate = null, f);
-      }
-      function w(t) {
-        this.tryEntries.push(t);
-      }
-      function m(r) {
-        var e = r[4] || {};
-        e.type = "normal", e.arg = t, r[4] = e;
-      }
-      function Context(t) {
-        this.tryEntries = [[-1]], t.forEach(w, this), this.reset(!0);
-      }
-      function x(r) {
-        if (null != r) {
-          var e = r[i];
-          if (e) return e.call(r);
-          if ("function" == typeof r.next) return r;
-          if (!isNaN(r.length)) {
-            var o = -1,
-              a = function e() {
-                for (; ++o < r.length;) if (n.call(r, o)) return e.value = r[o], e.done = !1, e;
-                return e.value = t, e.done = !0, e;
-              };
-            return a.next = a;
-          }
-        }
-        throw new TypeError(typeof r + " is not iterable");
-      }
-      return GeneratorFunction.prototype = GeneratorFunctionPrototype, c(v, "constructor", GeneratorFunctionPrototype), c(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = c(GeneratorFunctionPrototype, u, "GeneratorFunction"), r.isGeneratorFunction = function (t) {
-        var r = "function" == typeof t && t.constructor;
-        return !!r && (r === GeneratorFunction || "GeneratorFunction" === (r.displayName || r.name));
-      }, r.mark = function (t) {
-        return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, c(t, u, "GeneratorFunction")), t.prototype = Object.create(v), t;
-      }, r.awrap = function (t) {
-        return {
-          __await: t
-        };
-      }, g(AsyncIterator.prototype), c(AsyncIterator.prototype, a, function () {
-        return this;
-      }), r.AsyncIterator = AsyncIterator, r.async = function (t, e, n, o, i) {
-        void 0 === i && (i = Promise);
-        var a = new AsyncIterator(h(t, e, n, o), i);
-        return r.isGeneratorFunction(e) ? a : a.next().then(function (t) {
-          return t.done ? t.value : a.next();
-        });
-      }, g(v), c(v, u, "Generator"), c(v, i, function () {
-        return this;
-      }), c(v, "toString", function () {
+      }), _regeneratorDefine(u, "toString", function () {
         return "[object Generator]";
-      }), r.keys = function (t) {
-        var r = Object(t),
-          e = [];
-        for (var n in r) e.unshift(n);
-        return function t() {
-          for (; e.length;) if ((n = e.pop()) in r) return t.value = n, t.done = !1, t;
-          return t.done = !0, t;
+      }), (_regenerator = function () {
+        return {
+          w: i,
+          m: f
         };
-      }, r.values = x, Context.prototype = {
-        constructor: Context,
-        reset: function (r) {
-          if (this.prev = this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(m), !r) for (var e in this) "t" === e.charAt(0) && n.call(this, e) && !isNaN(+e.slice(1)) && (this[e] = t);
-        },
-        stop: function () {
-          this.done = !0;
-          var t = this.tryEntries[0][4];
-          if ("throw" === t.type) throw t.arg;
-          return this.rval;
-        },
-        dispatchException: function (r) {
-          if (this.done) throw r;
-          var e = this;
-          function n(t) {
-            a.type = "throw", a.arg = r, e.next = t;
+      })();
+    }
+    function _regeneratorDefine(e, r, n, t) {
+      var i = Object.defineProperty;
+      try {
+        i({}, "", {});
+      } catch (e) {
+        i = 0;
+      }
+      _regeneratorDefine = function (e, r, n, t) {
+        if (r) i ? i(e, r, {
+          value: n,
+          enumerable: !t,
+          configurable: !t,
+          writable: !t
+        }) : e[r] = n;else {
+          function o(r, n) {
+            _regeneratorDefine(e, r, function (e) {
+              return this._invoke(r, n, e);
+            });
           }
-          for (var o = e.tryEntries.length - 1; o >= 0; --o) {
-            var i = this.tryEntries[o],
-              a = i[4],
-              u = this.prev,
-              c = i[1],
-              h = i[2];
-            if (-1 === i[0]) return n("end"), !1;
-            if (!c && !h) throw Error("try statement without catch or finally");
-            if (null != i[0] && i[0] <= u) {
-              if (u < c) return this.method = "next", this.arg = t, n(c), !0;
-              if (u < h) return n(h), !1;
-            }
-          }
-        },
-        abrupt: function (t, r) {
-          for (var e = this.tryEntries.length - 1; e >= 0; --e) {
-            var n = this.tryEntries[e];
-            if (n[0] > -1 && n[0] <= this.prev && this.prev < n[2]) {
-              var o = n;
-              break;
-            }
-          }
-          o && ("break" === t || "continue" === t) && o[0] <= r && r <= o[2] && (o = null);
-          var i = o ? o[4] : {};
-          return i.type = t, i.arg = r, o ? (this.method = "next", this.next = o[2], f) : this.complete(i);
-        },
-        complete: function (t, r) {
-          if ("throw" === t.type) throw t.arg;
-          return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && r && (this.next = r), f;
-        },
-        finish: function (t) {
-          for (var r = this.tryEntries.length - 1; r >= 0; --r) {
-            var e = this.tryEntries[r];
-            if (e[2] === t) return this.complete(e[4], e[3]), m(e), f;
-          }
-        },
-        catch: function (t) {
-          for (var r = this.tryEntries.length - 1; r >= 0; --r) {
-            var e = this.tryEntries[r];
-            if (e[0] === t) {
-              var n = e[4];
-              if ("throw" === n.type) {
-                var o = n.arg;
-                m(e);
-              }
-              return o;
-            }
-          }
-          throw Error("illegal catch attempt");
-        },
-        delegateYield: function (r, e, n) {
-          return this.delegate = {
-            i: x(r),
-            r: e,
-            n: n
-          }, "next" === this.method && (this.arg = t), f;
+          o("next", 0), o("throw", 1), o("return", 2);
         }
-      }, r;
+      }, _regeneratorDefine(e, r, n, t);
     }
     function _setPrototypeOf(t, e) {
       return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) {
@@ -655,49 +496,47 @@
         headers: getHeaders$2()
       };
       return new Promise(function (resolve, reject) {
-        $.ajax(settings).done( /*#__PURE__*/function () {
-          var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(response) {
-            var torrents, standardizedResponse;
-            return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-              while (1) switch (_context2.prev = _context2.next) {
+        $.ajax(settings).done(/*#__PURE__*/function () {
+          var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(response) {
+            var torrents, standardizedResponse, _t8;
+            return _regenerator().w(function (_context2) {
+              while (1) switch (_context2.n) {
                 case 0:
-                  _context2.prev = 0;
+                  _context2.p = 0;
                   if (response.torrents) {
-                    _context2.next = 4;
+                    _context2.n = 1;
                     break;
                   }
                   resolve([]);
-                  return _context2.abrupt("return");
-                case 4:
+                  return _context2.a(2);
+                case 1:
                   torrents = Object.values(response.torrents);
-                  _context2.next = 7;
-                  return Promise.all(torrents.map( /*#__PURE__*/function () {
-                    var _ref2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(torrent) {
-                      return _regeneratorRuntime().wrap(function _callee$(_context) {
-                        while (1) switch (_context.prev = _context.next) {
+                  _context2.n = 2;
+                  return Promise.all(torrents.map(/*#__PURE__*/function () {
+                    var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(torrent) {
+                      var _t, _t2, _t3, _t4, _t5, _t6, _t7;
+                      return _regenerator().w(function (_context) {
+                        while (1) switch (_context.n) {
                           case 0:
-                            _context.t0 = torrent.name;
-                            _context.t1 = torrent.infohash_v1;
-                            _context.t2 = torrent.size;
-                            _context.t3 = torrent.state.charAt(0).toUpperCase() + torrent.state.slice(1);
-                            _context.t4 = torrent.tags;
-                            _context.next = 7;
+                            _t = torrent.name;
+                            _t2 = torrent.infohash_v1;
+                            _t3 = torrent.size;
+                            _t4 = torrent.state.charAt(0).toUpperCase() + torrent.state.slice(1);
+                            _t5 = torrent.tags;
+                            _context.n = 1;
                             return getPosterFromLabels(torrent.tags);
-                          case 7:
-                            _context.t5 = _context.sent;
-                            _context.t6 = torrent.progress;
-                            return _context.abrupt("return", {
-                              name: _context.t0,
-                              id: _context.t1,
-                              size: _context.t2,
-                              state: _context.t3,
-                              labels: _context.t4,
-                              image: _context.t5,
-                              completed: _context.t6
+                          case 1:
+                            _t6 = _context.v;
+                            _t7 = torrent.progress;
+                            return _context.a(2, {
+                              name: _t,
+                              id: _t2,
+                              size: _t3,
+                              state: _t4,
+                              labels: _t5,
+                              image: _t6,
+                              completed: _t7
                             });
-                          case 10:
-                          case "end":
-                            return _context.stop();
                         }
                       }, _callee);
                     }));
@@ -705,21 +544,20 @@
                       return _ref2.apply(this, arguments);
                     };
                   }()));
-                case 7:
-                  standardizedResponse = _context2.sent;
+                case 2:
+                  standardizedResponse = _context2.v;
                   resolve(standardizedResponse);
-                  _context2.next = 15;
+                  _context2.n = 4;
                   break;
-                case 11:
-                  _context2.prev = 11;
-                  _context2.t0 = _context2["catch"](0);
-                  console.log('TDM', 'GetData:', _context2.t0, response);
+                case 3:
+                  _context2.p = 3;
+                  _t8 = _context2.v;
+                  console.log('TDM', 'GetData:', _t8, response);
                   reject(new Error('Ошибка при обработке данных'));
-                case 15:
-                case "end":
-                  return _context2.stop();
+                case 4:
+                  return _context2.a(2);
               }
-            }, _callee2, null, [[0, 11]]);
+            }, _callee2, null, [[0, 3]]);
           }));
           return function (_x) {
             return _ref.apply(this, arguments);
@@ -829,7 +667,7 @@
 
     function cleanName(name) {
       // Оновлений регулярний вираз для видалення інформації про сезон, рік, якість та інші зайві частини
-      var regex = /*#__PURE__*/_wrapRegExp(/(.*?)(?:[.\s]S\d{1,2}(?:E\d{1,2})?|[.\s]\d{4}|[.\s](?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB\x2DRip|WEB\x2DDL|WEB|TS|(?:PPV )?WEB\x2D?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv).*$/i, {
+      var regex = /*#__PURE__*/_wrapRegExp(/(.*?)(?:[.\s]S\d{1,2}(?:E\d{1,2})?|[.\s]\d{4}|[.\s](?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB-Rip|WEB-DL|WEB|TS|(?:PPV )?WEB-?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv).*$/i, {
         title: 1
       });
       var match = name.match(regex);
@@ -962,25 +800,25 @@
         })
       };
       return new Promise(function (resolve, reject) {
-        $.ajax(settings).done( /*#__PURE__*/function () {
-          var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(response) {
+        $.ajax(settings).done(/*#__PURE__*/function () {
+          var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(response) {
             var standardizedResponse;
-            return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-              while (1) switch (_context2.prev = _context2.next) {
+            return _regenerator().w(function (_context2) {
+              while (1) switch (_context2.n) {
                 case 0:
-                  _context2.prev = 0;
-                  _context2.next = 3;
-                  return Promise.all(response.arguments.torrents.map( /*#__PURE__*/function () {
-                    var _ref2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(torrent) {
+                  _context2.p = 0;
+                  _context2.n = 1;
+                  return Promise.all(response.arguments.torrents.map(/*#__PURE__*/function () {
+                    var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(torrent) {
                       var imageUrl;
-                      return _regeneratorRuntime().wrap(function _callee$(_context) {
-                        while (1) switch (_context.prev = _context.next) {
+                      return _regenerator().w(function (_context) {
+                        while (1) switch (_context.n) {
                           case 0:
-                            _context.next = 2;
+                            _context.n = 1;
                             return getPosterFromLabels(torrent.labels);
-                          case 2:
-                            imageUrl = _context.sent;
-                            return _context.abrupt("return", {
+                          case 1:
+                            imageUrl = _context.v;
+                            return _context.a(2, {
                               name: torrent.name,
                               id: torrent.id,
                               size: torrent.totalSize,
@@ -990,9 +828,6 @@
                               // Используем результат
                               completed: torrent.percentDone
                             });
-                          case 4:
-                          case "end":
-                            return _context.stop();
                         }
                       }, _callee);
                     }));
@@ -1000,20 +835,19 @@
                       return _ref2.apply(this, arguments);
                     };
                   }()));
-                case 3:
-                  standardizedResponse = _context2.sent;
+                case 1:
+                  standardizedResponse = _context2.v;
                   resolve(standardizedResponse);
-                  _context2.next = 10;
+                  _context2.n = 3;
                   break;
-                case 7:
-                  _context2.prev = 7;
-                  _context2.t0 = _context2["catch"](0);
+                case 2:
+                  _context2.p = 2;
+                  _context2.v;
                   reject(new Error('Ошибка при обработке данных'));
-                case 10:
-                case "end":
-                  return _context2.stop();
+                case 3:
+                  return _context2.a(2);
               }
-            }, _callee2, null, [[0, 7]]);
+            }, _callee2, null, [[0, 2]]);
           }));
           return function (_x) {
             return _ref.apply(this, arguments);
@@ -1398,51 +1232,50 @@
       var head = $("<div class='lmetorrent-head'></div>");
       var body = $('<div class="lmetorrent-catalog--list category-full"></div>');
       var active, last;
-      this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-        var startClient, _startClient, result;
-        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-          while (1) switch (_context2.prev = _context2.next) {
+      this.create = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+        var startClient, _startClient, result, _t2;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.n) {
             case 0:
               _startClient = function _startClient3() {
-                _startClient = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(client) {
-                  var _yield$Promise$all, _yield$Promise$all2, qbData, qbInfo, _yield$Promise$all3, _yield$Promise$all4, trData, trInfo;
-                  return _regeneratorRuntime().wrap(function _callee$(_context) {
-                    while (1) switch (_context.prev = _context.next) {
+                _startClient = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(client) {
+                  var _yield$Promise$all, _yield$Promise$all2, qbData, qbInfo, _yield$Promise$all3, _yield$Promise$all4, trData, trInfo, _t;
+                  return _regenerator().w(function (_context) {
+                    while (1) switch (_context.n) {
                       case 0:
-                        _context.t0 = client;
-                        _context.next = _context.t0 === 'qBittorent' ? 3 : _context.t0 === 'transmission' ? 10 : _context.t0 === 'synology' ? 17 : 18;
+                        _t = client;
+                        _context.n = _t === 'qBittorent' ? 1 : _t === 'transmission' ? 3 : _t === 'synology' ? 5 : 6;
                         break;
-                      case 3:
-                        _context.next = 5;
+                      case 1:
+                        _context.n = 2;
                         return Promise.all([Qbittorent.GetData(), Qbittorent.GetInfo()]);
-                      case 5:
-                        _yield$Promise$all = _context.sent;
+                      case 2:
+                        _yield$Promise$all = _context.v;
                         _yield$Promise$all2 = _slicedToArray(_yield$Promise$all, 2);
                         qbData = _yield$Promise$all2[0];
                         qbInfo = _yield$Promise$all2[1];
-                        return _context.abrupt("return", {
+                        return _context.a(2, {
                           data: qbData,
                           info: qbInfo
                         });
-                      case 10:
-                        _context.next = 12;
+                      case 3:
+                        _context.n = 4;
                         return Promise.all([Transmission.GetData(), Transmission.GetInfo()]);
-                      case 12:
-                        _yield$Promise$all3 = _context.sent;
+                      case 4:
+                        _yield$Promise$all3 = _context.v;
                         _yield$Promise$all4 = _slicedToArray(_yield$Promise$all3, 2);
                         trData = _yield$Promise$all4[0];
                         trInfo = _yield$Promise$all4[1];
-                        return _context.abrupt("return", {
+                        return _context.a(2, {
                           data: trData,
                           info: trInfo
                         });
-                      case 17:
-                        return _context.abrupt("return", Synology.GetData());
-                      case 18:
+                      case 5:
+                        return _context.a(2, Synology.GetData());
+                      case 6:
                         throw new Error('Кто ты воин?');
-                      case 19:
-                      case "end":
-                        return _context.stop();
+                      case 7:
+                        return _context.a(2);
                     }
                   }, _callee);
                 }));
@@ -1452,29 +1285,26 @@
                 return _startClient.apply(this, arguments);
               };
               this.activity.loader(true);
-              _context2.prev = 3;
-              _context2.next = 6;
+              _context2.p = 1;
+              _context2.n = 2;
               return startClient(client);
-            case 6:
-              result = _context2.sent;
+            case 2:
+              result = _context2.v;
               if (result) {
                 this.build(result);
               } else {
                 this.errorClient(result);
               }
-              _context2.next = 13;
+              _context2.n = 4;
               break;
-            case 10:
-              _context2.prev = 10;
-              _context2.t0 = _context2["catch"](3);
-              this.errorClient(_context2.t0);
-            case 13:
-              return _context2.abrupt("return", this.render());
-            case 14:
-            case "end":
-              return _context2.stop();
+            case 3:
+              _context2.p = 3;
+              _t2 = _context2.v;
+              this.errorClient(_t2);
+            case 4:
+              return _context2.a(2, this.render());
           }
-        }, _callee2, this, [[3, 10]]);
+        }, _callee2, this, [[1, 3]]);
       }));
       this.errorClient = function (data) {
         console.log('TDM', 'Try get data:', data);
@@ -1534,10 +1364,10 @@
             last = item.render()[0];
             active = items.indexOf(item);
             scroll.update(items[active].render(), true);
-          }).on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+          }).on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
             var enabled, menu;
-            return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-              while (1) switch (_context3.prev = _context3.next) {
+            return _regenerator().w(function (_context3) {
+              while (1) switch (_context3.n) {
                 case 0:
                   enabled = Lampa.Controller.enabled().name;
                   menu = [];
@@ -1599,9 +1429,8 @@
                       }
                     }
                   });
-                case 5:
-                case "end":
-                  return _context3.stop();
+                case 1:
+                  return _context3.a(2);
               }
             }, _callee3);
           })));
@@ -1663,16 +1492,16 @@
             console.error('Неизвестный клиент');
             return;
         }
-        updateInterval = setInterval( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
-          var result;
-          return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-            while (1) switch (_context4.prev = _context4.next) {
+        updateInterval = setInterval(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+          var result, _t3;
+          return _regenerator().w(function (_context4) {
+            while (1) switch (_context4.n) {
               case 0:
-                _context4.prev = 0;
-                _context4.next = 3;
+                _context4.p = 0;
+                _context4.n = 1;
                 return getDataFunc();
-              case 3:
-                result = _context4.sent;
+              case 1:
+                result = _context4.v;
                 // Якщо для transmission/qBittorent отримуємо масив даних
                 // Проходимо по новому набору даних і оновлюємо існуючі елементи за id
                 result.forEach(function (newTorrent) {
@@ -1682,17 +1511,16 @@
                     }
                   });
                 });
-                _context4.next = 10;
+                _context4.n = 3;
                 break;
-              case 7:
-                _context4.prev = 7;
-                _context4.t0 = _context4["catch"](0);
-                console.error('Auto update error:', _context4.t0);
-              case 10:
-              case "end":
-                return _context4.stop();
+              case 2:
+                _context4.p = 2;
+                _t3 = _context4.v;
+                console.error('Auto update error:', _t3);
+              case 3:
+                return _context4.a(2);
             }
-          }, _callee4, null, [[0, 7]]);
+          }, _callee4, null, [[0, 2]]);
         })), 5000);
       }
       this.destroy = function () {
@@ -2363,20 +2191,20 @@
       return _startClient.apply(this, arguments);
     }
     function _startClient() {
-      _startClient = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(client) {
-        var result, _yield$Promise$all, _yield$Promise$all2, qbData, qbInfo, _yield$Promise$all3, _yield$Promise$all4, trData, trInfo;
-        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-          while (1) switch (_context2.prev = _context2.next) {
+      _startClient = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(client) {
+        var result, _yield$Promise$all, _yield$Promise$all2, qbData, qbInfo, _yield$Promise$all3, _yield$Promise$all4, trData, trInfo, _t, _t2;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.n) {
             case 0:
-              _context2.prev = 0;
-              _context2.t0 = client;
-              _context2.next = _context2.t0 === 'qBittorent' ? 4 : _context2.t0 === 'transmission' ? 12 : _context2.t0 === 'synology' ? 20 : 24;
+              _context2.p = 0;
+              _t = client;
+              _context2.n = _t === 'qBittorent' ? 1 : _t === 'transmission' ? 3 : _t === 'synology' ? 5 : 7;
               break;
-            case 4:
-              _context2.next = 6;
+            case 1:
+              _context2.n = 2;
               return Promise.all([Qbittorent.GetData(), Qbittorent.GetInfo()]);
-            case 6:
-              _yield$Promise$all = _context2.sent;
+            case 2:
+              _yield$Promise$all = _context2.v;
               _yield$Promise$all2 = _slicedToArray(_yield$Promise$all, 2);
               qbData = _yield$Promise$all2[0];
               qbInfo = _yield$Promise$all2[1];
@@ -2384,12 +2212,12 @@
                 data: qbData,
                 info: qbInfo
               };
-              return _context2.abrupt("break", 25);
-            case 12:
-              _context2.next = 14;
+              return _context2.a(3, 8);
+            case 3:
+              _context2.n = 4;
               return Promise.all([Transmission.GetData(), Transmission.GetInfo()]);
-            case 14:
-              _yield$Promise$all3 = _context2.sent;
+            case 4:
+              _yield$Promise$all3 = _context2.v;
               _yield$Promise$all4 = _slicedToArray(_yield$Promise$all3, 2);
               trData = _yield$Promise$all4[0];
               trInfo = _yield$Promise$all4[1];
@@ -2397,28 +2225,27 @@
                 data: trData,
                 info: trInfo
               };
-              return _context2.abrupt("break", 25);
-            case 20:
-              _context2.next = 22;
+              return _context2.a(3, 8);
+            case 5:
+              _context2.n = 6;
               return Synology.GetData();
-            case 22:
-              result = _context2.sent;
-              return _context2.abrupt("break", 25);
-            case 24:
+            case 6:
+              result = _context2.v;
+              return _context2.a(3, 8);
+            case 7:
               throw new Error('Unknown client type');
-            case 25:
+            case 8:
               console.log('TDM:', result);
-              return _context2.abrupt("return", result);
-            case 29:
-              _context2.prev = 29;
-              _context2.t1 = _context2["catch"](0);
-              console.error('Error fetching client data:', _context2.t1);
-              throw _context2.t1;
-            case 33:
-            case "end":
-              return _context2.stop();
+              return _context2.a(2, result);
+            case 9:
+              _context2.p = 9;
+              _t2 = _context2.v;
+              console.error('Error fetching client data:', _t2);
+              throw _t2;
+            case 10:
+              return _context2.a(2);
           }
-        }, _callee2, null, [[0, 29]]);
+        }, _callee2, null, [[0, 9]]);
       }));
       return _startClient.apply(this, arguments);
     }
@@ -2440,10 +2267,10 @@
                   var $button = $("<div class=\"full-start__button selector button--lme_torrent\">\n                                <svg fill=\"currentColor\" version=\"1.1\" id=\"Capa_1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 588.601 588.6\" xml:space=\"preserve\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <g> <path d=\"M168.405,288.048c-3.019,0.084-4.936,0.419-5.864,0.728v20.174l5.632-0.059c6.463-0.078,10.558-4.35,10.558-10.768 C178.73,291.017,174.636,287.869,168.405,288.048z\"></path> <path d=\"M82.324,290.445c-8.177,0.227-12.49,10.278-12.49,22.491c0,12.045,4.588,21.674,12.49,21.737 c8.089,0.079,12.701-9.761,12.701-22.412C95.018,300.86,90.688,290.213,82.324,290.445z\"></path> <path d=\"M125.722,289.235c-2.813,0.082-4.617,0.396-5.484,0.696v19.515l5.276-0.059c6.03-0.074,9.858-4.203,9.858-10.404 C135.372,292.117,131.544,289.074,125.722,289.235z\"></path> <path d=\"M539.568,49.201h-178.2c-0.786,0-1.561,0.074-2.347,0.124V0L11.228,46.419v494.562L359.032,588.6v-50.814 c0.78,0.053,1.55,0.115,2.341,0.115h178.2c20.852,0,37.8-16.959,37.8-37.8v-413.1C577.368,66.161,560.425,49.201,539.568,49.201z M361.368,70.801h178.2c8.928,0,16.2,7.267,16.2,16.2v271.329c-23.272-58.704-70.2-90.393-132.864-99.347 c-18.879-2.705-21.79,0.886-19.687,19.517c1.482,13.252,11.786,9.158,18.747,10.022c56.574,7.085,103.982,49.642,115.288,104.147 c7.267,34.974-1.266,71.872-21.305,101.05h-14.08c36.64-49.116,38.834-102.389,2.964-149.575 c-33.307-43.802-99.62-61.505-145.8-42.604V71.043C359.797,70.93,360.572,70.801,361.368,70.801z M359.032,333.687 c2.226-0.891,4.25-1.703,6.265-2.479c45.752-17.649,97.817-0.606,122.096,39.946c23.757,39.726,14.223,90.034-22.892,122.565 h-14.122c3.912-2.942,7.73-6.181,11.411-9.734c26.314-25.376,35.374-56.162,24.01-90.925 c-11.527-35.258-37.446-55.244-74.007-60.592c-18.114-2.647-36.956,1.244-52.761,9.661V333.687z M359.032,378.891 c0.169-0.163,0.327-0.354,0.506-0.517c22.939-22.17,62.259-21.479,84.555,1.397c22.687,23.277,22.887,60.307-2.479,81.949 c-13.11,11.175-29.995,20.408-46.659,24.49c-11.935,2.921-23.905,4.777-35.923,6.021V378.891z M296.331,275.25l49.401-1.7v11.156 l-19.232,0.514v61.077l-11.938-0.19v-60.57l-18.236,0.493V275.25H296.331z M60.247,292.37l-12.49,0.332v49.265l-7.771-0.11v-48.953 l-11.929,0.321V284.5l32.189-1.113V292.37z M81.857,343.459c-12.677-0.211-20.545-12.983-20.545-30.26 c0-18.077,8.521-31.118,21.209-31.572c13.458-0.466,21.526,12.714,21.526,30.085C104.048,332.153,94.521,343.67,81.857,343.459z M136.836,343.343c-0.738-1.867-1.917-6.982-3.31-14.776c-1.395-8.147-3.73-10.721-8.819-10.895l-4.47,0.025v25.393l-8.701-0.138 v-60.515c3.267-0.828,8.208-1.55,13.324-1.73c7.056-0.242,11.907,1.071,15.238,4.504c2.745,2.797,4.316,7.148,4.316,12.469 c0,8.137-4.398,13.685-9.042,15.868v0.284c3.533,1.641,5.688,6.012,6.951,12.056c1.572,7.857,2.911,15.161,3.963,17.607 L136.836,343.343z M180.312,344.023c-0.788-1.935-2.059-7.229-3.554-15.298c-1.484-8.427-3.995-11.096-9.429-11.264l-4.788,0.021 v26.262l-9.305-0.143v-62.574c3.488-0.865,8.754-1.608,14.241-1.798c7.549-0.274,12.738,1.086,16.313,4.627 c2.942,2.896,4.617,7.394,4.617,12.906c0,8.412-4.704,14.16-9.682,16.428v0.295c3.783,1.688,6.096,6.207,7.446,12.477 c1.68,8.127,3.119,15.684,4.237,18.22L180.312,344.023z M231.742,344.82l-33.874-0.533v-65.646l32.598-1.118v10.083l-22.539,0.609 v17.075l21.266-0.306v9.978l-21.266,0.137v19.438l23.815,0.189V344.82z M241.052,277.151l12.234-0.422l15.515,29.141 c4.061,7.668,7.604,15.688,10.434,23.235h0.19c-0.73-9.313-1.004-18.299-1.004-28.94v-24.301l10.491-0.366v70.208l-11.675-0.18 l-15.881-30.47c-3.828-7.515-7.791-15.884-10.702-23.535l-0.264,0.105c0.43,8.812,0.517,17.819,0.517,29.072v24.421l-9.848-0.152 v-67.816H241.052z M539.568,516.301h-4.915c8.644-11.56,15.746-23.467,21.115-35.743v19.543 C555.769,509.035,548.507,516.301,539.568,516.301z\"></path> </g> </g></svg>\n                                <span>".concat(torrent.completed > 0 ? "".concat(torrent.state, " - ").concat(Number((torrent.completed * 100).toFixed(2)), "%") : torrent.state, "</span>\n                            </div>"));
 
                   // Attach event handlers
-                  $button.on("hover:enter", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+                  $button.on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
                     var enabled, menu;
-                    return _regeneratorRuntime().wrap(function _callee$(_context) {
-                      while (1) switch (_context.prev = _context.next) {
+                    return _regenerator().w(function (_context) {
+                      while (1) switch (_context.n) {
                         case 0:
                           enabled = Lampa.Controller.enabled().name;
                           menu = [];
@@ -2483,9 +2310,8 @@
                               }
                             }
                           });
-                        case 5:
-                        case "end":
-                          return _context.stop();
+                        case 1:
+                          return _context.a(2);
                       }
                     }, _callee);
                   })));
@@ -2507,7 +2333,7 @@
       Component$1();
       //live.torrentList();
       // Style
-      Lampa.Template.add('lmemStyle', "\n        <style>\n            @charset 'UTF-8';.btnTDdownload{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}svg.btnTDdownload{width:36px;height:36px;margin-right:5%}.lmetorrent-error_body{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center}.lmetorrent-error_body .lmetorrent-error_result{margin-top:2em}.lmetorrent-head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;padding:0 2% 0 2%;margin:0 2% 2% 2%}.lmetorrent-header__update{white-space:nowrap}.lmetorrent-header__space{margin-left:auto}.lmetorrent-catalog--list.category-full{margin-left:2%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:start;-webkit-justify-content:start;-ms-flex-pack:start;justify-content:start}.lmetorrent_card__completed{position:absolute;right:0;bottom:0;font-size:.8em;-webkit-border-radius:.3em;-moz-border-radius:.3em;padding:.4em .4em;border-radius:.3em;text-align:center;font-weight:bold;background-color:var(--background-color);color:var(--text-color)}.lmetorrent_card__completed[data-completed]:nth-child(n):nth-last-child(n+51){--background-color:#fcc;--text-color:#900}.lmetorrent_card__completed[data-completed]:nth-child(n+51):nth-last-child(n+2){--background-color:#ffc;--text-color:#990}.lmetorrent_card__completed[data-completed='100']{--background-color:#cfc;--text-color:#090}.lmetorrent_card__state{left:0;top:0}.lmetorrent_card__size{left:0;bottom:0}.lmetorrent_card__size,.lmetorrent_card__state{position:absolute;padding:.4em .4em;background:#fff;color:#000;font-size:.8em;-webkit-border-radius:.3em;border-radius:.3em}.lmetorrent-item{margin-right:.5em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;border:solid .01em #fff;-webkit-border-radius:.8em;border-radius:.8em}.lmetorrent-item.focus{border:solid .26em #fff}.lmetorrent-item__data{margin-bottom:.4em}.lmetorrent-item__state{top:.5em;left:.5em;padding:.1em .3em;font-weight:bold;-webkit-border-radius:.25em;border-radius:.25em;color:#292d32;background-color:#eee}.lmetorrent-item__badge>svg{width:1em;height:1em;vertical-align:bottom}.lmetorrent-item__name{font-size:1.1em;margin-top:.8em;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}@media screen and (max-width:580px){.lmetorrent-item{width:21%}}@media screen and (max-width:385px){.lmetorrent-item__name{display:none}}\n        </style>\n    ");
+      Lampa.Template.add('lmemStyle', "\n        <style>\n            @charset 'UTF-8';.btnTDdownload{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}svg.btnTDdownload{width:36px;height:36px;margin-right:5%}.lmetorrent-error_body{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center}.lmetorrent-error_body .lmetorrent-error_result{margin-top:2em}.lmetorrent-head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;padding:0 2% 0 2%;margin:0 2% 2% 2%}.lmetorrent-header__update{white-space:nowrap}.lmetorrent-header__space{margin-left:auto}.lmetorrent-catalog--list.category-full{margin-left:2%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:start;-webkit-justify-content:flex-start;-ms-flex-pack:start;justify-content:flex-start}.lmetorrent_card__completed{position:absolute;right:0;bottom:0;font-size:.8em;-webkit-border-radius:.3em;-moz-border-radius:.3em;padding:.4em .4em;border-radius:.3em;text-align:center;font-weight:bold;background-color:var(--background-color);color:var(--text-color)}.lmetorrent_card__completed[data-completed]:nth-child(n):nth-last-child(n+51){--background-color:#fcc;--text-color:#900}.lmetorrent_card__completed[data-completed]:nth-child(n+51):nth-last-child(n+2){--background-color:#ffc;--text-color:#990}.lmetorrent_card__completed[data-completed='100']{--background-color:#cfc;--text-color:#090}.lmetorrent_card__state{left:0;top:0}.lmetorrent_card__size{left:0;bottom:0}.lmetorrent_card__size,.lmetorrent_card__state{position:absolute;padding:.4em .4em;background:#fff;color:#000;font-size:.8em;-webkit-border-radius:.3em;border-radius:.3em}.lmetorrent-item{margin-right:.5em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;border:solid .01em #fff;-webkit-border-radius:.8em;border-radius:.8em}.lmetorrent-item.focus{border:solid .26em #fff}.lmetorrent-item__data{margin-bottom:.4em}.lmetorrent-item__state{top:.5em;left:.5em;padding:.1em .3em;font-weight:bold;-webkit-border-radius:.25em;border-radius:.25em;color:#292d32;background-color:#eee}.lmetorrent-item__badge>svg{width:1em;height:1em;vertical-align:bottom}.lmetorrent-item__name{font-size:1.1em;margin-top:.8em;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}@media screen and (max-width:580px){.lmetorrent-item{width:21%}}@media screen and (max-width:385px){.lmetorrent-item__name{display:none}}\n        </style>\n    ");
       Lampa.Template.add("lmetorrent_header", "<div class=\"lmetorrent-header__data lmetorrent-header__update simple-button selector\">Update</div>\n              <div class=\"lmetorrent-header__data lmetorrent-header__space\">Free space: {space}</div>\n            ");
       Lampa.Template.add("lmetorrent_item", "<div class=\"card selector lmetorrent-item\">\n                <div class=\"lmetorrent-item__data lmetorrent-item__name\">{name}</div>\n                <div class=\"lmetorrent-item__data lmetorrent-item__state\">{state}</div>\n                <div class=\"lmetorrent-item__data lmetorrent-item__progress\">{size} / {completed}</div>\n            </div>");
       //<img src="./img/img_load.svg" class="card__img" />

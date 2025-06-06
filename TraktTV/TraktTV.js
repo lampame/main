@@ -102,274 +102,115 @@
     }
     return e;
   }
-  function _regeneratorRuntime() {
-    _regeneratorRuntime = function () {
-      return r;
-    };
-    var t,
-      r = {},
-      e = Object.prototype,
-      n = e.hasOwnProperty,
-      o = "function" == typeof Symbol ? Symbol : {},
-      i = o.iterator || "@@iterator",
-      a = o.asyncIterator || "@@asyncIterator",
-      u = o.toStringTag || "@@toStringTag";
-    function c(t, r, e, n) {
-      return Object.defineProperty(t, r, {
-        value: e,
-        enumerable: !n,
-        configurable: !n,
-        writable: !n
-      });
-    }
-    try {
-      c({}, "");
-    } catch (t) {
-      c = function (t, r, e) {
-        return t[r] = e;
-      };
-    }
-    function h(r, e, n, o) {
-      var i = e && e.prototype instanceof Generator ? e : Generator,
-        a = Object.create(i.prototype);
-      return c(a, "_invoke", function (r, e, n) {
-        var o = 1;
-        return function (i, a) {
-          if (3 === o) throw Error("Generator is already running");
-          if (4 === o) {
-            if ("throw" === i) throw a;
-            return {
-              value: t,
-              done: !0
-            };
-          }
-          for (n.method = i, n.arg = a;;) {
-            var u = n.delegate;
-            if (u) {
-              var c = d(u, n);
-              if (c) {
-                if (c === f) continue;
-                return c;
-              }
+  function _regenerator() {
+    /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */
+    var e,
+      t,
+      r = "function" == typeof Symbol ? Symbol : {},
+      n = r.iterator || "@@iterator",
+      o = r.toStringTag || "@@toStringTag";
+    function i(r, n, o, i) {
+      var c = n && n.prototype instanceof Generator ? n : Generator,
+        u = Object.create(c.prototype);
+      return _regeneratorDefine(u, "_invoke", function (r, n, o) {
+        var i,
+          c,
+          u,
+          f = 0,
+          p = o || [],
+          y = !1,
+          G = {
+            p: 0,
+            n: 0,
+            v: e,
+            a: d,
+            f: d.bind(e, 4),
+            d: function (t, r) {
+              return i = t, c = 0, u = e, G.n = r, a;
             }
-            if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) {
-              if (1 === o) throw o = 4, n.arg;
-              n.dispatchException(n.arg);
-            } else "return" === n.method && n.abrupt("return", n.arg);
-            o = 3;
-            var h = s(r, e, n);
-            if ("normal" === h.type) {
-              if (o = n.done ? 4 : 2, h.arg === f) continue;
-              return {
-                value: h.arg,
-                done: n.done
-              };
-            }
-            "throw" === h.type && (o = 4, n.method = "throw", n.arg = h.arg);
+          };
+        function d(r, n) {
+          for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) {
+            var o,
+              i = p[t],
+              d = G.p,
+              l = i[2];
+            r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0));
           }
+          if (o || r > 1) return a;
+          throw y = !0, n;
+        }
+        return function (o, p, l) {
+          if (f > 1) throw TypeError("Generator is already running");
+          for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) {
+            i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u);
+            try {
+              if (f = 2, i) {
+                if (c || (o = "next"), t = i[o]) {
+                  if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object");
+                  if (!t.done) return t;
+                  u = t.value, c < 2 && (c = 0);
+                } else 1 === c && (t = i.return) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1);
+                i = e;
+              } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break;
+            } catch (t) {
+              i = e, c = 1, u = t;
+            } finally {
+              f = 1;
+            }
+          }
+          return {
+            value: t,
+            done: y
+          };
         };
-      }(r, n, new Context(o || [])), !0), a;
+      }(r, o, i), !0), u;
     }
-    function s(t, r, e) {
-      try {
-        return {
-          type: "normal",
-          arg: t.call(r, e)
-        };
-      } catch (t) {
-        return {
-          type: "throw",
-          arg: t
-        };
-      }
-    }
-    r.wrap = h;
-    var f = {};
+    var a = {};
     function Generator() {}
     function GeneratorFunction() {}
     function GeneratorFunctionPrototype() {}
-    var l = {};
-    c(l, i, function () {
+    t = Object.getPrototypeOf;
+    var c = [][n] ? t(t([][n]())) : (_regeneratorDefine(t = {}, n, function () {
+        return this;
+      }), t),
+      u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c);
+    function f(e) {
+      return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e;
+    }
+    return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine(u), _regeneratorDefine(u, o, "Generator"), _regeneratorDefine(u, n, function () {
       return this;
-    });
-    var p = Object.getPrototypeOf,
-      y = p && p(p(x([])));
-    y && y !== e && n.call(y, i) && (l = y);
-    var v = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(l);
-    function g(t) {
-      ["next", "throw", "return"].forEach(function (r) {
-        c(t, r, function (t) {
-          return this._invoke(r, t);
-        });
-      });
-    }
-    function AsyncIterator(t, r) {
-      function e(o, i, a, u) {
-        var c = s(t[o], t, i);
-        if ("throw" !== c.type) {
-          var h = c.arg,
-            f = h.value;
-          return f && "object" == typeof f && n.call(f, "__await") ? r.resolve(f.__await).then(function (t) {
-            e("next", t, a, u);
-          }, function (t) {
-            e("throw", t, a, u);
-          }) : r.resolve(f).then(function (t) {
-            h.value = t, a(h);
-          }, function (t) {
-            return e("throw", t, a, u);
-          });
-        }
-        u(c.arg);
-      }
-      var o;
-      c(this, "_invoke", function (t, n) {
-        function i() {
-          return new r(function (r, o) {
-            e(t, n, r, o);
-          });
-        }
-        return o = o ? o.then(i, i) : i();
-      }, !0);
-    }
-    function d(r, e) {
-      var n = e.method,
-        o = r.i[n];
-      if (o === t) return e.delegate = null, "throw" === n && r.i.return && (e.method = "return", e.arg = t, d(r, e), "throw" === e.method) || "return" !== n && (e.method = "throw", e.arg = new TypeError("The iterator does not provide a '" + n + "' method")), f;
-      var i = s(o, r.i, e.arg);
-      if ("throw" === i.type) return e.method = "throw", e.arg = i.arg, e.delegate = null, f;
-      var a = i.arg;
-      return a ? a.done ? (e[r.r] = a.value, e.next = r.n, "return" !== e.method && (e.method = "next", e.arg = t), e.delegate = null, f) : a : (e.method = "throw", e.arg = new TypeError("iterator result is not an object"), e.delegate = null, f);
-    }
-    function w(t) {
-      this.tryEntries.push(t);
-    }
-    function m(r) {
-      var e = r[4] || {};
-      e.type = "normal", e.arg = t, r[4] = e;
-    }
-    function Context(t) {
-      this.tryEntries = [[-1]], t.forEach(w, this), this.reset(!0);
-    }
-    function x(r) {
-      if (null != r) {
-        var e = r[i];
-        if (e) return e.call(r);
-        if ("function" == typeof r.next) return r;
-        if (!isNaN(r.length)) {
-          var o = -1,
-            a = function e() {
-              for (; ++o < r.length;) if (n.call(r, o)) return e.value = r[o], e.done = !1, e;
-              return e.value = t, e.done = !0, e;
-            };
-          return a.next = a;
-        }
-      }
-      throw new TypeError(typeof r + " is not iterable");
-    }
-    return GeneratorFunction.prototype = GeneratorFunctionPrototype, c(v, "constructor", GeneratorFunctionPrototype), c(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = c(GeneratorFunctionPrototype, u, "GeneratorFunction"), r.isGeneratorFunction = function (t) {
-      var r = "function" == typeof t && t.constructor;
-      return !!r && (r === GeneratorFunction || "GeneratorFunction" === (r.displayName || r.name));
-    }, r.mark = function (t) {
-      return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, c(t, u, "GeneratorFunction")), t.prototype = Object.create(v), t;
-    }, r.awrap = function (t) {
-      return {
-        __await: t
-      };
-    }, g(AsyncIterator.prototype), c(AsyncIterator.prototype, a, function () {
-      return this;
-    }), r.AsyncIterator = AsyncIterator, r.async = function (t, e, n, o, i) {
-      void 0 === i && (i = Promise);
-      var a = new AsyncIterator(h(t, e, n, o), i);
-      return r.isGeneratorFunction(e) ? a : a.next().then(function (t) {
-        return t.done ? t.value : a.next();
-      });
-    }, g(v), c(v, u, "Generator"), c(v, i, function () {
-      return this;
-    }), c(v, "toString", function () {
+    }), _regeneratorDefine(u, "toString", function () {
       return "[object Generator]";
-    }), r.keys = function (t) {
-      var r = Object(t),
-        e = [];
-      for (var n in r) e.unshift(n);
-      return function t() {
-        for (; e.length;) if ((n = e.pop()) in r) return t.value = n, t.done = !1, t;
-        return t.done = !0, t;
+    }), (_regenerator = function () {
+      return {
+        w: i,
+        m: f
       };
-    }, r.values = x, Context.prototype = {
-      constructor: Context,
-      reset: function (r) {
-        if (this.prev = this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(m), !r) for (var e in this) "t" === e.charAt(0) && n.call(this, e) && !isNaN(+e.slice(1)) && (this[e] = t);
-      },
-      stop: function () {
-        this.done = !0;
-        var t = this.tryEntries[0][4];
-        if ("throw" === t.type) throw t.arg;
-        return this.rval;
-      },
-      dispatchException: function (r) {
-        if (this.done) throw r;
-        var e = this;
-        function n(t) {
-          a.type = "throw", a.arg = r, e.next = t;
+    })();
+  }
+  function _regeneratorDefine(e, r, n, t) {
+    var i = Object.defineProperty;
+    try {
+      i({}, "", {});
+    } catch (e) {
+      i = 0;
+    }
+    _regeneratorDefine = function (e, r, n, t) {
+      if (r) i ? i(e, r, {
+        value: n,
+        enumerable: !t,
+        configurable: !t,
+        writable: !t
+      }) : e[r] = n;else {
+        function o(r, n) {
+          _regeneratorDefine(e, r, function (e) {
+            return this._invoke(r, n, e);
+          });
         }
-        for (var o = e.tryEntries.length - 1; o >= 0; --o) {
-          var i = this.tryEntries[o],
-            a = i[4],
-            u = this.prev,
-            c = i[1],
-            h = i[2];
-          if (-1 === i[0]) return n("end"), !1;
-          if (!c && !h) throw Error("try statement without catch or finally");
-          if (null != i[0] && i[0] <= u) {
-            if (u < c) return this.method = "next", this.arg = t, n(c), !0;
-            if (u < h) return n(h), !1;
-          }
-        }
-      },
-      abrupt: function (t, r) {
-        for (var e = this.tryEntries.length - 1; e >= 0; --e) {
-          var n = this.tryEntries[e];
-          if (n[0] > -1 && n[0] <= this.prev && this.prev < n[2]) {
-            var o = n;
-            break;
-          }
-        }
-        o && ("break" === t || "continue" === t) && o[0] <= r && r <= o[2] && (o = null);
-        var i = o ? o[4] : {};
-        return i.type = t, i.arg = r, o ? (this.method = "next", this.next = o[2], f) : this.complete(i);
-      },
-      complete: function (t, r) {
-        if ("throw" === t.type) throw t.arg;
-        return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && r && (this.next = r), f;
-      },
-      finish: function (t) {
-        for (var r = this.tryEntries.length - 1; r >= 0; --r) {
-          var e = this.tryEntries[r];
-          if (e[2] === t) return this.complete(e[4], e[3]), m(e), f;
-        }
-      },
-      catch: function (t) {
-        for (var r = this.tryEntries.length - 1; r >= 0; --r) {
-          var e = this.tryEntries[r];
-          if (e[0] === t) {
-            var n = e[4];
-            if ("throw" === n.type) {
-              var o = n.arg;
-              m(e);
-            }
-            return o;
-          }
-        }
-        throw Error("illegal catch attempt");
-      },
-      delegateYield: function (r, e, n) {
-        return this.delegate = {
-          i: x(r),
-          r: e,
-          n: n
-        }, "next" === this.method && (this.arg = t), f;
+        o("next", 0), o("throw", 1), o("return", 2);
       }
-    }, r;
+    }, _regeneratorDefine(e, r, n, t);
   }
   function _slicedToArray(r, e) {
     return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest();
@@ -1054,9 +895,9 @@
         uk: "Додати до історії"
       },
       trakttv_recommendations: {
-        ru: "Рекомендации TraktTV",
-        en: "TraktTV Recommendations",
-        uk: "Рекомендації TraktTV"
+        ru: "Рекомендации",
+        en: "Recommendations",
+        uk: "Рекомендації"
       },
       trakttv_no_recommendations: {
         ru: "Нет рекомендаций",
@@ -1203,41 +1044,38 @@
       return _fetchTraktCalendar.apply(this, arguments);
     }
     function _fetchTraktCalendar() {
-      _fetchTraktCalendar = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+      _fetchTraktCalendar = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
         var dateString;
-        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-          while (1) switch (_context2.prev = _context2.next) {
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.n) {
             case 0:
               dateString = getTodayString();
-              _context2.prev = 1;
-              _context2.next = 4;
+              _context2.p = 1;
+              _context2.n = 2;
               return api.get("/calendars/my/shows/".concat(dateString, "/").concat(DAYS, "?extended=images,full"));
-            case 4:
-              return _context2.abrupt("return", _context2.sent);
-            case 7:
-              _context2.prev = 7;
-              _context2.t0 = _context2["catch"](1);
+            case 2:
+              return _context2.a(2, _context2.v);
+            case 3:
+              _context2.p = 3;
+              _context2.v;
               Lampa.Noty.show(Lampa.Lang.translate('trakttv_calendar_error') || 'Trakt Calendar load error');
-              return _context2.abrupt("return", []);
-            case 11:
-            case "end":
-              return _context2.stop();
+              return _context2.a(2, []);
           }
-        }, _callee2, null, [[1, 7]]);
+        }, _callee2, null, [[1, 3]]);
       }));
       return _fetchTraktCalendar.apply(this, arguments);
     }
-    this.create = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+    this.create = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
       var _this = this;
       var traktData, episodes, groupedByDate, startDate, dates, i, d, y, m, day, hasAny;
-      return _regeneratorRuntime().wrap(function _callee$(_context) {
-        while (1) switch (_context.prev = _context.next) {
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
           case 0:
             if (this.activity) this.activity.loader(true);
-            _context.next = 3;
+            _context.n = 1;
             return fetchTraktCalendar();
-          case 3:
-            traktData = _context.sent;
+          case 1:
+            traktData = _context.v;
             episodes = prepareTimetableData(traktData);
             groupedByDate = groupEpisodesByDate(episodes);
             startDate = new Date();
@@ -1271,10 +1109,7 @@
             if (this.activity && typeof this.activity.toggle === 'function') {
               this.activity.toggle();
             }
-            return _context.abrupt("return", this.render());
-          case 21:
-          case "end":
-            return _context.stop();
+            return _context.a(2, this.render());
         }
       }, _callee, this);
     }));
@@ -1398,6 +1233,39 @@
   }
 
   /**
+   * Файл з SVG іконками для використання в плагіні
+   * Це дозволяє уникнути дублювання коду та легко змінювати іконки
+   */
+
+  // Стилі для заголовків з іконками
+  var HEADER_STYLE = 'display:flex; align-items:center; gap:10px;';
+  var ICON_STYLE = 'width:52px; height:52px;';
+
+  // Основна іконка Trakt.TV
+  var TRAKT_ICON = "<svg xmlns=\"http://www.w3.org/2000/svg\" id=\"Layer_2\" viewBox=\"0 0 48 48\" fill=\"currentColor\">\n  <g id=\"_x2D_-production\">\n    <path id=\"logomark.square.white\" class=\"cls-1\" d=\"M30.17,30.22l-1.46-1.46,19.16-19.17c-.05-.39-.13-.77-.23-1.15l-20.31,20.33,2.16,2.16-1.46,1.46-3.62-3.62L46.85,6.29c-.15-.3-.31-.6-.5-.88l-23.33,23.35,4.31,4.31-1.46,1.46-14.39-14.4,1.46-1.46,8.62,8.62L45.1,3.72c-2.07-2.29-5.05-3.72-8.37-3.72H11.27C5.05,0,0,5.05,0,11.27v25.48c0,6.22,5.05,11.26,11.27,11.26h25.47c6.22,0,11.27-5.04,11.27-11.26V12.38l-17.83,17.84ZM21.54,25.91l-7.91-7.93,1.46-1.46,7.91,7.92-1.46,1.47ZM23.69,23.74l-7.91-7.92,1.46-1.46,7.92,7.92-1.47,1.46ZM43.4,35.12c0,4.57-3.71,8.28-8.28,8.28H12.88c-4.56,0-8.28-3.71-8.28-8.28V12.88c0-4.57,3.71-8.28,8.28-8.28h20.78v2.08H12.88c-3.42,0-6.2,2.78-6.2,6.2v22.23c0,3.42,2.78,6.21,6.2,6.21h22.24c3.42,0,6.2-2.79,6.2-6.21v-3.51h2.08v3.51Z\"/>\n  </g>\n</svg>";
+
+  // Іконка для watchlist
+  var WATCHLIST_ICON = "<svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d=\"M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32l288 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-288 0c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z\"/></svg>";
+
+  // Іконка для історії (галочка)
+  var HISTORY_ICON = "<svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 448 512\"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d=\"M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z\"/></svg>";
+
+  // Функція для створення заголовка з іконкою
+  function createHeaderWithIcon(icon, text) {
+    return "<div class=\"trakt-header\" style=\"".concat(HEADER_STYLE, "\"><div class=\"trakt-icon\" style=\"").concat(ICON_STYLE, "\">").concat(icon, "</div><div class=\"trakt-title\">").concat(text, "</div></div>");
+  }
+
+  // Експортуємо всі іконки та утиліти
+  var icons = {
+    TRAKT_ICON: TRAKT_ICON,
+    WATCHLIST_ICON: WATCHLIST_ICON,
+    HISTORY_ICON: HISTORY_ICON,
+    HEADER_STYLE: HEADER_STYLE,
+    ICON_STYLE: ICON_STYLE,
+    createHeaderWithIcon: createHeaderWithIcon
+  };
+
+  /**
    * Плагін для відображення рекомендацій на головній сторінці
    */
   var recommendationsPlugin = {
@@ -1451,7 +1319,7 @@
         return normalized;
       });
       return {
-        title: Lampa.Lang.translate('trakttv_recommendations'),
+        title: icons.createHeaderWithIcon(icons.TRAKT_ICON, Lampa.Lang.translate('trakttv_recommendations')),
         results: normalizedResults,
         line_type: 'trakttv_recommendations',
         onMore: function onMore() {
@@ -1564,7 +1432,7 @@
         });
       });
       return {
-        title: 'TraktTV Up Next',
+        title: icons.createHeaderWithIcon(icons.TRAKT_ICON, 'Up Next'),
         results: normalizedResults,
         line_type: 'trakttv_upnext',
         onMore: function onMore() {
@@ -1622,7 +1490,7 @@
   function addWatchlistButton(card) {
     var button = document.createElement('div');
     button.className = 'full-start__button selector watchlist-button';
-    button.innerHTML = "\n        <svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d=\"M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32l288 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-288 0c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z\"/></svg>\n        <span>".concat(Lampa.Lang.translate('trakt_watchlist_button'), "</span>\n    ");
+    button.innerHTML = "\n        ".concat(icons.WATCHLIST_ICON, "\n        <span>").concat(Lampa.Lang.translate('trakt_watchlist_button'), "</span>\n    ");
 
     // Перевіряємо чи є в списку
     api.inWatchlist(card.movie, function (isAdded) {
@@ -1669,7 +1537,7 @@
     addHistoryButton: function addHistoryButton(data) {
       var button = document.createElement('div');
       button.className = 'full-start__button selector trakt_history-button';
-      button.innerHTML = "\n               <svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 448 512\"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d=\"M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z\"/></svg> \n                <span>".concat(Lampa.Lang.translate('trakt_history_not_in'), "</span>\n");
+      button.innerHTML = "\n               ".concat(icons.HISTORY_ICON, " \n                <span>").concat(Lampa.Lang.translate('trakt_history_not_in'), "</span>\n");
 
       // Перевіряємо чи є в історії
       api.inHistory(data.movie, function (isInHistory) {
@@ -1785,9 +1653,9 @@
    * Модуль для роботи з меню TraktTV
    */
   function addMenuItems() {
-    var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.520.679.684v-.005z\"></path></g></svg></div>\n        <div class=\"menu__text\">Watchlist</div>\n    </li>");
-    var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.520.679.684v-.005z\"></path></g></svg></div>\n        <div class=\"menu__text\">Up Next</div>\n    </li>");
-    var timetable = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.520.679.684v-.005z\"></path></g></svg></div>\n    </div>\n    <div class=\"menu__text\">Calendar</div>\n    </li>");
+    var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">Watchlist</div>\n    </li>"));
+    var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">Up Next</div>\n    </li>"));
+    var timetable = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n    </div>\n    <div class=\"menu__text\">Calendar</div>\n    </li>"));
     timetable.on('hover:enter', function () {
       Lampa.Activity.push({
         url: '',
@@ -1828,7 +1696,7 @@
       component: 'trakttv_recommendations',
       toggleOption: 'trakttv_show_recommendations'
     }];
-    var combineButton = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\"><svg viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.520.679.684v-.005z\"></path></g></svg></div>\n    </div>\n    <div class=\"menu__text\">TraktTV</div>\n    </li>");
+    var combineButton = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">TraktTV</div>\n    </li>"));
     combineButton.on('hover:enter', function () {
       Lampa.Select.show({
         title: 'TraktTV',
@@ -1881,7 +1749,7 @@
     Lampa.SettingsApi.addComponent({
       component: 'trakt',
       name: 'Trakt.TV',
-      icon: "<svg style=\"filter:invert(0);\" fill=\"currentColor\" viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><title>Trakt icon</title><path fill=\"currentColor\" d=\"M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm0-22.789C6.05 1.211 1.211 6.05 1.211 12S6.05 22.79 12 22.79 22.79 17.95 22.79 12 17.95 1.211 12 1.211zm-7.11 17.32c1.756 1.92 4.294 3.113 7.11 3.113 1.439 0 2.801-.313 4.027-.876l-6.697-6.68-4.44 4.443zm14.288-.067c1.541-1.71 2.484-3.99 2.484-6.466 0-3.885-2.287-7.215-5.568-8.76l-6.089 6.076 9.164 9.15h.009zm-9.877-8.429L4.227 15.09l-.679-.68 5.337-5.336 6.23-6.225c-.978-.328-2.02-.509-3.115-.509C6.663 2.337 2.337 6.663 2.337 12c0 2.172.713 4.178 1.939 5.801l5.056-5.055.359.329 7.245 7.245c.15-.082.285-.164.42-.266L9.33 12.05l-4.854 4.855-.679-.679 5.535-5.535.359.331 8.46 8.437c.135-.1.255-.215.375-.316L9.39 10.027l-.083.015-.006-.007zm3.047 1.028l-.678-.676 4.788-4.79.679.689-4.789 4.785v-.008zm4.542-6.578l-5.52 5.52-.68-.679 5.521-5.52.679.684v-.005z\"></path></g></svg>"
+      icon: icons.TRAKT_ICON
     });
 
     //Користувацька інфа (user + stats) через custom param
