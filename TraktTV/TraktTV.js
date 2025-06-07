@@ -475,9 +475,33 @@
       })
     };
   }
+
+  // Функція для отримання історії серіалу за TMDB ID
+  function getShowHistory(tmdbId) {
+    return new Promise(function (resolve, reject) {
+      // Спочатку отримуємо Trakt ID за TMDB ID
+      requestApi('GET', "/search/tmdb/".concat(tmdbId, "?type=show")).then(function (response) {
+        if (response && response.length > 0 && response[0].show && response[0].show.ids.trakt) {
+          var traktId = response[0].show.ids.trakt;
+
+          // Отримуємо історію серіалу за Trakt ID
+          requestApi('GET', "/sync/history/shows/".concat(traktId)).then(function (historyData) {
+            resolve(historyData);
+          })["catch"](function (error) {
+            reject(error);
+          });
+        } else {
+          reject(new Error('Show not found in Trakt'));
+        }
+      })["catch"](function (error) {
+        reject(error);
+      });
+    });
+  }
   var api = {
     addToHistory: addToHistory,
     removeFromHistory: removeFromHistory,
+    getShowHistory: getShowHistory,
     get: function get(url) {
       var unauthorized = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
       return requestApi('GET', url, {}, unauthorized);
@@ -1770,6 +1794,41 @@
   };
 
   var TraktHistory = {
+    // Функція для відображення прогресу перегляду серіалу
+    showWatchProgress: function showWatchProgress(data, element) {
+      // Перевіряємо чи це серіал
+      if (data.movie && data.movie.first_air_date && element.object.method === 'tv') {
+        // Отримуємо історію серіалу
+        api.getShowHistory(data.movie.id).then(function (historyData) {
+          if (historyData && historyData.length > 0) {
+            // Отримуємо останній переглянутий епізод
+            var lastWatched = historyData[0];
+            if (lastWatched && lastWatched.episode) {
+              var season = lastWatched.episode.season;
+              var episode = lastWatched.episode.number;
+
+              // Створюємо елемент для відображення прогресу
+              var progressElement = document.createElement('div');
+              progressElement.className = 'full-start-new__details trakt';
+              progressElement.innerHTML = "\n                                <div class=\"trakt-icon\" style=\"width:48px; height:48px;\">".concat(icons.TRAKT_ICON, "</div>\n                                <span>").concat(Lampa.Lang.translate('full_season'), ": ").concat(season, "</span><span class=\"full-start-new__split\">\u25CF</span>\n                                <span>").concat(Lampa.Lang.translate('full_episode'), ": ").concat(episode, "</span>\n                            ");
+
+              // Знаходимо елемент після якого вставити прогрес
+              var taglineElement = element.object.activity.render().find('.full-start-new__rate-line');
+              if (taglineElement.length) {
+                // Перевіряємо чи вже є елемент прогресу
+                var existingProgress = element.object.activity.render().find('.full-start-new__details.trakt');
+                if (existingProgress.length) {
+                  existingProgress.remove();
+                }
+                taglineElement.after(progressElement);
+              }
+            }
+          }
+        })["catch"](function (error) {
+          console.error('Error getting show history:', error);
+        });
+      }
+    },
     addHistoryButton: function addHistoryButton(data) {
       var button = document.createElement('div');
       button.className = 'full-start__button selector trakt_history-button';
@@ -2263,12 +2322,21 @@
       // Додаємо нову кнопку
       var historyButton = TraktHistory.addHistoryButton(e.data);
       e.object.activity.render().find('.full-start-new__buttons').append(historyButton);
+
+      // Додаємо прогрес перегляду для серіалів
+      if (e.object.method === 'tv') {
+        TraktHistory.showWatchProgress(e.data, e);
+      }
     }
   };
 
   //LampaJS plugin for Trakt.TV
   function startPlugin() {
     window.plugin_trakt_ready = true;
+
+    // Додаємо стилі
+    Lampa.Template.add('trakt_style', "<style>.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}</style>");
+    $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     // Реєструємо плагін для рекомендацій
     Lampa.Manifest.plugins = recommendationsPlugin;
