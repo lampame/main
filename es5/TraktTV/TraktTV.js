@@ -1168,6 +1168,11 @@
         ru: "Показывать рекомендации TraktTV на главной",
         en: "Show TraktTV recommendations on main page",
         uk: "Показувати рекомендації TraktTV на головній сторінці"
+      },
+      trakttv_show_tv_progress: {
+        ru: "Показывать прогресс просмотра сериалов",
+        en: "Show TV progress",
+        uk: "Показувати прогрес прогляду серіалів"
       }
     });
   }
@@ -2241,7 +2246,7 @@
 
     // Параметр для відображення рекомендацій на головній
     Lampa.SettingsApi.addParam({
-      component: 'interface',
+      component: 'trakt',
       param: {
         name: 'trakttv_show_on_main',
         type: 'trigger',
@@ -2250,6 +2255,17 @@
       field: {
         name: Lampa.Lang.translate('trakttv_show_recommendations'),
         description: Lampa.Lang.translate('trakttv_show_recommendations')
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakttv_show_tv_progress',
+        type: 'trigger',
+        "default": true
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttv_show_tv_progress')
       }
     });
   }
@@ -2325,7 +2341,12 @@
 
       // Додаємо прогрес перегляду для серіалів
       if (e.object.method === 'tv') {
-        TraktHistory.showWatchProgress(e.data, e);
+        // Перевіряємо налаштування trakttv_show_tv_progress
+        var showProgress = Lampa.Storage.field('trakttv_show_tv_progress');
+        // Показуємо прогрес, якщо налаштування не існує або дорівнює true
+        if (showProgress === undefined || showProgress === true) {
+          TraktHistory.showWatchProgress(e.data, e);
+        }
       }
     }
   };
