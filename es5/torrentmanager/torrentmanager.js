@@ -55,10 +55,10 @@
           zh: "RPC 路径"
         },
         TransmissionRPCRouteDescription: {
-          ru: "Изменение пути API. Не трогать без необходимости",
-          en: "Change api route. Do not change without need",
-          uk: "Змінити маршрут API. Не чіпати без нагальної потреби",
-          zh: "更改API路径。如无必要，请勿更改"
+          ru: "Изменение пути API. Не трогать без необходимости, если используете KeenDNS указать /app/transmission/rpc",
+          en: "Change api route. Do not change without need, if you use KeenDNS, specify /app/transmission/rpc",
+          uk: "Змінити маршрут API. Не чіпати без нагальної потреби, якщо ви використовуєте KeenDNS, вкажіть /app/transmission/rpc",
+          zh: "更改API路径。如无必要，请勿更改, 如使用 KeenDNS，请指定 /app/transmission/rpc"
         },
         //Auth
         AuthSuccess: {
