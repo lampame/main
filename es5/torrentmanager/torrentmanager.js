@@ -3517,13 +3517,13 @@
     }
     function _startClient() {
       _startClient = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(client) {
-        var result, _yield$Promise$all, _yield$Promise$all2, qbData, qbInfo, _yield$Promise$all3, _yield$Promise$all4, trData, trInfo, _t, _t2;
+        var result, _yield$Promise$all, _yield$Promise$all2, qbData, qbInfo, _yield$Promise$all3, _yield$Promise$all4, trData, trInfo, _yield$Promise$all5, _yield$Promise$all6, keData, keInfo, _t, _t2;
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.n) {
             case 0:
               _context2.p = 0;
               _t = client;
-              _context2.n = _t === 'qBittorent' ? 1 : _t === 'transmission' ? 3 : _t === 'synology' ? 5 : 7;
+              _context2.n = _t === 'qBittorent' ? 1 : _t === 'transmission' ? 3 : _t === 'synology' ? 5 : _t === 'keenetic' ? 7 : 9;
               break;
             case 1:
               _context2.n = 2;
@@ -3537,7 +3537,7 @@
                 data: qbData,
                 info: qbInfo
               };
-              return _context2.a(3, 8);
+              return _context2.a(3, 10);
             case 3:
               _context2.n = 4;
               return Promise.all([Transmission.GetData(), Transmission.GetInfo()]);
@@ -3550,27 +3550,40 @@
                 data: trData,
                 info: trInfo
               };
-              return _context2.a(3, 8);
+              return _context2.a(3, 10);
             case 5:
               _context2.n = 6;
               return Synology.GetData();
             case 6:
               result = _context2.v;
-              return _context2.a(3, 8);
+              return _context2.a(3, 10);
             case 7:
-              throw new Error('Unknown client type');
+              _context2.n = 8;
+              return Promise.all([Keenetic.GetData(), Keenetic.GetInfo()]);
             case 8:
+              _yield$Promise$all5 = _context2.v;
+              _yield$Promise$all6 = _slicedToArray(_yield$Promise$all5, 2);
+              keData = _yield$Promise$all6[0];
+              keInfo = _yield$Promise$all6[1];
+              result = {
+                data: keData,
+                info: keInfo
+              };
+              return _context2.a(3, 10);
+            case 9:
+              throw new Error('Unknown client type');
+            case 10:
               console.log('TDM:', result);
               return _context2.a(2, result);
-            case 9:
-              _context2.p = 9;
+            case 11:
+              _context2.p = 11;
               _t2 = _context2.v;
               console.error('Error fetching client data:', _t2);
               throw _t2;
-            case 10:
+            case 12:
               return _context2.a(2);
           }
-        }, _callee2, null, [[0, 9]]);
+        }, _callee2, null, [[0, 11]]);
       }));
       return _startClient.apply(this, arguments);
     }
@@ -3609,6 +3622,16 @@
                             title: Lampa.Lang.translate('delete'),
                             action: 'delete'
                           });
+
+                          // Add play option for Keenetic client
+                          if (client === 'keenetic') {
+                            menu.push({
+                              title: Lampa.Lang.translate('play'),
+                              action: 'play'
+                            });
+                          }
+
+                          // Add full delete option for clients that support it
                           if (client !== 'synology') menu.push({
                             title: Lampa.Lang.translate('fullDelete'),
                             action: 'delete',
@@ -3630,6 +3653,8 @@
                                   return Transmission.SendCommand(a, torrent);
                                 case 'synology':
                                   return Synology.SendCommand(a, torrent);
+                                case 'keenetic':
+                                  return Keenetic.SendCommand(a, torrent);
                                 default:
                                   return 'Неизвестный клиент';
                               }
