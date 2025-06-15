@@ -1765,7 +1765,7 @@
     });
 
     // Додаємо обробник кліку
-    button.addEventListener('hover:enter', function () {
+    button.on('hover:enter', function () {
       var isAdded = button.classList.contains('added');
       if (isAdded) {
         api.removeFromWatchlist(card.movie, function () {
@@ -1856,7 +1856,9 @@
           button.querySelector('span').textContent = Lampa.Lang.translate('trakt_history_not_in');
         }
       }
-      button.addEventListener('hover:enter', function () {
+
+      // Обробник кліку для кнопки, що працює на всіх платформах
+      $(button).on('hover:enter', function () {
         var isInHistory = button.classList.contains('added');
         if (isInHistory) {
           // Вже в історії, видаляємо
