@@ -650,10 +650,14 @@
             }
           });
         }).then(function () {
-          resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
+          resolve(Lampa.Bell.push({
+            text: Lampa.Lang.translate('actionSentSuccessfully')
+          }));
         })["catch"](function (error) {
           console.log('TDM', 'Send command:', error);
-          reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+          reject(Lampa.Bell.push({
+            text: Lampa.Lang.translate('actionReturnedError')
+          }));
         });
       });
     }
@@ -678,14 +682,20 @@
         $.ajax(settings).done(function (response) {
           try {
             console.log('TDM', 'Send file:', response);
-            resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
+            resolve(Lampa.Bell.push({
+              text: Lampa.Lang.translate('actionSentSuccessfully')
+            }));
           } catch (error) {
             console.log('TDM', 'Send file:', error);
-            reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+            reject(Lampa.Bell.push({
+              text: Lampa.Lang.translate('actionReturnedError')
+            }));
           }
         }).fail(function (jqXHR, textStatus, errorThrown) {
           console.log('TDM', 'Send file:', textStatus, errorThrown, jqXHR);
-          reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+          reject(Lampa.Bell.push({
+            text: Lampa.Lang.translate('actionReturnedError')
+          }));
         });
       });
     }
@@ -1054,7 +1064,9 @@
                 method: 'session-get'
               });
             case 1:
-              Lampa.Noty.show(Lampa.Lang.translate('AuthSuccess'));
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('AuthSuccess')
+              });
               _context2.n = 3;
               break;
             case 2:
@@ -1065,11 +1077,15 @@
                 sessionId = _t2.getResponseHeader('X-Transmission-Session-Id');
                 if (sessionId) {
                   Lampa.Storage.set("".concat(CONFIG_PREFIX$1, "Key"), sessionId);
-                  Lampa.Noty.show(Lampa.Lang.translate('AuthSuccess'));
+                  Lampa.Bell.push({
+                    text: Lampa.Lang.translate('AuthSuccess')
+                  });
                 }
               } else {
                 console.error('TDM: Transmission auth error:', _t2);
-                Lampa.Noty.show(Lampa.Lang.translate('AuthDenied'));
+                Lampa.Bell.push({
+                  text: Lampa.Lang.translate('AuthDenied')
+                });
               }
             case 3:
               return _context2.a(2);
@@ -1223,7 +1239,9 @@
                 }
               });
             case 3:
-              Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully'));
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('actionSentSuccessfully')
+              });
               return _context6.a(2);
             case 4:
               _t5 = action.action;
@@ -1250,14 +1268,18 @@
                 }
               });
             case 10:
-              Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully'));
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('actionSentSuccessfully')
+              });
               _context6.n = 12;
               break;
             case 11:
               _context6.p = 11;
               _t6 = _context6.v;
               console.error('TDM: Error sending command:', _t6);
-              Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError'));
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('actionReturnedError')
+              });
               throw _t6;
             case 12:
               return _context6.a(2);
@@ -1327,14 +1349,18 @@
               }
               throw new Error("Failed to set labels: ".concat(labelResponse.result));
             case 7:
-              Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully'));
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('actionSentSuccessfully')
+              });
               _context7.n = 9;
               break;
             case 8:
               _context7.p = 8;
               _t7 = _context7.v;
               console.error('TDM: Error sending task:', _t7);
-              Lampa.Noty.show(_t7.message || Lampa.Lang.translate('actionReturnedError'));
+              Lampa.Bell.push({
+                text: _t7.message || Lampa.Lang.translate('actionReturnedError')
+              });
               throw _t7;
             case 9:
               return _context7.a(2);
@@ -1386,12 +1412,16 @@
             createDate: Math.floor(Date.now() / 1000)
           };
           Lampa.Storage.set("lmetorrentsynologyKey", JSON.stringify(data));
-          Lampa.Noty.show(Lampa.Lang.translate('AuthSuccess'));
+          Lampa.Bell.push({
+            text: Lampa.Lang.translate('AuthSuccess')
+          });
         },
         error: function error(jqXHR) {
           if (jqXHR.status !== 200) {
             console.log('TDM', 'Synology auth', jqXHR.status, jqXHR);
-            Lampa.Noty.show(Lampa.Lang.translate('AuthDenied'));
+            Lampa.Bell.push({
+              text: Lampa.Lang.translate('AuthDenied')
+            });
           }
         }
       });
@@ -1436,14 +1466,20 @@
         $.ajax(settings).done(function (response) {
           response = JSON.parse(response);
           try {
-            resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
+            resolve(Lampa.Bell.push({
+              text: Lampa.Lang.translate('actionSentSuccessfully')
+            }));
           } catch (error) {
             console.log('TDM', 'Send action:', error);
-            reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+            reject(Lampa.Bell.push({
+              text: Lampa.Lang.translate('actionReturnedError')
+            }));
           }
         }).fail(function (jqXHR, textStatus, errorThrown) {
           console.log('TDM', 'Send file:', textStatus, errorThrown, jqXHR);
-          reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+          reject(Lampa.Bell.push({
+            text: Lampa.Lang.translate('actionReturnedError')
+          }));
         });
       });
     }
@@ -1459,14 +1495,20 @@
         $.ajax(settings).done(function (response) {
           response = JSON.parse(response);
           try {
-            resolve(Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully')));
+            resolve(Lampa.Bell.push({
+              text: Lampa.Lang.translate('actionSentSuccessfully')
+            }));
           } catch (error) {
             console.log('TDM', 'Send action:', error);
-            reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+            reject(Lampa.Bell.push({
+              text: Lampa.Lang.translate('actionReturnedError')
+            }));
           }
         }).fail(function (jqXHR, textStatus, errorThrown) {
           console.log('TDM', 'Send file:', textStatus, errorThrown, jqXHR);
-          reject(Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError')));
+          reject(Lampa.Bell.push({
+            text: Lampa.Lang.translate('actionReturnedError')
+          }));
         });
       });
     }
@@ -1634,7 +1676,9 @@
                 method: 'session-get'
               });
             case 1:
-              Lampa.Noty.show(Lampa.Lang.translate('AuthSuccess'));
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('AuthSuccess')
+              });
               _context2.n = 3;
               break;
             case 2:
@@ -1645,11 +1689,15 @@
                 sessionId = _t2.getResponseHeader('X-Transmission-Session-Id');
                 if (sessionId) {
                   Lampa.Storage.set("".concat(CONFIG_PREFIX, "Key"), sessionId);
-                  Lampa.Noty.show(Lampa.Lang.translate('AuthSuccess'));
+                  Lampa.Bell.push({
+                    text: Lampa.Lang.translate('AuthSuccess')
+                  });
                 }
               } else {
                 console.error('TDM: Keenetic auth error:', _t2);
-                Lampa.Noty.show(Lampa.Lang.translate('AuthDenied'));
+                Lampa.Bell.push({
+                  text: Lampa.Lang.translate('AuthDenied')
+                });
               }
             case 3:
               return _context2.a(2);
@@ -1805,7 +1853,9 @@
                 }
               });
             case 3:
-              Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully'));
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('actionSentSuccessfully')
+              });
               return _context6.a(2);
             case 4:
               if (!(action.action === 'play')) {
@@ -1990,14 +2040,18 @@
                 }
               });
             case 15:
-              Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully'));
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('actionSentSuccessfully')
+              });
               _context6.n = 17;
               break;
             case 16:
               _context6.p = 16;
               _t6 = _context6.v;
               console.error('TDM: Error sending command:', _t6);
-              Lampa.Noty.show(Lampa.Lang.translate('actionReturnedError'));
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('actionReturnedError')
+              });
               throw _t6;
             case 17:
               return _context6.a(2);
@@ -2067,14 +2121,18 @@
               }
               throw new Error("Failed to set labels: ".concat(labelResponse.result));
             case 7:
-              Lampa.Noty.show(Lampa.Lang.translate('actionSentSuccessfully'));
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('actionSentSuccessfully')
+              });
               _context7.n = 9;
               break;
             case 8:
               _context7.p = 8;
               _t7 = _context7.v;
               console.error('TDM: Error sending task:', _t7);
-              Lampa.Noty.show(_t7.message || Lampa.Lang.translate('actionReturnedError'));
+              Lampa.Bell.push({
+                text: _t7.message || Lampa.Lang.translate('actionReturnedError')
+              });
               throw _t7;
             case 9:
               return _context7.a(2);
@@ -2352,7 +2410,9 @@
             component: "lmetorrentPanel",
             page: 1
           });
-          Lampa.Noty.show("Reloaded");
+          Lampa.Bell.push({
+            text: "Reloaded"
+          });
         });
         head.append(item.render());
         items.push(item);
@@ -2460,7 +2520,9 @@
               source: Lampa.Storage.field('source') || 'tmdb'
             });
           } else {
-            Lampa.Noty.show('No metadata available for this torrent');
+            Lampa.Bell.push({
+              text: 'No metadata available for this torrent'
+            });
           }
         } else {
           // Send command to the appropriate client
@@ -2474,7 +2536,9 @@
             case 'synology':
               return Synology.SendCommand(action, torrentData);
             default:
-              Lampa.Noty.show('Unknown client type');
+              Lampa.Bell.push({
+                text: 'Unknown client type'
+              });
               return null;
           }
         }
@@ -3448,9 +3512,13 @@
         window.location.assign(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link);
       } else {
         Lampa.Utils.copyTextToClipboard(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link, function () {
-          Lampa.Noty.show(Lampa.Lang.translate('copy_secuses'));
+          Lampa.Bell.push({
+            text: Lampa.Lang.translate('copy_secuses')
+          });
         }, function () {
-          Lampa.Noty.show(Lampa.Lang.translate('copy_error'));
+          Lampa.Bell.push({
+            text: Lampa.Lang.translate('copy_error')
+          });
         });
       }
     }

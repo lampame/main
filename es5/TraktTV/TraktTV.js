@@ -1323,7 +1323,9 @@
             case 3:
               _context2.p = 3;
               _context2.v;
-              Lampa.Noty.show(Lampa.Lang.translate('trakttv_calendar_error') || 'Trakt Calendar load error');
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('trakttv_calendar_error') || 'Trakt Calendar load error'
+              });
               return _context2.a(2, []);
           }
         }, _callee2, null, [[1, 3]]);
@@ -1769,17 +1771,25 @@
       var isAdded = button.classList.contains('added');
       if (isAdded) {
         api.removeFromWatchlist(card.movie, function () {
-          Lampa.Noty.show(Lampa.Lang.translate('trakt_watchlist_remove'));
+          Lampa.Bell.push({
+            text: Lampa.Lang.translate('trakt_watchlist_remove')
+          });
           updateButtonStyle(button, false);
         }, function () {
-          return Lampa.Noty.show('Помилка при видаленні');
+          return Lampa.Bell.push({
+            text: 'Помилка при видаленні'
+          });
         });
       } else {
         api.addToWatchlist(card.movie, function () {
-          Lampa.Noty.show(Lampa.Lang.translate('trakt_watchlist_add'));
+          Lampa.Bell.push({
+            text: Lampa.Lang.translate('trakt_watchlist_add')
+          });
           updateButtonStyle(button, true);
         }, function () {
-          return Lampa.Noty.show('Помилка при додаванні');
+          return Lampa.Bell.push({
+            text: 'Помилка при додаванні'
+          });
         });
       }
     });
@@ -1873,10 +1883,15 @@
           };
           if (_type === 'movie') {
             api.removeFromHistory(_apiData).then(function () {
-              Lampa.Noty.show(Lampa.Lang.translate('trakt_history_removed'));
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('trakt_history_removed')
+              });
               updateButtonStyle(button, false);
             })["catch"](function (err) {
-              Lampa.Noty.show(Lampa.Lang.translate('trakt_history_removeError'), err);
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('trakt_history_removeError'),
+                err: err
+              });
             });
           } else if (_type === 'show') {
             Lampa.Select.show({
@@ -1893,12 +1908,17 @@
               }],
               onSelect: function onSelect(a) {
                 api.removeFromHistory(_apiData, a.action).then(function () {
-                  Lampa.Noty.show(Lampa.Lang.translate('trakt_history_removed', {
-                    type: a.title
-                  }));
+                  Lampa.Bell.push({
+                    text: Lampa.Lang.translate('trakt_history_removed', {
+                      type: a.title
+                    })
+                  });
                   updateButtonStyle(button, false);
                 })["catch"](function (err) {
-                  Lampa.Noty.show(Lampa.Lang.translate('trakt_history_removeError'), err);
+                  Lampa.Bell.push({
+                    text: Lampa.Lang.translate('trakt_history_removeError'),
+                    err: err
+                  });
                 });
               },
               onBack: function onBack() {
@@ -1919,10 +1939,15 @@
         };
         if (type === 'movie') {
           api.addToHistory(apiData).then(function () {
-            Lampa.Noty.show(Lampa.Lang.translate('trakt_history_added'));
+            Lampa.Bell.push({
+              text: Lampa.Lang.translate('trakt_history_added')
+            });
             updateButtonStyle(button, true);
           })["catch"](function (err) {
-            Lampa.Noty.show(Lampa.Lang.translate('trakt_history_addError'), err);
+            Lampa.Bell.push({
+              text: Lampa.Lang.translate('trakt_history_addError'),
+              err: err
+            });
           });
         } else if (type === 'show') {
           Lampa.Select.show({
@@ -1939,12 +1964,17 @@
             }],
             onSelect: function onSelect(a) {
               api.addToHistory(apiData, a.action).then(function () {
-                Lampa.Noty.show(Lampa.Lang.translate('trakt_history_added', {
-                  type: a.title
-                }));
+                Lampa.Bell.push({
+                  text: Lampa.Lang.translate('trakt_history_added', {
+                    type: a.title
+                  })
+                });
                 updateButtonStyle(button, true);
               })["catch"](function (err) {
-                Lampa.Noty.show(Lampa.Lang.translate('trakt_history_addError'), err);
+                Lampa.Bell.push({
+                  text: Lampa.Lang.translate('trakt_history_addError'),
+                  err: err
+                });
               });
             },
             onBack: function onBack() {
@@ -2025,10 +2055,14 @@
 
           // Перемикаємо значення
           if (currentValue === true) {
-            Lampa.Noty.show(Lampa.Lang.translate('trakt_componentDisable'));
+            Lampa.Bell.push({
+              text: Lampa.Lang.translate('trakt_componentDisable')
+            });
             Lampa.Storage.set(toggleKey, false);
           } else {
-            Lampa.Noty.show(Lampa.Lang.translate('trakt_componentEnable'));
+            Lampa.Bell.push({
+              text: Lampa.Lang.translate('trakt_componentEnable')
+            });
             Lampa.Storage.set(toggleKey, true);
           }
         },
@@ -2145,7 +2179,9 @@
           });
           pollAuth(response);
         })["catch"](function (err) {
-          Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthError'));
+          Lampa.Bell.push({
+            text: Lampa.Lang.translate('trakttvAuthError')
+          });
         });
       }
     });
@@ -2213,7 +2249,9 @@
       },
       onChange: function onChange() {
         api.auth.logout();
-        Lampa.Noty.show(Lampa.Lang.translate('trakttvLogoutNoty'));
+        Lampa.Bell.push({
+          text: Lampa.Lang.translate('trakttvLogoutNoty')
+        });
         Lampa.Settings.update();
       }
     });
@@ -2241,7 +2279,9 @@
           Lampa.Storage.set('trakt_token', null);
           Lampa.Storage.set('trakt_refresh_token', null);
         }
-        Lampa.Noty.show(Lampa.Lang.translate('trakttvFullClearNoty'));
+        Lampa.Bell.push({
+          text: Lampa.Lang.translate('trakttvFullClearNoty')
+        });
         Lampa.Settings.update();
       }
     });
@@ -2281,14 +2321,18 @@
         Lampa.Storage.set('trakt_refresh_token', response.refresh_token);
         Lampa.Modal.close();
         Lampa.Settings.update();
-        Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthOk'));
+        Lampa.Bell.push({
+          text: Lampa.Lang.translate('trakttvAuthOk')
+        });
       })["catch"](function (err) {
         if (err.status == 400) {
           return; // Очікуємо
         }
         clearInterval(interval);
         Lampa.Modal.close();
-        Lampa.Noty.show(Lampa.Lang.translate('trakttvAuthError'));
+        Lampa.Bell.push({
+          text: Lampa.Lang.translate('trakttvAuthError')
+        });
       });
     }, (data.interval + 1) * 1000);
   }
