@@ -256,6 +256,7 @@
         },
         watched_at: new Date().toISOString()
       });
+      return requestApi('POST', '/sync/history', body);
     } else if (data.method === 'show') {
       if (mode === 'all') {
         // Додаємо весь серіал в історію
@@ -265,41 +266,154 @@
           },
           watched_at: new Date().toISOString()
         });
-      } else if (mode === 'last_season') {
-        // Отримуємо інформацію про серіал для визначення останнього сезону
-        return getShowInfo(data.id).then(function (showInfo) {
-          // Якщо є інформація про сезони, використовуємо останній доступний
-          var lastSeason = showInfo.last_season || data.season || 1;
-          body.shows.push({
-            ids: {
-              tmdb: data.id
-            },
-            seasons: [{
-              number: lastSeason,
-              watched_at: new Date().toISOString()
-            }]
+        return requestApi('POST', '/sync/history', body);
+      } else if (mode === 'last_season' || mode === 'last_episode') {
+        // Спочатку отримуємо історію серіалу, щоб визначити які епізоди вже переглянуті
+        return getShowHistory(data.id).then(function (historyData) {
+          // Отримуємо інформацію про серіал для визначення всіх сезонів та епізодів
+          return getShowInfo(data.id).then(function (showInfo) {
+            // Отримуємо останній сезон
+            var lastSeason = showInfo.last_season || data.season || 1;
+
+            // Отримуємо список всіх переглянутих епізодів
+            var watchedEpisodes = {};
+            if (historyData && historyData.length > 0) {
+              historyData.forEach(function (item) {
+                if (item.episode) {
+                  var s = item.episode.season;
+                  var e = item.episode.number;
+                  if (!watchedEpisodes[s]) {
+                    watchedEpisodes[s] = [];
+                  }
+                  if (!watchedEpisodes[s].includes(e)) {
+                    watchedEpisodes[s].push(e);
+                  }
+                }
+              });
+            }
+
+            // Отримуємо інформацію про останній сезон
+            var seasonUrl = Lampa.TMDB.api('tv/' + data.id + '/season/' + lastSeason + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'ru'));
+            return new Promise(function (resolve, reject) {
+              var network = new Lampa.Reguest();
+              network.silent(seasonUrl, function (seasonData) {
+                if (seasonData && seasonData.episodes && seasonData.episodes.length > 0) {
+                  // Знаходимо всі епізоди сезону
+                  var allEpisodes = seasonData.episodes.map(function (e) {
+                    return e.episode_number;
+                  }).sort(function (a, b) {
+                    return a - b;
+                  });
+
+                  // Знаходимо невідмічені епізоди
+                  var unwatchedEpisodes = allEpisodes.filter(function (e) {
+                    return !watchedEpisodes[lastSeason] || !watchedEpisodes[lastSeason].includes(e);
+                  });
+                  if (mode === 'last_episode' && unwatchedEpisodes.length > 0) {
+                    // Додаємо перший невідмічений епізод
+                    var nextEpisode = unwatchedEpisodes[0];
+                    body.shows.push({
+                      ids: {
+                        tmdb: data.id
+                      },
+                      seasons: [{
+                        number: lastSeason,
+                        episodes: [{
+                          number: nextEpisode,
+                          watched_at: new Date().toISOString()
+                        }]
+                      }]
+                    });
+                  } else if (mode === 'last_season' && unwatchedEpisodes.length > 0) {
+                    // Додаємо всі невідмічені епізоди сезону
+                    body.shows.push({
+                      ids: {
+                        tmdb: data.id
+                      },
+                      seasons: [{
+                        number: lastSeason,
+                        episodes: unwatchedEpisodes.map(function (e) {
+                          return {
+                            number: e,
+                            watched_at: new Date().toISOString()
+                          };
+                        })
+                      }]
+                    });
+                  } else {
+                    // Якщо всі епізоди вже переглянуті, додаємо весь сезон
+                    body.shows.push({
+                      ids: {
+                        tmdb: data.id
+                      },
+                      seasons: [{
+                        number: lastSeason,
+                        watched_at: new Date().toISOString()
+                      }]
+                    });
+                  }
+                  resolve(requestApi('POST', '/sync/history', body));
+                } else {
+                  // Якщо не вдалося отримати дані про епізоди, додаємо весь сезон
+                  body.shows.push({
+                    ids: {
+                      tmdb: data.id
+                    },
+                    seasons: [{
+                      number: lastSeason,
+                      watched_at: new Date().toISOString()
+                    }]
+                  });
+                  resolve(requestApi('POST', '/sync/history', body));
+                }
+              }, function () {
+                // У випадку помилки додаємо весь сезон
+                body.shows.push({
+                  ids: {
+                    tmdb: data.id
+                  },
+                  seasons: [{
+                    number: lastSeason,
+                    watched_at: new Date().toISOString()
+                  }]
+                });
+                resolve(requestApi('POST', '/sync/history', body));
+              });
+            });
           });
-          return requestApi('POST', '/sync/history', body);
-        });
-      } else if (mode === 'last_episode') {
-        // Отримуємо інформацію про серіал для визначення останнього епізоду
-        return getShowInfo(data.id).then(function (showInfo) {
-          // Якщо є інформація про сезони та епізоди, використовуємо останні доступні
-          var lastSeason = showInfo.last_season || data.season || 1;
-          var lastEpisode = showInfo.last_episode || data.episode || 1;
-          body.shows.push({
-            ids: {
-              tmdb: data.id
-            },
-            seasons: [{
-              number: lastSeason,
-              episodes: [{
-                number: lastEpisode,
-                watched_at: new Date().toISOString()
-              }]
-            }]
+        })["catch"](function (error) {
+          console.error('Error getting show history:', error);
+
+          // Fallback to original behavior if there's an error
+          return getShowInfo(data.id).then(function (showInfo) {
+            var lastSeason = showInfo.last_season || data.season || 1;
+            var lastEpisode = showInfo.last_episode || data.episode || 1;
+            if (mode === 'last_season') {
+              body.shows.push({
+                ids: {
+                  tmdb: data.id
+                },
+                seasons: [{
+                  number: lastSeason,
+                  watched_at: new Date().toISOString()
+                }]
+              });
+            } else if (mode === 'last_episode') {
+              body.shows.push({
+                ids: {
+                  tmdb: data.id
+                },
+                seasons: [{
+                  number: lastSeason,
+                  episodes: [{
+                    number: lastEpisode,
+                    watched_at: new Date().toISOString()
+                  }]
+                }]
+              });
+            }
+            return requestApi('POST', '/sync/history', body);
           });
-          return requestApi('POST', '/sync/history', body);
         });
       }
     }
@@ -383,6 +497,7 @@
           tmdb: data.id
         }
       });
+      return requestApi('POST', '/sync/history/remove', body);
     } else if (data.method === 'show') {
       if (mode === 'all') {
         body.shows.push({
@@ -390,39 +505,100 @@
             tmdb: data.id
           }
         });
-      } else if (mode === 'last_season') {
-        // Отримуємо інформацію про серіал для визначення останнього сезону
-        return getShowInfo(data.id).then(function (showInfo) {
-          // Якщо є інформація про сезони, використовуємо останній доступний
-          var lastSeason = showInfo.last_season || data.season || 1;
-          body.shows.push({
-            ids: {
-              tmdb: data.id
-            },
-            seasons: [{
-              number: lastSeason
-            }]
+        return requestApi('POST', '/sync/history/remove', body);
+      } else if (mode === 'last_season' || mode === 'last_episode') {
+        // Спочатку отримуємо історію серіалу, щоб визначити які епізоди вже переглянуті
+        return getShowHistory(data.id).then(function (historyData) {
+          // Отримуємо інформацію про серіал для визначення всіх сезонів та епізодів
+          return getShowInfo(data.id).then(function (showInfo) {
+            // Отримуємо останній сезон
+            var lastSeason = showInfo.last_season || data.season || 1;
+
+            // Отримуємо список всіх переглянутих епізодів
+            var watchedEpisodes = {};
+            if (historyData && historyData.length > 0) {
+              historyData.forEach(function (item) {
+                if (item.episode) {
+                  var s = item.episode.season;
+                  var e = item.episode.number;
+                  if (!watchedEpisodes[s]) {
+                    watchedEpisodes[s] = [];
+                  }
+                  if (!watchedEpisodes[s].includes(e)) {
+                    watchedEpisodes[s].push(e);
+                  }
+                }
+              });
+            }
+            if (mode === 'last_episode' && watchedEpisodes[lastSeason] && watchedEpisodes[lastSeason].length > 0) {
+              // Сортуємо епізоди за номером (від більшого до меншого)
+              var sortedEpisodes = _toConsumableArray(watchedEpisodes[lastSeason]).sort(function (a, b) {
+                return b - a;
+              });
+              // Видаляємо останній переглянутий епізод
+              var lastWatchedEpisode = sortedEpisodes[0];
+              body.shows.push({
+                ids: {
+                  tmdb: data.id
+                },
+                seasons: [{
+                  number: lastSeason,
+                  episodes: [{
+                    number: lastWatchedEpisode
+                  }]
+                }]
+              });
+            } else if (mode === 'last_season' && watchedEpisodes[lastSeason] && watchedEpisodes[lastSeason].length > 0) {
+              // Видаляємо всі переглянуті епізоди останнього сезону
+              body.shows.push({
+                ids: {
+                  tmdb: data.id
+                },
+                seasons: [{
+                  number: lastSeason
+                }]
+              });
+            } else {
+              // Якщо немає переглянутих епізодів, видаляємо весь серіал з історії
+              body.shows.push({
+                ids: {
+                  tmdb: data.id
+                }
+              });
+            }
+            return requestApi('POST', '/sync/history/remove', body);
           });
-          return requestApi('POST', '/sync/history/remove', body);
-        });
-      } else if (mode === 'last_episode') {
-        // Отримуємо інформацію про серіал для визначення останнього епізоду
-        return getShowInfo(data.id).then(function (showInfo) {
-          // Якщо є інформація про сезони та епізоди, використовуємо останні доступні
-          var lastSeason = showInfo.last_season || data.season || 1;
-          var lastEpisode = showInfo.last_episode || data.episode || 1;
-          body.shows.push({
-            ids: {
-              tmdb: data.id
-            },
-            seasons: [{
-              number: lastSeason,
-              episodes: [{
-                number: lastEpisode
-              }]
-            }]
+        })["catch"](function (error) {
+          console.error('Error getting show history:', error);
+
+          // Fallback to original behavior if there's an error
+          return getShowInfo(data.id).then(function (showInfo) {
+            var lastSeason = showInfo.last_season || data.season || 1;
+            var lastEpisode = showInfo.last_episode || data.episode || 1;
+            if (mode === 'last_season') {
+              body.shows.push({
+                ids: {
+                  tmdb: data.id
+                },
+                seasons: [{
+                  number: lastSeason
+                }]
+              });
+            } else if (mode === 'last_episode') {
+              body.shows.push({
+                ids: {
+                  tmdb: data.id
+                },
+                seasons: [{
+                  number: lastSeason,
+                  episodes: [{
+                    number: lastEpisode
+                  }]
+                }]
+              });
+            }
+            return requestApi('POST', '/sync/history/remove', body);
           });
-          return requestApi('POST', '/sync/history/remove', body);
         });
       }
     }
