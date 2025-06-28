@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    function main$7() {
+    function main$8() {
       Lampa.Lang.add({
         lme_EngData_desc: {
           ru: "Добавляет английское название произведения, и заменяет описание если оно отсутсвует",
@@ -52,35 +52,24 @@
           ru: "Добавляет рейтинги от mdblist.com. Бесплатный ключ можно получить на сайте",
           en: "Adds ratings from mdblist.com. You can get a free key on the site",
           uk: "Додає рейтинги від mdblist.com. Безкоштовний ключ можна отримати на сайті"
+        },
+        lme_streamingdiscovery_desc: {
+          ru: "Добавляет рейтинги от различных сервисов (IMDb, Metacritic, TMDB, Rotten Tomatoes и др.)",
+          en: "Adds ratings from various services (IMDb, Metacritic, TMDB, Rotten Tomatoes, etc.)",
+          uk: "Додає рейтинги від різних сервісів (IMDb, Metacritic, TMDB, Rotten Tomatoes тощо)"
         }
       });
     }
     var Lang = {
-      main: main$7
+      main: main$8
     };
 
-    function main$6() {
+    function main$7() {
       Lampa.SettingsApi.addComponent({
         component: "lme",
         name: 'Movie Enhancer',
         icon: '<svg height="200px" width="200px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 431.661 431.661" xml:space="preserve" fill="#000000"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <path style="fill:#ffffff;" d="M180.355,213.668l40.079,40.085L42.526,431.661L2.446,391.576L180.355,213.668z M228.877,245.316 l-40.079-40.085l68.905-68.911l40.091,40.079L228.877,245.316z"></path> <polygon style="fill:#ffffff;" points="380.066,218.525 391.999,218.519 391.999,181.309 429.215,181.309 429.215,169.376 391.999,169.376 391.999,132.166 380.066,132.166 380.066,169.376 342.862,169.376 342.862,181.309 380.066,181.309 "></polygon> <polygon style="fill:#ffffff;" points="393.282,260.424 393.282,248.49 356.073,248.49 356.073,211.281 344.145,211.281 344.145,248.49 306.93,248.49 306.93,260.424 344.145,260.424 344.145,297.633 356.073,297.633 356.073,260.424 "></polygon> <polygon style="fill:#ffffff;" points="302.956,37.209 265.741,37.209 265.741,0 253.807,0 253.807,37.209 216.603,37.209 216.603,49.143 253.807,49.143 253.807,86.353 265.741,86.353 265.741,49.143 302.956,49.143 "></polygon> <polygon style="fill:#ffffff;" points="223.853,73.148 186.638,73.148 186.638,35.932 174.71,35.932 174.71,73.148 137.495,73.148 137.495,85.076 174.71,85.076 174.71,122.291 186.638,122.291 186.638,85.076 223.853,85.076 "></polygon> </g> </g></svg>'
       });
-      //Quality
-      // Lampa.SettingsApi.addParam({
-      //     component: "lme",
-      //     param: {
-      //         name: "lme_quality",
-      //         type: "trigger",
-      //         default: false
-      //     },
-      //     field: {
-      //         name: 'Quality',
-      //         description: Lampa.Lang.translate('lme_quality_desc'),
-      //     },
-      //     onChange: function (value) {
-      //         Lampa.Settings.update();
-      //     },
-      // });
       //Quality Watchmode
       Lampa.SettingsApi.addParam({
         component: "lme",
@@ -126,6 +115,22 @@
         field: {
           name: 'Show time',
           description: Lampa.Lang.translate('lme_averageRuntime_desc')
+        },
+        onChange: function onChange(value) {
+          Lampa.Settings.update();
+        }
+      });
+      //Streaming Discovery Ratings
+      Lampa.SettingsApi.addParam({
+        component: "lme",
+        param: {
+          name: "lme_streamingdiscovery",
+          type: "trigger",
+          "default": false
+        },
+        field: {
+          name: 'Streaming Discovery Ratings',
+          description: Lampa.Lang.translate('lme_streamingdiscovery_desc')
         },
         onChange: function onChange(value) {
           Lampa.Settings.update();
@@ -231,7 +236,7 @@
       });
     }
     var CONFIG = {
-      main: main$6
+      main: main$7
     };
 
     function asyncGeneratorStep(n, t, e, r, o, a, c) {
@@ -420,7 +425,7 @@
         $(selector).append(quality);
       }
     }
-    function main$5() {
+    function main$6() {
       Lampa.Listener.follow("full", function (e) {
         if (e.type === "complite") {
           findBestQualityItem(e.object).then(function (bestItem) {
@@ -444,10 +449,10 @@
       });
     }
     var StreamQuality = {
-      main: main$5
+      main: main$6
     };
 
-    function main$4() {
+    function main$5() {
       Lampa.Listener.follow("full", function (cardData) {
         //if (e.type === "complite" && Lampa.Storage.field('source') !== 'cub')
         if (cardData.type === "complite" && Lampa.Storage.field('source') === 'tmdb') {
@@ -499,10 +504,10 @@
       });
     }
     var englishData = {
-      main: main$4
+      main: main$5
     };
 
-    function main$3() {
+    function main$4() {
       Lampa.Listener.follow("full", function (cardData) {
         if (cardData.type === "complite" && cardData.object.method === "tv") {
           var imdbId = cardData.data.movie.imdb_id;
@@ -536,10 +541,10 @@
       });
     }
     var averageRuntime = {
-      main: main$3
+      main: main$4
     };
 
-    function main$2() {
+    function main$3() {
       var allSources = ['tmdb', 'cub']; // Усі плеери
       var logos = {
         tmdb: "<svg width=\"161\" height=\"37\" viewBox=\"0 0 161 37\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\"> <path d=\"M10.0846 35.8986H17.8727V7.01351H27.9572V0H0V6.99324H10.0846V35.8986ZM38.1417 35.8986H45.9298V8.36149H46.0296L54.9659 35.8784H60.9568L70.1927 8.36149H70.2925V35.8784H78.0806V0H66.3485L58.1611 23.4122H58.0612L49.9237 0H38.1417V35.8986ZM89.0039 0.121622H100.686C103.406 0.125865 106.115 0.466206 108.754 1.13514C111.157 1.7138 113.421 2.77522 115.414 4.25676C117.34 5.72744 118.892 7.64602 119.937 9.85135C121.118 12.4714 121.689 15.3326 121.604 18.2128C121.658 20.8662 121.104 23.4961 119.987 25.8953C118.946 28.0542 117.453 29.9565 115.613 31.4696C113.73 33.0023 111.579 34.1611 109.273 34.8851C106.835 35.6708 104.292 36.064 101.734 36.0507H89.0039V0.121622ZM96.792 28.7027H100.786C102.466 28.7143 104.141 28.5273 105.778 28.1453C107.239 27.8443 108.621 27.2329 109.832 26.3513C110.988 25.4631 111.908 24.2961 112.508 22.9561C113.209 21.335 113.55 19.5772 113.506 17.8074C113.536 16.2216 113.194 14.6514 112.508 13.2264C111.885 11.9635 110.987 10.8612 109.882 10.0034C108.733 9.13749 107.437 8.49491 106.058 8.10811C104.537 7.67642 102.964 7.46152 101.385 7.46959H96.792V28.7027ZM132.887 0.121622H146.067C147.613 0.122387 149.158 0.234152 150.69 0.456081C152.142 0.647089 153.551 1.09291 154.853 1.77365C156.07 2.41433 157.102 3.36414 157.849 4.5304C158.677 5.95358 159.076 7.59212 158.997 9.24324C159.065 11.0819 158.473 12.883 157.329 14.3108C156.163 15.6827 154.625 16.6765 152.906 17.1689V17.2297C154.012 17.39 155.084 17.7323 156.081 18.2432C157.002 18.7125 157.831 19.3479 158.528 20.1182C159.218 20.8897 159.75 21.7922 160.095 22.7736C160.467 23.8129 160.653 24.9112 160.644 26.0169C160.704 27.6822 160.288 29.3295 159.446 30.7601C158.663 32.0054 157.603 33.0468 156.351 33.8007C155.035 34.6026 153.593 35.1683 152.087 35.473C150.535 35.8108 148.952 35.9807 147.365 35.9797H132.887V0.121622ZM140.675 14.4628H146.316C146.914 14.4661 147.511 14.3981 148.094 14.2601C148.651 14.1373 149.182 13.9142 149.661 13.6014C150.129 13.2951 150.516 12.8776 150.789 12.3851C151.082 11.8239 151.226 11.1955 151.209 10.5608C151.241 9.91579 151.088 9.27513 150.769 8.71622C150.46 8.2373 150.038 7.8438 149.541 7.57095C148.985 7.28738 148.389 7.09253 147.774 6.99324C147.165 6.87376 146.547 6.81268 145.927 6.81081H140.635L140.675 14.4628ZM140.675 29.3108H147.664C148.279 29.3125 148.892 29.2445 149.491 29.1081C150.087 28.9843 150.654 28.7433 151.159 28.3986C151.663 28.0612 152.083 27.6103 152.387 27.0811C152.715 26.4768 152.877 25.7943 152.856 25.1047C152.883 24.3773 152.664 23.6623 152.237 23.0777C151.818 22.5517 151.276 22.1405 150.66 21.8818C150.02 21.6112 149.349 21.4239 148.663 21.3243C147.985 21.2266 147.301 21.1758 146.616 21.1723H140.725L140.675 29.3108Z\" fill=\"currentColor\"/> </svg>",
@@ -601,10 +606,10 @@
       });
     }
     var sourceSwitch = {
-      main: main$2
+      main: main$3
     };
 
-    function main$1() {
+    function main$2() {
       Lampa.Listener.follow('full', function (e) {
         if (e.type === 'complite') {
           setTimeout(function () {
@@ -663,10 +668,10 @@
       });
     }
     var showButton = {
-      main: main$1
+      main: main$2
     };
 
-    function main() {
+    function main$1() {
       // Add CSS styles first
       var styleElement = $('<style>').text("\n        .card__lmerating {\n            position: absolute;\n            right: -0.8em;\n            padding: 0.4em 0.4em;\n            background: linear-gradient(90deg, #2c2c2c, #1a1a1a);\n            color: #fff;\n            font-size: 0.8em;\n            border-radius: 0.3em;\n            text-transform: uppercase;\n            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);\n        }\n\n        @media (max-width: 768px) {\n            .card__lmerating {\n                right: 0.2em;\n                font-size: 0.7em;\n            }\n        }\n\n        @media (max-width: 480px) {\n            .card__lmerating {\n                right: 0.5em;\n                font-size: 0.6em;\n            }\n        }\n    ");
       $('head').append(styleElement);
@@ -703,12 +708,134 @@
       });
     }
     var ratings = {
+      main: main$1
+    };
+
+    function main() {
+      console.log('StreamingDiscovery: Module initialized');
+
+      // Add CSS styles first
+      var styleElement = $('<style>').text("\n        .full-start-new__streaming-ratings {\n            display: flex;\n            align-items: center;\n            margin-bottom: 1em;\n            flex-wrap: wrap;\n        }\n        \n        .streaming-rating {\n            display: flex;\n            align-items: center;\n            margin-right: 1.5em;\n            margin-bottom: 0.5em;\n        }\n        \n        .streaming-rating__icon {\n            width: 2em;\n            height: 2em;\n            margin-right: 0.5em;\n            border-radius: 0.3em;\n            object-fit: contain;\n        }\n        \n        .streaming-rating__score {\n            font-size: 1.2em;\n            font-weight: bold;\n        }\n        \n        @media (max-width: 768px) {\n            .streaming-rating__icon {\n                width: 1.8em;\n                height: 1.8em;\n            }\n            \n            .streaming-rating__score {\n                font-size: 1.1em;\n            }\n        }\n        \n        @media (max-width: 480px) {\n            .streaming-rating__icon {\n                width: 1.5em;\n                height: 1.5em;\n            }\n            \n            .streaming-rating__score {\n                font-size: 1em;\n            }\n        }\n    ");
+      $('head').append(styleElement);
+      console.log('StreamingDiscovery: CSS styles added');
+
+      // Add streaming discovery listener
+      Lampa.Listener.follow("full", function (e) {
+        console.log('StreamingDiscovery: "full" event received', e.type);
+        var cardData = e.object;
+        if (e.type == "complite") {
+          console.log('StreamingDiscovery: Card data loaded', cardData);
+
+          // Get IMDB ID from card data
+          var imdbId = '';
+          if (cardData.card.imdb_id) {
+            imdbId = cardData.card.imdb_id;
+            console.log('StreamingDiscovery: Found IMDB ID in cardData.imdb_id', imdbId);
+          } else if (cardData.movie && cardData.movie.imdb_id) {
+            imdbId = cardData.movie.imdb_id;
+            console.log('StreamingDiscovery: Found IMDB ID in cardData.movie.imdb_id', imdbId);
+          } else if (cardData.external_ids && cardData.external_ids.imdb_id) {
+            imdbId = cardData.external_ids.imdb_id;
+            console.log('StreamingDiscovery: Found IMDB ID in cardData.external_ids.imdb_id', imdbId);
+          } else {
+            console.log('StreamingDiscovery: No IMDB ID found in card data', cardData.card.imdb_id);
+          }
+
+          // If IMDB ID is found, make the API request
+          if (imdbId) {
+            // Ensure IMDB ID has the 'tt' prefix
+            if (!imdbId.startsWith('tt')) {
+              imdbId = 'tt' + imdbId;
+              console.log('StreamingDiscovery: Added tt prefix to IMDB ID', imdbId);
+            }
+            var settings = {
+              url: "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://www.streamingdiscovery.com/api/public/cache/ratings/movie?id=".concat(imdbId),
+              method: "GET",
+              timeout: 0
+            };
+            console.log('StreamingDiscovery: Making API request', settings.url);
+            $.ajax(settings).done(function (response) {
+              console.log('StreamingDiscovery: API response received', response);
+              if (response && response.Data) {
+                var data = response.Data;
+                console.log('StreamingDiscovery: Data extracted from response', data);
+                var ratingServices = [{
+                  name: 'imdb',
+                  label: 'IMDb',
+                  value: data.imdb
+                }, {
+                  name: 'metacritic',
+                  label: 'Metacritic',
+                  value: data.metacritic
+                }, {
+                  name: 'tmdb',
+                  label: 'TMDB',
+                  value: data.tmdb
+                }, {
+                  name: 'rotten-tomatoes',
+                  label: 'Rotten Tomatoes',
+                  value: data.rottenTomatoes
+                }, {
+                  name: 'trakt',
+                  label: 'Trakt',
+                  value: data.trakt
+                }, {
+                  name: 'film-affinity',
+                  label: 'FilmAffinity',
+                  value: data.filmAffinity
+                }];
+                console.log('StreamingDiscovery: Rating services prepared', ratingServices);
+
+                // Create container for streaming ratings
+                var ratingsContainer = $('<div class="full-start-new__streaming-ratings"></div>');
+
+                // Add each available rating
+                ratingServices.forEach(function (service) {
+                  if (service.value) {
+                    console.log('StreamingDiscovery: Adding rating for', service.name, service.value);
+                    var ratingElement = $("\n                                    <div class=\"streaming-rating streaming-rating--".concat(service.name, "\">\n                                        <img class=\"streaming-rating__icon\" style=\"filter: grayscale(100%)\" src=\"https://www.streamingdiscovery.com/logo/").concat(service.name, ".png\" alt=\"").concat(service.label, "\">\n                                        <div class=\"streaming-rating__score\">").concat(service.value, "</div>\n                                    </div>\n                                "));
+                    ratingsContainer.append(ratingElement);
+                  }
+                });
+
+                // Find the rate line element and insert our ratings before it
+                var rateLineElement = $('.full-start-new__rate-line');
+                console.log('StreamingDiscovery: Rate line element found?', rateLineElement.length > 0);
+                if (rateLineElement.length) {
+                  rateLineElement.before(ratingsContainer);
+                  console.log('StreamingDiscovery: Ratings container inserted before rate line');
+                } else {
+                  console.log('StreamingDiscovery: Rate line element not found, trying alternative insertion');
+                  // Try alternative insertion points
+                  var fullInfo = $('.full-start-new__details');
+                  if (fullInfo.length) {
+                    fullInfo.prepend(ratingsContainer);
+                    console.log('StreamingDiscovery: Ratings container inserted at beginning of details');
+                  } else {
+                    console.log('StreamingDiscovery: No suitable insertion point found');
+                  }
+                }
+              } else {
+                console.log('StreamingDiscovery: No data in response or invalid response format', response);
+              }
+            }).fail(function (jqXHR, textStatus, errorThrown) {
+              console.error("StreamingDiscovery request failed:", textStatus, errorThrown);
+              console.log('StreamingDiscovery: AJAX error details', jqXHR);
+            });
+          } else {
+            console.log('StreamingDiscovery: No valid IMDB ID found, skipping API request');
+          }
+        }
+      });
+      console.log('StreamingDiscovery: Event listener registered');
+    }
+    var streamingdiscovery = {
       main: main
     };
 
     var manifest = {
       type: "other",
-      version: "0.0.4",
+      version: "0.0.5",
       author: '@lme_chat',
       name: "Lampa Movie Enhancer",
       description: "Some tweaks for movie content",
@@ -726,6 +853,7 @@
       if (Lampa.Storage.get('lme_switchsource') == true) sourceSwitch.main();
       if (Lampa.Storage.get('lme_showbutton') == true) showButton.main();
       if (Lampa.Storage.get('lme_ratings') !== null && Lampa.Storage.get('lme_ratings') !== undefined && Lampa.Storage.get('lme_ratings') !== '') ratings.main();
+      if (Lampa.Storage.get('lme_streamingdiscovery') == true) streamingdiscovery.main();
     }
     function startPlugin() {
       window.plugin_lme_ready = true;
