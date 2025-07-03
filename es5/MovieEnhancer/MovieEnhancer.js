@@ -802,11 +802,26 @@
                 var rateLineElement = $('.full-start-new__rate-line');
                 console.log('StreamingDiscovery: Rate line element found?', rateLineElement.length > 0);
                 if (rateLineElement.length) {
-                  rateLineElement.before(ratingsContainer);
-                  console.log('StreamingDiscovery: Ratings container inserted before rate line');
+                  // /* if (rateLineElement.length) {
+                  //     rateLineElement.before(ratingsContainer);
+                  //     console.log('StreamingDiscovery: Ratings container inserted before rate line');
+                  // } else {
+                  //     console.log('StreamingDiscovery: Rate line element not found, trying alternative insertion');
+                  //     // Try alternative insertion points
+                  //     const fullInfo = $('.full-start-new__details');
+                  //     if (fullInfo.length) {
+                  //         fullInfo.prepend(ratingsContainer);
+                  //         console.log('StreamingDiscovery: Ratings container inserted at beginning of details');
+                  //     } else {
+                  //         console.log('StreamingDiscovery: No suitable insertion point found');
+                  //     }
+                  // }*/
+
+                  // Replace the contents of the rate line element
+                  rateLineElement.html(ratingsContainer);
+                  console.log('StreamingDiscovery: Ratings container replaced contents of rate line');
                 } else {
-                  console.log('StreamingDiscovery: Rate line element not found, trying alternative insertion');
-                  // Try alternative insertion points
+                  // Fallback insertion point
                   var fullInfo = $('.full-start-new__details');
                   if (fullInfo.length) {
                     fullInfo.prepend(ratingsContainer);
