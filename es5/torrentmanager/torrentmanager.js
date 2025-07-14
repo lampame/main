@@ -471,7 +471,7 @@
         var proxyTMDBApi;
         var proxyTMDBImage;
         if (Lampa.Storage.field('lmetorrentproxyTMDB') == true) {
-          proxyTMDBApi = "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key());
+          proxyTMDBApi = "https://lme-gateway.alwaysdata.net/gateway.php?url=https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key());
           proxyTMDBImage = 'https://tmdb.melonhu.cn/img/t/p/';
         }
 
@@ -480,7 +480,7 @@
           url: Lampa.Storage.field('lmetorrentproxyTMDB') == true ? proxyTMDBApi : directTMDBApi,
           method: 'GET',
           headers: {
-            "x-requested-with": "lampame"
+            "X-CORS-Auth": "lme-plugins"
           },
           success: function success(response) {
             try {
@@ -510,13 +510,13 @@
     var url$1 = Lampa.Storage.field("lmetorrentqBittorentUrl");
     var proxy$1 = "";
     if (Lampa.Storage.field("lmetorrentqBittorentProxy") === true) {
-      proxy$1 = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
+      proxy$1 = 'https://lme-gateway.alwaysdata.net/gateway.php?url=';
     }
     function getHeaders$3(type) {
       var headers = {};
       if (type) headers["Content-Type"] = type;
       if (Lampa.Storage.get("lmetorrentqBittorentKey")) headers["set-cookie"] = Lampa.Storage.get("lmetorrenttransmissionKey");
-      if (Lampa.Storage.field('lmetorrentqBittorentProxy') === true) headers["x-requested-with"] = "lampame";
+      if (Lampa.Storage.field('lmetorrentqBittorentProxy') === true) headers["X-CORS-Auth"] = 'lme-plugins';
       return headers;
     }
     function auth$3() {}
@@ -939,7 +939,7 @@
         useProxy: Lampa.Storage.field("".concat(CONFIG_PREFIX$1, "Proxy")) === true,
         autostart: Lampa.Storage.field("".concat(CONFIG_PREFIX$1, "Autostart")),
         sequentialDownload: Lampa.Storage.field("".concat(CONFIG_PREFIX$1, "SequentialDownload")),
-        proxy: 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/'
+        proxy: 'https://lme-gateway.alwaysdata.net/gateway.php?url='
       };
     }
 
@@ -963,7 +963,7 @@
 
       // Add proxy headers if needed
       if (config.useProxy) {
-        headers['x-requested-with'] = 'lampame';
+        headers['X-CORS-Auth'] = 'lme-plugins';
       }
       return headers;
     }
@@ -1384,7 +1384,7 @@
     var pass = Lampa.Storage.field("lmetorrentsynologyPass");
     var proxy = "";
     if (Lampa.Storage.field("lmetorrentsynologyProxy") === true) {
-      proxy = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
+      proxy = 'https://lme-gateway.alwaysdata.net/gateway.php?url=';
     }
     function getHeaders$1() {
       var headers = {
@@ -1395,7 +1395,7 @@
         headers["X-Transmission-Session-Id"] = Lampa.Storage.get("lmetorrenttransmissionKey");
       }
       if (Lampa.Storage.field('lmetorrenttransmissionProxy') === true) {
-        headers["x-requested-with"] = "lampame";
+        headers['X-CORS-Auth'] = 'lme-plugins';
       }
       return headers;
     }
@@ -1551,7 +1551,7 @@
         autostart: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Autostart")),
         sequentialDownload: Lampa.Storage.field("".concat(CONFIG_PREFIX, "SequentialDownload")),
         webdavUrl: Lampa.Storage.field("".concat(CONFIG_PREFIX, "WebdavUrl")),
-        proxy: 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/'
+        proxy: 'https://lme-gateway.alwaysdata.net/gateway.php?url='
       };
     }
 
@@ -1575,7 +1575,7 @@
 
       // Add proxy headers if needed
       if (config.useProxy) {
-        headers['x-requested-with'] = 'lampame';
+        headers['X-CORS-Auth'] = 'lme-plugins';
       }
       return headers;
     }
