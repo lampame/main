@@ -388,7 +388,7 @@
               mediaType = (object === null || object === void 0 ? void 0 : object.media_type) || (object !== null && object !== void 0 && object.first_air_date ? "tv" : "movie");
               tid = (object === null || object === void 0 || (_object$card = object.card) === null || _object$card === void 0 ? void 0 : _object$card.imdb_id) || "".concat(mediaType, "-").concat(object.id);
               settings = {
-                url: "https://iboouvfabveldaehdnia.supabase.co/functions/v1/watchmode-proxy?tid=".concat(tid, "&apiKey=").concat(Lampa.Storage.get('lme_wmquality'), "&tmdbId=").concat(mediaType, "-").concat(object.id),
+                url: "https://lme-gateway.alwaysdata.net/wm.php?tid=".concat(tid, "&apiKey=").concat(Lampa.Storage.get('lme_wmquality'), "&tmdbId=").concat(mediaType, "-").concat(object.id),
                 method: "GET",
                 timeout: 0
               };
