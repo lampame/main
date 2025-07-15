@@ -472,7 +472,7 @@
         var proxyTMDBImage;
         if (Lampa.Storage.field('lmetorrentproxyTMDB') == true) {
           proxyTMDBApi = "https://lme-gateway.alwaysdata.net/gateway.php?url=https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key());
-          proxyTMDBImage = 'https://tmdb.melonhu.cn/img/t/p/';
+          proxyTMDBImage = 'https://lme-gateway.alwaysdata.net/gateway.php?url=https://tmdb.melonhu.cn/img/t/p/';
         }
 
         // Делаем GET-запрос к API TMDB
