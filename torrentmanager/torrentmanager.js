@@ -777,7 +777,7 @@
             case 3:
               _context.p = 3;
               _t = _context.v;
-              console.error('TMDB search error:', _t);
+              console.error('TMDB', 'search error:', _t);
               throw new Error("Failed to fetch data from TMDB: ".concat(_t.statusText || _t.message));
             case 4:
               return _context.a(2);
@@ -832,7 +832,7 @@
         return _regenerator().w(function (_context3) {
           while (1) switch (_context3.n) {
             case 0:
-              console.log('TDM: Processing torrents:', _typeof(torrentData), torrentData);
+              console.log('TDM', 'Processing torrents:', _typeof(torrentData), torrentData);
 
               // Ensure we're working with an array
               torrents = Array.isArray(torrentData) ? torrentData : [torrentData];
@@ -852,7 +852,7 @@
                           _context2.n = 1;
                           break;
                         }
-                        console.warn('TDM: Empty torrent name after cleaning');
+                        console.warn('TDM', 'Empty torrent name after cleaning');
                         return _context2.a(2, null);
                       case 1:
                         _context2.n = 2;
@@ -863,7 +863,7 @@
                           _context2.n = 3;
                           break;
                         }
-                        console.log('TDM: No results found for', cleanedName);
+                        console.log('TDM', 'No results found for ', cleanedName);
                         return _context2.a(2, null);
                       case 3:
                         if (!(response.results.length === 1)) {
@@ -883,7 +883,7 @@
                       case 6:
                         _context2.p = 6;
                         _t2 = _context2.v;
-                        console.error('TDM: Error processing torrent:', _t2);
+                        console.error('TDM', 'torrent processing error:', _t2);
                         return _context2.a(2, null);
                     }
                   }, _callee2, null, [[0, 6]]);
@@ -900,7 +900,7 @@
             case 3:
               _context3.p = 3;
               _t3 = _context3.v;
-              console.error('TDM: Error in processTorrents:', _t3);
+              console.error('TDM', 'torrent processing overall error:', _t3);
               throw _t3;
             case 4:
               return _context3.a(2);
@@ -1082,7 +1082,7 @@
                   });
                 }
               } else {
-                console.error('TDM: Transmission auth error:', _t2);
+                console.error('TDM', 'Authentication failed.', _t2);
                 Lampa.Bell.push({
                   text: Lampa.Lang.translate('AuthDenied')
                 });
@@ -1150,7 +1150,7 @@
             case 3:
               _context4.p = 3;
               _t3 = _context4.v;
-              console.error('TDM: Error fetching torrent data:', _t3);
+              console.error('TDM', 'Error fetching torrent data:', _t3);
               throw new Error("Failed to fetch torrent data: ".concat(_t3.statusText || _t3.message));
             case 4:
               return _context4.a(2);
@@ -1188,7 +1188,7 @@
             case 2:
               _context5.p = 2;
               _t4 = _context5.v;
-              console.error('TDM: Error fetching session info:', _t4);
+              console.error('TDM', 'Error fetching session info:', _t4);
               throw new Error("Failed to fetch session info: ".concat(_t4.statusText || _t4.message));
             case 3:
               return _context5.a(2);
@@ -1276,7 +1276,7 @@
             case 11:
               _context6.p = 11;
               _t6 = _context6.v;
-              console.error('TDM: Error sending command:', _t6);
+              console.error('TDM', 'Error sending command:', _t6);
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('actionReturnedError')
               });
@@ -1357,7 +1357,7 @@
             case 8:
               _context7.p = 8;
               _t7 = _context7.v;
-              console.error('TDM: Error sending task:', _t7);
+              console.error('TDM', 'Error adding torrent:', _t7);
               Lampa.Bell.push({
                 text: _t7.message || Lampa.Lang.translate('actionReturnedError')
               });
@@ -1694,7 +1694,7 @@
                   });
                 }
               } else {
-                console.error('TDM: Keenetic auth error:', _t2);
+                console.error('TDM', 'Authentication failed', _t2);
                 Lampa.Bell.push({
                   text: Lampa.Lang.translate('AuthDenied')
                 });
@@ -1764,7 +1764,7 @@
             case 3:
               _context4.p = 3;
               _t3 = _context4.v;
-              console.error('TDM: Error fetching torrent data:', _t3);
+              console.error('TDM', 'Error fetching torrent data:', _t3);
               throw new Error("Failed to fetch torrent data: ".concat(_t3.statusText || _t3.message));
             case 4:
               return _context4.a(2);
@@ -1802,7 +1802,7 @@
             case 2:
               _context5.p = 2;
               _t4 = _context5.v;
-              console.error('TDM: Error fetching session info:', _t4);
+              console.error('TDM', 'Error fetching session info:', _t4);
               throw new Error("Failed to fetch session info: ".concat(_t4.statusText || _t4.message));
             case 3:
               return _context5.a(2);
@@ -2048,7 +2048,7 @@
             case 16:
               _context6.p = 16;
               _t6 = _context6.v;
-              console.error('TDM: Error sending command:', _t6);
+              console.error('TDM', 'Error sending command:', _t6);
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('actionReturnedError')
               });
@@ -2129,7 +2129,7 @@
             case 8:
               _context7.p = 8;
               _t7 = _context7.v;
-              console.error('TDM: Error sending task:', _t7);
+              console.error('TDM', 'Error adding torrent:', _t7);
               Lampa.Bell.push({
                 text: _t7.message || Lampa.Lang.translate('actionReturnedError')
               });
@@ -2564,7 +2564,7 @@
             getDataFunc = Synology.GetData;
             break;
           default:
-            console.error('Unknown client type');
+            console.error('TDM', 'Unknown client type');
             return;
         }
 
@@ -2592,7 +2592,7 @@
               case 2:
                 _context2.p = 2;
                 _t2 = _context2.v;
-                console.error('Auto update error:', _t2);
+                console.error('TDM', 'Auto update error:', _t2);
               case 3:
                 return _context2.a(2);
             }
@@ -3656,7 +3656,7 @@
             case 11:
               _context2.p = 11;
               _t2 = _context2.v;
-              console.error('Error fetching client data:', _t2);
+              console.error('TDM', 'Error fetching client data:', _t2);
               throw _t2;
             case 12:
               return _context2.a(2);
@@ -3748,7 +3748,7 @@
                   e.object.activity.render().find('.full-start-new__buttons').append($button);
                 }
               } else {
-                console.error('Failed to get torrent client data');
+                console.error('TDM', 'Failed to get torrent client data');
               }
             });
           }, 100);
@@ -3889,7 +3889,7 @@
         // Initialize client authentication
         initializeClientAuth();
       } catch (error) {
-        console.error('Error initializing Torrent Manager plugin:', error);
+        console.error('TDM', 'Error initializing Torrent Manager plugin:', error);
       }
     }
 
