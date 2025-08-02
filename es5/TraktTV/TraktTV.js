@@ -232,6 +232,15 @@
     var i = _toPrimitive(t, "string");
     return "symbol" == typeof i ? i : i + "";
   }
+  function _typeof(o) {
+    "@babel/helpers - typeof";
+
+    return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
+      return typeof o;
+    } : function (o) {
+      return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
+    }, _typeof(o);
+  }
   function _unsupportedIterableToArray(r, a) {
     if (r) {
       if ("string" == typeof r) return _arrayLikeToArray(r, a);
@@ -240,16 +249,112 @@
     }
   }
 
+  /**
+   * Генерує зображення з текстом за допомогою Canvas API.
+   * @param {string} text - Текст для відображення на зображенні.
+   * @returns {string} - URL зображення у форматі data:image/png;base64.
+   */
+  function textToImage(text) {
+    var canvas = document.createElement('canvas');
+    var context = canvas.getContext('2d');
+    var width = 400;
+    var height = 600;
+    canvas.width = width;
+    canvas.height = height;
+
+    // Фон
+    context.fillStyle = '#1a202c'; // Темно-сірий фон
+    context.fillRect(0, 0, width, height);
+
+    // Налаштування тексту
+    context.fillStyle = '#ffffff'; // Білий колір тексту
+    context.font = 'bold 48px Arial';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+
+    // Розбивка тексту на рядки
+    var words = text.split(' ');
+    var lines = [];
+    var currentLine = words[0] || '';
+    for (var i = 1; i < words.length; i++) {
+      var word = words[i];
+      var testLine = currentLine + ' ' + word;
+      var metrics = context.measureText(testLine);
+      var testWidth = metrics.width;
+      if (testWidth > width - 40 && currentLine !== '') {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    lines.push(currentLine);
+
+    // Відображення тексту
+    var lineHeight = 58;
+    var startY = (height - lines.length * lineHeight) / 2 + lineHeight / 2;
+    lines.forEach(function (line, index) {
+      context.fillText(line, width / 2, startY + index * lineHeight);
+    });
+    return canvas.toDataURL('image/png');
+  }
+
   var CLIENT_ID = 'a77093dcf5db97106d9303f3ab7d46a80a93a6e0c1d7a2ff8a1aacebe0dc161b';
   var CLIENT_SECRET = 'a8cf25070f8c9a609782deecf56197f99e96084b080c1c86fccf9dc682465f1b';
   var API_URL = 'https://lampame.v6.rocks/https://api.trakt.tv';
-  function addToHistory(data) {
+  function getImageUrl(media) {
+    var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'poster';
+    var imageSet = media.images && media.images[type];
+    var imageUrl = '';
+    if (imageSet) {
+      if (_typeof(imageSet) === 'object' && !Array.isArray(imageSet)) {
+        imageUrl = imageSet.medium || imageSet.thumb || imageSet.full || '';
+      } else if (Array.isArray(imageSet) && imageSet.length > 0) {
+        imageUrl = imageSet[0];
+      } else if (typeof imageSet === 'string') {
+        imageUrl = imageSet;
+      }
+    }
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      var finalUrl = 'https://' + imageUrl.replace(/^\/+/, '');
+      return finalUrl;
+    }
+    return imageUrl;
+  }
+  function addToHistory$1(data) {
     var mode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
     var body = {
       movies: [],
       shows: []
     };
+
+    // Логування для налагодження
+
+    // Перевірка, чи data має структуру для епізодів (викликається з watching.js)
+    if (data.episodes) {
+      // Якщо це епізоди, додаємо їх до shows
+      body.shows.push({
+        ids: data.ids || {},
+        // Використовуємо передані ids або порожній об'єкт
+        seasons: [{
+          number: data.season_number || 1,
+          episodes: data.episodes.map(function (ep) {
+            return {
+              number: ep.number,
+              watched_at: ep.watched_at || new Date().toISOString()
+            };
+          })
+        }]
+      });
+      return requestApi('POST', '/sync/history', body);
+    }
+
+    // Перевірка, чи data має структуру для фільму
     if (data.method === 'movie') {
+      // Перевірка наявності необхідних даних
+      if (!data.id) {
+        return Promise.reject(new Error(Lampa.Lang.translate('trakttv_movie_id_missed')));
+      }
       body.movies.push({
         ids: {
           tmdb: data.id
@@ -257,21 +362,29 @@
         watched_at: new Date().toISOString()
       });
       return requestApi('POST', '/sync/history', body);
-    } else if (data.method === 'show') {
+    }
+    // Перевірка, чи data має структуру для серіалу
+    else if (data.method === 'show' || data.method === 'tv') {
+      // Перевірка наявності необхідних даних
+      if (!data.id) {
+        return Promise.reject(new Error(Lampa.Lang.translate('trakttv_show_id_missed')));
+      }
       if (mode === 'all') {
         // Додаємо весь серіал в історію
         body.shows.push({
-          ids: {
+          ids: data.ids || {
             tmdb: data.id
           },
           watched_at: new Date().toISOString()
         });
         return requestApi('POST', '/sync/history', body);
       } else if (mode === 'last_season' || mode === 'last_episode') {
+        var _data$ids;
         // Спочатку отримуємо історію серіалу, щоб визначити які епізоди вже переглянуті
-        return getShowHistory(data.id).then(function (historyData) {
+        return getShowHistory(data.id, (_data$ids = data.ids) === null || _data$ids === void 0 ? void 0 : _data$ids.trakt).then(function (historyData) {
+          var _data$ids2;
           // Отримуємо інформацію про серіал для визначення всіх сезонів та епізодів
-          return getShowInfo(data.id).then(function (showInfo) {
+          return getShowInfo(data.id, (_data$ids2 = data.ids) === null || _data$ids2 === void 0 ? void 0 : _data$ids2.trakt).then(function (showInfo) {
             // Отримуємо останній сезон
             var lastSeason = showInfo.last_season || data.season || 1;
 
@@ -313,7 +426,7 @@
                     // Додаємо перший невідмічений епізод
                     var nextEpisode = unwatchedEpisodes[0];
                     body.shows.push({
-                      ids: {
+                      ids: data.ids || {
                         tmdb: data.id
                       },
                       seasons: [{
@@ -327,7 +440,7 @@
                   } else if (mode === 'last_season' && unwatchedEpisodes.length > 0) {
                     // Додаємо всі невідмічені епізоди сезону
                     body.shows.push({
-                      ids: {
+                      ids: data.ids || {
                         tmdb: data.id
                       },
                       seasons: [{
@@ -343,7 +456,7 @@
                   } else {
                     // Якщо всі епізоди вже переглянуті, додаємо весь сезон
                     body.shows.push({
-                      ids: {
+                      ids: data.ids || {
                         tmdb: data.id
                       },
                       seasons: [{
@@ -356,7 +469,7 @@
                 } else {
                   // Якщо не вдалося отримати дані про епізоди, додаємо весь сезон
                   body.shows.push({
-                    ids: {
+                    ids: data.ids || {
                       tmdb: data.id
                     },
                     seasons: [{
@@ -369,7 +482,7 @@
               }, function () {
                 // У випадку помилки додаємо весь сезон
                 body.shows.push({
-                  ids: {
+                  ids: data.ids || {
                     tmdb: data.id
                   },
                   seasons: [{
@@ -382,15 +495,14 @@
             });
           });
         })["catch"](function (error) {
-          console.error('Error getting show history:', error);
-
+          var _data$ids3;
           // Fallback to original behavior if there's an error
-          return getShowInfo(data.id).then(function (showInfo) {
+          return getShowInfo(data.id, (_data$ids3 = data.ids) === null || _data$ids3 === void 0 ? void 0 : _data$ids3.trakt).then(function (showInfo) {
             var lastSeason = showInfo.last_season || data.season || 1;
             var lastEpisode = showInfo.last_episode || data.episode || 1;
             if (mode === 'last_season') {
               body.shows.push({
-                ids: {
+                ids: data.ids || {
                   tmdb: data.id
                 },
                 seasons: [{
@@ -400,7 +512,7 @@
               });
             } else if (mode === 'last_episode') {
               body.shows.push({
-                ids: {
+                ids: data.ids || {
                   tmdb: data.id
                 },
                 seasons: [{
@@ -415,14 +527,88 @@
             return requestApi('POST', '/sync/history', body);
           });
         });
+      } else {
+        // Якщо mode не вказаний або інший, додаємо весь серіал
+        // Використовуємо передані ids або формуватимемо за TMDB ID
+        body.shows.push({
+          ids: data.ids || {
+            tmdb: data.id
+          },
+          watched_at: new Date().toISOString()
+        });
+        return requestApi('POST', '/sync/history', body);
       }
+    } else {
+      // Якщо тип вмісту не визначено, повертаємо помилку
+      return Promise.reject(new Error(Lampa.Lang.translate('trakttv_unknown_content')));
     }
-    return requestApi('POST', '/sync/history', body);
   }
 
-  // Функція для отримання інформації про серіал з TMDB
+  // Функція для отримання інформації про серіал з TMDB або Trakt
   function getShowInfo(tmdbId) {
+    var traktId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
     return new Promise(function (resolve, reject) {
+      // Якщо переданий Trakt ID, отримуємо інформацію з Trakt
+      if (traktId) {
+        requestApi('GET', "/shows/".concat(traktId, "?extended=full")).then(function (showData) {
+          if (showData && showData.seasons) {
+            // Знаходимо останній сезон (виключаючи спеціальні сезони з номером 0)
+            var regularSeasons = showData.seasons.filter(function (s) {
+              return s.number > 0;
+            });
+            var lastSeasonData = regularSeasons.length > 0 ? regularSeasons.reduce(function (prev, current) {
+              return prev.number > current.number ? prev : current;
+            }) : null;
+
+            // Якщо знайдено останній сезон, отримуємо інформацію про його епізоди
+            if (lastSeasonData) {
+              requestApi('GET', "/shows/".concat(traktId, "/seasons/").concat(lastSeasonData.number, "?extended=full")).then(function (seasonData) {
+                if (seasonData && seasonData.episodes && seasonData.episodes.length > 0) {
+                  // Знаходимо останній епізод сезону
+                  var lastEpisodeData = seasonData.episodes.reduce(function (prev, current) {
+                    return prev.number > current.number ? prev : current;
+                  });
+                  resolve({
+                    last_season: lastSeasonData.number,
+                    last_episode: lastEpisodeData.number,
+                    total_seasons: regularSeasons.length,
+                    total_episodes: seasonData.episodes.length
+                  });
+                } else {
+                  resolve({
+                    last_season: lastSeasonData.number,
+                    last_episode: 1
+                  });
+                }
+              })["catch"](function () {
+                // Якщо не вдалося отримати дані про епізоди, повертаємо хоча б номер сезону
+                resolve({
+                  last_season: lastSeasonData.number,
+                  last_episode: 1
+                });
+              });
+            } else {
+              resolve({
+                last_season: 1,
+                last_episode: 1
+              });
+            }
+          } else {
+            resolve({
+              last_season: 1,
+              last_episode: 1
+            });
+          }
+        })["catch"](function () {
+          // У випадку помилки повертаємо значення за замовчуванням
+          resolve({
+            last_season: 1,
+            last_episode: 1
+          });
+        });
+        return;
+      }
+
       // Використовуємо Lampa.TMDB для отримання інформації про серіал
       var url = Lampa.TMDB.api('tv/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'ru'));
       var network = new Lampa.Reguest();
@@ -485,125 +671,6 @@
       });
     });
   }
-  function removeFromHistory(data) {
-    var mode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-    var body = {
-      movies: [],
-      shows: []
-    };
-    if (data.method === 'movie') {
-      body.movies.push({
-        ids: {
-          tmdb: data.id
-        }
-      });
-      return requestApi('POST', '/sync/history/remove', body);
-    } else if (data.method === 'show') {
-      if (mode === 'all') {
-        body.shows.push({
-          ids: {
-            tmdb: data.id
-          }
-        });
-        return requestApi('POST', '/sync/history/remove', body);
-      } else if (mode === 'last_season' || mode === 'last_episode') {
-        // Спочатку отримуємо історію серіалу, щоб визначити які епізоди вже переглянуті
-        return getShowHistory(data.id).then(function (historyData) {
-          // Отримуємо інформацію про серіал для визначення всіх сезонів та епізодів
-          return getShowInfo(data.id).then(function (showInfo) {
-            // Отримуємо останній сезон
-            var lastSeason = showInfo.last_season || data.season || 1;
-
-            // Отримуємо список всіх переглянутих епізодів
-            var watchedEpisodes = {};
-            if (historyData && historyData.length > 0) {
-              historyData.forEach(function (item) {
-                if (item.episode) {
-                  var s = item.episode.season;
-                  var e = item.episode.number;
-                  if (!watchedEpisodes[s]) {
-                    watchedEpisodes[s] = [];
-                  }
-                  if (!watchedEpisodes[s].includes(e)) {
-                    watchedEpisodes[s].push(e);
-                  }
-                }
-              });
-            }
-            if (mode === 'last_episode' && watchedEpisodes[lastSeason] && watchedEpisodes[lastSeason].length > 0) {
-              // Сортуємо епізоди за номером (від більшого до меншого)
-              var sortedEpisodes = _toConsumableArray(watchedEpisodes[lastSeason]).sort(function (a, b) {
-                return b - a;
-              });
-              // Видаляємо останній переглянутий епізод
-              var lastWatchedEpisode = sortedEpisodes[0];
-              body.shows.push({
-                ids: {
-                  tmdb: data.id
-                },
-                seasons: [{
-                  number: lastSeason,
-                  episodes: [{
-                    number: lastWatchedEpisode
-                  }]
-                }]
-              });
-            } else if (mode === 'last_season' && watchedEpisodes[lastSeason] && watchedEpisodes[lastSeason].length > 0) {
-              // Видаляємо всі переглянуті епізоди останнього сезону
-              body.shows.push({
-                ids: {
-                  tmdb: data.id
-                },
-                seasons: [{
-                  number: lastSeason
-                }]
-              });
-            } else {
-              // Якщо немає переглянутих епізодів, видаляємо весь серіал з історії
-              body.shows.push({
-                ids: {
-                  tmdb: data.id
-                }
-              });
-            }
-            return requestApi('POST', '/sync/history/remove', body);
-          });
-        })["catch"](function (error) {
-          console.error('Error getting show history:', error);
-
-          // Fallback to original behavior if there's an error
-          return getShowInfo(data.id).then(function (showInfo) {
-            var lastSeason = showInfo.last_season || data.season || 1;
-            var lastEpisode = showInfo.last_episode || data.episode || 1;
-            if (mode === 'last_season') {
-              body.shows.push({
-                ids: {
-                  tmdb: data.id
-                },
-                seasons: [{
-                  number: lastSeason
-                }]
-              });
-            } else if (mode === 'last_episode') {
-              body.shows.push({
-                ids: {
-                  tmdb: data.id
-                },
-                seasons: [{
-                  number: lastSeason,
-                  episodes: [{
-                    number: lastEpisode
-                  }]
-                }]
-              });
-            }
-            return requestApi('POST', '/sync/history/remove', body);
-          });
-        });
-      }
-    }
-    return requestApi('POST', '/sync/history/remove', body);
-  }
   function requestApi(method, url) {
     var params = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var unauthorized = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
@@ -635,7 +702,6 @@
   function formatTraktResults(items) {
     return {
       results: items.map(function (item) {
-        var _media$images, _media$images2;
         var media = item.movie || item.show;
         return {
           component: 'full',
@@ -644,8 +710,8 @@
           original_title: media.title,
           release_date: media.year + '',
           vote_average: media.rating || 0,
-          poster: Array.isArray((_media$images = media.images) === null || _media$images === void 0 ? void 0 : _media$images.poster) ? "https://".concat(media.images.poster[0]) : '',
-          image: Array.isArray((_media$images2 = media.images) === null || _media$images2 === void 0 ? void 0 : _media$images2.fanart) ? "https://".concat(media.images.fanart[0]) : '',
+          poster: getImageUrl(media, 'poster'),
+          image: getImageUrl(media, 'fanart'),
           method: item.movie ? 'movie' : 'tv'
         };
       })
@@ -654,14 +720,25 @@
 
   // Функція для отримання історії серіалу за TMDB ID
   function getShowHistory(tmdbId) {
+    var traktId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
     return new Promise(function (resolve, reject) {
+      // Якщо переданий Trakt ID, отримуємо інформацію з Trakt
+      if (traktId) {
+        requestApi('GET', "/shows/".concat(traktId, "/history")).then(function (historyData) {
+          resolve(historyData);
+        })["catch"](function (error) {
+          reject(error);
+        });
+        return;
+      }
+
       // Спочатку отримуємо Trakt ID за TMDB ID
       requestApi('GET', "/search/tmdb/".concat(tmdbId, "?type=show")).then(function (response) {
         if (response && response.length > 0 && response[0].show && response[0].show.ids.trakt) {
-          var traktId = response[0].show.ids.trakt;
+          var foundTraktId = response[0].show.ids.trakt;
 
           // Отримуємо історію серіалу за Trakt ID
-          requestApi('GET', "/sync/history/shows/".concat(traktId)).then(function (historyData) {
+          requestApi('GET', "/sync/history/shows/".concat(foundTraktId)).then(function (historyData) {
             resolve(historyData);
           })["catch"](function (error) {
             reject(error);
@@ -675,9 +752,44 @@
     });
   }
   var api = {
-    addToHistory: addToHistory,
-    removeFromHistory: removeFromHistory,
-    getShowHistory: getShowHistory,
+    addToHistory: addToHistory$1,
+    // Переміщені функції на початок об'єкта
+    formatListsResults: function formatListsResults(items) {
+      var likedListIds = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+      try {
+        var results = items.map(function (item) {
+          if (!item) return null;
+          var list = item && item.list ? item.list : item;
+          if (!list || !list.ids || !list.ids.trakt) {
+            console.warn('TraktTV Debug: Invalid list item received', item);
+            return null;
+          }
+          var isLiked = likedListIds.includes(list.ids.trakt);
+          var result = {
+            component: 'trakt_list',
+            id: list.ids.trakt,
+            title: list.name || '',
+            original_title: list.name || '',
+            description: list.description || '',
+            poster: getImageUrl(list, 'poster') || textToImage("[".concat(list.item_count || 0, "] ").concat(list.name || '')),
+            image: getImageUrl(list, 'fanart'),
+            method: 'list',
+            item_count: list.item_count || 0,
+            is_liked: isLiked
+          };
+          return result;
+        }).filter(function (item) {
+          return item !== null;
+        });
+        return {
+          results: results
+        };
+      } catch (error) {
+        return {
+          results: []
+        };
+      }
+    },
     get: function get(url) {
       var unauthorized = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
       return requestApi('GET', url, {}, unauthorized);
@@ -697,29 +809,31 @@
             moviesResponse = _ref2[0],
             showsResponse = _ref2[1];
           var formattedMovies = moviesResponse.map(function (movie) {
-            var _movie$images;
             return {
               component: 'full',
               id: movie.ids.tmdb,
+              ids: movie.ids,
+              // Додаємо всі ids
               title: movie.title,
               original_title: movie.title,
               release_date: movie.year + '',
               vote_average: movie.rating || 0,
-              poster: Array.isArray((_movie$images = movie.images) === null || _movie$images === void 0 ? void 0 : _movie$images.poster) ? "https://".concat(movie.images.poster[0]) : '',
+              poster: getImageUrl(movie, 'poster'),
               method: 'movie',
               card_type: 'movie'
             };
           });
           var formattedShows = showsResponse.map(function (show) {
-            var _show$images;
             return {
               component: 'full',
               id: show.ids.tmdb,
+              ids: show.ids,
+              // Додаємо всі ids
               title: show.title,
               original_title: show.title,
               release_date: show.year + '',
               vote_average: show.rating || 0,
-              poster: Array.isArray((_show$images = show.images) === null || _show$images === void 0 ? void 0 : _show$images.poster) ? "https://".concat(show.images.poster[0]) : '',
+              poster: getImageUrl(show, 'poster'),
               type: 'tv',
               method: 'tv',
               card_type: 'tv'
@@ -756,15 +870,16 @@
           // Fallback to just movies if the combined request fails
           requestApi('GET', "/recommendations/movies?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=".concat(fetchLimit)).then(function (response) {
             var formattedResults = response.map(function (movie) {
-              var _movie$images2;
               return {
                 component: 'full',
                 id: movie.ids.tmdb,
+                ids: movie.ids,
+                // Додаємо всі ids
                 title: movie.title,
                 original_title: movie.title,
                 release_date: movie.year + '',
                 vote_average: movie.rating || 0,
-                poster: Array.isArray((_movie$images2 = movie.images) === null || _movie$images2 === void 0 ? void 0 : _movie$images2.poster) ? "https://".concat(movie.images.poster[0]) : '',
+                poster: getImageUrl(movie, 'poster'),
                 method: 'movie',
                 card_type: 'movie'
               };
@@ -792,103 +907,108 @@
         });
       });
     },
-    watchlist: function watchlist(params, oncomplete, onerror) {
-      var page = params.page || 1;
-      var limit = params.limit || 36;
-      requestApi('GET', '/sync/watchlist/movies,shows/added/asc?extended=images').then(function (response) {
-        // Calculate total items and pages
-        var total = response.length;
-        var total_pages = Math.max(1, Math.ceil(total / limit));
+    watchlist: function watchlist(params) {
+      return new Promise(function (resolve, reject) {
+        var page = params.page || 1;
+        var limit = params.limit || 36;
+        requestApi('GET', '/sync/watchlist/movies,shows/added/asc?extended=images').then(function (response) {
+          // Calculate total items and pages
+          var total = response.length;
+          var total_pages = Math.max(1, Math.ceil(total / limit));
 
-        // Apply pagination
-        var offset = (page - 1) * limit;
-        var paginatedResults = response.slice(offset, offset + limit);
+          // Apply pagination
+          var offset = (page - 1) * limit;
+          var paginatedResults = response.slice(offset, offset + limit);
 
-        // Format and return with pagination info
-        var formattedData = formatTraktResults(paginatedResults);
-        formattedData.total = total;
-        formattedData.total_pages = total_pages;
-        formattedData.page = page;
-        oncomplete(formattedData);
-      })["catch"](function (error) {
-        onerror(error);
+          // Format and return with pagination info
+          var formattedData = formatTraktResults(paginatedResults);
+          formattedData.total = total;
+          formattedData.total_pages = total_pages;
+          formattedData.page = page;
+          resolve(formattedData);
+        })["catch"](function (error) {
+          reject(error);
+        });
       });
     },
-    upnext: function upnext(params, oncomplete, onerror) {
-      var page = params.page || 1;
-      var limit = params.limit || 36;
-      requestApi('GET', '/sync/watched/shows?extended=images,full,seasons').then(function (watchedResponse) {
-        var watched = Array.isArray(watchedResponse) ? watchedResponse : [];
-        var watching = watched.filter(function (item) {
-          if (!item.show || typeof item.show.aired_episodes !== 'number') return false;
-          var totalEpisodes = item.show.aired_episodes;
-          var watchedEpisodes = 0;
-          if (Array.isArray(item.seasons)) {
-            item.seasons.forEach(function (season) {
-              if (Array.isArray(season.episodes) && season.number > 0) {
-                watchedEpisodes += season.episodes.length;
-              }
-            });
-          }
-          return totalEpisodes > watchedEpisodes;
-        });
-        var results = watching.map(function (item) {
-          var _item$show$images, _item$show$images2;
-          var watchedEpisodes = 0;
-          var lastWatchedDate = null;
-          if (Array.isArray(item.seasons)) {
-            item.seasons.forEach(function (season) {
-              if (Array.isArray(season.episodes) && season.number > 0) {
-                watchedEpisodes += season.episodes.length;
-                season.episodes.forEach(function (episode) {
-                  if (episode.last_watched_at) {
-                    var episodeDate = new Date(episode.last_watched_at);
-                    if (!lastWatchedDate || episodeDate > lastWatchedDate) {
-                      lastWatchedDate = episodeDate;
+    upnext: function upnext(params) {
+      return new Promise(function (resolve, reject) {
+        var page = params.page || 1;
+        var limit = params.limit || 36;
+        requestApi('GET', '/sync/watched/shows?extended=images,full,seasons').then(function (watchedResponse) {
+          var watched = Array.isArray(watchedResponse) ? watchedResponse : [];
+          var watching = watched.filter(function (item) {
+            if (!item.show || typeof item.show.aired_episodes !== 'number') return false;
+            var totalEpisodes = item.show.aired_episodes;
+            var watchedEpisodes = 0;
+            if (Array.isArray(item.seasons)) {
+              item.seasons.forEach(function (season) {
+                if (Array.isArray(season.episodes) && season.number > 0) {
+                  watchedEpisodes += season.episodes.length;
+                }
+              });
+            }
+            return totalEpisodes > watchedEpisodes;
+          });
+          var results = watching.map(function (item) {
+            var watchedEpisodes = 0;
+            var lastWatchedDate = null;
+            if (Array.isArray(item.seasons)) {
+              item.seasons.forEach(function (season) {
+                if (Array.isArray(season.episodes) && season.number > 0) {
+                  watchedEpisodes += season.episodes.length;
+                  season.episodes.forEach(function (episode) {
+                    if (episode.last_watched_at) {
+                      var episodeDate = new Date(episode.last_watched_at);
+                      if (!lastWatchedDate || episodeDate > lastWatchedDate) {
+                        lastWatchedDate = episodeDate;
+                      }
                     }
-                  }
-                });
-              }
-            });
-          }
-          return {
-            component: 'full',
-            id: item.show.ids.tmdb || item.show.ids.trakt,
-            title: item.show.title,
-            original_title: item.show.original_title || item.show.title,
-            release_date: item.show.year ? String(item.show.year) : '',
-            vote_average: item.show.rating || 0,
-            poster: Array.isArray((_item$show$images = item.show.images) === null || _item$show$images === void 0 ? void 0 : _item$show$images.poster) ? "https://".concat(item.show.images.poster[0]) : '',
-            image: Array.isArray((_item$show$images2 = item.show.images) === null || _item$show$images2 === void 0 ? void 0 : _item$show$images2.fanart) ? "https://".concat(item.show.images.fanart[0]) : '',
-            method: 'tv',
-            release_quality: "".concat(watchedEpisodes, "/").concat(item.show.aired_episodes),
-            status: item.show.status,
-            last_watched: lastWatchedDate
-          };
-        });
-        results.sort(function (a, b) {
-          if (!a.last_watched && !b.last_watched) return 0;
-          if (!a.last_watched) return 1;
-          if (!b.last_watched) return -1;
-          return new Date(b.last_watched) - new Date(a.last_watched);
-        });
+                  });
+                }
+              });
+            }
+            return {
+              component: 'full',
+              id: item.show.ids.tmdb || item.show.ids.trakt,
+              ids: item.show.ids,
+              // Додаємо всі ids
+              title: item.show.title,
+              original_title: item.show.original_title || item.show.title,
+              release_date: item.show.year ? String(item.show.year) : '',
+              vote_average: item.show.rating || 0,
+              poster: getImageUrl(item.show, 'poster'),
+              image: getImageUrl(item.show, 'fanart'),
+              method: 'tv',
+              release_quality: "".concat(watchedEpisodes, "/").concat(item.show.aired_episodes),
+              status: item.show.status,
+              last_watched: lastWatchedDate
+            };
+          });
+          results.sort(function (a, b) {
+            if (!a.last_watched && !b.last_watched) return 0;
+            if (!a.last_watched) return 1;
+            if (!b.last_watched) return -1;
+            return new Date(b.last_watched) - new Date(a.last_watched);
+          });
 
-        // Calculate total items and pages
-        var total = results.length;
-        var total_pages = Math.max(1, Math.ceil(total / limit));
+          // Calculate total items and pages
+          var total = results.length;
+          var total_pages = Math.max(1, Math.ceil(total / limit));
 
-        // Apply pagination
-        var offset = (page - 1) * limit;
-        var paginatedResults = results.slice(offset, offset + limit);
+          // Apply pagination
+          var offset = (page - 1) * limit;
+          var paginatedResults = results.slice(offset, offset + limit);
 
-        // Return with pagination info
-        oncomplete({
-          results: paginatedResults,
-          total: total,
-          total_pages: total_pages,
-          page: page
-        });
-      })["catch"](onerror);
+          // Return with pagination info
+          resolve({
+            results: paginatedResults,
+            total: total,
+            total_pages: total_pages,
+            page: page
+          });
+        })["catch"](reject);
+      });
     },
     auth: {
       login: function login() {
@@ -920,103 +1040,254 @@
         return response;
       });
     },
-    addToWatchlist: function addToWatchlist(params, oncomplete, onerror) {
-      var data = {
-        movies: [],
-        shows: []
-      };
-      if (params.method === 'movie') {
-        data.movies.push({
-          ids: {
-            tmdb: params.id
-          }
+    addToWatchlist: function addToWatchlist(params) {
+      return new Promise(function (resolve, reject) {
+        var data = {
+          movies: [],
+          shows: []
+        };
+        if (params.method === 'movie') {
+          data.movies.push({
+            ids: params.ids || {
+              tmdb: params.id
+            }
+          });
+        } else {
+          data.shows.push({
+            ids: params.ids || {
+              tmdb: params.id
+            }
+          });
+        }
+        requestApi('POST', '/sync/watchlist', data).then(function (response) {
+          resolve(response);
+        })["catch"](function (error) {
+          reject(error);
         });
-      } else {
-        data.shows.push({
-          ids: {
-            tmdb: params.id
-          }
-        });
-      }
-      requestApi('POST', '/sync/watchlist', data).then(function (response) {
-        oncomplete(response);
-      })["catch"](function (error) {
-        onerror(error);
       });
     },
-    removeFromWatchlist: function removeFromWatchlist(params, oncomplete, onerror) {
-      var data = {
-        movies: [],
-        shows: []
-      };
-      if (params.method === 'movie') {
-        data.movies.push({
-          ids: {
-            tmdb: params.id
-          }
+    removeFromWatchlist: function removeFromWatchlist(params) {
+      return new Promise(function (resolve, reject) {
+        var data = {
+          movies: [],
+          shows: []
+        };
+        if (params.method === 'movie') {
+          data.movies.push({
+            ids: params.ids || {
+              tmdb: params.id
+            }
+          });
+        } else {
+          data.shows.push({
+            ids: params.ids || {
+              tmdb: params.id
+            }
+          });
+        }
+        requestApi('POST', '/sync/watchlist/remove', data).then(function (response) {
+          resolve(response);
+        })["catch"](function (error) {
+          reject(error);
         });
-      } else {
-        data.shows.push({
-          ids: {
-            tmdb: params.id
-          }
-        });
-      }
-      requestApi('POST', '/sync/watchlist/remove', data).then(function (response) {
-        oncomplete(response);
-      })["catch"](function (error) {
-        onerror(error);
       });
     },
-    inWatchlist: function inWatchlist(params, oncomplete, onerror) {
-      var type = params.method === 'movie' ? 'movies' : 'shows';
-      var url = "/sync/watchlist/".concat(type, "?extended=full");
-      requestApi('GET', url).then(function (response) {
-        var found = response.find(function (item) {
-          var _item$movie, _item$show;
-          return ((_item$movie = item.movie) === null || _item$movie === void 0 ? void 0 : _item$movie.ids.tmdb) === params.id || ((_item$show = item.show) === null || _item$show === void 0 ? void 0 : _item$show.ids.tmdb) === params.id;
+    inWatchlist: function inWatchlist(params) {
+      return new Promise(function (resolve, reject) {
+        var type = params.method === 'movie' ? 'movies' : 'shows';
+        var url = "/sync/watchlist/".concat(type, "?extended=full");
+        requestApi('GET', url).then(function (response) {
+          var found = response.find(function (item) {
+            var _item$movie, _item$show, _item$movie2, _item$show2;
+            return ((_item$movie = item.movie) === null || _item$movie === void 0 ? void 0 : _item$movie.ids.tmdb) === params.id || ((_item$show = item.show) === null || _item$show === void 0 ? void 0 : _item$show.ids.tmdb) === params.id || params.ids && (((_item$movie2 = item.movie) === null || _item$movie2 === void 0 ? void 0 : _item$movie2.ids.trakt) === params.ids.trakt || ((_item$show2 = item.show) === null || _item$show2 === void 0 ? void 0 : _item$show2.ids.trakt) === params.ids.trakt);
+          });
+          resolve(!!found);
+        })["catch"](function (error) {
+          reject(error);
         });
-        oncomplete(!!found);
-      })["catch"](function (error) {
-        onerror(error);
       });
     },
-    inHistory: function inHistory(params, oncomplete, onerror) {
-      var type = params.method === 'movie' ? 'movies' : 'shows';
-      var url = "/sync/history/".concat(type, "?extended=full");
-      requestApi('GET', url).then(function (response) {
-        var found = response.find(function (item) {
-          var _item$movie2, _item$show2;
-          return ((_item$movie2 = item.movie) === null || _item$movie2 === void 0 ? void 0 : _item$movie2.ids.tmdb) === params.id || ((_item$show2 = item.show) === null || _item$show2 === void 0 ? void 0 : _item$show2.ids.tmdb) === params.id;
+    inHistory: function inHistory(params) {
+      return new Promise(function (resolve, reject) {
+        var type = params.method === 'movie' ? 'movies' : 'shows';
+        var url = "/sync/history/".concat(type, "?extended=full");
+        requestApi('GET', url).then(function (response) {
+          var found = response.find(function (item) {
+            var _item$movie3, _item$show3, _item$movie4, _item$show4;
+            return ((_item$movie3 = item.movie) === null || _item$movie3 === void 0 ? void 0 : _item$movie3.ids.tmdb) === params.id || ((_item$show3 = item.show) === null || _item$show3 === void 0 ? void 0 : _item$show3.ids.tmdb) === params.id || params.ids && (((_item$movie4 = item.movie) === null || _item$movie4 === void 0 ? void 0 : _item$movie4.ids.trakt) === params.ids.trakt || ((_item$show4 = item.show) === null || _item$show4 === void 0 ? void 0 : _item$show4.ids.trakt) === params.ids.trakt);
+          });
+          resolve(!!found);
+        })["catch"](function (error) {
+          reject(error);
         });
-        oncomplete(!!found);
-      })["catch"](function (error) {
-        onerror(error);
+      });
+    },
+    // Новий метод для отримання списків, які користувач лайкнув
+    likesLists: function likesLists(params) {
+      var _this = this;
+      return new Promise(function (resolve, reject) {
+        var page = params.page || 1;
+        var limit = params.limit || 36;
+        requestApi('GET', "/users/me/likes/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images")).then(function (response) {
+          // Calculate total items and pages
+          var total = response.length;
+          var total_pages = Math.max(1, Math.ceil(total / limit));
+
+          // Apply pagination
+          var offset = (page - 1) * limit;
+          response.slice(offset, offset + limit);
+          var formattedData = _this.formatListsResults(response, response.map(function (item) {
+            return item.list.ids.trakt;
+          })); // Передаємо сирий масив response та ID лайкнутих списків
+          formattedData.total = total;
+          formattedData.total_pages = total_pages;
+          formattedData.page = page;
+          resolve(formattedData);
+        })["catch"](function (error) {
+          reject(error);
+        });
+      });
+    },
+    lists: function lists(params) {
+      var _this2 = this;
+      return new Promise(function (resolve, reject) {
+        var page = params.page || 1;
+        var limit = params.limit || 36;
+        requestApi('GET', "/users/me/likes/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images")).then(function (response) {
+          // Calculate total items and pages
+          var total = response.length;
+          var total_pages = Math.max(1, Math.ceil(total / limit));
+
+          // Apply pagination
+          var offset = (page - 1) * limit;
+          response.slice(offset, offset + limit);
+          var formattedData = _this2.formatListsResults(response, response.map(function (item) {
+            return item.list.ids.trakt;
+          })); // Передаємо сирий масив response та ID лайкнутих списків
+          formattedData.total = total;
+          formattedData.total_pages = total_pages;
+          formattedData.page = page;
+          resolve(formattedData);
+        })["catch"](function (error) {
+          reject(error);
+        });
+      });
+    },
+    // Метод для отримання вмісту конкретного листа за його ID
+    // Використовує endpoint: https://api.trakt.tv/lists/{id}/items
+    // params: { list_id: string, page: number, limit: number }
+    list: function list(params) {
+      return new Promise(function (resolve, reject) {
+        // Отримуємо ID листа з параметрів
+        var listId = params.id; // Використовуємо params.id, оскільки baseComponent передає id
+
+        // Перевіряємо наявність ID
+        if (!listId) {
+          reject(new Error('List ID is missing'));
+          return;
+        }
+
+        // Створюємо URL для запиту
+        // За специфікацією, type не передаємо
+        var page = params.page || 1;
+        var limit = params.limit || 36;
+        var url = "/lists/".concat(listId, "/items?extended=images&page=").concat(page, "&limit=").concat(limit);
+        requestApi('GET', url).then(function (response) {
+          // Припускаємо, що відповідь має структуру, схожу на watchlist
+          // Масив об'єктів, де кожен об'єкт містить movie або show
+          // Потрібно форматувати ці дані для відображення в Lampa
+
+          // Форматуємо результати
+          var formattedData = formatTraktResults(response);
+
+          // Додаємо інформацію про пагінацію
+          // Оскільки API може не повертати заголовки пагінації,
+          // ми припускаємо, що якщо кількість елементів дорівнює ліміту,
+          // можливо є ще сторінки. Це не ідеально, але краще ніж нічого.
+          // Для точного визначення пагінації потрібно аналізувати заголовки відповіді.
+          // requestApi повертає лише тіло відповіді, тому заголовки недоступні.
+          // Тимчасово встановлюємо total_pages = page + 1, якщо отримали повну сторінку.
+          var total_items = Array.isArray(response) ? response.length : 0;
+          var total_pages = total_items === limit ? page + 1 : page;
+          formattedData.total = total_items;
+          formattedData.total_pages = total_pages;
+          formattedData.page = page;
+          resolve(formattedData);
+        })["catch"](function (error) {
+          reject(error);
+        });
+      });
+    },
+    // Новий метод для отримання списків, пов'язаних з медіа (фільмом або серіалом)
+    getMediaLists: function getMediaLists(params) {
+      return new Promise(function (resolve, reject) {
+        var tmdbId = params.id;
+        var mediaType = params.method; // 'movie' or 'show'
+
+        if (!tmdbId || !mediaType) {
+          reject(new Error('Media ID or type is missing'));
+          return;
+        }
+
+        // Спочатку отримуємо Trakt ID за TMDB ID
+        requestApi('GET', "/search/tmdb/".concat(tmdbId, "?type=").concat(mediaType)).then(function (searchResponse) {
+          var traktId = null;
+          if (searchResponse && searchResponse.length > 0) {
+            if (mediaType === 'movie' && searchResponse[0].movie) {
+              traktId = searchResponse[0].movie.ids.trakt;
+            } else if (mediaType === 'show' && searchResponse[0].show) {
+              traktId = searchResponse[0].show.ids.trakt;
+            }
+          }
+          if (!traktId) {
+            reject(new Error("Trakt ID not found for TMDB ID: ".concat(tmdbId)));
+            return;
+          }
+          var url = '';
+          if (mediaType === 'movie') {
+            url = "/movies/".concat(traktId, "/lists");
+          } else if (mediaType === 'show') {
+            url = "/shows/".concat(traktId, "/lists");
+          }
+          requestApi('GET', url).then(function (response) {
+            var formattedData = api.formatListsResults(response);
+            resolve(formattedData.results);
+          })["catch"](function (error) {
+            reject(error);
+          });
+        })["catch"](function (error) {
+          reject(error);
+        });
       });
     }
   };
 
-  var _Lampa = Lampa,
-    InteractionCategory = _Lampa.InteractionCategory;
   function baseComponent(object, type) {
-    var comp = new InteractionCategory(object);
+    var comp = new Lampa.InteractionCategory(object);
     var total_pages = 0;
     var waitload = false;
     comp.create = function () {
       var _this = this;
-      // Встановлюємо початкові параметри
-      var params = _objectSpread2({}, object);
+      var params = _objectSpread2({}, object); // Копіюємо всі властивості
+
+      // Явно встановлюємо id для типу 'list', щоб уникнути можливих перетворень
+      if (type === 'list' && object.id) {
+        params.id = object.id;
+      } else if (type === 'list' && object.list_id) {
+        // Додаємо fallback, якщо раптом object.id не спрацює
+        params.id = object.list_id;
+      }
 
       // Встановлюємо ліміт для різних типів
       if (type === 'upnext') {
-        params.limit = 36; // Зменшуємо ліміт для пагінації
+        params.limit = 36;
       } else {
-        params.limit = 36; // Стандартний ліміт для інших типів
+        params.limit = 36;
       }
 
       // Встановлюємо номер сторінки, якщо не вказано
       params.page = params.page || 1;
-      api[type](params, function (data) {
+      api[type](params).then(function (data) {
         // Зберігаємо загальну кількість сторінок
         if (data.total_pages) {
           total_pages = data.total_pages;
@@ -1027,7 +1298,9 @@
         if (_this.activity.scroll) {
           _this.activity.scroll.onEnd = _this.next.bind(_this);
         }
-      }, this.empty.bind(this));
+      })["catch"](function () {
+        _this.empty();
+      });
     };
 
     // Метод для завантаження наступної сторінки
@@ -1038,20 +1311,29 @@
         waitload = true;
         object.page++;
         var params = _objectSpread2({}, object);
+        // Явно встановлюємо id для типу 'list' в next, якщо object.id є
+        if (type === 'list' && object.id) {
+          params.id = object.id;
+        } else if (type === 'list' && object.list_id) {
+          params.id = object.list_id;
+        }
         if (type === 'upnext') {
           params.limit = 36;
         } else {
           params.limit = 36;
         }
-        api[type](params, function (data) {
+        api[type](params).then(function (data) {
           _this2.append(data);
           waitload = false;
-        }, function () {
+        })["catch"](function () {
           waitload = false;
         });
       }
     };
     comp.cardRender = function (object, element, card) {
+      if (element.method === 'tv' || element.type === 'show') {
+        card.render().addClass('card--tv').append('<div class="card__type">' + Lampa.Lang.translate('trakttv_card_type_tv') + '</div>');
+      }
       card.onMenu = false;
       card.onEnter = function () {
         Lampa.Activity.push(card.data);
@@ -1060,7 +1342,7 @@
     return comp;
   }
   function baseRecommendations(object) {
-    var comp = new Lampa.InteractionCategory(object);
+    var comp = new Lampa.Lampa.InteractionCategory(object);
     var total_pages = 0;
     var waitload = false;
     comp.create = function () {
@@ -1086,7 +1368,6 @@
           _this3.empty();
         }
       })["catch"](function (error) {
-        console.error('TraktTV', error);
         _this3.empty();
       });
     };
@@ -1111,7 +1392,7 @@
     comp.cardRender = function (object, element, card) {
       // Додаємо мітку TV для серіалів
       if (element.method === 'tv') {
-        card.render().addClass('card--tv').append('<div class="card__type">TV</div>');
+        card.render().addClass('card--tv').append('<div class="card__type">' + Lampa.Lang.translate('trakttv_card_type_tv') + '</div>');
       }
       card.onMenu = false;
       card.onEnter = function () {
@@ -1142,10 +1423,86 @@
     if (!object.page) object.page = 1;
     return new baseRecommendations(object);
   }
+  function lists(object) {
+    var comp = new Lampa.InteractionCategory(object);
+    var total_pages = 0;
+    var waitload = false;
+    comp.create = function () {
+      var _this5 = this;
+      var params = _objectSpread2({}, object);
+      params.limit = 36;
+      params.page = params.page || 1;
+      api.likesLists(params).then(function (data) {
+        if (data.total_pages) {
+          total_pages = data.total_pages;
+        }
+        _this5.build(data);
+        if (_this5.activity.scroll) {
+          _this5.activity.scroll.onEnd = _this5.next.bind(_this5);
+        }
+      })["catch"](function (error) {
+        console.error('TraktTV Likes Lists API response:', error);
+        _this5.empty();
+      });
+    };
+    comp.next = function () {
+      var _this6 = this;
+      if (waitload) return;
+      if (object.page < total_pages) {
+        waitload = true;
+        object.page++;
+        var params = _objectSpread2({}, object);
+        params.limit = 36;
+        api.likesLists(params).then(function (data) {
+          _this6.append(data);
+          waitload = false;
+        })["catch"](function () {
+          waitload = false;
+        });
+      }
+    };
+    comp.cardRender = function (object, element, card) {
+      card.render().find('.card__title').remove();
+      var itemCountText = element.item_count ? "[".concat(element.item_count, "] ") : '';
+      card.render().find('.card__view').append("<div class=\"card__title\">".concat(itemCountText).concat(element.title, "</div>"));
+      card.onMenu = false;
+      card.onEnter = function () {
+        Lampa.Activity.push({
+          url: '',
+          title: Lampa.Lang.translate('trakt_list_title_named').replace('{name}', element.title),
+          component: 'trakt_list_detail',
+          id: element.id,
+          name: element.title,
+          description: element.description,
+          source: 'tmdb'
+        });
+      };
+    };
+    return comp;
+  }
+  function list_detail(object) {
+    if (!object.page) object.page = 1;
+    return new baseComponent(object, 'list');
+  }
+  function trakt_list_detail(object) {
+    if (!object.page) object.page = 1;
+
+    // Створюємо новий об'єкт, який гарантовано матиме 'id'
+    var paramsForBaseComponent = {
+      id: object.id,
+      // Використовуємо object.id, який приходить з Lampa.Activity.push
+      page: object.page,
+      limit: object.limit // Передаємо limit, якщо він є в object
+    };
+    return new baseComponent(paramsForBaseComponent, 'list');
+  }
   var Catalog = {
     watchlist: watchlist$1,
     upnext: upnext,
-    recommendations: recommendations
+    recommendations: recommendations,
+    lists: lists,
+    list_detail: list_detail,
+    trakt_list_detail: trakt_list_detail
   };
 
   function Main() {
@@ -1250,6 +1607,16 @@
         en: "Episodes on",
         uk: "Серії на"
       },
+      trakttv_calendar_error: {
+        ru: "Ошибка загрузки календаря Trakt",
+        en: "Trakt Calendar load error",
+        uk: "Помилка завантаження календаря Trakt"
+      },
+      trakttv_no_upcoming: {
+        ru: "Нет предстоящих эпизодов",
+        en: "No upcoming episodes",
+        uk: "Немає майбутніх епізодів"
+      },
       trakttvFullClear: {
         ru: "Очистить все ключи Trakt.TV",
         en: "Clear all Trakt.TV keys",
@@ -1349,6 +1716,201 @@
         ru: "Показывать прогресс просмотра сериалов",
         en: "Show TV progress",
         uk: "Показувати прогрес прогляду серіалів"
+      },
+      trakttv_related_lists: {
+        ru: "Пов'язані списки",
+        en: "Related lists",
+        uk: "Пов'язані списки"
+      },
+      trakt_list_detail: {
+        ru: "Содержимое списка",
+        en: "List Content",
+        uk: "Вміст списку"
+      },
+      trakt_no_lists: {
+        ru: "Нет списков",
+        en: "No lists",
+        uk: "Немає списків"
+      },
+      trakt_list_items: {
+        ru: "Элементы списка",
+        en: "List Items",
+        uk: "Елементи списку"
+      },
+      trakttv_user_info: {
+        ru: "Пользователь Trakt.TV",
+        en: "Trakt.TV User",
+        uk: "Користувач Trakt.TV"
+      },
+      trakttv_username: {
+        ru: "Имя пользователя",
+        en: "Username",
+        uk: "Ім'я користувача"
+      },
+      trakttv_movies: {
+        ru: "Фильмы",
+        en: "Movies",
+        uk: "Фільми"
+      },
+      trakttv_episodes: {
+        ru: "Эпизоды",
+        en: "Episodes",
+        uk: "Епізоди"
+      },
+      trakttv_code: {
+        ru: "Код",
+        en: "Code",
+        uk: "Код"
+      },
+      trakttv_auth: {
+        ru: "Авторизация Trakt",
+        en: "Trakt Auth",
+        uk: "Авторизація Trakt"
+      },
+      trakttv_enable_watching: {
+        ru: "Включить отслеживание просмотра",
+        en: "Enable watch tracking",
+        uk: "Ввімкнути відстеження перегляду"
+      },
+      trakttv_enable_watching_descr: {
+        ru: "Автоматически отмечать просмотренные эпизоды и добавлять сериалы в \"Смотрю\"",
+        en: "Automatically mark watched episodes and add series to \"Watching\"",
+        uk: "Автоматично позначати переглянуті епізоди та додавати серіали в \"Дивлюся\""
+      },
+      trakttv_add_threshold: {
+        ru: "Порог добавления сериала",
+        en: "Series adding threshold",
+        uk: "Поріг додавання серіалу"
+      },
+      trakttv_add_threshold_descr: {
+        ru: "Когда добавлять сериал в список \"Смотрю\" на Trakt.TV",
+        en: "When to add a series to the \"Watching\" list on Trakt.TV",
+        uk: "Коли додавати серіал до списку \"Дивлюся\" на Trakt.TV"
+      },
+      trakttv_add_immediately: {
+        ru: "Сразу при запуске",
+        en: "Immediately upon launch",
+        uk: "Одразу при запуску"
+      },
+      trakttv_add_after_5: {
+        ru: "После 5% просмотра",
+        en: "After 5% view",
+        uk: "Після 5% перегляду"
+      },
+      trakttv_add_after_10: {
+        ru: "После 10% просмотра",
+        en: "After 10% view",
+        uk: "Після 10% перегляду"
+      },
+      trakttv_add_after_15: {
+        ru: "После 15% просмотра",
+        en: "After 15% view",
+        uk: "Після 15% перегляду"
+      },
+      trakttv_add_after_20: {
+        ru: "После 20% просмотра",
+        en: "After 20% view",
+        uk: "Після 20% перегляду"
+      },
+      trakttv_add_after_25: {
+        ru: "После 25% просмотра",
+        en: "After 25% view",
+        uk: "Після 25% перегляду"
+      },
+      trakttv_add_after_30: {
+        ru: "После 30% просмотра",
+        en: "After 30% view",
+        uk: "Після 30% перегляду"
+      },
+      trakttv_add_after_35: {
+        ru: "После 35% просмотра",
+        en: "After 35% view",
+        uk: "Після 35% перегляду"
+      },
+      trakttv_add_after_40: {
+        ru: "После 40% просмотра",
+        en: "After 40% view",
+        uk: "Після 40% перегляду"
+      },
+      trakttv_add_after_45: {
+        ru: "После 45% просмотра",
+        en: "After 45% view",
+        uk: "Після 45% перегляду"
+      },
+      trakttv_add_after_50: {
+        ru: "После 50% просмотра",
+        en: "After 50% view",
+        uk: "Після 50% перегляду"
+      },
+      trakttv_min_progress_threshold: {
+        ru: "Порог просмотра",
+        en: "Viewing threshold",
+        uk: "Поріг перегляду"
+      },
+      trakttv_min_progress_threshold_descr: {
+        ru: "Минимальный процент просмотра для отметки эпизода на Trakt.TV",
+        en: "Minimum percentage of viewing to mark an episode on Trakt.TV",
+        uk: "Мінімальний відсоток перегляду для позначення епізоду на Trakt.TV"
+      },
+      trakttv_enable_logging: {
+        ru: "Включить логирование",
+        en: "Enable logging",
+        uk: "Увімкнути логування"
+      },
+      trakttv_enable_logging_descr: {
+        ru: "Логирование для тестирования механизма отслеживания просмотра",
+        en: "Logging for testing the watch tracking mechanism",
+        uk: "Логування для тестування механізму відстеження перегляду"
+      },
+      trakttv_card_type_tv: {
+        ru: "TV",
+        en: "TV",
+        uk: "TV"
+      },
+      trakt_list_title_named: {
+        ru: "Список - {name}",
+        en: "List - {name}",
+        uk: "Список - {name}"
+      },
+      trakttv_movie_id_missed: {
+        ru: "Отсутствует ID фильма",
+        en: "Movie ID is missing",
+        uk: "Відсутній ID фільму"
+      },
+      trakttv_show_id_missed: {
+        ru: "Отсутствует ID сериала",
+        en: "Show ID is missing",
+        uk: "Відсутній ID серіалу"
+      },
+      trakttv_unknown_content: {
+        ru: "Неизвестный тип контента",
+        en: "Unknown content type",
+        uk: "Невідомий тип контенту"
+      },
+      trakttv_show_not_found: {
+        ru: "Сериал не найден в Trakt",
+        en: "Show not found in Trakt",
+        uk: "Серіал не знайдено в Trakt"
+      },
+      trakttv_params_missed: {
+        ru: "Отсутствуют параметры",
+        en: "Params is missing",
+        uk: "Відсутні параметри"
+      },
+      trakttv_media_id_missed: {
+        ru: "Отсутствует ID медиа",
+        en: "Media ID is missing",
+        uk: "Відсутній ID медіа"
+      },
+      trakttv_list_id_missed: {
+        ru: "Отсутствует ID списка",
+        en: "List ID is missing",
+        uk: "Відсутній ID списку"
+      },
+      trakttv_upnext: {
+        ru: "Смотреть дальше",
+        en: "Up Next",
+        uk: "Дивитись далі"
       }
     });
   }
@@ -1500,7 +2062,7 @@
               _context2.p = 3;
               _context2.v;
               Lampa.Bell.push({
-                text: Lampa.Lang.translate('trakttv_calendar_error') || 'Trakt Calendar load error'
+                text: Lampa.Lang.translate('trakttv_calendar_error')
               });
               return _context2.a(2, []);
           }
@@ -1558,7 +2120,7 @@
     }));
     this.empty = function () {
       var empty = new Empty({
-        descr: Lampa.Lang.translate('trakttv_no_upcoming') || 'No upcoming episodes'
+        descr: Lampa.Lang.translate('trakttv_no_upcoming')
       });
       html.append(empty.render());
       _this2.start = empty.start;
@@ -1582,7 +2144,7 @@
         });
         item.addClass('timetable__item--any');
       } else {
-        item.find('.timetable__body').append("<div class=\"timetable__empty\">".concat(Lampa.Lang.translate('trakttv_no_series') || 'No series', "</div>"));
+        item.find('.timetable__body').append("<div class=\"timetable__empty\">".concat(Lampa.Lang.translate('trakttv_no_series'), "</div>"));
       }
       item.on('hover:focus', function () {
         last = $(this)[0];
@@ -1622,7 +2184,7 @@
             modal.append(noty);
           });
           Modal.open({
-            title: "".concat(Lampa.Lang.translate('trakttv_episodes_on') || 'Episodes on', " ").concat(date),
+            title: "".concat(Lampa.Lang.translate('trakttv_episodes_on'), " ").concat(date),
             size: 'medium',
             html: modal,
             onBack: function onBack() {
@@ -1767,7 +2329,7 @@
         line_type: 'trakttv_recommendations',
         onMore: function onMore() {
           Lampa.Activity.push({
-            title: 'Recommendations',
+            title: Lampa.Lang.translate('trakttv_recommendations'),
             component: "trakttv_recommendations"
           });
         },
@@ -1794,7 +2356,7 @@
               // Створюємо елемент типу
               var cardTypeElement = $("<div>", {
                 "class": "card__type",
-                text: "TV"
+                text: Lampa.Lang.translate('trakttv_card_type_tv')
               });
 
               // Додаємо у .card__view якщо знайдено
@@ -1875,12 +2437,12 @@
         });
       });
       return {
-        title: icons.createHeaderWithIcon(icons.TRAKT_ICON, 'Up Next'),
+        title: icons.createHeaderWithIcon(icons.TRAKT_ICON, Lampa.Lang.translate('trakttv_upnext')),
         results: normalizedResults,
         line_type: 'trakttv_upnext',
         onMore: function onMore() {
           Lampa.Activity.push({
-            title: 'Up Next',
+            title: Lampa.Lang.translate('trakttv_upnext'),
             component: "trakt_upnext"
           });
         },
@@ -1920,9 +2482,7 @@
           Lampa.Storage.set('trakttv_cached_upnext', data.results);
 
           // Оновлюємо головну сторінку якщо вона активна
-          if (Lampa.Activity.active().component === 'main') {
-            console.log('TraktTV: Up Next оновлено');
-          }
+          if (Lampa.Activity.active().component === 'main') ;
         }
       }, function (error) {
         console.error('TraktTV', error);
@@ -1990,7 +2550,7 @@
       // Перевіряємо чи це серіал
       if (data.movie && data.movie.first_air_date && element.object.method === 'tv') {
         // Отримуємо історію серіалу
-        api.getShowHistory(data.movie.id).then(function (historyData) {
+        getShowHistory(data.movie.id).then(function (historyData) {
           if (historyData && historyData.length > 0) {
             // Отримуємо останній переглянутий епізод
             var lastWatched = historyData[0];
@@ -2026,7 +2586,7 @@
       button.innerHTML = "\n               ".concat(icons.HISTORY_ICON, " \n                <span>").concat(Lampa.Lang.translate('trakt_history_not_in'), "</span>\n");
 
       // Перевіряємо чи є в історії
-      api.inHistory(data.movie, function (isInHistory) {
+      inHistory(data.movie, function (isInHistory) {
         updateButtonStyle(button, isInHistory);
       }, function () {
         button.style.display = 'none';
@@ -2058,7 +2618,7 @@
             episode: data.movie.episode_number || 1
           };
           if (_type === 'movie') {
-            api.removeFromHistory(_apiData).then(function () {
+            removeFromHistory(_apiData).then(function () {
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('trakt_history_removed')
               });
@@ -2083,7 +2643,7 @@
                 action: 'last_episode'
               }],
               onSelect: function onSelect(a) {
-                api.removeFromHistory(_apiData, a.action).then(function () {
+                removeFromHistory(_apiData, a.action).then(function () {
                   Lampa.Bell.push({
                     text: Lampa.Lang.translate('trakt_history_removed', {
                       type: a.title
@@ -2114,7 +2674,7 @@
           episode: data.movie.episode_number || 1
         };
         if (type === 'movie') {
-          api.addToHistory(apiData).then(function () {
+          addToHistory(apiData).then(function () {
             Lampa.Bell.push({
               text: Lampa.Lang.translate('trakt_history_added')
             });
@@ -2139,7 +2699,7 @@
               action: 'last_episode'
             }],
             onSelect: function onSelect(a) {
-              api.addToHistory(apiData, a.action).then(function () {
+              addToHistory(apiData, a.action).then(function () {
                 Lampa.Bell.push({
                   text: Lampa.Lang.translate('trakt_history_added', {
                     type: a.title
@@ -2210,6 +2770,12 @@
       component: 'trakttv_recommendations',
       toggleOption: 'trakttv_show_recommendations'
     }];
+
+    // Додаємо новий пункт меню для списків користувача
+    items.push({
+      title: 'Liked Lists',
+      component: 'trakt_lists'
+    });
     var combineButton = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">TraktTV</div>\n    </li>"));
     combineButton.on('hover:enter', function () {
       Lampa.Select.show({
@@ -2219,7 +2785,8 @@
           Lampa.Activity.push({
             url: '',
             title: a.title,
-            component: a.component
+            component: a.component,
+            page: 1
           });
         },
         onLong: function onLong(a) {
@@ -2288,7 +2855,7 @@
           return;
         }
         // Показати лоадер
-        var loading = $('<div class="settings-param__value">Loading...</div>');
+        var loading = $("<div class=\"settings-param__value\">".concat(Lampa.Lang.translate('loading'), "</div>"));
         item.append(loading);
         Promise.all([api.get('/users/me'), api.get('/users/me/stats')]).then(function (_ref) {
           var _ref2 = _slicedToArray(_ref, 2),
@@ -2306,12 +2873,12 @@
           if (minutes > 0) {
             funnyLine = "<span style=\"color:#f39c12;\">".concat(Lampa.Lang.translate('trakttvHumorMinutes').replace('{time}', minutes), "</span>");
           }
-          item.append("<div class=\"settings-param__name\"><b>Trakt.TV User</b></div>");
-          item.append("<div class=\"settings-param__value\">Username: ".concat(user.username, " ").concat(user.vip ? 'VIP' : '', "</div>"));
+          item.append("<div class=\"settings-param__name\"><b>".concat(Lampa.Lang.translate('trakttv_user_info'), "</b></div>"));
+          item.append("<div class=\"settings-param__value\">".concat(Lampa.Lang.translate('trakttv_username'), ": ").concat(user.username, " ").concat(user.vip ? 'VIP' : '', "</div>"));
           if (funnyLine) item.append("<div class=\"settings-param__value\">".concat(funnyLine, "</div>"));
           if (stats) {
             var _stats$movies2, _stats$movies3, _stats$episodes2, _stats$episodes3;
-            item.append("\n                        <div class=\"settings-param__value\">\n                            <b>Movies:</b>\n                            ".concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$movies2 = stats.movies) === null || _stats$movies2 === void 0 ? void 0 : _stats$movies2.watched) || 0, ", \n                            ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$movies3 = stats.movies) === null || _stats$movies3 === void 0 ? void 0 : _stats$movies3.minutes) || 0, "\n                        </div>\n                        <div class=\"settings-param__value\">\n                            <b>Episodes:</b>\n                            ").concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$episodes2 = stats.episodes) === null || _stats$episodes2 === void 0 ? void 0 : _stats$episodes2.watched) || 0, ", \n                            ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$episodes3 = stats.episodes) === null || _stats$episodes3 === void 0 ? void 0 : _stats$episodes3.minutes) || 0, "\n                        </div>\n                    "));
+            item.append("\n                        <div class=\"settings-param__value\">\n                            <b>".concat(Lampa.Lang.translate('trakttv_movies'), ":</b>\n                            ").concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$movies2 = stats.movies) === null || _stats$movies2 === void 0 ? void 0 : _stats$movies2.watched) || 0, ",\n                            ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$movies3 = stats.movies) === null || _stats$movies3 === void 0 ? void 0 : _stats$movies3.minutes) || 0, "\n                        </div>\n                        <div class=\"settings-param__value\">\n                            <b>").concat(Lampa.Lang.translate('trakttv_episodes'), ":</b>\n                            ").concat(Lampa.Lang.translate('trakttvStatWatched'), ": ").concat(((_stats$episodes2 = stats.episodes) === null || _stats$episodes2 === void 0 ? void 0 : _stats$episodes2.watched) || 0, ",\n                            ").concat(Lampa.Lang.translate('trakttvStatMinutes'), ": ").concat(((_stats$episodes3 = stats.episodes) === null || _stats$episodes3 === void 0 ? void 0 : _stats$episodes3.minutes) || 0, "\n                        </div>\n                    "));
           }
         })["catch"](function () {
           loading.remove();
@@ -2343,9 +2910,9 @@
       onChange: function onChange() {
         if (Lampa.Storage.get('trakt_token')) return;
         api.auth.login().then(function (response) {
-          var modal = $("<div class=\"about\">\n                        <div class=\"about__text\">".concat(response.verification_url, "</div>\n                        <div class=\"about__text\">Code: ").concat(response.user_code, "</div>\n                    </div>"));
+          var modal = $("<div class=\"about\">\n                        <div class=\"about__text\">".concat(response.verification_url, "</div>\n                        <div class=\"about__text\">").concat(Lampa.Lang.translate('trakttv_code'), ": ").concat(response.user_code, "</div>\n                    </div>"));
           Lampa.Modal.open({
-            title: 'Trakt Auth',
+            title: Lampa.Lang.translate('trakttv_auth'),
             html: modal,
             size: 'small',
             onBack: function onBack() {
@@ -2361,50 +2928,6 @@
         });
       }
     });
-
-    // // Кнопка імпорту закладок з Trakt
-    // Lampa.SettingsApi.addParam({
-    //     component: 'trakt',
-    //     param: {
-    //         name: 'trakt_import',
-    //         type: 'button'
-    //     },
-    //     field: {
-    //         name: 'Імпортувати закладки з Trakt'
-    //     },
-    //     onRender: function(item){
-    //         if(Lampa.Storage.get('trakt_token')){
-    //             item.show();
-    //         } else {
-    //             item.hide();
-    //         }
-    //     },
-    //     onChange: function(){
-    //         importTraktToLampa();
-    //     }
-    // });
-
-    // // Кнопка експорту закладок у Trakt
-    // Lampa.SettingsApi.addParam({
-    //     component: 'trakt',
-    //     param: {
-    //         name: 'trakt_export',
-    //         type: 'button'
-    //     },
-    //     field: {
-    //         name: 'Експортувати закладки у Trakt'
-    //     },
-    //     onRender: function(item){
-    //         if(Lampa.Storage.get('trakt_token')){
-    //             item.show();
-    //         } else {
-    //             item.hide();
-    //         }
-    //     },
-    //     onChange: function(){
-    //         exportLampaToTrakt();
-    //     }
-    // });
 
     // Кнопка logout
     Lampa.SettingsApi.addParam({
@@ -2486,6 +3009,85 @@
         name: Lampa.Lang.translate('trakttv_show_tv_progress')
       }
     });
+
+    // Параметр для ввімкнення/вимкнення відстеження перегляду
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_enable_watching',
+        type: 'trigger',
+        "default": false
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttv_enable_watching'),
+        description: Lampa.Lang.translate('trakttv_enable_watching_descr')
+      }
+    });
+
+    // Параметр для вибору порогу додавання серіалу
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_add_threshold',
+        type: 'select',
+        "default": '0',
+        values: {
+          '0': Lampa.Lang.translate('trakttv_add_immediately'),
+          '5': Lampa.Lang.translate('trakttv_add_after_5'),
+          '10': Lampa.Lang.translate('trakttv_add_after_10'),
+          '15': Lampa.Lang.translate('trakttv_add_after_15'),
+          '20': Lampa.Lang.translate('trakttv_add_after_20'),
+          '25': Lampa.Lang.translate('trakttv_add_after_25'),
+          '30': Lampa.Lang.translate('trakttv_add_after_30'),
+          '35': Lampa.Lang.translate('trakttv_add_after_35'),
+          '40': Lampa.Lang.translate('trakttv_add_after_40'),
+          '45': Lampa.Lang.translate('trakttv_add_after_45'),
+          '50': Lampa.Lang.translate('trakttv_add_after_50')
+        }
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttv_add_threshold'),
+        description: Lampa.Lang.translate('trakttv_add_threshold_descr')
+      }
+    });
+
+    // Параметр для вибору мінімального відсотку перегляду
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_min_progress',
+        type: 'select',
+        "default": '90',
+        values: {
+          '50': '50%',
+          '60': '60%',
+          '70': '70%',
+          '80': '80%',
+          '85': '85%',
+          '90': '90%',
+          '95': '95%',
+          '100': '100%'
+        }
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttv_min_progress_threshold'),
+        description: Lampa.Lang.translate('trakttv_min_progress_threshold_descr')
+      }
+    });
+
+    // Параметр для ввімкнення/вимкнення логування
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_enable_logging',
+        type: 'trigger',
+        "default": false
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttv_enable_logging'),
+        description: Lampa.Lang.translate('trakttv_enable_logging_descr')
+      }
+    });
   }
 
   // Окрема функція для poll авторизації
@@ -2517,6 +3119,472 @@
   };
 
   /**
+   * Визначає тип вмісту (фільм чи серіал) на основі даних картки
+   * @param {Object} card - Картка вмісту
+   * @returns {string} 'movie' або 'show'
+   */
+  function getContentType(card) {
+    // Якщо є поля, характерні для серіалів, вважаємо, що це серіал
+    if (card.episode_run_time || card.first_air_date || card.created_by || card.number_of_seasons || card.number_of_episodes) {
+      return 'show';
+    }
+    // В іншому випадку вважаємо, що це фільм
+    return 'movie';
+  }
+
+  // Змінні для уникнення подвійних запитів
+  var isMarkingEpisodeAsWatched = false;
+  var isAddingShowToWatching = false;
+  var isInitialized = false;
+
+  /**
+   * Модуль для відстеження перегляду в Trakt.TV
+   */
+  var watching = {
+    /**
+     * Перевіряє, чи увімкнено логування
+     * @returns {boolean} true, якщо логування увімкнено
+     */
+    isLoggingEnabled: function isLoggingEnabled() {
+      return Lampa.Storage.field('trakt_enable_logging');
+    },
+    /**
+     * Ініціалізує обробники подій відстеження перегляду
+     */
+    init: function init() {
+      // Уникнення подвійної ініціалізації
+      if (isInitialized) {
+        console.log('TraktTV', 'watching.init called while already initialized, skipping');
+        return;
+      }
+      isInitialized = true;
+
+      // Додаткове логування для налагодження подвійної ініціалізації
+      console.log('TraktTV', 'watching.init called');
+      if (this.isLoggingEnabled()) {
+        console.log('TraktTV', 'Initializing watching module');
+      }
+
+      // Слідкуємо за оновленнями Timeline
+      if (window.Lampa && Lampa.Timeline && Lampa.Timeline.listener) {
+        Lampa.Timeline.listener.follow('update', this.processTimelineUpdate.bind(this));
+        if (this.isLoggingEnabled()) {
+          console.log('TraktTV', 'Timeline listener attached');
+        }
+      }
+
+      // Слідкуємо за стартом програвача для збереження поточної картки
+      if (window.Lampa && Lampa.Player && Lampa.Player.listener) {
+        Lampa.Player.listener.follow('start', this.onPlayerStart.bind(this));
+        if (this.isLoggingEnabled()) {
+          console.log('TraktTV', 'Player listener attached');
+        }
+      }
+    },
+    /**
+     * Обробник події старту програвача
+     * @param {Object} data - Дані події
+     */
+    onPlayerStart: function onPlayerStart(data) {
+      if (this.isLoggingEnabled()) {
+        console.log('TraktTV', 'Player start event received', data);
+      }
+      var card = data.card || Lampa.Activity.active() && Lampa.Activity.active().movie;
+      if (this.isLoggingEnabled()) {
+        console.log('TraktTV', 'Card determined in onPlayerStart', card);
+      }
+      if (!card) {
+        if (this.isLoggingEnabled()) {
+          console.log('TraktTV', 'No card found in onPlayerStart');
+        }
+        return;
+      }
+
+      // Зберігаємо поточну картку для подальшої обробки
+      Lampa.Storage.set('trakt_last_card', card);
+      if (this.isLoggingEnabled()) {
+        console.log('TraktTV', 'Card saved to storage', card);
+      }
+    },
+    /**
+     * Обробник оновлень Timeline
+     * @param {Object} data - Дані події
+     */
+    processTimelineUpdate: function processTimelineUpdate(data) {
+      // Додаткове логування для налагодження подвійних викликів
+      console.log('TraktTV', 'processTimelineUpdate called with data:', data);
+      if (this.isLoggingEnabled()) {
+        console.log('TraktTV', 'Timeline update received', data);
+      }
+
+      // Перевіряємо налаштування trakt_enable_watching
+      var enableWatching = Lampa.Storage.field('trakt_enable_watching');
+      console.log('TraktTV', 'trakt_enable_watching setting:', enableWatching);
+      if (!enableWatching) {
+        if (this.isLoggingEnabled()) {
+          console.log('TraktTV', 'Watching is disabled by settings');
+        }
+        return;
+      }
+      if (!data || !data.data || !data.data.hash || !data.data.road) {
+        if (this.isLoggingEnabled()) {
+          console.log('TraktTV', 'Invalid data received', data);
+        }
+        console.log('TraktTV', 'Invalid data - data:', data);
+        console.log('TraktTV', 'Invalid data - data.data:', data && data.data);
+        console.log('TraktTV', 'Invalid data - data.data.hash:', data && data.data && data.data.hash);
+        console.log('TraktTV', 'Invalid data - data.data.road:', data && data.data && data.data.road);
+        return;
+      }
+      var hash = data.data.hash;
+      var percent = data.data.road.percent;
+      var token = Lampa.Storage.get('trakt_token');
+      var minProgress = parseInt(Lampa.Storage.field('trakt_min_progress') || config.minProgress);
+      var addThreshold = parseInt(Lampa.Storage.field('trakt_add_threshold') || config.addThreshold);
+      console.log('TraktTV', 'Timeline update data:', {
+        hash: hash,
+        percent: percent,
+        token: !!token,
+        minProgress: minProgress,
+        addThreshold: addThreshold
+      });
+      if (this.isLoggingEnabled()) {
+        console.log('TraktTV', 'Processing timeline update', {
+          hash: hash,
+          percent: percent,
+          token: !!token,
+          minProgress: minProgress,
+          addThreshold: addThreshold
+        });
+      }
+      if (!token) {
+        if (this.isLoggingEnabled()) {
+          console.log('TraktTV', 'No token found, skipping update');
+        }
+        console.log('TraktTV', 'No token found');
+        return;
+      }
+      var card = this.getCurrentCard();
+      console.log('TraktTV', 'Card from getCurrentCard:', card);
+      if (!card) {
+        if (this.isLoggingEnabled()) {
+          console.log('TraktTV', 'No card found, skipping update');
+        }
+        console.log('TraktTV', 'No card found, skipping update');
+        return;
+      }
+
+      // Перевіряємо, чи потрібно додати серіал в "Смотрю"
+      console.log('TraktTV', 'Calling checkAndAddToShow');
+      this.checkAndAddToShow(card, hash, percent, addThreshold, token);
+
+      // Перевіряємо, чи потрібно відзначити епізод як переглянутий
+      console.log('TraktTV', 'Checking if episode should be marked as watched, percent:', percent, 'minProgress:', minProgress);
+      if (percent >= minProgress) {
+        console.log('TraktTV', 'Marking episode as watched');
+        this.markEpisodeAsWatched(card, hash, token);
+      } else {
+        console.log('TraktTV', 'Episode not marked as watched, percent < minProgress');
+      }
+    },
+    /**
+     * Отримує поточну картку
+     * @returns {Object|null} Поточна картка
+     */
+    getCurrentCard: function getCurrentCard() {
+      var card = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie) || null;
+      if (!card) card = Lampa.Storage.get('trakt_last_card', null);
+
+      // Додаткове логування для налагодження
+      console.log('TraktTV', 'getCurrentCard - Activity.active():', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active());
+      console.log('TraktTV', 'getCurrentCard - card_data:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card_data);
+      console.log('TraktTV', 'getCurrentCard - card:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card);
+      console.log('TraktTV', 'getCurrentCard - movie:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().movie);
+      console.log('TraktTV', 'getCurrentCard - trakt_last_card from storage:', Lampa.Storage.get('trakt_last_card', null));
+      console.log('TraktTV', 'getCurrentCard - final card:', card);
+      if (this.isLoggingEnabled()) {
+        console.log('TraktTV', 'Current card determined', card);
+      }
+      return card;
+    },
+    /**
+     * Перевіряє, чи потрібно додати серіал в "Смотрю"
+     * @param {Object} card - Картка серіалу
+     * @param {string} hash - Хеш епізоду
+     * @param {number} percent - Відсоток перегляду
+     * @param {number} addThreshold - Поріг додавання
+     * @param {string} token - Токен авторизації
+     */
+    checkAndAddToShow: function checkAndAddToShow(card, hash, percent, addThreshold, token) {
+      var originalName = card.original_name || card.original_title || card.title;
+      var firstEpisodeHash = Lampa.Utils.hash('11' + originalName);
+
+      // Додаткове логування для налагодження
+      console.log('TraktTV', 'checkAndAddToShow called with:', {
+        card: card,
+        hash: hash,
+        percent: percent,
+        addThreshold: addThreshold,
+        originalName: originalName,
+        firstEpisodeHash: firstEpisodeHash
+      });
+      if (this.isLoggingEnabled()) {
+        console.log('TraktTV: Checking if show should be added to watching', {
+          card: card,
+          hash: hash,
+          percent: percent,
+          addThreshold: addThreshold,
+          firstEpisodeHash: firstEpisodeHash,
+          shouldAdd: hash === firstEpisodeHash && percent >= addThreshold || addThreshold === 0 && hash === firstEpisodeHash
+        });
+      }
+      var shouldAdd = hash === firstEpisodeHash && percent >= addThreshold || addThreshold === 0 && hash === firstEpisodeHash;
+      console.log('TraktTV', 'Should add show to watching:', shouldAdd);
+      if (shouldAdd) {
+        console.log('TraktTV', 'Adding show to watching');
+        this.addShowToWatching(card, token);
+      } else {
+        console.log('TraktTV', 'Not adding show to watching');
+      }
+    },
+    /**
+     * Додає серіал в "Смотрю"
+     * @param {Object} card - Картка серіалу
+     * @param {string} token - Токен авторизації
+     */
+    addShowToWatching: function addShowToWatching(card, token) {
+      var _this = this;
+      // Уникнення подвійних запитів
+      if (isAddingShowToWatching) {
+        console.log('TraktTV', 'addShowToWatching called while already adding, skipping');
+        return;
+      }
+      isAddingShowToWatching = true;
+      if (this.isLoggingEnabled()) {
+        console.log('TraktTV', 'Adding show to watching', card);
+      }
+
+      // Додаткове логування для налагодження
+      console.log('TraktTV', 'addShowToWatching called with card:', card);
+      var tmdbId = card.id || card.ids && card.ids.tmdb;
+      console.log('TraktTV', 'Determined tmdbId:', tmdbId);
+      if (!tmdbId) {
+        console.log('TraktTV', 'No tmdbId found, returning');
+        return;
+      }
+
+      // Визначаємо тип вмісту
+      var contentType = getContentType(card);
+      console.log('TraktTV', 'Determined content type:', contentType);
+
+      // Отримуємо Trakt ID за TMDB ID
+      console.log('TraktTV', 'Searching for content by tmdbId:', tmdbId, 'type:', contentType);
+      api.get("/search/tmdb/".concat(tmdbId, "?type=").concat(contentType)).then(function (response) {
+        console.log('TraktTV', 'Search response:', response);
+        if (response && response.length > 0) {
+          var item = response[0];
+          var traktId = item.show && item.show.ids.trakt || item.movie && item.movie.ids.trakt;
+          console.log('TraktTV', 'Found traktId:', traktId);
+
+          // Додаємо вміст в "Смотрю"
+          var body = {};
+          if (contentType === 'show') {
+            body.shows = [{
+              ids: _objectSpread2({
+                trakt: traktId
+              }, card.ids),
+              // Завжди додаємо traktId
+              watched_at: new Date().toISOString()
+            }];
+          } else {
+            body.movies = [{
+              ids: _objectSpread2({
+                trakt: traktId
+              }, card.ids),
+              // Завжди додаємо traktId
+              watched_at: new Date().toISOString()
+            }];
+          }
+          console.log('TraktTV', 'Body for adding content to watching:', body);
+          if (_this.isLoggingEnabled()) {
+            console.log('TraktTV', 'Sending request to add content to watching', body);
+          }
+          return api.get('/sync/watchlist', body);
+        } else {
+          console.log('TraktTV', 'No show found or no traktId in response');
+        }
+      })["catch"](function (error) {
+        console.error('TraktTV: Error adding show to watching', error);
+        console.log('TraktTV', 'Error details:', error);
+      })["finally"](function () {
+        // Скидаємо стан після виконання запиту
+        isAddingShowToWatching = false;
+      });
+    },
+    /**
+     * Відзначає епізод як переглянутий
+     * @param {Object} card - Картка серіалу
+     * @param {string} hash - Хеш епізоду
+     * @param {string} token - Токен авторизації
+     */
+    markEpisodeAsWatched: function markEpisodeAsWatched(card, hash, token) {
+      var _this2 = this;
+      // Уникнення подвійних запитів
+      if (isMarkingEpisodeAsWatched) {
+        console.log('TraktTV', 'markEpisodeAsWatched called while already marking, skipping');
+        return;
+      }
+      isMarkingEpisodeAsWatched = true;
+      if (this.isLoggingEnabled()) {
+        console.log('TraktTV', 'Marking episode as watched', {
+          card: card,
+          hash: hash
+        });
+      }
+
+      // Додаткове логування для налагодження
+      console.log('TraktTV', 'markEpisodeAsWatched called with:', {
+        card: card,
+        hash: hash
+      });
+      var tmdbId = card.id || card.ids && card.ids.tmdb;
+      console.log('TraktTV', 'Determined tmdbId:', tmdbId);
+      if (!tmdbId) {
+        console.log('TraktTV', 'No tmdbId found, returning');
+        return;
+      }
+
+      // Визначаємо тип вмісту
+      var contentType = getContentType(card);
+      console.log('TraktTV', 'Determined content type:', contentType);
+
+      // Отримуємо інформацію про вміст
+      console.log('TraktTV', 'Searching for content by tmdbId:', tmdbId, 'type:', contentType);
+      api.get("/search/tmdb/".concat(tmdbId, "?type=").concat(contentType)).then(function (response) {
+        console.log('TraktTV', 'Search response:', response);
+        if (response && response.length > 0) {
+          var item = response[0];
+          var traktId = item.show && item.show.ids.trakt || item.movie && item.movie.ids.trakt;
+          console.log('TraktTV', 'Found traktId:', traktId);
+          if (_this2.isLoggingEnabled()) {
+            console.log('TraktTV', 'Found show Trakt ID', traktId);
+          }
+
+          // Якщо це фільм, відзначаємо його як переглянутий
+          if (contentType === 'movie') {
+            return api.addToHistory({
+              method: 'movie',
+              id: card.id || card.ids && card.ids.tmdb,
+              ids: _objectSpread2({
+                trakt: traktId
+              }, card.ids)
+            });
+          }
+
+          // Якщо це серіал, отримуємо інформацію про сезони та епізоди
+          console.log('TraktTV', 'Getting seasons for traktId:', traktId);
+          return api.get("/shows/".concat(traktId, "/seasons?extended=episodes")).then(function (seasons) {
+            console.log('TraktTV', 'Seasons response:', seasons);
+            if (!seasons) {
+              console.log('TraktTV', 'No seasons data received');
+              return;
+            }
+            if (_this2.isLoggingEnabled()) {
+              console.log('TraktTV', 'Received seasons data', seasons.length);
+            }
+
+            // Знаходимо відповідний епізод за хешем
+            console.log('TraktTV', 'Finding episode by hash');
+            var episodeInfo = _this2.findEpisodeByHash(card, hash, seasons);
+            console.log('TraktTV', 'Episode info found:', episodeInfo);
+            if (!episodeInfo) {
+              console.log('TraktTV', 'No episode info found, returning');
+              return;
+            }
+            if (_this2.isLoggingEnabled()) {
+              console.log('TraktTV', 'Found episode info', episodeInfo);
+            }
+
+            // Відзначаємо епізод як переглянутий
+            return api.addToHistory({
+              method: 'show',
+              // Вказуємо тип вмісту
+              id: card.id || card.ids && card.ids.tmdb,
+              // ID серіалу
+              ids: _objectSpread2({
+                trakt: traktId
+              }, card.ids),
+              // Завжди додаємо traktId
+              season_number: episodeInfo.season,
+              // Номер сезону
+              episodes: [{
+                number: episodeInfo.episode,
+                // Номер епізоду
+                watched_at: new Date().toISOString() // Час перегляду
+              }]
+            });
+          });
+        } else {
+          console.log('TraktTV', 'No show found or no traktId in response');
+        }
+      })["catch"](function (error) {
+        console.error('TraktTV: Error marking episode as watched', error);
+        console.log('TraktTV', 'Error details:', error);
+      })["finally"](function () {
+        // Скидаємо стан після виконання запиту
+        isMarkingEpisodeAsWatched = false;
+      });
+    },
+    /**
+     * Знаходить інформацію про епізод за хешем
+     * @param {Object} card - Картка серіалу
+     * @param {string} hash - Хеш епізоду
+     * @param {Array} seasons - Сезони серіалу
+     * @returns {Object|null} Інформація про епізод
+     */
+    findEpisodeByHash: function findEpisodeByHash(card, hash, seasons) {
+      var originalName = card.original_name || card.original_title || card.title;
+
+      // Додаткове логування для налагодження
+      console.log('TraktTV', 'findEpisodeByHash called with:', {
+        card: card,
+        hash: hash,
+        seasons: seasons && seasons.length
+      });
+      console.log('TraktTV', 'originalName:', originalName);
+      for (var i = 0; i < seasons.length; i++) {
+        var season = seasons[i];
+        if (!season.episodes) continue;
+        for (var j = 0; j < season.episodes.length; j++) {
+          var episode = season.episodes[j];
+          var episodeHashStr = '' + season.number + episode.number + originalName;
+          var episodeHash = Lampa.Utils.hash(episodeHashStr);
+
+          // Додаткове логування для налагодження
+          console.log('TraktTV', 'Checking episode:', {
+            season: season.number,
+            episode: episode.number,
+            episodeHashStr: episodeHashStr,
+            episodeHash: episodeHash,
+            ids: episode.ids
+          });
+          if (episodeHash === hash && episode.ids && episode.ids.trakt) {
+            var result = {
+              traktId: episode.ids.trakt,
+              season: season.number,
+              episode: episode.number
+            };
+            console.log('TraktTV', 'Found matching episode:', result);
+            return result;
+          }
+        }
+      }
+      console.log('TraktTV', 'No matching episode found');
+      return null;
+    }
+  };
+
+  /**
    * Модуль для обробки подій плагіна
    */
   var events = {
@@ -2538,6 +3606,9 @@
           _this.onFullCardReady(e);
         }
       });
+
+      // Ініціалізуємо обробники відстеження перегляду
+      // watching.init() викликається в TraktTV.js, тому тут не потрібно
     },
     /**
      * Обробник події готовності додатку
@@ -2550,22 +3621,193 @@
       addMenuItems();
     },
     /**
+     * Додає блок з пов'язаними списками в картку медіа
+     * @param {Object} e - Об'єкт події
+     */
+    addRelatedListsBlock: function addRelatedListsBlock(e) {
+      // Перевіряємо наявність об'єкта події
+      if (!e) {
+        console.error('TraktTV', 'Cannot add related lists block - event object is missing');
+        return;
+      }
+
+      // Перевіряємо наявність даних картки
+      var card = e.data;
+      if (!card) {
+        console.error('TraktTV', 'Cannot add related lists block - missing card data');
+        return;
+      }
+
+      // Перевіряємо наявність методу
+      var method = e.object && e.object.method ? e.object.method : card.method || 'movie';
+
+      // Перевіряємо наявність ID
+      if (!card.id && (!card.external_ids || !card.external_ids.trakt_id)) {
+        console.error('TraktTV', 'Cannot add related lists block - missing card ID');
+        return;
+      }
+
+      // Параметри для запиту
+      var params = {
+        id: card.id,
+        method: method === 'tv' ? 'show' : 'movie'
+      };
+
+      // Додаємо trakt_id, якщо він доступний
+      if (card.external_ids && card.external_ids.trakt_id) {
+        params.ids = {
+          trakt: card.external_ids.trakt_id
+        };
+      }
+
+      // Отримуємо пов'язані списки та списки, які користувач лайкнув
+      Promise.all([api.getMediaLists(params), api.likesLists({
+        page: 1,
+        limit: 1000
+      }) // Отримуємо всі лайкнуті списки
+      ]).then(function (_ref) {
+        var _ref2 = _slicedToArray(_ref, 2),
+          mediaListsResponse = _ref2[0],
+          likedListsResponse = _ref2[1];
+        var formattedMediaLists = mediaListsResponse; // getMediaLists вже повертає відформатовані дані
+        var likedListIds = likedListsResponse.results.map(function (list) {
+          return list.id;
+        });
+
+        // Перевіряємо наявність списків
+        if (!formattedMediaLists || !Array.isArray(formattedMediaLists) || formattedMediaLists.length === 0) {
+          return;
+        }
+
+        // Перевіряємо наявність activity та render
+        if (!e.object || !e.object.activity || typeof e.object.activity.render !== 'function') {
+          return;
+        }
+
+        // Знаходимо блок з тегами
+        var tagsBlock = e.object.activity.render().find('.full-descr__tags');
+        if (tagsBlock.length === 0) {
+          return;
+        }
+
+        // Створюємо елемент для відображення кількості списків
+        var listsCountElement = $("\n                <div class=\"tag-count selector\">\n                    <div class=\"tag-count__name\">".concat(Lampa.Lang.translate('trakttv_related_lists'), "</div>\n                </div>\n            "));
+
+        // Додаємо обробник кліку для відображення списків
+        listsCountElement.on('hover:enter', function () {
+          var selectItems = formattedMediaLists.map(function (list) {
+            return {
+              title: list.title,
+              id: list.id,
+              component: 'trakt_list_detail',
+              // Вказуємо компонент
+              list_id: list.id,
+              // Передаємо list_id
+              page: 1,
+              // Початкова сторінка
+              liked: likedListIds.includes(list.id) // Додаємо статус лайку
+            };
+          });
+          if (selectItems.length === 0) {
+            Lampa.Noty.show(Lampa.Lang.translate('trakt_no_lists'));
+            return;
+          }
+          Lampa.Select.show({
+            title: Lampa.Lang.translate('trakttv_related_lists'),
+            items: selectItems,
+            onSelect: function onSelect(a) {
+              Lampa.Activity.push({
+                url: '',
+                title: a.title,
+                component: a.component,
+                list_id: a.list_id,
+                page: a.page
+              });
+            },
+            onRender: function onRender(item, element) {
+              if (element.liked) {
+                item.find('.selectbox__title').append('<span class="selectbox__lables"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="22px" height="22px" viewBox="0 0 22 22" xml:space="preserve"><path fill="currentColor" d="M11,20c-0.3,0-0.5-0.1-0.7-0.3l-8.5-8.5c-0.9-0.9-1.4-2-1.4-3.3c0-2.6,2.1-4.7,4.7-4.7c1.4,0,2.7,0.6,3.6,1.5l2.3,2.3l2.3-2.3c0.9-0.9,2.2-1.5,3.6-1.5c2.6,0,4.7,2.1,4.7,4.7c0,1.3-0.5,2.4-1.4,3.3l-8.5,8.5C11.5,19.9,11.3,20,11,20z"></path></svg></span>');
+              }
+            },
+            onBack: function onBack() {
+              Lampa.Controller.toggle('content');
+            }
+          });
+        });
+
+        // Додаємо елемент в кінець блоку з тегами
+        tagsBlock.append(listsCountElement);
+      })["catch"](function (error) {});
+    },
+    /**
      * Обробник події готовності картки фільму/серіалу
      * @param {Object} e - Об'єкт події
      */
     onFullCardReady: function onFullCardReady(e) {
+      // Перевіряємо наявність необхідних даних
+      if (!e || !e.data) {
+        return;
+      }
+
+      // Перевіряємо наявність activity
+      if (!e.object || !e.object.activity || typeof e.object.activity.render !== 'function') {
+        return;
+      }
       var button = watchlist.addWatchlistButton(e.data);
       e.object.activity.render().find('.full-start-new__buttons').append(button);
 
-      // Додаємо нову кнопку
-      var historyButton = TraktHistory.addHistoryButton(e.data);
-      e.object.activity.render().find('.full-start-new__buttons').append(historyButton);
+      // Видалено кнопку TraktHistory.addHistoryButton згідно з завданням
+      // const historyButton = TraktHistory.addHistoryButton(e.data);
+      // e.object.activity.render().find('.full-start-new__buttons').append(historyButton);
+
+      // Додаємо блок з пов'язаними списками
+      // Перевіряємо наявність необхідних даних для списків
+      // Виправлено: додано більше логування для налагодження
+
+      if (!e.data.id) {
+        // Спробуємо отримати ID з інших джерел
+
+        // Перевіряємо наявність ID в різних можливих полях
+        if (e.data.card && e.data.card.id) {
+          e.data.id = e.data.card.id;
+        } else if (e.data.data && e.data.data.id) {
+          e.data.id = e.data.data.id;
+        } else if (e.data.movie && e.data.movie.id) {
+          e.data.id = e.data.movie.id;
+        } else if (e.data.show && e.data.show.id) {
+          e.data.id = e.data.show.id;
+        } else if (e.data.external_ids && e.data.external_ids.tmdb_id) {
+          e.data.id = e.data.external_ids.tmdb_id;
+        } else {
+          return;
+        }
+      }
+
+      // Перевіряємо наявність external_ids
+      if (!e.data.external_ids) {
+        e.data.external_ids = {};
+      }
+
+      // Створюємо глибоку копію об'єкта події для передачі в addRelatedListsBlock
+      var eventForLists = {
+        data: JSON.parse(JSON.stringify(e.data)),
+        object: {
+          method: e.object.method,
+          activity: e.object.activity
+        }
+      };
+
+      // Додаткова перевірка копії даних
+      if (!eventForLists.data.id) {
+        eventForLists.data.id = e.data.id; // Явно копіюємо ID
+      }
+      this.addRelatedListsBlock(eventForLists);
 
       // Додаємо прогрес перегляду для серіалів
       if (e.object.method === 'tv') {
         // Перевіряємо налаштування trakttv_show_tv_progress
         var showProgress = Lampa.Storage.field('trakttv_show_tv_progress');
-        // Показуємо прогрес, якщо налаштування не існує або дорівнює true
+        // Показуємо прогрес, якщо налаштування не існуё true
         if (showProgress === undefined || showProgress === true) {
           TraktHistory.showWatchProgress(e.data, e);
         }
@@ -2578,7 +3820,7 @@
     window.plugin_trakt_ready = true;
 
     // Додаємо стилі
-    Lampa.Template.add('trakt_style', "<style>.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}</style>");
+    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     // Реєструємо плагін для рекомендацій
@@ -2604,12 +3846,16 @@
     // Додаємо нові компоненти
     Lampa.Component.add('trakt_timetable_all', TraktTimetableAll);
     Lampa.Component.add('trakttv_recommendations', Catalog.recommendations);
+    Lampa.Component.add('trakt_list_detail', Catalog.list_detail);
+    Lampa.Component.add('trakt_lists', Catalog.lists);
 
     // Додаємо переклади
     Main();
 
     // Ініціалізуємо обробники подій
     events.init();
+    // Ініціалізуємо модуль відстеження перегляду
+    watching.init();
   }
   if (!window.plugin_trakt_ready) startPlugin();
 
