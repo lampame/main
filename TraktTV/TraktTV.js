@@ -2193,6 +2193,16 @@
         ru: "Смотреть дальше",
         en: "Up Next",
         uk: "Дивитись далі"
+      },
+      trakttv_scan_qr_code: {
+        ru: "Отсканируйте QR-код",
+        en: "Scan QR code",
+        uk: "Відскануйте QR-код"
+      },
+      trakttv_scan_qr: {
+        ru: "Отсканируйте QR-код",
+        en: "Scan QR code",
+        uk: "Відскануйте QR-код"
       }
     });
   }
@@ -3230,7 +3240,10 @@
           }
           var safeVerification = String(data.verification_url || '');
           var safeUserCode = String(data.user_code || '');
-          var modal = $("<div class=\"about\">\n                        <div class=\"about__text\">".concat(safeVerification, "</div>\n                        <div class=\"about__text\">").concat(Lampa.Lang.translate('trakttv_code'), ": ").concat(safeUserCode, "</div>\n                    </div>"));
+
+          // Generate QR code URL
+          var qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=' + encodeURIComponent('https://trakt.tv/activate/' + safeUserCode);
+          var modal = $("<div class=\"about\">\n                        <div class=\"trakt-qr-container\" style=\"text-align: center; margin-bottom: 20px;\">\n                            <a href=\"".concat(safeVerification, "/").concat(safeUserCode, "\" target=\"_blank\" style=\"display: inline-block;\">\n                                <img src=\"").concat(qrCodeUrl, "\" alt=\"Trakt.TV QR Code\" style=\"max-width: 550px; height: auto; border: 2px solid #e3e3e3; border-radius: 8px;\"\n                                     onerror=\"this.parentElement.parentElement.style.display='none';\">\n                            </a>\n                            <div style=\"margin-top: 8px; font-size: 12px; color: #888;\">").concat(Lampa.Lang.translate('trakttv_scan_qr_code'), "</div>\n                        </div>\n                        <div class=\"about__text\">").concat(safeVerification, "</div>\n                        <div class=\"about__text\">").concat(Lampa.Lang.translate('trakttv_code'), ": ").concat(safeUserCode, "</div>\n                    </div>"));
           Lampa.Modal.open({
             title: Lampa.Lang.translate('trakttv_auth'),
             html: modal,
