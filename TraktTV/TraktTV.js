@@ -719,7 +719,188 @@
       });
     });
   }
-  function requestApi(method, url) {
+
+  /**
+   * Refresh tokens using refresh_token
+   * unauthorized = true
+   * Note: must not be called during active device auth (guarded in config.js)
+   */
+  function refreshTokens() {
+    return _refreshTokens.apply(this, arguments);
+  }
+  function _refreshTokens() {
+    _refreshTokens = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+      var _ref8,
+        redirect_uri,
+        refresh_token,
+        _args = arguments;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            _ref8 = _args.length > 0 && _args[0] !== undefined ? _args[0] : {}, redirect_uri = _ref8.redirect_uri;
+            refresh_token = Lampa.Storage.get('trakt_refresh_token');
+            if (refresh_token) {
+              _context.n = 1;
+              break;
+            }
+            if (Lampa.Storage.field('trakt_enable_logging')) {
+              console.error('TraktTV', 'refreshTokens: No refresh_token found.');
+            }
+            return _context.a(2, Promise.reject(Object.assign(new Error('No refresh_token'), {
+              status: 0
+            })));
+          case 1:
+            return _context.a(2, _performRequest('POST', '/oauth/token', {
+              refresh_token: refresh_token,
+              client_id: CLIENT_ID,
+              client_secret: CLIENT_SECRET,
+              redirect_uri: redirect_uri || '',
+              grant_type: 'refresh_token'
+            }, true).then(function (res) {
+              if (res && res.access_token) {
+                Lampa.Storage.set('trakt_token', res.access_token);
+                if (res.refresh_token) Lampa.Storage.set('trakt_refresh_token', res.refresh_token);
+                if (Lampa.Storage.field('trakt_enable_logging')) {
+                  console.log('TraktTV', 'refreshTokens: Token refreshed successfully.');
+                }
+              }
+              return res;
+            })["catch"](function (error) {
+              if (Lampa.Storage.field('trakt_enable_logging')) {
+                console.error('TraktTV', 'refreshTokens: Failed to refresh token:', error);
+              }
+              throw error;
+            }));
+        }
+      }, _callee);
+    }));
+    return _refreshTokens.apply(this, arguments);
+  }
+  var isRefreshingToken = false;
+  var requestQueue = [];
+  function _refreshTokenAndRetry() {
+    return _refreshTokenAndRetry2.apply(this, arguments);
+  }
+  function _refreshTokenAndRetry2() {
+    _refreshTokenAndRetry2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+      var queuedRequest, _t;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.n) {
+          case 0:
+            _context2.p = 0;
+            isRefreshingToken = true;
+            _context2.n = 1;
+            return refreshTokens();
+          case 1:
+            _context2.n = 3;
+            break;
+          case 2:
+            _context2.p = 2;
+            _t = _context2.v;
+            if (Lampa.Storage.field('trakt_enable_logging')) {
+              console.error('TraktTV', 'Failed to refresh token:', _t);
+            }
+            // Відхиляємо всі запити в черзі, якщо оновлення токена не вдалося
+            while (requestQueue.length > 0) {
+              requestQueue.shift().reject(_t);
+            }
+            throw _t;
+          case 3:
+            _context2.p = 3;
+            isRefreshingToken = false; // Забезпечуємо, що isRefreshingToken завжди скидається
+            // Обробляємо всі запити в черзі після завершення оновлення
+            while (requestQueue.length > 0) {
+              queuedRequest = requestQueue.shift(); // Повторюємо запит з оновленим токеном
+              requestApi(queuedRequest.method, queuedRequest.url, queuedRequest.params, false, queuedRequest.retryCount + 1).then(queuedRequest.resolve)["catch"](queuedRequest.reject);
+            }
+            return _context2.f(3);
+          case 4:
+            return _context2.a(2);
+        }
+      }, _callee2, null, [[0, 2, 3, 4]]);
+    }));
+    return _refreshTokenAndRetry2.apply(this, arguments);
+  }
+  function requestApi(_x, _x2) {
+    return _requestApi.apply(this, arguments);
+  }
+  function _requestApi() {
+    _requestApi = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(method, url) {
+      var params,
+        unauthorized,
+        retryCount,
+        MAX_RETRIES,
+        response,
+        _args3 = arguments,
+        _t2;
+      return _regenerator().w(function (_context3) {
+        while (1) switch (_context3.n) {
+          case 0:
+            params = _args3.length > 2 && _args3[2] !== undefined ? _args3[2] : {};
+            unauthorized = _args3.length > 3 && _args3[3] !== undefined ? _args3[3] : false;
+            retryCount = _args3.length > 4 && _args3[4] !== undefined ? _args3[4] : 0;
+            MAX_RETRIES = 1; // Обмеження кількості повторних спроб
+            if (!unauthorized) {
+              _context3.n = 1;
+              break;
+            }
+            return _context3.a(2, _performRequest(method, url, params, true));
+          case 1:
+            if (!isRefreshingToken) {
+              _context3.n = 2;
+              break;
+            }
+            return _context3.a(2, new Promise(function (resolve, reject) {
+              requestQueue.push({
+                method: method,
+                url: url,
+                params: params,
+                resolve: resolve,
+                reject: reject,
+                retryCount: retryCount
+              });
+            }));
+          case 2:
+            _context3.p = 2;
+            _context3.n = 3;
+            return _performRequest(method, url, params, false);
+          case 3:
+            response = _context3.v;
+            return _context3.a(2, response);
+          case 4:
+            _context3.p = 4;
+            _t2 = _context3.v;
+            if (!(_t2.status === 401 && retryCount < MAX_RETRIES)) {
+              _context3.n = 5;
+              break;
+            }
+            if (Lampa.Storage.field('trakt_enable_logging')) {
+              console.log('TraktTV', "401 Unauthorized for ".concat(url, ". Attempting to refresh token. Retry count: ").concat(retryCount));
+            }
+            // Запускаємо процес оновлення токена (якщо він ще не запущений)
+            // і додаємо поточний запит до черги, щоб він був повторений після оновлення
+            // _refreshTokenAndRetry will handle the queue
+            _refreshTokenAndRetry();
+            return _context3.a(2, new Promise(function (resolve, reject) {
+              requestQueue.push({
+                method: method,
+                url: url,
+                params: params,
+                resolve: resolve,
+                reject: reject,
+                retryCount: retryCount
+              });
+            }));
+          case 5:
+            throw _t2;
+          case 6:
+            return _context3.a(2);
+        }
+      }, _callee3, null, [[2, 4]]);
+    }));
+    return _requestApi.apply(this, arguments);
+  }
+  function _performRequest(method, url) {
     var params = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var unauthorized = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
     return new Promise(function (resolve, reject) {
@@ -752,13 +933,13 @@
         var status = error && error.status ? error.status : 0;
         if (logging) {
           try {
-            console.log('TraktTV', 'response', method, url, status);
+            console.log('TraktTV', 'response', method, url, status, 'Error details:', error);
           } catch (e) {}
         }
-        reject({
+        reject(Object.assign(new Error('TraktTV API Error'), {
           status: status,
-          error: error
-        });
+          originalError: error || {}
+        }));
       }, postData, requestParams);
     });
   }
@@ -1027,10 +1208,12 @@
       });
     },
     upnext: function upnext(params) {
+      var logging = Lampa.Storage.field('trakt_enable_logging');
       return new Promise(function (resolve, reject) {
         var page = params.page || 1;
         var limit = params.limit || 36;
         requestApi('GET', '/sync/watched/shows?extended=images,full,seasons').then(function (watchedResponse) {
+          if (logging) console.log('TraktTV', 'upnext: watchedResponse', watchedResponse);
           var watched = Array.isArray(watchedResponse) ? watchedResponse : [];
           var watching = watched.filter(function (item) {
             if (!item.show || typeof item.show.aired_episodes !== 'number') return false;
@@ -1045,6 +1228,7 @@
             }
             return totalEpisodes > watchedEpisodes;
           });
+          if (logging) console.log('TraktTV', 'upnext: watching (filtered)', watching);
           var results = watching.map(function (item) {
             var watchedEpisodes = 0;
             var lastWatchedDate = null;
@@ -1080,6 +1264,7 @@
               last_watched: lastWatchedDate
             };
           });
+          if (logging) console.log('TraktTV', 'upnext: results (mapped)', results);
           results.sort(function (a, b) {
             if (!a.last_watched && !b.last_watched) return 0;
             if (!a.last_watched) return 1;
@@ -1105,7 +1290,7 @@
         })["catch"](reject);
       });
     },
-    auth: _defineProperty(_defineProperty(_defineProperty(_defineProperty(_defineProperty(_defineProperty({
+    auth: {
       /**
        * Build Standard OAuth authorize URL
        * params: { redirect_uri, state?, signup?, prompt? }
@@ -1153,47 +1338,18 @@
        * Refresh tokens using refresh_token
        * unauthorized = true
        */
-      refresh: function refresh() {
-        var _ref7 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-          redirect_uri = _ref7.redirect_uri;
-        var refresh_token = Lampa.Storage.get('trakt_refresh_token');
-        if (!refresh_token) return Promise.reject(Object.assign(new Error('No refresh_token'), {
-          status: 0
-        }));
-        return requestApi('POST', '/oauth/token', {
-          refresh_token: refresh_token,
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET,
-          redirect_uri: redirect_uri || '',
-          grant_type: 'refresh_token'
-        }, true).then(function (res) {
-          if (res && res.access_token) {
-            Lampa.Storage.set('trakt_token', res.access_token);
-            if (res.refresh_token) Lampa.Storage.set('trakt_refresh_token', res.refresh_token);
-          }
-          return res;
-        });
-      },
+      refresh: refreshTokens,
+      // Використовуємо нову функцію refreshTokens
       /**
        * Revoke token best-effort
        * unauthorized = true
        */
-      revoke: function revoke(_ref8) {
-        var token = _ref8.token;
+      revoke: function revoke(_ref7) {
+        var token = _ref7.token;
         return requestApi('POST', '/oauth/revoke', {
           token: token,
           client_id: CLIENT_ID,
           client_secret: CLIENT_SECRET
-        }, true);
-      },
-      /**
-       * Device OAuth: start login (device code)
-       * unauthorized = true
-       */
-      login: function login() {
-        // kept for backward compat alias to device.login
-        return requestApi('POST', '/oauth/device/code', {
-          client_id: CLIENT_ID
         }, true);
       },
       device: {
@@ -1201,7 +1357,7 @@
          * Device OAuth: start
          */
         login: function login() {
-          return requestApi('POST', '/oauth/device/code', {
+          return _performRequest('POST', '/oauth/device/code', {
             client_id: CLIENT_ID
           }, true);
         },
@@ -1210,85 +1366,17 @@
          * unauthorized = true
          */
         poll: function poll(device_code) {
-          return requestApi('POST', '/oauth/device/token', {
+          return _performRequest('POST', '/oauth/device/token', {
             code: device_code,
             client_id: CLIENT_ID,
             client_secret: CLIENT_SECRET
           }, true);
         }
-      }
-    }, "refresh", function refresh() {
-      var _ref9 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        redirect_uri = _ref9.redirect_uri;
-      var refresh_token = Lampa.Storage.get('trakt_refresh_token');
-      if (!refresh_token) return Promise.reject(Object.assign(new Error('No refresh_token'), {
-        status: 0
-      }));
-      return requestApi('POST', '/oauth/token', {
-        refresh_token: refresh_token,
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        redirect_uri: redirect_uri || '',
-        grant_type: 'refresh_token'
-      }, true).then(function (res) {
-        if (res && res.access_token) {
-          Lampa.Storage.set('trakt_token', res.access_token);
-          if (res.refresh_token) Lampa.Storage.set('trakt_refresh_token', res.refresh_token);
-        }
-        return res;
-      });
-    }), "login", function login() {
-      // kept for backward compat alias to device.login
-      return requestApi('POST', '/oauth/device/code', {
-        client_id: CLIENT_ID
-      }, true);
-    }), "device", {
-      /**
-       * Device OAuth: start
-       */
-      login: function login() {
-        return requestApi('POST', '/oauth/device/code', {
-          client_id: CLIENT_ID
-        }, true);
       },
-      /**
-       * Device OAuth: poll token
-       * unauthorized = true
-       */
-      poll: function poll(device_code) {
-        return requestApi('POST', '/oauth/device/token', {
-          code: device_code,
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET
-        }, true);
+      logout: function logout() {
+        Lampa.Storage.set('trakt_token', null);
+        Lampa.Storage.set('trakt_refresh_token', null);
       }
-    }), "login", function login() {
-      return requestApi('POST', '/oauth/device/code', {
-        client_id: CLIENT_ID
-      }, true);
-    }), "poll", function poll(device_code) {
-      // unauthorized=true to avoid Bearer header during device polling
-      return requestApi('POST', '/oauth/device/token', {
-        code: device_code,
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET
-      }, true);
-    }), "logout", function logout() {
-      Lampa.Storage.set('trakt_token', null);
-      Lampa.Storage.set('trakt_refresh_token', null);
-    }),
-    refresh: function refresh() {
-      // unauthorized=true to avoid Bearer header on refresh (token may be expired)
-      return requestApi('POST', '/oauth/token', {
-        refresh_token: Lampa.Storage.get('trakt_refresh_token'),
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        grant_type: 'refresh_token'
-      }, true).then(function (response) {
-        Lampa.Storage.set('trakt_token', response.access_token);
-        Lampa.Storage.set('trakt_refresh_token', response.refresh_token);
-        return response;
-      });
     },
     addToWatchlist: function addToWatchlist(params) {
       return new Promise(function (resolve, reject) {
@@ -1512,6 +1600,15 @@
     }
   };
 
+  // Глобальний обробник Unhandled Promise Rejection для діагностики
+  if (typeof window !== 'undefined') {
+    window.addEventListener('unhandledrejection', function (event) {
+      if (Lampa.Storage.field('trakt_enable_logging')) {
+        console.error('TraktTV', 'Unhandled promise rejection:', event.reason);
+      }
+    });
+  }
+
   // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
   var Api$3 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
   function baseComponent(object, type) {
@@ -1545,11 +1642,16 @@
         return;
       }
       (Api$3 && Api$3[type](params)).then(function (data) {
-        // Зберігаємо загальну кількість сторінок
-        if (data.total_pages) {
+        // Зберігаємо загальну кількість сторінок, якщо є
+        // Для 'upnext' Api.upnext не повертає total_pages, тому не використовуємо
+        if (type !== 'upnext' && data && data.total_pages) {
           total_pages = data.total_pages;
         }
-        _this.build(data);
+
+        // Перевіряємо, чи data є об'єктом і має властивість 'results', інакше передаємо порожній масив
+        _this.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+          results: []
+        });
 
         // Налаштовуємо скрол для завантаження наступної сторінки
         if (_this.activity.scroll) {
@@ -1585,7 +1687,9 @@
           return;
         }
         (Api$3 && Api$3[type](params)).then(function (data) {
-          _this2.append(data);
+          _this2.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+            results: []
+          });
           waitload = false;
         })["catch"](function () {
           waitload = false;
@@ -1604,7 +1708,7 @@
     return comp;
   }
   function baseRecommendations(object) {
-    var comp = new Lampa.Lampa.InteractionCategory(object);
+    var comp = new Lampa.InteractionCategory(object);
     var total_pages = 0;
     var waitload = false;
     comp.create = function () {
@@ -1620,19 +1724,19 @@
       }
       (Api$3 && Api$3.recommendations(params)).then(function (recommendations) {
         // Перевіряємо чи є results і чи він не порожній
-        if (recommendations && recommendations.results && recommendations.results.length > 0) {
-          // Зберігаємо загальну кількість сторінок, якщо є
-          if (recommendations.total_pages) {
-            total_pages = recommendations.total_pages;
-          }
-          _this3.build(recommendations);
+        // Перевіряємо, чи recommendations є об'єктом і має властивість 'results', інакше передаємо порожній масив
+        _this3.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : {
+          results: []
+        });
 
-          // Налаштовуємо скрол для завантаження наступної сторінки
-          if (_this3.activity.scroll) {
-            _this3.activity.scroll.onEnd = _this3.next.bind(_this3);
-          }
-        } else {
-          _this3.empty();
+        // Зберігаємо загальну кількість сторінок, якщо є
+        if (recommendations && recommendations.total_pages) {
+          total_pages = recommendations.total_pages;
+        }
+
+        // Налаштовуємо скрол для завантаження наступної сторінки
+        if (_this3.activity.scroll) {
+          _this3.activity.scroll.onEnd = _this3.next.bind(_this3);
         }
       })["catch"](function (error) {
         _this3.empty();
@@ -1654,7 +1758,9 @@
           return;
         }
         (Api$3 && Api$3.recommendations(params)).then(function (data) {
-          _this4.append(data);
+          _this4.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+            results: []
+          });
           waitload = false;
         })["catch"](function () {
           waitload = false;
@@ -1718,7 +1824,7 @@
           _this5.activity.scroll.onEnd = _this5.next.bind(_this5);
         }
       })["catch"](function (error) {
-        console.error('TraktTV Likes Lists API response:', error);
+        console.error('TraktTV', 'Likes Lists API response:', error);
         _this5.empty();
       });
     };
@@ -2058,71 +2164,6 @@
         ru: "Автоматически отмечать просмотренные эпизоды и добавлять сериалы в \"Смотрю\"",
         en: "Automatically mark watched episodes and add series to \"Watching\"",
         uk: "Автоматично позначати переглянуті епізоди та додавати серіали в \"Дивлюся\""
-      },
-      trakttv_add_threshold: {
-        ru: "Порог добавления сериала",
-        en: "Series adding threshold",
-        uk: "Поріг додавання серіалу"
-      },
-      trakttv_add_threshold_descr: {
-        ru: "Когда добавлять сериал в список \"Смотрю\" на Trakt.TV",
-        en: "When to add a series to the \"Watching\" list on Trakt.TV",
-        uk: "Коли додавати серіал до списку \"Дивлюся\" на Trakt.TV"
-      },
-      trakttv_add_immediately: {
-        ru: "Сразу при запуске",
-        en: "Immediately upon launch",
-        uk: "Одразу при запуску"
-      },
-      trakttv_add_after_5: {
-        ru: "После 5% просмотра",
-        en: "After 5% view",
-        uk: "Після 5% перегляду"
-      },
-      trakttv_add_after_10: {
-        ru: "После 10% просмотра",
-        en: "After 10% view",
-        uk: "Після 10% перегляду"
-      },
-      trakttv_add_after_15: {
-        ru: "После 15% просмотра",
-        en: "After 15% view",
-        uk: "Після 15% перегляду"
-      },
-      trakttv_add_after_20: {
-        ru: "После 20% просмотра",
-        en: "After 20% view",
-        uk: "Після 20% перегляду"
-      },
-      trakttv_add_after_25: {
-        ru: "После 25% просмотра",
-        en: "After 25% view",
-        uk: "Після 25% перегляду"
-      },
-      trakttv_add_after_30: {
-        ru: "После 30% просмотра",
-        en: "After 30% view",
-        uk: "Після 30% перегляду"
-      },
-      trakttv_add_after_35: {
-        ru: "После 35% просмотра",
-        en: "After 35% view",
-        uk: "Після 35% перегляду"
-      },
-      trakttv_add_after_40: {
-        ru: "После 40% просмотра",
-        en: "After 40% view",
-        uk: "Після 40% перегляду"
-      },
-      trakttv_add_after_45: {
-        ru: "После 45% просмотра",
-        en: "After 45% view",
-        uk: "Після 45% перегляду"
-      },
-      trakttv_add_after_50: {
-        ru: "После 50% просмотра",
-        en: "After 50% view",
-        uk: "Після 50% перегляду"
       },
       trakttv_min_progress_threshold: {
         ru: "Порог просмотра",
@@ -2572,6 +2613,7 @@
     version: "2.5",
     author: '@lme_chat',
     name: "LME TraktTV",
+    inMemoryCache: [],
     /**
      * Функція для відображення рекомендацій на головній сторінці
      * @returns {Object} Об'єкт з результатами для відображення
@@ -2585,15 +2627,8 @@
         results: []
       };
 
-      // Отримуємо кешовані дані
-      var recommendations = Lampa.Storage.get('trakttv_cached_recommendations', []);
-      if (typeof recommendations === 'string') {
-        try {
-          recommendations = JSON.parse(recommendations);
-        } catch (e) {
-          recommendations = [];
-        }
-      }
+      // Отримуємо кешовані дані з внутрішнього кешу
+      var recommendations = Lampa.Storage.get('trakttv_cached_recommendations', '[]');
 
       // Запускаємо оновлення в фоні (не блокуючи onMain)
       this.updateRecommendationsInBackground();
@@ -2639,24 +2674,27 @@
               source: card_data.source || params.object.source
             });
           };
-          setTimeout(function () {
-            // Отримуємо рендер-картку (елемент)
-            var card_element = card.render();
+          // Додаємо перевірку на існування item перед використанням
+          if (item) {
+            setTimeout(function () {
+              // Отримуємо рендер-картку (елемент)
+              var card_element = card.render();
 
-            // Додаємо клас, якщо потрібно
-            if ((item.method || item.type || item.card_type || (item.name ? 'tv' : 'movie')) === 'tv') {
-              $(card_element).addClass('card--tv');
+              // Додаємо клас, якщо потрібно
+              if ((item.method || item.type || item.card_type || (item.name ? 'tv' : 'movie')) === 'tv') {
+                $(card_element).addClass('card--tv');
 
-              // Створюємо елемент типу
-              var cardTypeElement = $("<div>", {
-                "class": "card__type",
-                text: Lampa.Lang.translate('trakttv_card_type_tv')
-              });
+                // Створюємо елемент типу
+                var cardTypeElement = $("<div>", {
+                  "class": "card__type",
+                  text: Lampa.Lang.translate('trakttv_card_type_tv')
+                });
 
-              // Додаємо у .card__view якщо знайдено
-              $(card_element).find(".card__view").append(cardTypeElement);
-            }
-          }, 1); // Можливо треба більшу затримку, якщо картка ще не в DOM (наприклад, 50 чи 100 мс)
+                // Додаємо у .card__view якщо знайдено
+                $(card_element).find(".card__view").append(cardTypeElement);
+              }
+            }, 1); // Можливо треба більшу затримку, якщо картка ще не в DOM (наприклад, 50 чи 100 мс)
+          }
           return card;
         }
       };
@@ -2679,11 +2717,17 @@
       (Api$2 && Api$2.recommendations({
         limit: limit
       })).then(function (data) {
-        if (data && data.results && data.results.length > 0) {
+        // Додаємо перевірку на Array.isArray(data.results)
+        if (data && Array.isArray(data.results) && data.results.length > 0) {
           Lampa.Storage.set('trakttv_cached_recommendations', data.results);
+        } else {
+          if (Lampa.Storage.field('trakt_enable_logging')) console.warn('TraktTV', 'Recommendations data results is not a valid array or is empty:', data.results);
+          Lampa.Storage.set('trakttv_cached_recommendations', []);
         }
       })["catch"](function (error) {
         console.error('TraktTV', error);
+        // У випадку помилки, переконаємося, що кеш очищено
+        Lampa.Storage.set('trakttv_cached_recommendations', []);
       });
     }
   };
@@ -2699,6 +2743,7 @@
     version: "1.0",
     author: '@lme_chat',
     name: "LME TraktTV Up Next",
+    inMemoryCache: [],
     /**
      * Функція для відображення Up Next на головній сторінці
      * @returns {Object} Об'єкт з результатами для відображення
@@ -2707,36 +2752,24 @@
       if (!Lampa.Storage.field('trakttv_show_on_main', true)) return {
         results: []
       };
-      var userHasPermission = Lampa.Storage.get('trakt_token');
+      var userHasPermission = Lampa.Storage.get('trakt_token') && Lampa.Storage.field('trakttv_show_upnext', true);
       if (!userHasPermission) return {
         results: []
       };
-
-      // Отримуємо список серій Up Next
-      var upnext = Lampa.Storage.get('trakttv_cached_upnext', []);
-      if (typeof upnext === 'string') {
-        try {
-          upnext = JSON.parse(upnext);
-        } catch (e) {
-          upnext = [];
-        }
-      }
-
-      // Завантажуємо Up Next в фоні
+      var upnext = Lampa.Storage.get('trakttv_cached_upnext', '[]');
       this.updateUpNextInBackground();
       if (!Array.isArray(upnext) || upnext.length === 0) {
         return {
           results: []
         };
       }
-
-      // Нормалізуємо дані
       var normalizedResults = upnext.map(function (item) {
-        return _objectSpread2(_objectSpread2({}, item), {}, {
-          name: item.title || item.original_title,
-          first_air_date: item.release_date,
-          title: item.title || item.original_title
-        });
+        var normalized = _objectSpread2({}, item);
+        if (item.type === 'episode' || item.card_type === 'episode') {
+          normalized.name = item.title || item.original_title;
+          normalized.first_air_date = item.release_date;
+        }
+        return normalized;
       });
       return {
         title: icons.createHeaderWithIcon(icons.TRAKT_ICON, Lampa.Lang.translate('trakttv_upnext')),
@@ -2772,27 +2805,21 @@
      */
     updateUpNextInBackground: function updateUpNextInBackground() {
       var isMainPage = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
-      // Якщо запит з головної сторінки, обмежуємо до 20 результатів
-      // Якщо запит зі сторінки Up Next, отримуємо 50 результатів
       var limit = isMainPage ? 20 : 50;
-
-      // Отримуємо UpNext від API - використовуємо правильний метод
       if (!Api$1) {
-        var _Lampa;
-        if ((_Lampa = Lampa) !== null && _Lampa !== void 0 && (_Lampa = _Lampa.Storage) !== null && _Lampa !== void 0 && _Lampa.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/plugins/upnext.js');
         return;
       }
-      Api$1 && Api$1.upnext({
+      (Api$1 && Api$1.upnext({
         limit: limit
-      }, function (data) {
-        if (data && data.results && data.results.length > 0) {
+      })).then(function (data) {
+        if (Array.isArray(data === null || data === void 0 ? void 0 : data.results) && data.results.length > 0) {
           Lampa.Storage.set('trakttv_cached_upnext', data.results);
-
-          // Оновлюємо головну сторінку якщо вона активна
-          if (Lampa.Activity.active().component === 'main') ;
+        } else {
+          Lampa.Storage.set('trakttv_cached_upnext', []);
         }
-      }, function (error) {
+      })["catch"](function (error) {
         console.error('TraktTV', error);
+        Lampa.Storage.set('trakttv_cached_upnext', []);
       });
     }
   };
@@ -2883,7 +2910,7 @@
             }
           }
         })["catch"](function (error) {
-          console.error('Error getting show history:', error);
+          console.error('TraktTV', 'Error getting show history:', error);
         });
       }
     },
@@ -3250,12 +3277,10 @@
             size: 'small',
             onBack: function onBack() {
               // stop polling, clear flag
-              if (window.__trakt_poll_interval) {
-                clearInterval(window.__trakt_poll_interval);
-                window.__trakt_poll_interval = null;
-              }
-              if (Lampa.Storage.field('trakt_enable_logging')) {
-                console.log('TraktTV auth', 'onBack-stop');
+              // Stop polling and clear flag on modal close
+              if (currentPollTimeoutId) {
+                clearTimeout(currentPollTimeoutId);
+                currentPollTimeoutId = null;
               }
               Lampa.Storage.set('trakt_active_device_auth', false);
               Lampa.Modal.close();
@@ -3263,18 +3288,18 @@
             }
           });
 
-          // Guard: do not start if already active
+          // If already polling due to a previous attempt, do not start a new one
+          // This check is crucial to prevent multiple polling loops
           if (Lampa.Storage.get('trakt_active_device_auth') === true) {
-            if (Lampa.Storage.field('trakt_enable_logging')) {
-              console.log('TraktTV auth', 'already-active-skip-start');
-            }
+            log('already-active-skip-start');
             return;
           }
 
-          // Mark active before polling
+          // Mark as active and start polling
           Lampa.Storage.set('trakt_active_device_auth', true);
-          pollAuth(data);
-        })["catch"](function () {
+          pollAuth(data, Lampa.Modal); // Pass Lampa.Modal to pollAuth for direct control
+        })["catch"](function (error) {
+          log('login-init-error', error);
           Lampa.Bell.push({
             text: Lampa.Lang.translate('trakttvAuthError')
           });
@@ -3382,33 +3407,6 @@
       }
     });
 
-    // Параметр для вибору порогу додавання серіалу
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_add_threshold',
-        type: 'select',
-        "default": '0',
-        values: {
-          '0': Lampa.Lang.translate('trakttv_add_immediately'),
-          '5': Lampa.Lang.translate('trakttv_add_after_5'),
-          '10': Lampa.Lang.translate('trakttv_add_after_10'),
-          '15': Lampa.Lang.translate('trakttv_add_after_15'),
-          '20': Lampa.Lang.translate('trakttv_add_after_20'),
-          '25': Lampa.Lang.translate('trakttv_add_after_25'),
-          '30': Lampa.Lang.translate('trakttv_add_after_30'),
-          '35': Lampa.Lang.translate('trakttv_add_after_35'),
-          '40': Lampa.Lang.translate('trakttv_add_after_40'),
-          '45': Lampa.Lang.translate('trakttv_add_after_45'),
-          '50': Lampa.Lang.translate('trakttv_add_after_50')
-        }
-      },
-      field: {
-        name: Lampa.Lang.translate('trakttv_add_threshold'),
-        description: Lampa.Lang.translate('trakttv_add_threshold_descr')
-      }
-    });
-
     // Параметр для вибору мінімального відсотку перегляду
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -3448,162 +3446,139 @@
     });
   }
 
-  // Окрема функція для poll авторизації
-  function pollAuth(data) {
-    // Validate inputs and derive timings
-    var intervalSec = Number(data && data.interval);
-    var pollingStep = Number.isFinite(intervalSec) ? (intervalSec + 1) * 1000 : 6000;
-    var expiresMs = Number.isFinite(Number(data && data.expires_in)) ? Number(data.expires_in) * 1000 : 300000;
-    if (!data || !data.device_code) {
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.log('TraktTV auth', 'error-missing-device_code');
+  // Helper for logging
+  function log(message) {
+    if (Lampa.Storage.field('trakt_enable_logging')) {
+      var _console;
+      for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+        args[_key - 1] = arguments[_key];
       }
-      Lampa.Bell.push({
-        text: Lampa.Lang.translate('trakttvAuthError')
-      });
+      (_console = console).log.apply(_console, ['TraktTV', message].concat(args));
+    }
+  }
+  var currentPollTimeoutId = null; // Змінна для зберігання ідентифікатора таймауту опитування
+
+  // Centralized error handling and polling stop
+  function handlePollingError(modalInstance, messageKey, defaultMessage, code) {
+    var stop = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : true;
+    log('error-stop', code);
+    if (stop) {
+      if (currentPollTimeoutId) {
+        clearTimeout(currentPollTimeoutId);
+        currentPollTimeoutId = null;
+      }
       Lampa.Storage.set('trakt_active_device_auth', false);
+    }
+    if (modalInstance) {
+      modalInstance.close();
+    }
+    Lampa.Bell.push({
+      text: Lampa.Lang.translate(messageKey) || defaultMessage
+    });
+  }
+
+  // Function to handle successful authentication
+  function handleAuthSuccess(modalInstance, response) {
+    log('success', 200);
+    if (currentPollTimeoutId) {
+      clearTimeout(currentPollTimeoutId);
+      currentPollTimeoutId = null;
+    }
+    Lampa.Storage.set('trakt_token', response.access_token);
+    Lampa.Storage.set('trakt_refresh_token', response.refresh_token);
+    Lampa.Storage.set('trakt_active_device_auth', false);
+    if (modalInstance) {
+      modalInstance.close();
+    }
+    Lampa.Settings.update();
+    Lampa.Bell.push({
+      text: Lampa.Lang.translate('trakttvAuthOk')
+    });
+  }
+
+  // Окрема функція для poll авторизації
+  function pollAuth(data, modalInstance) {
+    var originalIntervalSec = Number(data && data.interval);
+    var currentPollingStepMs = Number.isFinite(originalIntervalSec) ? originalIntervalSec * 1000 : 5000; // Default to 5 seconds
+    var expiresMs = Number.isFinite(Number(data && data.expires_in)) ? Number(data.expires_in) * 1000 : 600 * 1000; // Default to 10 minutes
+
+    if (!data || !data.device_code) {
+      handlePollingError(modalInstance, 'trakttvAuthError', 'Authentication error', 'missing-device_code');
       return;
     }
-    var startTs = Date.now();
-    if (Lampa.Storage.field('trakt_enable_logging')) {
-      console.log('TraktTV auth', 'start', {
-        step: pollingStep
-      });
-    }
+    var startTime = Date.now();
+    log('start-polling', {
+      currentPollingStepMs: currentPollingStepMs,
+      expiresMs: expiresMs
+    });
 
-    // prohibit parallel polls
-    if (window.__trakt_poll_interval) {
-      clearInterval(window.__trakt_poll_interval);
-      window.__trakt_poll_interval = null;
+    // Clear any existing poll timeout before starting a new one
+    if (currentPollTimeoutId) {
+      clearTimeout(currentPollTimeoutId);
+      currentPollTimeoutId = null;
     }
-    if (Lampa.Storage.get('trakt_active_device_auth') !== true) {
-      // ensure flag set by caller
-      Lampa.Storage.set('trakt_active_device_auth', true);
-    }
-    var stopPolling = function stopPolling() {
-      if (window.__trakt_poll_interval) {
-        clearInterval(window.__trakt_poll_interval);
-        window.__trakt_poll_interval = null;
+    var _executePoll = function executePoll() {
+      // Check for timeout BEFORE making the API call
+      if (Date.now() - startTime >= expiresMs) {
+        log('timeout');
+        handlePollingError(modalInstance, 'trakttvExpired', 'Expired, please restart', 'timeout');
+        return; // Stop polling
       }
-    };
-    var successFinish = function successFinish(response) {
-      stopPolling();
-      Lampa.Storage.set('trakt_token', response.access_token);
-      Lampa.Storage.set('trakt_refresh_token', response.refresh_token);
-      Lampa.Storage.set('trakt_active_device_auth', false);
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.log('TraktTV auth', 'success', 200);
-      }
-      Lampa.Modal.close();
-      Lampa.Settings.update();
-      Lampa.Bell.push({
-        text: Lampa.Lang.translate('trakttvAuthOk')
-      });
-    };
-    var errorFinish = function errorFinish(code) {
-      stopPolling();
-      Lampa.Storage.set('trakt_active_device_auth', false);
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.log('TraktTV auth', 'error-stop', code);
-      }
-      Lampa.Modal.close();
-      Lampa.Bell.push({
-        text: Lampa.Lang.translate('trakttvAuthError')
-      });
-    };
-    function startInterval() {
-      if (window.__trakt_poll_interval) clearInterval(window.__trakt_poll_interval);
-      window.__trakt_poll_interval = setInterval(tick, pollingStep);
-    }
-    function tick() {
-      // timeout by expiresMs
-      if (Date.now() - startTs >= expiresMs) {
-        if (Lampa.Storage.field('trakt_enable_logging')) {
-          console.log('TraktTV auth', 'timeout');
-        }
-        errorFinish('timeout');
-        return;
-      }
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.log('TraktTV auth', 'tick');
-      }
-
-      // strictly device token polling, unauthorized=true implied by api
+      log('tick');
       if (!Api) {
-        var _Lampa4;
-        if ((_Lampa4 = Lampa) !== null && _Lampa4 !== void 0 && (_Lampa4 = _Lampa4.Storage) !== null && _Lampa4 !== void 0 && _Lampa4.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/config.js');
+        log('Api missing in plugins/TraktTV/config.js');
+        handlePollingError(modalInstance, 'trakttvAuthError', 'Authentication error', 'api-missing');
         return;
       }
-      (Api && Api.auth.device.poll(data.device_code)).then(successFinish)["catch"](function (err) {
-        var status = err && err.status;
-        if (status === 200) {
-          // edge case if gateway misroutes success
-          successFinish(err);
-          return;
+      Api.auth.device.poll(data.device_code).then(function (response) {
+        // Trakt.tv returns 200 OK with token on success
+        handleAuthSuccess(modalInstance, response);
+      })["catch"](function (error) {
+        var status = error && error.status;
+        log('poll-error', status);
+        switch (status) {
+          case 400:
+            // authorization_pending, do not stop polling
+            log('pending-400');
+            // Schedule next poll with currentPollingStepMs
+            currentPollTimeoutId = setTimeout(_executePoll, currentPollingStepMs);
+            break;
+          case 404:
+            // invalid_device_code
+            handlePollingError(modalInstance, 'trakttvInvalidCode', 'Invalid device code', status);
+            break;
+          case 409:
+            // already_used
+            handlePollingError(modalInstance, 'trakttvAuthOk', 'Already authorized', status); // This is a success case for the user
+            break;
+          case 410:
+            // expired_token
+            handlePollingError(modalInstance, 'trakttvExpired', 'Expired, please restart', status);
+            break;
+          case 418:
+            // denied
+            handlePollingError(modalInstance, 'trakttvDenied', 'Access denied', status);
+            break;
+          case 429:
+            // slow_down - implement exponential backoff with jitter
+            // Increase polling step, but cap it to avoid excessively long delays
+            currentPollingStepMs = Math.min(currentPollingStepMs * 2, 60 * 1000); // Double, max 60 seconds
+            var jitter = Math.random() * 1000; // Add random jitter up to 1 second
+            log('slow_down', {
+              newPollingStep: currentPollingStepMs + jitter
+            });
+            currentPollTimeoutId = setTimeout(_executePoll, currentPollingStepMs + jitter);
+            break;
+          default:
+            // Any other error
+            handlePollingError(modalInstance, 'trakttvAuthError', 'Authentication error', status || 'unknown-error');
+            break;
         }
-        if (status === 400) {
-          if (Lampa.Storage.field('trakt_enable_logging')) console.log('TraktTV auth', 'pending 400');
-          return; // authorization_pending
-        }
-        if (status === 404) {
-          if (Lampa.Storage.field('trakt_enable_logging')) console.log('TraktTV auth', '404 invalid_device_code');
-          stopPolling();
-          Lampa.Storage.set('trakt_active_device_auth', false);
-          Lampa.Modal.close();
-          Lampa.Bell.push({
-            text: Lampa.Lang.translate('trakttvInvalidCode') || 'Invalid device code'
-          });
-          return;
-        }
-        if (status === 409) {
-          if (Lampa.Storage.field('trakt_enable_logging')) console.log('TraktTV auth', '409 already used');
-          stopPolling();
-          Lampa.Storage.set('trakt_active_device_auth', false);
-          Lampa.Modal.close();
-          Lampa.Bell.push({
-            text: Lampa.Lang.translate('trakttvAuthOk')
-          });
-          return;
-        }
-        if (status === 410) {
-          if (Lampa.Storage.field('trakt_enable_logging')) console.log('TraktTV auth', '410 expired_token');
-          stopPolling();
-          Lampa.Storage.set('trakt_active_device_auth', false);
-          Lampa.Modal.close();
-          Lampa.Bell.push({
-            text: Lampa.Lang.translate('trakttvExpired') || 'Expired, please restart'
-          });
-          return;
-        }
-        if (status === 418) {
-          if (Lampa.Storage.field('trakt_enable_logging')) console.log('TraktTV auth', '418 denied');
-          stopPolling();
-          Lampa.Storage.set('trakt_active_device_auth', false);
-          Lampa.Modal.close();
-          Lampa.Bell.push({
-            text: Lampa.Lang.translate('trakttvDenied') || 'Access denied'
-          });
-          return;
-        }
-        if (status === 429) {
-          // slow_down: increase step +1000ms minimum
-          var newStep = Math.max(pollingStep + 1000, pollingStep + 1000);
-          pollingStep = newStep;
-          if (Lampa.Storage.field('trakt_enable_logging')) console.log('TraktTV auth', '429 slow_down', {
-            newStep: newStep
-          });
-          startInterval();
-          return;
-        }
-
-        // any other error
-        errorFinish(status || 'error');
       });
-    }
+    };
 
-    // Start immediately and schedule next ticks
-    tick();
-    startInterval();
+    // Start the first poll immediately
+    _executePoll();
   }
   var config = {
     main: main
@@ -3731,6 +3706,17 @@
     var ttl = getTTL();
     var rec = completionCache.get(key);
     var now = nowSec();
+
+    // DEBUG: Log canFinishOnce check
+    if (Lampa.Storage.field('trakt_enable_logging')) {
+      console.log('TraktTV', 'DEBUG - canFinishOnce check:', {
+        key: key,
+        record: rec,
+        ttl: ttl,
+        now: now,
+        recordAge: rec ? now - rec.ts : null
+      });
+    }
     if (!rec) return {
       allow: true,
       reason: 'no_record'
@@ -3938,6 +3924,16 @@
   var intentTimers = new Map(); // key -> timeout id
   function markFinishIntent(key) {
     var token = Lampa.Storage.get('trakt_token');
+
+    // DEBUG: Log intent marking
+    if (Lampa.Storage.field('trakt_enable_logging')) {
+      console.log('TraktTV', 'DEBUG - markFinishIntent called:', {
+        key: key,
+        tokenAvailable: !!token,
+        existingRecord: completionCache.get(key),
+        timestamp: new Date().toISOString()
+      });
+    }
     completionCache.get(key);
     var next = {
       ts: nowSec(),
@@ -3982,7 +3978,16 @@
       return _regenerator().w(function (_context5) {
         while (1) switch (_context5.n) {
           case 0:
-            token = Lampa.Storage.get('trakt_token');
+            token = Lampa.Storage.get('trakt_token'); // DEBUG: Log finish function call
+            if (Lampa.Storage.field('trakt_enable_logging')) {
+              console.log('TraktTV', 'DEBUG - finish function called:', {
+                mediaId: media.id,
+                mediaHash: media.hash,
+                mediaType: getContentType(media),
+                tokenAvailable: !!token,
+                timestamp: new Date().toISOString()
+              });
+            }
             if (token) {
               _context5.n = 1;
               break;
@@ -3992,7 +3997,15 @@
               reason: 'no_token'
             });
           case 1:
-            key = getCompletionKey(media);
+            key = getCompletionKey(media); // DEBUG: Log key used in finish
+            if (Lampa.Storage.field('trakt_enable_logging')) {
+              console.log('TraktTV', 'DEBUG - finish function key:', {
+                key: key,
+                mediaIds: media.ids,
+                mediaId: media.id,
+                mediaHash: media.hash
+              });
+            }
             doFinish = /*#__PURE__*/function () {
               var _ref5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
                 var type, tmdbId, search, e, traktId, res, _tmdbId, _search, _e, traktShowId, season, episode, seasons, _e2, last, originalName, found, _iterator2, _step2, s, _iterator3, _step3, ep, epHash, _e3, _res, _t2, _t3;
@@ -4296,21 +4309,18 @@
       var percent = data.data.road.percent;
       var token = Lampa.Storage.get('trakt_token');
       var minProgress = parseInt(Lampa.Storage.field('trakt_min_progress') || config.minProgress);
-      var addThreshold = parseInt(Lampa.Storage.field('trakt_add_threshold') || config.addThreshold);
       console.log('TraktTV', 'Timeline update data:', {
         hash: hash,
         percent: percent,
         token: !!token,
-        minProgress: minProgress,
-        addThreshold: addThreshold
+        minProgress: minProgress
       });
       if (this.isLoggingEnabled()) {
         console.log('TraktTV', 'Processing timeline update', {
           hash: hash,
           percent: percent,
           token: !!token,
-          minProgress: minProgress,
-          addThreshold: addThreshold
+          minProgress: minProgress
         });
       }
       if (!token) {
@@ -4332,7 +4342,7 @@
 
       // Перевіряємо, чи потрібно додати серіал в "Смотрю"
       console.log('TraktTV', 'Calling checkAndAddToShow');
-      this.checkAndAddToShow(card, hash, percent, addThreshold, token);
+      this.checkAndAddToShow(card, hash, percent, token);
 
       // Інтеграція нового фініш-флоу: при досягненні порогу формуємо key і викликаємо finish()
       console.log('TraktTV', 'Checking if should finish with idempotency, percent:', percent, 'minProgress:', minProgress);
@@ -4340,7 +4350,30 @@
         var media = Object.assign({}, card, {
           hash: hash
         });
+
+        // DEBUG: Log media object and hash source
+        if (this.isLoggingEnabled()) {
+          console.log('TraktTV', 'DEBUG - Timeline route media:', {
+            cardId: card.id,
+            cardType: getContentType(card),
+            percent: percent,
+            minProgress: minProgress,
+            currentHash: hash,
+            mediaHash: media.hash
+          });
+        }
         var key = getCompletionKey(media);
+
+        // DEBUG: Log key generation
+        if (this.isLoggingEnabled()) {
+          console.log('TraktTV', 'DEBUG - Timeline route key generation:', {
+            key: key,
+            mediaIds: media.ids,
+            mediaId: media.id,
+            mediaHash: media.hash,
+            contentType: getContentType(media)
+          });
+        }
         slog('Timeline threshold reached, finish intent and attempt', {
           key: key,
           percent: percent
@@ -4380,10 +4413,9 @@
      * @param {Object} card - Картка серіалу
      * @param {string} hash - Хеш епізоду
      * @param {number} percent - Відсоток перегляду
-     * @param {number} addThreshold - Поріг додавання
      * @param {string} token - Токен авторизації
      */
-    checkAndAddToShow: function checkAndAddToShow(card, hash, percent, addThreshold, token) {
+    checkAndAddToShow: function checkAndAddToShow(card, hash, percent, token) {
       var originalName = card.original_name || card.original_title || card.title;
       var firstEpisodeHash = Lampa.Utils.hash('11' + originalName);
 
@@ -4392,7 +4424,6 @@
         card: card,
         hash: hash,
         percent: percent,
-        addThreshold: addThreshold,
         originalName: originalName,
         firstEpisodeHash: firstEpisodeHash
       });
@@ -4401,12 +4432,11 @@
           card: card,
           hash: hash,
           percent: percent,
-          addThreshold: addThreshold,
           firstEpisodeHash: firstEpisodeHash,
-          shouldAdd: hash === firstEpisodeHash && percent >= addThreshold || addThreshold === 0 && hash === firstEpisodeHash
+          shouldAdd: hash === firstEpisodeHash
         });
       }
-      var shouldAdd = hash === firstEpisodeHash && percent >= addThreshold || addThreshold === 0 && hash === firstEpisodeHash;
+      var shouldAdd = hash === firstEpisodeHash;
       console.log('TraktTV', 'Should add show to watching:', shouldAdd);
       if (shouldAdd) {
         console.log('TraktTV', 'Adding show to watching');
@@ -4482,7 +4512,7 @@
           console.log('TraktTV', 'No show found or no traktId in response');
         }
       })["catch"](function (error) {
-        console.error('TraktTV: Error adding show to watching', error);
+        console.error('TraktTV', 'Error adding show to watching', error);
         console.log('TraktTV', 'Error details:', error);
       })["finally"](function () {
         // Скидаємо стан після виконання запиту
@@ -4582,6 +4612,17 @@
             var media = Object.assign({}, card, {
               hash: lastTimeline.hash
             });
+
+            // DEBUG: Log media object and hash source
+            if (Lampa.Storage.field('trakt_enable_logging')) {
+              console.log('TraktTV', 'DEBUG - Event route media:', {
+                cardId: card.id,
+                cardType: card.first_air_date ? 'show' : 'movie',
+                eventId: evt && evt.type,
+                lastTimelineHash: lastTimeline.hash,
+                currentMediaHash: media.hash
+              });
+            }
             var key = watching && watching.markFinishIntent ? function () {
               // watching.getCompletionKey is internal; build key via mark intent flow
               // markFinishIntent only needs key. We will compute the key the same way as finish() does.
@@ -4589,22 +4630,52 @@
               // We cannot import util directly, so replicate minimal key: prefer ids if exist.
               var ids = media.ids || {};
               var isShow = !!(media.episode_run_time || media.first_air_date || media.created_by || media.number_of_seasons || media.number_of_episodes);
+
+              // DEBUG: Log content type detection
+              if (Lampa.Storage.field('trakt_enable_logging')) {
+                console.log('TraktTV', 'DEBUG - Event route content type detection:', {
+                  isShow: isShow,
+                  episode_run_time: media.episode_run_time,
+                  first_air_date: media.first_air_date,
+                  created_by: media.created_by,
+                  number_of_seasons: media.number_of_seasons,
+                  number_of_episodes: media.number_of_episodes
+                });
+              }
+              var generatedKey;
               if (!isShow) {
-                if (ids.trakt) return "movie:trakt:".concat(ids.trakt);
-                if (media.id) return "movie:tmdb:".concat(media.id);
-                if (media.hash) return "movie:hash:".concat(media.hash);
+                if (ids.trakt) generatedKey = "movie:trakt:".concat(ids.trakt);else if (media.id) generatedKey = "movie:tmdb:".concat(media.id);else if (media.hash) generatedKey = "movie:hash:".concat(media.hash);
               } else {
                 var showTrakt = ids && ids.trakt || media.show && media.show.ids && media.show.ids.trakt;
                 var s = media.season_number || media.season || media.seasonNumber;
                 var e = media.episode_number || media.episode || media.episodeNumber;
-                if (showTrakt && s && e) return "episode:trakt:".concat(showTrakt, ":S").concat(s, ":E").concat(e);
-                if (media.id && s && e) return "episode:tmdb:".concat(media.id, ":S").concat(s, ":E").concat(e);
-                if (media.hash) return "episode:hash:".concat(media.hash);
+                if (showTrakt && s && e) generatedKey = "episode:trakt:".concat(showTrakt, ":S").concat(s, ":E").concat(e);else if (media.id && s && e) generatedKey = "episode:tmdb:".concat(media.id, ":S").concat(s, ":E").concat(e);else if (media.hash) generatedKey = "episode:hash:".concat(media.hash);
               }
-              var title = media.original_title || media.original_name || media.title || 'unknown';
-              return "unknown:".concat(Lampa.Utils.hash(title));
+
+              // DEBUG: Log generated key
+              if (Lampa.Storage.field('trakt_enable_logging')) {
+                console.log('TraktTV', 'DEBUG - Event route key generation:', {
+                  generatedKey: generatedKey,
+                  mediaIds: ids,
+                  mediaId: media.id,
+                  mediaHash: media.hash
+                });
+              }
+              if (!generatedKey) {
+                var title = media.original_title || media.original_name || media.title || 'unknown';
+                generatedKey = "unknown:".concat(Lampa.Utils.hash(title));
+              }
+              return generatedKey;
             }() : null;
             if (key && watching && typeof watching.markFinishIntent === 'function') {
+              // DEBUG: Log intent marking
+              if (Lampa.Storage.field('trakt_enable_logging')) {
+                console.log('TraktTV', 'DEBUG - Event route markFinishIntent called:', {
+                  key: key,
+                  eventId: evt && evt.type,
+                  timestamp: new Date().toISOString()
+                });
+              }
               watching.markFinishIntent(key);
               if (Lampa.Storage.field('trakt_enable_logging')) {
                 console.log('TraktTV', 'Finish intent marked from event', evt && evt.type, key);
@@ -4612,6 +4683,9 @@
             }
           } catch (e) {
             // swallow
+            if (Lampa.Storage.field('trakt_enable_logging')) {
+              console.log('TraktTV', 'DEBUG - Event route error:', e);
+            }
           }
         };
         Lampa.Player.listener.follow('ended', routeFinishIntent);
@@ -4835,14 +4909,6 @@
     }
   };
 
-  /**
-   * LampaJS plugin for Trakt.TV
-   * Global API bridge:
-   * - Exposes api on window.TraktTV.api inside startPlugin() to support non-ESM runtime usage (dev bundle)
-   * - Adds a local helper getter getGlobalApi() (not exported)
-   * - Idempotent and guarded; no throws if window/Lampa missing
-   */
-
   // Helper getter: prefer module api, fallback to global bridge
   function getGlobalApi() {
     try {
@@ -4874,7 +4940,7 @@
         try {
           if (typeof Lampa !== 'undefined' && Lampa && Lampa.Storage && typeof Lampa.Storage.field === 'function') {
             if (Lampa.Storage.field('trakt_enable_logging')) {
-              console.log('[TraktTV] Global api bridge', {
+              console.log('TraktTV', {
                 hasModuleApi: !!current,
                 hadExisting: !!existing,
                 finalHas: !!window.TraktTV.api
@@ -4889,31 +4955,41 @@
     Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
-    // Реєструємо плагін для рекомендацій
-    Lampa.Manifest.plugins = recommendationsPlugin;
-
-    // Реєструємо плагін для Up Next
-    Lampa.Manifest.plugins = upnextPlugin;
+    // Реєструємо плагіни
+    if (!Array.isArray(Lampa.Manifest.plugins)) {
+      Lampa.Manifest.plugins = [];
+    }
+    Lampa.Manifest.plugins.push(recommendationsPlugin);
+    Lampa.Manifest.plugins.push(upnextPlugin);
 
     // Фонове оновлення токена при старті
     // Викликати refresh ТІЛЬКИ якщо є refresh_token і не активний Device OAuth
     // Заборонити /oauth/token під час Device-полінгу
     if (Lampa.Storage.get('trakt_refresh_token') && Lampa.Storage.get('trakt_active_device_auth') !== true) {
+      var _getGlobalApi;
       if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.log('TraktTV start', 'refresh_check', {
+        console.log('TraktTV', 'refresh_check', {
           has_refresh: true,
           active_device_auth: Lampa.Storage.get('trakt_active_device_auth') === true
         });
       }
       // Prefer module api; if unavailable at runtime, attempt global fallback
-      (getGlobalApi() || {
-        refresh: function refresh() {
-          return Promise.resolve();
+      var authApi = (_getGlobalApi = getGlobalApi()) === null || _getGlobalApi === void 0 ? void 0 : _getGlobalApi.auth;
+      if (authApi && typeof authApi.refresh === 'function') {
+        authApi.refresh()["catch"](function (error) {
+          if (Lampa.Storage.field('trakt_enable_logging')) console.error('TraktTV', 'Refresh token failed:', error);
+        });
+      } else {
+        if (Lampa.Storage.field('trakt_enable_logging')) {
+          console.error('TraktTV', 'Auth API or refresh method is not available for refresh token.', {
+            authApi: !!authApi,
+            typeOfRefresh: _typeof(authApi === null || authApi === void 0 ? void 0 : authApi.refresh)
+          });
         }
-      }).refresh()["catch"](function () {});
+      }
     } else {
       if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.log('TraktTV start', 'skip_refresh', {
+        console.log('TraktTV', 'skip_refresh', {
           has_refresh: !!Lampa.Storage.get('trakt_refresh_token'),
           active_device_auth: Lampa.Storage.get('trakt_active_device_auth') === true
         });
@@ -4943,6 +5019,12 @@
     // Ініціалізуємо модуль відстеження перегляду
     watching.init();
   }
-  if (!window.plugin_trakt_ready) startPlugin();
+  if (!window.plugin_trakt_ready) {
+    // Додаємо глобальний обробник unhandledrejection на самому початку
+    window.addEventListener('unhandledrejection', function (event) {
+      console.error('TraktTV: Unhandled promise rejection:', event.reason);
+    });
+    startPlugin();
+  }
 
 })();
