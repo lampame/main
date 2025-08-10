@@ -2641,14 +2641,27 @@
       // Нормалізуємо дані
       var normalizedResults = recommendations.map(function (item) {
         var normalized = _objectSpread2({}, item);
+
+        // Додаємо логування для аналізу вхідних даних
+        console.log('🔍 [TraktTV Recommendations] Вхідні дані:', {
+          original: item,
+          type: item.type,
+          card_type: item.card_type,
+          name: item.name,
+          title: item.title,
+          hasName: !!item.name,
+          hasTitle: !!item.title
+        });
         if (item.type === 'tv' || item.card_type === 'tv') {
           normalized.name = item.title || item.original_title;
           normalized.first_air_date = item.release_date;
+          console.log('🔍 [TraktTV Recommendations] Оброблено як tv:', normalized);
         }
         if (item.type === 'movie' || item.card_type === 'movie') {
           delete normalized.name;
           normalized.release_date = item.release_date;
           normalized.title = item.title || item.original_title;
+          console.log('🔍 [TraktTV Recommendations] Оброблено як movie:', normalized);
         }
         return normalized;
       });
@@ -2665,11 +2678,25 @@
         cardClass: function cardClass(item, params) {
           var card = new Lampa.Card(item, params);
           card.onEnter = function (target, card_data) {
+            // Логування для аналізу логіки визначення типу
+            var detectedType = card_data.type || card_data.card_type || (card_data.name ? 'tv' : 'movie');
+            console.log('🔍 [TraktTV Recommendations] cardClass логіка:', {
+              card_data: {
+                type: card_data.type,
+                card_type: card_data.card_type,
+                name: card_data.name,
+                title: card_data.title
+              },
+              detectedType: detectedType,
+              expectedType: 'tv',
+              // Очікуваний тип для серіалів
+              isCorrect: detectedType === 'tv'
+            });
             Lampa.Activity.push({
               url: card_data.url,
               component: 'full',
               id: card_data.id,
-              method: card_data.type || card_data.card_type || (card_data.name ? 'tv' : 'movie'),
+              method: detectedType,
               card: card_data,
               source: card_data.source || params.object.source
             });
@@ -2717,6 +2744,15 @@
       (Api$2 && Api$2.recommendations({
         limit: limit
       })).then(function (data) {
+        var _data$results, _data$results2;
+        // Логування для аналізу API відповіді
+        console.log('🔍 [TraktTV Recommendations] API відповідь:', {
+          hasData: !!data,
+          hasResults: Array.isArray(data === null || data === void 0 ? void 0 : data.results),
+          resultsCount: (data === null || data === void 0 || (_data$results = data.results) === null || _data$results === void 0 ? void 0 : _data$results.length) || 0,
+          sampleResults: data === null || data === void 0 || (_data$results2 = data.results) === null || _data$results2 === void 0 ? void 0 : _data$results2.slice(0, 3) // Перші 3 елементи для аналізу
+        });
+
         // Додаємо перевірку на Array.isArray(data.results)
         if (data && Array.isArray(data.results) && data.results.length > 0) {
           Lampa.Storage.set('trakttv_cached_recommendations', data.results);
@@ -2765,9 +2801,65 @@
       }
       var normalizedResults = upnext.map(function (item) {
         var normalized = _objectSpread2({}, item);
-        if (item.type === 'episode' || item.card_type === 'episode') {
+
+        // Додаємо логування для аналізу вхідних даних
+        console.log('🔍 [TraktTV UpNext] Вхідні дані:', {
+          original: item,
+          method: item.method,
+          type: item.type,
+          card_type: item.card_type,
+          name: item.name,
+          title: item.title,
+          hasName: !!item.name,
+          hasTitle: !!item.title
+        });
+
+        // Створюємо уніфіковану функцію визначення типу контенту
+        var getContentType = function getContentType(data) {
+          // Спочатку перевіряємо method (для upnext API)
+          if (data.method) {
+            console.log('🔍 [TraktTV UpNext] Використано method поле:', data.method);
+            return data.method;
+          }
+          // Потім перевіряємо type (для recommendations API)
+          if (data.type) {
+            console.log('🔍 [TraktTV UpNext] Використано type поле:', data.type);
+            return data.type;
+          }
+          // Потім перевіряємо card_type (fallback)
+          if (data.card_type) {
+            console.log('🔍 [TraktTV UpNext] Використано card_type поле:', data.card_type);
+            return data.card_type;
+          }
+          // fallback за замовчуванням
+          console.log('🔍 [TraktTV UpNext] Використано fallback: movie');
+          return 'movie';
+        };
+        var contentType = getContentType(item);
+        if (contentType === 'tv' || contentType === 'show') {
           normalized.name = item.title || item.original_title;
           normalized.first_air_date = item.release_date;
+          normalized.type = 'tv'; // Додаємо type для сумісності
+          normalized.card_type = 'tv'; // Додаємо card_type для сумісності
+          console.log('🔍 [TraktTV UpNext] Оброблено як tv:', normalized);
+        }
+        if (contentType === 'movie') {
+          delete normalized.name;
+          normalized.release_date = item.release_date;
+          normalized.title = item.title || item.original_title;
+          normalized.type = 'movie'; // Додаємо type для сумісності
+          normalized.card_type = 'movie'; // Додаємо card_type для сумісності
+          console.log('🔍 [TraktTV UpNext] Оброблено як movie:', normalized);
+        }
+        if (contentType === 'episode') {
+          normalized.name = item.title || item.original_title;
+          normalized.first_air_date = item.release_date;
+          normalized.type = 'episode'; // Додаємо type для сумісності
+          normalized.card_type = 'episode'; // Додаємо card_type для сумісності
+          console.log('🔍 [TraktTV UpNext] Оброблено як episode:', normalized);
+        }
+        if (!contentType) {
+          console.log('🔍 [TraktTV UpNext] Неопрацьований тип:', contentType);
         }
         return normalized;
       });
@@ -2784,11 +2876,46 @@
         cardClass: function cardClass(item, params) {
           var card = new Lampa.Card(item, params);
           card.onEnter = function (target, card_data) {
+            // Створюємо уніфіковану функцію визначення типу контенту
+            var getContentType = function getContentType(data) {
+              // Спочатку перевіряємо method (для upnext API)
+              if (data.method) {
+                console.log('🔍 [TraktTV UpNext] cardClass: Використано method поле:', data.method);
+                return data.method;
+              }
+              // Потім перевіряємо type (для recommendations API)
+              if (data.type) {
+                console.log('🔍 [TraktTV UpNext] cardClass: Використано type поле:', data.type);
+                return data.type;
+              }
+              // Потім перевіряємо card_type (fallback)
+              if (data.card_type) {
+                console.log('🔍 [TraktTV UpNext] cardClass: Використано card_type поле:', data.card_type);
+                return data.card_type;
+              }
+              // fallback за замовчуванням
+              console.log('🔍 [TraktTV UpNext] cardClass: Використано fallback: movie');
+              return 'movie';
+            };
+            var detectedType = getContentType(card_data);
+            console.log('🔍 [TraktTV UpNext] cardClass логіка:', {
+              card_data: {
+                method: card_data.method,
+                type: card_data.type,
+                card_type: card_data.card_type,
+                name: card_data.name,
+                title: card_data.title
+              },
+              detectedType: detectedType,
+              expectedType: 'tv',
+              // Очікуваний тип для серіалів
+              isCorrect: detectedType === 'tv'
+            });
             Lampa.Activity.push({
               url: card_data.url,
               component: 'full',
               id: card_data.id,
-              method: 'tv',
+              method: detectedType,
               card: card_data,
               source: card_data.source || params.object.source,
               season: card_data.season,
@@ -2812,6 +2939,14 @@
       (Api$1 && Api$1.upnext({
         limit: limit
       })).then(function (data) {
+        var _data$results, _data$results2;
+        // Логування для аналізу API відповіді
+        console.log('🔍 [TraktTV UpNext] API відповідь:', {
+          hasData: !!data,
+          hasResults: Array.isArray(data === null || data === void 0 ? void 0 : data.results),
+          resultsCount: (data === null || data === void 0 || (_data$results = data.results) === null || _data$results === void 0 ? void 0 : _data$results.length) || 0,
+          sampleResults: data === null || data === void 0 || (_data$results2 = data.results) === null || _data$results2 === void 0 ? void 0 : _data$results2.slice(0, 3) // Перші 3 елементи для аналізу
+        });
         if (Array.isArray(data === null || data === void 0 ? void 0 : data.results) && data.results.length > 0) {
           Lampa.Storage.set('trakttv_cached_upnext', data.results);
         } else {
