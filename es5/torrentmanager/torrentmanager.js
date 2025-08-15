@@ -177,6 +177,54 @@
         });
       };
     }
+    function _createForOfIteratorHelper(r, e) {
+      var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
+      if (!t) {
+        if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) {
+          t && (r = t);
+          var n = 0,
+            F = function () {};
+          return {
+            s: F,
+            n: function () {
+              return n >= r.length ? {
+                done: !0
+              } : {
+                done: !1,
+                value: r[n++]
+              };
+            },
+            e: function (r) {
+              throw r;
+            },
+            f: F
+          };
+        }
+        throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+      }
+      var o,
+        a = !0,
+        u = !1;
+      return {
+        s: function () {
+          t = t.call(r);
+        },
+        n: function () {
+          var r = t.next();
+          return a = r.done, r;
+        },
+        e: function (r) {
+          u = !0, o = r;
+        },
+        f: function () {
+          try {
+            a || null == t.return || t.return();
+          } finally {
+            if (u) throw o;
+          }
+        }
+      };
+    }
     function _defineProperty(e, r, t) {
       return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
         value: t,
@@ -599,7 +647,7 @@
         });
       });
     }
-    function GetInfo$2() {
+    function GetInfo$3() {
       var settings = {
         url: "".concat(proxy$1).concat(url$1, "/api/v2/sync/maindata"),
         method: "GET",
@@ -702,7 +750,7 @@
     var Qbittorent = {
       auth: auth$3,
       GetData: GetData$3,
-      GetInfo: GetInfo$2,
+      GetInfo: GetInfo$3,
       SendCommand: SendCommand$3,
       SendTask: SendTask$3
     };
@@ -1159,8 +1207,8 @@
       }));
       return _GetData$1.apply(this, arguments);
     }
-    function GetInfo$1() {
-      return _GetInfo$1.apply(this, arguments);
+    function GetInfo$2() {
+      return _GetInfo$2.apply(this, arguments);
     }
     /**
      * Send a command to Transmission
@@ -1169,8 +1217,8 @@
      * @param {Object|Array} torrentData - Torrent data to act on
      * @returns {Promise<void>} - Promise resolving when command completes
      */
-    function _GetInfo$1() {
-      _GetInfo$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+    function _GetInfo$2() {
+      _GetInfo$2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
         var response, _t4;
         return _regenerator().w(function (_context5) {
           while (1) switch (_context5.n) {
@@ -1195,7 +1243,7 @@
           }
         }, _callee5, null, [[0, 2]]);
       }));
-      return _GetInfo$1.apply(this, arguments);
+      return _GetInfo$2.apply(this, arguments);
     }
     function SendCommand$2(_x2, _x3) {
       return _SendCommand$1.apply(this, arguments);
@@ -1372,13 +1420,107 @@
     var Transmission = {
       auth: auth$2,
       GetData: GetData$2,
-      GetInfo: GetInfo$1,
+      GetInfo: GetInfo$2,
       SendCommand: SendCommand$2,
       SendTask: SendTask$2,
       transmissionStatus: TRANSMISSION_STATUS$1
     };
 
-    // Constant
+    /**
+     * Генерує зображення з текстом за допомогою Canvas API.
+     * @param {string} text - Текст для відображення на зображенні.
+     * @returns {string} - URL зображення у форматі data:image/png;base64.
+     */
+    function textToImage(text) {
+      var canvas = document.createElement('canvas');
+      var context = canvas.getContext('2d');
+      var width = 400;
+      var height = 600;
+      canvas.width = width;
+      canvas.height = height;
+
+      // Фон
+      context.fillStyle = '#1a202c'; // Темно-сірий фон
+      context.fillRect(0, 0, width, height);
+
+      // Налаштування тексту
+      context.fillStyle = '#ffffff'; // Білий колір тексту
+      context.font = 'bold 48px Arial';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+
+      // Розбивка тексту на рядки
+      // Спочатку розбиваємо по наявних переносах рядків
+      var initialLines = text.split('\n');
+      var lines = [];
+
+      // Функція для розбиття довгого слова на частини
+      function breakLongWord(word, maxWidth) {
+        var brokenLines = [];
+        var currentPart = '';
+        for (var i = 0; i < word.length; i++) {
+          var _char = word[i];
+          var testPart = currentPart + _char;
+          var metrics = context.measureText(testPart);
+          var testWidth = metrics.width;
+          if (testWidth > maxWidth && currentPart !== '') {
+            brokenLines.push(currentPart);
+            currentPart = _char;
+          } else {
+            currentPart = testPart;
+          }
+        }
+        if (currentPart !== '') {
+          brokenLines.push(currentPart);
+        }
+        return brokenLines;
+      }
+
+      // Потім для кожного рядка застосовуємо переноси за шириною
+      initialLines.forEach(function (initialLine) {
+        var words = initialLine.split(' ');
+        var currentLine = '';
+        for (var i = 0; i < words.length; i++) {
+          var word = words[i];
+          // Перевіряємо, чи слово не занадто довге
+          var wordMetrics = context.measureText(word);
+          if (wordMetrics.width > width - 40) {
+            // Якщо є поточний рядок, додаємо його до списку
+            if (currentLine !== '') {
+              lines.push(currentLine);
+              currentLine = '';
+            }
+            // Розбиваємо довге слово на частини
+            var brokenWordLines = breakLongWord(word, width - 40);
+            lines.push.apply(lines, _toConsumableArray(brokenWordLines));
+          } else {
+            // Слово не занадто довге, обробляємо звичайним чином
+            var testLine = currentLine === '' ? word : currentLine + ' ' + word;
+            var metrics = context.measureText(testLine);
+            var testWidth = metrics.width;
+            if (testWidth > width - 40 && currentLine !== '') {
+              lines.push(currentLine);
+              currentLine = word;
+            } else {
+              currentLine = testLine;
+            }
+          }
+        }
+        // Додаємо останній рядок, якщо він не порожній
+        if (currentLine !== '') {
+          lines.push(currentLine);
+        }
+      });
+
+      // Відображення тексту
+      var lineHeight = 58;
+      var startY = (height - lines.length * lineHeight) / 2 + lineHeight / 2;
+      lines.forEach(function (line, index) {
+        context.fillText(line, width / 2, startY + index * lineHeight);
+      });
+      return canvas.toDataURL('image/png');
+    }
+
     var url = Lampa.Storage.field("lmetorrentsynologyUrl");
     var user = Lampa.Storage.field("lmetorrentsynologyUser");
     var pass = Lampa.Storage.field("lmetorrentsynologyPass");
@@ -1443,7 +1585,9 @@
                 id: torrent.id,
                 size: torrent.size,
                 state: torrent.status.charAt(0).toUpperCase() + torrent.status.slice(1),
-                completed: torrent.additional.transfer.size_downloaded / torrent.size // или другой соответствующий атрибут
+                completed: torrent.additional.transfer.size_downloaded / torrent.size,
+                // или другой соответствующий атрибут
+                image: textToImage(torrent.title) // Додаємо згенероване зображення з назви торрента
               };
             });
             resolve(standardizedResponse);
@@ -1454,6 +1598,128 @@
           reject(new Error("\u041E\u0448\u0438\u0431\u043A\u0430 AJAX \u0437\u0430\u043F\u0440\u043E\u0441\u0430: ".concat(textStatus, " - ").concat(errorThrown)));
         });
       });
+    }
+
+    /**
+     * Get session information from Synology
+     *
+     * @returns {Promise<Object>} - Promise resolving to session info
+     */
+    function GetInfo$1() {
+      return _GetInfo$1.apply(this, arguments);
+    }
+    function _GetInfo$1() {
+      _GetInfo$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+        var volumeSettings, volumeResponse, volumeData, moviesPath, tvPath, matchingShare, _iterator, _step, share, normalizedMoviesPath, normalizedTvPath, normalizedSharePath, _t, _t2;
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
+            case 0:
+              _context.p = 0;
+              // Get volume status information
+              volumeSettings = {
+                url: "".concat(proxy).concat(url, "/webapi/entry.cgi?version=2&api=SYNO.FileStation.List&method=list_share&additional=[\"volume_status\"]&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID),
+                method: "GET",
+                timeout: 0,
+                headers: getHeaders$1()
+              };
+              _context.n = 1;
+              return $.ajax(volumeSettings);
+            case 1:
+              volumeResponse = _context.v;
+              // Parse response if it's a string, otherwise use as is
+              volumeData = typeof volumeResponse === 'string' ? JSON.parse(volumeResponse) : volumeResponse;
+              if (!(!volumeData.success || !volumeData.data || !volumeData.data.shares)) {
+                _context.n = 2;
+                break;
+              }
+              throw new Error('Failed to fetch volume information');
+            case 2:
+              // Get the configured paths for Movies and TV shows
+              moviesPath = Lampa.Storage.get('lmetorrentsynologyPathMovies');
+              tvPath = Lampa.Storage.get('lmetorrentsynologyPathTV'); // If both paths are not set, return an error
+              if (!(!moviesPath && !tvPath)) {
+                _context.n = 3;
+                break;
+              }
+              throw new Error('NaN undefined');
+            case 3:
+              // Find the share that matches either moviesPath or tvPath
+              matchingShare = null; // Check each share to see if its path matches our configured paths
+              _iterator = _createForOfIteratorHelper(volumeData.data.shares);
+              _context.p = 4;
+              _iterator.s();
+            case 5:
+              if ((_step = _iterator.n()).done) {
+                _context.n = 10;
+                break;
+              }
+              share = _step.value;
+              // Normalize paths by adding leading slash if not present
+              normalizedMoviesPath = moviesPath.startsWith('/') ? moviesPath : '/' + moviesPath;
+              normalizedTvPath = tvPath.startsWith('/') ? tvPath : '/' + tvPath;
+              normalizedSharePath = share.path; // Check if either moviesPath or tvPath starts with the share path
+              if (!(normalizedMoviesPath && normalizedMoviesPath.startsWith(normalizedSharePath + '/'))) {
+                _context.n = 6;
+                break;
+              }
+              matchingShare = share;
+              return _context.a(3, 10);
+            case 6:
+              if (!(normalizedTvPath && normalizedTvPath.startsWith(normalizedSharePath + '/'))) {
+                _context.n = 7;
+                break;
+              }
+              matchingShare = share;
+              return _context.a(3, 10);
+            case 7:
+              if (!(normalizedMoviesPath && normalizedMoviesPath === normalizedSharePath)) {
+                _context.n = 8;
+                break;
+              }
+              matchingShare = share;
+              return _context.a(3, 10);
+            case 8:
+              if (!(normalizedTvPath && normalizedTvPath === normalizedSharePath)) {
+                _context.n = 9;
+                break;
+              }
+              matchingShare = share;
+              return _context.a(3, 10);
+            case 9:
+              _context.n = 5;
+              break;
+            case 10:
+              _context.n = 12;
+              break;
+            case 11:
+              _context.p = 11;
+              _t = _context.v;
+              _iterator.e(_t);
+            case 12:
+              _context.p = 12;
+              _iterator.f();
+              return _context.f(12);
+            case 13:
+              if (!(matchingShare && matchingShare.additional && matchingShare.additional.volume_status)) {
+                _context.n = 14;
+                break;
+              }
+              return _context.a(2, {
+                space: matchingShare.additional.volume_status.freespace
+              });
+            case 14:
+              throw new Error('NaN undefined');
+            case 15:
+              _context.p = 15;
+              _t2 = _context.v;
+              console.error('TDM', 'Error fetching session info:', _t2);
+              throw new Error("Failed to fetch session info: ".concat(_t2.message));
+            case 16:
+              return _context.a(2);
+          }
+        }, _callee, null, [[4, 11, 12, 13], [0, 15]]);
+      }));
+      return _GetInfo$1.apply(this, arguments);
     }
     function SendCommand$1(a, torrent_data) {
       var settings = {
@@ -1484,7 +1750,7 @@
       });
     }
     function SendTask$1(selectedTorrent, labels, dtype) {
-      var path = Lampa.Storage.get("lmetorrentqBittorent".concat(dtype)) ? "&destination=".concat(Lampa.Storage.get("lmetorrentqBittorent".concat(dtype))) : '';
+      var path = Lampa.Storage.get("lmetorrentsynologyPath".concat(dtype)) ? "&destination=".concat(Lampa.Storage.get("lmetorrentsynologyPath".concat(dtype))) : '';
       var settings = {
         url: "".concat(proxy).concat(url, "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=create&uri=").concat(encodeURIComponent(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link)).concat(path, "&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID),
         method: "GET",
@@ -1515,6 +1781,7 @@
     var Synology = {
       auth: auth$1,
       GetData: GetData$1,
+      GetInfo: GetInfo$1,
       SendCommand: SendCommand$1,
       SendTask: SendTask$1
     };
@@ -2292,12 +2559,12 @@
        */
       function _fetchClientData() {
         _fetchClientData = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(clientType) {
-          var _yield$Promise$all, _yield$Promise$all2, qbData, qbInfo, _yield$Promise$all3, _yield$Promise$all4, trData, trInfo, _yield$Promise$all5, _yield$Promise$all6, keData, keInfo, _t3;
+          var _yield$Promise$all, _yield$Promise$all2, qbData, qbInfo, _yield$Promise$all3, _yield$Promise$all4, trData, trInfo, _yield$Promise$all5, _yield$Promise$all6, keData, keInfo, _yield$Promise$all7, _yield$Promise$all8, syData, syInfo, _t3;
           return _regenerator().w(function (_context3) {
             while (1) switch (_context3.n) {
               case 0:
                 _t3 = clientType;
-                _context3.n = _t3 === 'qBittorent' ? 1 : _t3 === 'transmission' ? 3 : _t3 === 'keenetic' ? 5 : _t3 === 'synology' ? 7 : 8;
+                _context3.n = _t3 === 'qBittorent' ? 1 : _t3 === 'transmission' ? 3 : _t3 === 'keenetic' ? 5 : _t3 === 'synology' ? 7 : 9;
                 break;
               case 1:
                 _context3.n = 2;
@@ -2336,10 +2603,20 @@
                   info: keInfo
                 });
               case 7:
-                return _context3.a(2, Synology.GetData());
+                _context3.n = 8;
+                return Promise.all([Synology.GetData(), Synology.GetInfo()]);
               case 8:
-                throw new Error('Unknown client type');
+                _yield$Promise$all7 = _context3.v;
+                _yield$Promise$all8 = _slicedToArray(_yield$Promise$all7, 2);
+                syData = _yield$Promise$all8[0];
+                syInfo = _yield$Promise$all8[1];
+                return _context3.a(2, {
+                  data: syData,
+                  info: syInfo
+                });
               case 9:
+                throw new Error('Unknown client type');
+              case 10:
                 return _context3.a(2);
             }
           }, _callee3);
@@ -2367,8 +2644,6 @@
         // Add header
         if (result.info) {
           this.renderHeader(result.info);
-        } else if (client === 'synology') {
-          this.renderHeader("{'space':0}");
         }
 
         // Add torrent items
@@ -2406,7 +2681,7 @@
         item.render()[0].on("hover:enter", function () {
           Lampa.Activity.replace({
             url: "",
-            title: "LME Torrent Manager",
+            title: client.toUpperCase() + " Manager",
             component: "lmetorrentPanel",
             page: 1
           });
@@ -2449,14 +2724,14 @@
 
         // Build menu items
         var menuItems = [{
-          title: 'Open card',
-          action: 'card'
+          title: Lampa.Lang.translate('resume'),
+          action: 'resume'
         }, {
-          title: 'Add metadata',
-          action: 'parse'
+          title: Lampa.Lang.translate('pause'),
+          action: 'pause'
         }, {
-          title: 'Add metadata all',
-          action: 'parse-all'
+          title: Lampa.Lang.translate('delete'),
+          action: 'delete'
         }];
 
         // Add play option for Keenetic client
@@ -2466,25 +2741,20 @@
             action: 'play'
           });
         }
-
-        // Add standard control options
-        menuItems.push({
-          title: Lampa.Lang.translate('resume'),
-          action: 'resume'
-        }, {
-          title: Lampa.Lang.translate('pause'),
-          action: 'pause'
-        }, {
-          title: Lampa.Lang.translate('delete'),
-          action: 'delete'
-        });
-
-        // Add full delete option for non-Synology clients
-        if (client !== 'synology') {
+        if (client != 'synology') {
           menuItems.push({
             title: Lampa.Lang.translate('fullDelete'),
             action: 'delete',
             deleteFiles: true
+          }, {
+            title: 'Open card',
+            action: 'card'
+          }, {
+            title: 'Add metadata',
+            action: 'parse'
+          }, {
+            title: 'Add metadata all',
+            action: 'parse-all'
           });
         }
 
@@ -3828,7 +4098,7 @@
       button.on('hover:enter', function () {
         Lampa.Activity.push({
           url: '',
-          title: MANIFEST.name,
+          title: Lampa.Storage.get(MANIFEST.component + 'Select').toUpperCase() + " Manager",
           component: 'lmetorrentPanel',
           page: 1
         });
