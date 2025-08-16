@@ -1537,7 +1537,7 @@
      * Інкапсулює логіку роботи з Lampa.DB (IndexedDB).
      */
 
-    var DB_NAME = 'dev_lme_torrentmanager';
+    var DB_NAME = 'lme_torrentmanager';
     var DB_VERSION = 4; // Збільшено версію для гарантованого оновлення
 
     /**
