@@ -137,6 +137,21 @@
           en: "Sort by progress",
           ru: "Сортировать по прогрессу",
           uk: "Сортувати за прогресом"
+        },
+        openCard: {
+          en: "Open",
+          ru: "Открыть",
+          uk: "Відкрити"
+        },
+        add_metadata: {
+          en: "Add metadata",
+          ru: "Добавить метаданные",
+          uk: "Додати метадані"
+        },
+        add_metadata_all: {
+          en: "Parse all",
+          ru: "Парсить все",
+          uk: "Парсити все"
         }
       });
     }
@@ -776,7 +791,7 @@
 
       // Regular expression to extract the main title from torrent name
       // Removes season/episode markers, year, quality indicators, etc.
-      var regex = /*#__PURE__*/_wrapRegExp(/(.*?)(?:[.\s]S\d{1,2}(?:E\d{1,2})?|[.\s]\d{4}|[.\s](?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB-Rip|WEB-DL|WEB|TS|(?:PPV )?WEB-?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv).*$/i, {
+      var regex = /*#__PURE__*/_wrapRegExp(/^(.+?)(?:[.\s(]((19|20)\d{2})[.\s)]|S\d{1,2}(?:E\d{1,2})?|[.\s](?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB-Rip|WEB-DL|WEB|TS|(?:PPV )?WEB-?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv)/i, {
         title: 1
       });
       var match = name.match(regex);
@@ -888,7 +903,7 @@
               _context3.n = 2;
               return Promise.all(torrents.map(/*#__PURE__*/function () {
                 var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(torrent) {
-                  var name, cleanedName, response, result, _t2;
+                  var name, cleanedName, response, _t2;
                   return _regenerator().w(function (_context2) {
                     while (1) switch (_context2.n) {
                       case 0:
@@ -918,11 +933,7 @@
                           _context2.n = 4;
                           break;
                         }
-                        result = response.results[0];
-                        return _context2.a(2, {
-                          media_type: result.media_type,
-                          id: result.id
-                        });
+                        return _context2.a(2, response.results[0]);
                       case 4:
                         _context2.n = 5;
                         return handleMultipleResults(response.results);
@@ -1143,15 +1154,15 @@
       return _auth$1.apply(this, arguments);
     }
     function GetData$2() {
-      return _GetData$1.apply(this, arguments);
+      return _GetData$2.apply(this, arguments);
     }
     /**
      * Get session information from Transmission
      * 
      * @returns {Promise<Object>} - Promise resolving to session info
      */
-    function _GetData$1() {
-      _GetData$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+    function _GetData$2() {
+      _GetData$2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
         var response, _t3;
         return _regenerator().w(function (_context4) {
           while (1) switch (_context4.n) {
@@ -1205,7 +1216,7 @@
           }
         }, _callee4, null, [[0, 3]]);
       }));
-      return _GetData$1.apply(this, arguments);
+      return _GetData$2.apply(this, arguments);
     }
     function GetInfo$2() {
       return _GetInfo$2.apply(this, arguments);
@@ -1521,6 +1532,176 @@
       return canvas.toDataURL('image/png');
     }
 
+    /**
+     * @file IndexedDB утиліти для зберігання метаданих торрентів.
+     * Інкапсулює логіку роботи з Lampa.DB (IndexedDB).
+     */
+
+    var DB_NAME = 'dev_lme_torrentmanager';
+    var DB_VERSION = 4; // Збільшено версію для гарантованого оновлення
+
+    /**
+     * Отримує список всіх можливих імен таблиць для всіх клієнтів.
+     * @returns {string[]} Масив імен таблиць.
+     */
+    function getAllTableNames() {
+      var clients = ['synology', 'qbittorent', 'transmission', 'keenetic', 'universal']; // Додайте сюди інших клієнтів за потреби
+      return clients.map(function (client) {
+        return "".concat(client, "_metadata");
+      });
+    }
+
+    /**
+     * Допоміжна функція для отримання назви таблиці (сховища) на основі активного клієнта.
+     * @returns {string} Назва таблиці, напр. 'synology_metadata'.
+     */
+    function getTableName() {
+      var client = Lampa.Storage.field('lmetorrentSelect');
+      if (!client) {
+        console.error('[DB] Активний клієнт не вибрано!');
+        return 'default_metadata';
+      }
+      return "".concat(client.toLowerCase(), "_metadata");
+    }
+    var dbPromise = null;
+
+    /**
+     * Ініціалізує та відкриває IndexedDB, використовуючи патерн singleton promise.
+     * @returns {Promise<object>} Promise, який вирішується об'єктом бази даних Lampa.DB.
+     */
+    function initDB() {
+      if (dbPromise) {
+        return dbPromise;
+      }
+      dbPromise = new Promise(/*#__PURE__*/function () {
+        var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(resolve, reject) {
+          var allTables, db, _t;
+          return _regenerator().w(function (_context) {
+            while (1) switch (_context.n) {
+              case 0:
+                if (Lampa.DB) {
+                  _context.n = 1;
+                  break;
+                }
+                console.error('Lampa.DB не визначено.');
+                dbPromise = null; // Скидаємо для повторної спроби
+                return _context.a(2, reject(new Error('Lampa.DB is not defined')));
+              case 1:
+                allTables = getAllTableNames();
+                db = new Lampa.DB(DB_NAME, allTables, DB_VERSION);
+                _context.p = 2;
+                _context.n = 3;
+                return db.openDatabase();
+              case 3:
+                console.log("TDM", "Database '".concat(DB_NAME, "' successfully opened/updated to version ").concat(DB_VERSION, "."));
+                resolve(db);
+                _context.n = 5;
+                break;
+              case 4:
+                _context.p = 4;
+                _t = _context.v;
+                console.error("TDM", "Critical error '".concat(DB_NAME, "':"), _t);
+                dbPromise = null; // Скидаємо для повторної спроби
+                reject(_t);
+              case 5:
+                return _context.a(2);
+            }
+          }, _callee, null, [[2, 4]]);
+        }));
+        return function (_x, _x2) {
+          return _ref.apply(this, arguments);
+        };
+      }());
+      return dbPromise;
+    }
+
+    /**
+     * Зберігає метадані для ключа.
+     * @param {string} key - Ключ (ідентифікатор торренту).
+     * @param {any} value - Значення для збереження.
+     * @returns {Promise<void>}
+     */
+    function saveMetadata(_x3, _x4) {
+      return _saveMetadata.apply(this, arguments);
+    }
+
+    /**
+     * Отримує метадані за ключем.
+     * @param {string} key - Ключ (ідентифікатор торренту).
+     * @returns {Promise<any|null>}
+     */
+    function _saveMetadata() {
+      _saveMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(key, value) {
+        var db, tableName, _t2;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.n) {
+            case 0:
+              _context2.p = 0;
+              _context2.n = 1;
+              return initDB();
+            case 1:
+              db = _context2.v;
+              tableName = getTableName();
+              _context2.n = 2;
+              return db.rewriteData(tableName, key, value);
+            case 2:
+              console.log("TDM", "Metadata for key '".concat(key, "' successfully saved in table '").concat(tableName, "'."));
+              _context2.n = 4;
+              break;
+            case 3:
+              _context2.p = 3;
+              _t2 = _context2.v;
+              console.error("TDM", "Error in saveMetadata:", _t2);
+              throw _t2;
+            case 4:
+              return _context2.a(2);
+          }
+        }, _callee2, null, [[0, 3]]);
+      }));
+      return _saveMetadata.apply(this, arguments);
+    }
+    function getMetadata(_x5) {
+      return _getMetadata.apply(this, arguments);
+    }
+    function _getMetadata() {
+      _getMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(key) {
+        var db, tableName, result, _t3;
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
+            case 0:
+              _context3.p = 0;
+              _context3.n = 1;
+              return initDB();
+            case 1:
+              db = _context3.v;
+              tableName = getTableName();
+              _context3.n = 2;
+              return db.getData(tableName, key);
+            case 2:
+              result = _context3.v;
+              if (!result) {
+                _context3.n = 3;
+                break;
+              }
+              return _context3.a(2, result);
+            case 3:
+              return _context3.a(2, null);
+            case 4:
+              _context3.n = 6;
+              break;
+            case 5:
+              _context3.p = 5;
+              _t3 = _context3.v;
+              console.error("TDM", "Error in getMetadata:", _t3);
+              throw _t3;
+            case 6:
+              return _context3.a(2);
+          }
+        }, _callee3, null, [[0, 5]]);
+      }));
+      return _getMetadata.apply(this, arguments);
+    }
+
     var url = Lampa.Storage.field("lmetorrentsynologyUrl");
     var user = Lampa.Storage.field("lmetorrentsynologyUser");
     var pass = Lampa.Storage.field("lmetorrentsynologyPass");
@@ -1569,52 +1750,107 @@
       });
     }
     function GetData$1() {
-      var settings = {
-        url: "".concat(proxy).concat(url, "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=list&additional=file,transfer&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID, "&limit=-1"),
-        method: "GET",
-        timeout: 0,
-        headers: getHeaders$1() // Если getHeaders возвращает объект с ключом headers
-      };
-      return new Promise(function (resolve, reject) {
-        $.ajax(settings).done(function (response) {
-          response = JSON.parse(response);
-          try {
-            var standardizedResponse = response.data.tasks.map(function (torrent) {
-              return {
-                name: torrent.title,
-                id: torrent.id,
-                size: torrent.size,
-                state: torrent.status.charAt(0).toUpperCase() + torrent.status.slice(1),
-                completed: torrent.additional.transfer.size_downloaded / torrent.size,
-                // или другой соответствующий атрибут
-                image: textToImage(torrent.title) // Додаємо згенероване зображення з назви торрента
-              };
-            });
-            resolve(standardizedResponse);
-          } catch (error) {
-            reject(new Error('Ошибка при обработке данных'));
-          }
-        }).fail(function (jqXHR, textStatus, errorThrown) {
-          reject(new Error("\u041E\u0448\u0438\u0431\u043A\u0430 AJAX \u0437\u0430\u043F\u0440\u043E\u0441\u0430: ".concat(textStatus, " - ").concat(errorThrown)));
-        });
-      });
+      return _GetData$1.apply(this, arguments);
     }
-
     /**
      * Get session information from Synology
      *
      * @returns {Promise<Object>} - Promise resolving to session info
      */
+    function _GetData$1() {
+      _GetData$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+        var settings;
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
+            case 0:
+              settings = {
+                url: "".concat(proxy).concat(url, "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=list&additional=file,transfer&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID, "&limit=-1"),
+                method: "GET",
+                timeout: 0,
+                headers: getHeaders$1() // Если getHeaders возвращает объект с ключом headers
+              };
+              return _context3.a(2, new Promise(/*#__PURE__*/function () {
+                var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(resolve, reject) {
+                  var response, parsedResponse, standardizedResponse, _t;
+                  return _regenerator().w(function (_context2) {
+                    while (1) switch (_context2.n) {
+                      case 0:
+                        _context2.p = 0;
+                        _context2.n = 1;
+                        return $.ajax(settings);
+                      case 1:
+                        response = _context2.v;
+                        parsedResponse = JSON.parse(response);
+                        if (!(!parsedResponse.data || !parsedResponse.data.tasks)) {
+                          _context2.n = 2;
+                          break;
+                        }
+                        throw new Error('Invalid response structure');
+                      case 2:
+                        _context2.n = 3;
+                        return Promise.all(parsedResponse.data.tasks.map(/*#__PURE__*/function () {
+                          var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(torrent) {
+                            var metadata, imageUrl;
+                            return _regenerator().w(function (_context) {
+                              while (1) switch (_context.n) {
+                                case 0:
+                                  _context.n = 1;
+                                  return getMetadata(torrent.id);
+                                case 1:
+                                  metadata = _context.v;
+                                  // Спочатку перевіряємо, чи є метадані та постер, інакше створюємо картинку з тексту
+                                  imageUrl = metadata && metadata.poster ? metadata.poster : textToImage(torrent.title);
+                                  return _context.a(2, {
+                                    name: torrent.title,
+                                    id: torrent.id,
+                                    size: torrent.size,
+                                    state: torrent.status.charAt(0).toUpperCase() + torrent.status.slice(1),
+                                    completed: torrent.additional.transfer.size_downloaded / torrent.size,
+                                    image: imageUrl,
+                                    tmdb_id: metadata ? metadata.tmdb_id : null,
+                                    media_type: metadata ? metadata.media_type : null
+                                  });
+                              }
+                            }, _callee);
+                          }));
+                          return function (_x3) {
+                            return _ref2.apply(this, arguments);
+                          };
+                        }()));
+                      case 3:
+                        standardizedResponse = _context2.v;
+                        resolve(standardizedResponse);
+                        _context2.n = 5;
+                        break;
+                      case 4:
+                        _context2.p = 4;
+                        _t = _context2.v;
+                        console.error('TDM', 'GetData error:', _t);
+                        reject(new Error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0435 \u0434\u0430\u043D\u043D\u044B\u0445 \u0438\u043B\u0438 AJAX \u0437\u0430\u043F\u0440\u043E\u0441\u0430: ".concat(_t.message || _t)));
+                      case 5:
+                        return _context2.a(2);
+                    }
+                  }, _callee2, null, [[0, 4]]);
+                }));
+                return function (_x, _x2) {
+                  return _ref.apply(this, arguments);
+                };
+              }()));
+          }
+        }, _callee3);
+      }));
+      return _GetData$1.apply(this, arguments);
+    }
     function GetInfo$1() {
       return _GetInfo$1.apply(this, arguments);
     }
     function _GetInfo$1() {
-      _GetInfo$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-        var volumeSettings, volumeResponse, volumeData, moviesPath, tvPath, matchingShare, _iterator, _step, share, normalizedMoviesPath, normalizedTvPath, normalizedSharePath, _t, _t2;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.n) {
+      _GetInfo$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+        var volumeSettings, volumeResponse, volumeData, moviesPath, tvPath, matchingShare, _iterator, _step, share, normalizedMoviesPath, normalizedTvPath, normalizedSharePath, _t2, _t3;
+        return _regenerator().w(function (_context4) {
+          while (1) switch (_context4.n) {
             case 0:
-              _context.p = 0;
+              _context4.p = 0;
               // Get volume status information
               volumeSettings = {
                 url: "".concat(proxy).concat(url, "/webapi/entry.cgi?version=2&api=SYNO.FileStation.List&method=list_share&additional=[\"volume_status\"]&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID),
@@ -1622,14 +1858,14 @@
                 timeout: 0,
                 headers: getHeaders$1()
               };
-              _context.n = 1;
+              _context4.n = 1;
               return $.ajax(volumeSettings);
             case 1:
-              volumeResponse = _context.v;
+              volumeResponse = _context4.v;
               // Parse response if it's a string, otherwise use as is
               volumeData = typeof volumeResponse === 'string' ? JSON.parse(volumeResponse) : volumeResponse;
               if (!(!volumeData.success || !volumeData.data || !volumeData.data.shares)) {
-                _context.n = 2;
+                _context4.n = 2;
                 break;
               }
               throw new Error('Failed to fetch volume information');
@@ -1638,7 +1874,7 @@
               moviesPath = Lampa.Storage.get('lmetorrentsynologyPathMovies');
               tvPath = Lampa.Storage.get('lmetorrentsynologyPathTV'); // If both paths are not set, return an error
               if (!(!moviesPath && !tvPath)) {
-                _context.n = 3;
+                _context4.n = 3;
                 break;
               }
               throw new Error('NaN undefined');
@@ -1646,11 +1882,11 @@
               // Find the share that matches either moviesPath or tvPath
               matchingShare = null; // Check each share to see if its path matches our configured paths
               _iterator = _createForOfIteratorHelper(volumeData.data.shares);
-              _context.p = 4;
+              _context4.p = 4;
               _iterator.s();
             case 5:
               if ((_step = _iterator.n()).done) {
-                _context.n = 10;
+                _context4.n = 10;
                 break;
               }
               share = _step.value;
@@ -1659,65 +1895,65 @@
               normalizedTvPath = tvPath.startsWith('/') ? tvPath : '/' + tvPath;
               normalizedSharePath = share.path; // Check if either moviesPath or tvPath starts with the share path
               if (!(normalizedMoviesPath && normalizedMoviesPath.startsWith(normalizedSharePath + '/'))) {
-                _context.n = 6;
+                _context4.n = 6;
                 break;
               }
               matchingShare = share;
-              return _context.a(3, 10);
+              return _context4.a(3, 10);
             case 6:
               if (!(normalizedTvPath && normalizedTvPath.startsWith(normalizedSharePath + '/'))) {
-                _context.n = 7;
+                _context4.n = 7;
                 break;
               }
               matchingShare = share;
-              return _context.a(3, 10);
+              return _context4.a(3, 10);
             case 7:
               if (!(normalizedMoviesPath && normalizedMoviesPath === normalizedSharePath)) {
-                _context.n = 8;
+                _context4.n = 8;
                 break;
               }
               matchingShare = share;
-              return _context.a(3, 10);
+              return _context4.a(3, 10);
             case 8:
               if (!(normalizedTvPath && normalizedTvPath === normalizedSharePath)) {
-                _context.n = 9;
+                _context4.n = 9;
                 break;
               }
               matchingShare = share;
-              return _context.a(3, 10);
+              return _context4.a(3, 10);
             case 9:
-              _context.n = 5;
+              _context4.n = 5;
               break;
             case 10:
-              _context.n = 12;
+              _context4.n = 12;
               break;
             case 11:
-              _context.p = 11;
-              _t = _context.v;
-              _iterator.e(_t);
+              _context4.p = 11;
+              _t2 = _context4.v;
+              _iterator.e(_t2);
             case 12:
-              _context.p = 12;
+              _context4.p = 12;
               _iterator.f();
-              return _context.f(12);
+              return _context4.f(12);
             case 13:
               if (!(matchingShare && matchingShare.additional && matchingShare.additional.volume_status)) {
-                _context.n = 14;
+                _context4.n = 14;
                 break;
               }
-              return _context.a(2, {
+              return _context4.a(2, {
                 space: matchingShare.additional.volume_status.freespace
               });
             case 14:
               throw new Error('NaN undefined');
             case 15:
-              _context.p = 15;
-              _t2 = _context.v;
-              console.error('TDM', 'Error fetching session info:', _t2);
-              throw new Error("Failed to fetch session info: ".concat(_t2.message));
+              _context4.p = 15;
+              _t3 = _context4.v;
+              console.error('TDM', 'Error fetching session info:', _t3);
+              throw new Error("Failed to fetch session info: ".concat(_t3.message));
             case 16:
-              return _context.a(2);
+              return _context4.a(2);
           }
-        }, _callee, null, [[4, 11, 12, 13], [0, 15]]);
+        }, _callee4, null, [[4, 11, 12, 13], [0, 15]]);
       }));
       return _GetInfo$1.apply(this, arguments);
     }
@@ -2459,6 +2695,151 @@
       };
     }
 
+    /**
+     * Оновлює метадані для одного або кількох торрентів.
+     * Отримує дані з TMDB та зберігає їх у базу даних.
+     * @param {object|object[]} torrentData - Дані одного або кількох торрентів.
+     */
+    function update(_x) {
+      return _update.apply(this, arguments);
+    }
+    function _update() {
+      _update = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(torrentData) {
+        var torrents, _iterator, _step, torrent, cleanTitle, searchResults, initialMetadata, fullMetadata, detailsUrl, imageUrl, imagePath, useProxy, posterSize, directBaseUrl, proxyBaseUrl, baseUrl, metadataToSave, generatedImage, _t, _t2, _t3;
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
+            case 0:
+              torrents = Array.isArray(torrentData) ? torrentData : [torrentData];
+              _iterator = _createForOfIteratorHelper(torrents);
+              _context.p = 1;
+              _iterator.s();
+            case 2:
+              if ((_step = _iterator.n()).done) {
+                _context.n = 18;
+                break;
+              }
+              torrent = _step.value;
+              _context.p = 3;
+              cleanTitle = torrent.title || torrent.name;
+              if (cleanTitle) {
+                _context.n = 4;
+                break;
+              }
+              console.warn('TDM', 'MetadataManager: Torrent has no title or name', torrent);
+              Lampa.Bell.push({
+                text: "Skipping torrent without title: ".concat(torrent.id)
+              });
+              return _context.a(3, 17);
+            case 4:
+              _context.n = 5;
+              return processTorrents(cleanTitle);
+            case 5:
+              searchResults = _context.v;
+              // processTorrents повертає масив, беремо перший результат
+              initialMetadata = searchResults && searchResults.length > 0 ? searchResults[0] : null;
+              if (!(initialMetadata && initialMetadata.media_type && initialMetadata.id)) {
+                _context.n = 13;
+                break;
+              }
+              fullMetadata = void 0; // Якщо processTorrents повернув лише id та тип, отримуємо повні дані
+              if (!(!initialMetadata.poster_path && !initialMetadata.backdrop_path)) {
+                _context.n = 10;
+                break;
+              }
+              detailsUrl = "https://api.themoviedb.org/3/".concat(initialMetadata.media_type, "/").concat(initialMetadata.id, "?api_key=4ef0d7355d9ffb5151e987764708ce96&language=uk,ru,en");
+              _context.p = 6;
+              _context.n = 7;
+              return $.ajax({
+                url: detailsUrl,
+                method: 'GET'
+              });
+            case 7:
+              fullMetadata = _context.v;
+              _context.n = 9;
+              break;
+            case 8:
+              _context.p = 8;
+              _t = _context.v;
+              console.error('TDM', 'Failed to fetch full metadata:', _t);
+              fullMetadata = initialMetadata; // Повертаємось до початкових даних
+            case 9:
+              _context.n = 11;
+              break;
+            case 10:
+              fullMetadata = initialMetadata;
+            case 11:
+              imageUrl = '';
+              imagePath = fullMetadata.poster_path || fullMetadata.backdrop_path;
+              if (imagePath) {
+                useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
+                posterSize = Lampa.Storage.field('poster_size') || 'w200'; // Базовий URL з Lampa
+                directBaseUrl = Lampa.TMDB.image('t/p/'); // Проксі URL
+                proxyBaseUrl = 'https://lampame.v6.rocks/https://tmdb.melonhu.cn/img/t/p/';
+                baseUrl = useProxy ? proxyBaseUrl : directBaseUrl; // Формуємо фінальний URL, додаючи слеш між розміром та шляхом
+                // imagePath від API приходить з початковим слешем, видаляємо його
+                imageUrl = baseUrl + posterSize + '/' + imagePath.replace(/^\//, '');
+              } else {
+                console.log('TDM', 'MetadataManager: No poster or backdrop path found, using textToImage', cleanTitle);
+                imageUrl = textToImage(cleanTitle);
+              }
+
+              // Зберігаємо URL постера та інші метадані в базу даних
+              metadataToSave = {
+                poster: imageUrl,
+                tmdb_id: fullMetadata.id,
+                media_type: fullMetadata.media_type || initialMetadata.media_type
+              };
+              _context.n = 12;
+              return saveMetadata(torrent.id, metadataToSave);
+            case 12:
+              Lampa.Bell.push({
+                text: "Metadata added for: ".concat(cleanTitle)
+              });
+              _context.n = 15;
+              break;
+            case 13:
+              console.log('TDM', 'MetadataManager: No TMDB metadata found for', cleanTitle);
+              generatedImage = textToImage(cleanTitle);
+              _context.n = 14;
+              return saveMetadata(torrent.id, {
+                poster: generatedImage
+              });
+            case 14:
+              Lampa.Bell.push({
+                text: "No metadata found for: ".concat(cleanTitle)
+              });
+            case 15:
+              _context.n = 17;
+              break;
+            case 16:
+              _context.p = 16;
+              _t2 = _context.v;
+              console.error('TDM', 'MetadataManager update error:', _t2);
+              Lampa.Bell.push({
+                text: "Error adding metadata for ".concat(torrent.title || torrent.name, ": ").concat(_t2.message)
+              });
+            case 17:
+              _context.n = 2;
+              break;
+            case 18:
+              _context.n = 20;
+              break;
+            case 19:
+              _context.p = 19;
+              _t3 = _context.v;
+              _iterator.e(_t3);
+            case 20:
+              _context.p = 20;
+              _iterator.f();
+              return _context.f(20);
+            case 21:
+              return _context.a(2);
+          }
+        }, _callee, null, [[6, 8], [3, 16], [1, 19, 20, 21]]);
+      }));
+      return _update.apply(this, arguments);
+    }
+
     // Constants
     var UPDATE_INTERVAL_MS = 5000;
 
@@ -2501,7 +2882,6 @@
       var updateInterval;
       var items = [];
       var active, last;
-
       // UI elements
       var scroll = new Lampa.Scroll({
         mask: true,
@@ -2721,8 +3101,7 @@
        */
       function showTorrentMenu(torrentData, allTorrents) {
         var enabled = Lampa.Controller.enabled().name;
-
-        // Build menu items
+        var hasMetadata = torrentData.tmdb_id && torrentData.media_type || parseLabels(torrentData.labels);
         var menuItems = [{
           title: Lampa.Lang.translate('resume'),
           action: 'resume'
@@ -2732,9 +3111,16 @@
         }, {
           title: Lampa.Lang.translate('delete'),
           action: 'delete'
-        }];
-
-        // Add play option for Keenetic client
+        }].concat(_toConsumableArray(hasMetadata ? [{
+          title: Lampa.Lang.translate('openCard'),
+          action: 'card'
+        }] : []), [{
+          title: Lampa.Lang.translate('add_metadata'),
+          action: 'parse'
+        }, {
+          title: Lampa.Lang.translate('add_metadata_all'),
+          action: 'parse-all'
+        }]);
         if (client === 'keenetic') {
           menuItems.push({
             title: 'Play',
@@ -2746,19 +3132,8 @@
             title: Lampa.Lang.translate('fullDelete'),
             action: 'delete',
             deleteFiles: true
-          }, {
-            title: 'Open card',
-            action: 'card'
-          }, {
-            title: 'Add metadata',
-            action: 'parse'
-          }, {
-            title: 'Add metadata all',
-            action: 'parse-all'
           });
         }
-
-        // Show the menu
         Lampa.Select.show({
           title: torrentData.name,
           items: menuItems,
@@ -2780,7 +3155,18 @@
        */
       function handleTorrentAction(action, torrentData, allTorrents) {
         if (action.action === 'card') {
-          var cardInfo = parseLabels(torrentData.labels);
+          var cardInfo = null;
+          // Спочатку перевіряємо новий метод (з DB)
+          if (torrentData.tmdb_id && torrentData.media_type) {
+            cardInfo = {
+              tID: torrentData.tmdb_id,
+              method: torrentData.media_type
+            };
+          }
+          // Якщо не вийшло, перевіряємо старий метод (з labels)
+          else {
+            cardInfo = parseLabels(torrentData.labels);
+          }
           if (cardInfo) {
             Lampa.Activity.push({
               url: '',
@@ -2804,7 +3190,13 @@
             case 'keenetic':
               return Keenetic.SendCommand(action, action.action === 'parse-all' ? allTorrents : torrentData);
             case 'synology':
-              return Synology.SendCommand(action, torrentData);
+              if (action.action === 'parse') {
+                return update(torrentData);
+              } else if (action.action === 'parse-all') {
+                return update(allTorrents);
+              } else {
+                return Synology.SendCommand(action, torrentData);
+              }
             default:
               Lampa.Bell.push({
                 text: 'Unknown client type'
