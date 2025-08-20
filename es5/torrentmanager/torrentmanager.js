@@ -197,6 +197,20 @@
         });
       };
     }
+    function _classCallCheck(a, n) {
+      if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function");
+    }
+    function _defineProperties(e, r) {
+      for (var t = 0; t < r.length; t++) {
+        var o = r[t];
+        o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o);
+      }
+    }
+    function _createClass(e, r, t) {
+      return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", {
+        writable: !1
+      }), e;
+    }
     function _createForOfIteratorHelper(r, e) {
       var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
       if (!t) {
@@ -872,7 +886,14 @@
           title: Lampa.Lang.translate('selectResult'),
           items: menuItems,
           onBack: function onBack() {
-            Lampa.Controller.toggle(enabled);
+            // Повертаємось до попереднього контролера, якщо він існує
+            var currentController = Lampa.Controller.enabled();
+            if (currentController && currentController.name !== enabled) {
+              Lampa.Controller.toggle(enabled);
+            } else {
+              // Якщо контролер не змінився, просто вимикаємо меню
+              Lampa.Controller.toggle('menu');
+            }
             reject(new Error('Selection canceled by user'));
           },
           onSelect: function onSelect(selected) {
@@ -2854,7 +2875,7 @@
      * @param {Array|string} labels - Labels to parse
      * @returns {Object|null} - Parsed media type and ID, or null if not found
      */
-    function parseLabels(labels) {
+    function parseLabels$1(labels) {
       if (!labels) return null;
 
       // Convert string to array if needed
@@ -3106,7 +3127,7 @@
        */
       function showTorrentMenu(torrentData, allTorrents) {
         var enabled = Lampa.Controller.enabled().name;
-        var hasMetadata = torrentData.tmdb_id && torrentData.media_type || parseLabels(torrentData.labels);
+        var hasMetadata = torrentData.tmdb_id && torrentData.media_type || parseLabels$1(torrentData.labels);
         var menuItems = [{
           title: Lampa.Lang.translate('resume'),
           action: 'resume'
@@ -3143,7 +3164,14 @@
           title: torrentData.name,
           items: menuItems,
           onBack: function onBack() {
-            Lampa.Controller.toggle(enabled);
+            // Повертаємось до попереднього контролера, якщо він існує
+            var currentController = Lampa.Controller.enabled();
+            if (currentController && currentController.name !== enabled) {
+              Lampa.Controller.toggle(enabled);
+            } else {
+              // Якщо контролер не змінився, просто вимикаємо меню
+              Lampa.Controller.toggle('menu');
+            }
           },
           onSelect: function onSelect(action) {
             handleTorrentAction(action, torrentData, allTorrents);
@@ -3170,7 +3198,7 @@
           }
           // Якщо не вийшло, перевіряємо старий метод (з labels)
           else {
-            cardInfo = parseLabels(torrentData.labels);
+            cardInfo = parseLabels$1(torrentData.labels);
           }
           if (cardInfo) {
             Lampa.Activity.push({
@@ -4388,7 +4416,14 @@
                             title: torrent.completed > 0 ? "".concat(torrent.state, " - ").concat(Number((torrent.completed * 100).toFixed(2)), "%") : torrent.state,
                             items: menu,
                             onBack: function onBack() {
-                              Lampa.Controller.toggle(enabled);
+                              // Повертаємось до попереднього контролера, якщо він існує
+                              var currentController = Lampa.Controller.enabled();
+                              if (currentController && currentController.name !== enabled) {
+                                Lampa.Controller.toggle(enabled);
+                              } else {
+                                // Якщо контролер не змінився, просто вимикаємо меню
+                                Lampa.Controller.toggle('menu');
+                              }
                             },
                             onSelect: function onSelect(a) {
                               switch (client) {
@@ -4423,28 +4458,375 @@
       });
     }
 
-    /**
-     * Templates module for Torrent Manager plugin
-     * 
-     * This module contains all UI templates used by the plugin
-     */
+    var TorrentStateManager = /*#__PURE__*/function () {
+      function TorrentStateManager() {
+        _classCallCheck(this, TorrentStateManager);
+        this.torrents = [];
+        this.interval = null;
+        this.listener = Lampa.Listener;
+        this.clients = {
+          'transmission': Transmission,
+          'qbittorent': Qbittorent,
+          'keenetic': Keenetic,
+          'synology': Synology,
+          'universal': Main
+        };
+      }
+      return _createClass(TorrentStateManager, [{
+        key: "start",
+        value: function start() {
+          this.interval = setInterval(this.update.bind(this), 5000); // Оновлювати кожні 5 секунд
+          this.update();
+        }
+      }, {
+        key: "stop",
+        value: function stop() {
+          if (this.interval) {
+            clearInterval(this.interval);
+            this.interval = null;
+          }
+        }
+      }, {
+        key: "update",
+        value: function () {
+          var _update = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+            var client_name, client, new_torrents, has_active_downloads_before, has_active_downloads_after;
+            return _regenerator().w(function (_context) {
+              while (1) switch (_context.n) {
+                case 0:
+                  _context.p = 0;
+                  client_name = Lampa.Storage.get('lmetorrentSelect');
+                  client = this.clients[client_name];
+                  if (client) {
+                    _context.n = 1;
+                    break;
+                  }
+                  return _context.a(2);
+                case 1:
+                  _context.n = 2;
+                  return client.GetData();
+                case 2:
+                  new_torrents = _context.v;
+                  if (new_torrents) {
+                    has_active_downloads_before = this.hasActiveDownloads();
+                    this.torrents = new_torrents;
+                    has_active_downloads_after = this.hasActiveDownloads();
+                    this.listener.send('torrents:updated', {
+                      torrents: this.torrents
+                    });
+                    if (has_active_downloads_before !== has_active_downloads_after) {
+                      this.listener.send('torrents:status_changed', {
+                        active: has_active_downloads_after
+                      });
+                    }
+                  }
+                  _context.n = 4;
+                  break;
+                case 3:
+                  _context.p = 3;
+                  _context.v;
+                case 4:
+                  return _context.a(2);
+              }
+            }, _callee, this, [[0, 3]]);
+          }));
+          function update() {
+            return _update.apply(this, arguments);
+          }
+          return update;
+        }()
+      }, {
+        key: "hasActiveDownloads",
+        value: function hasActiveDownloads() {
+          return this.torrents.some(function (t) {
+            return t.state === 'downloading' || t.state === 'checking';
+          });
+        }
+      }, {
+        key: "on",
+        value: function on(event, callback) {
+          this.listener.follow(event, callback);
+        }
+      }]);
+    }();
+    var TorrentStateManager$1 = new TorrentStateManager();
 
-    /**
-     * Register all UI templates with Lampa
-     */
-    function registerTemplates() {
-      // CSS styles
-      Lampa.Template.add('lmemStyle', "\n        <style>\n            @charset 'UTF-8';.btnTDdownload{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}svg.btnTDdownload{width:36px;height:36px;margin-right:5%}.lmetorrent-error_body{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center}.lmetorrent-error_body .lmetorrent-error_result{margin-top:2em}.lmetorrent-head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;padding:0 2% 0 2%;margin:0 2% 2% 2%}.lmetorrent-header__update{white-space:nowrap}.lmetorrent-header__space{margin-left:auto}.lmetorrent-catalog--list.category-full{margin-left:2%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:start;-webkit-justify-content:flex-start;-ms-flex-pack:start;justify-content:flex-start}.lmetorrent_card__completed{position:absolute;right:0;bottom:0;font-size:.8em;-webkit-border-radius:.3em;-moz-border-radius:.3em;padding:.4em .4em;border-radius:.3em;text-align:center;font-weight:bold;background-color:var(--background-color);color:var(--text-color)}.lmetorrent_card__completed[data-completed]:nth-child(n):nth-last-child(n+51){--background-color:#fcc;--text-color:#900}.lmetorrent_card__completed[data-completed]:nth-child(n+51):nth-last-child(n+2){--background-color:#ffc;--text-color:#990}.lmetorrent_card__completed[data-completed='100']{--background-color:#cfc;--text-color:#090}.lmetorrent_card__state{left:0;top:0}.lmetorrent_card__size{left:0;bottom:0}.lmetorrent_card__size,.lmetorrent_card__state{position:absolute;padding:.4em .4em;background:#fff;color:#000;font-size:.8em;-webkit-border-radius:.3em;border-radius:.3em}.lmetorrent-item{margin-right:.5em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;border:solid .01em #fff;-webkit-border-radius:.8em;border-radius:.8em}.lmetorrent-item.focus{border:solid .26em #fff}.lmetorrent-item__data{margin-bottom:.4em}.lmetorrent-item__state{top:.5em;left:.5em;padding:.1em .3em;font-weight:bold;-webkit-border-radius:.25em;border-radius:.25em;color:#292d32;background-color:#eee}.lmetorrent-item__badge>svg{width:1em;height:1em;vertical-align:bottom}.lmetorrent-item__name{font-size:1.1em;margin-top:.8em;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}@media screen and (max-width:580px){.lmetorrent-item{width:21%}}@media screen and (max-width:385px){.lmetorrent-item__name{display:none}}\n        </style>\n    ");
+    // Parse torrent labels to extract media information
+    function parseLabels(labels) {
+      if (!labels) return null;
 
-      // Header template
-      Lampa.Template.add('lmetorrent_header', "<div class=\"lmetorrent-header__data lmetorrent-header__update simple-button selector\">Update</div>\n          <div class=\"lmetorrent-header__data lmetorrent-header__space\">Free space: {space}</div>\n        ");
+      // Convert string to array if needed
+      var labelArray = Array.isArray(labels) ? labels : labels.split(',');
 
-      // List item template
-      Lampa.Template.add('lmetorrent_item', "<div class=\"card selector lmetorrent-item\">\n            <div class=\"lmetorrent-item__data lmetorrent-item__name\">{name}</div>\n            <div class=\"lmetorrent-item__data lmetorrent-item__state\">{state}</div>\n            <div class=\"lmetorrent-item__data lmetorrent-item__progress\">{size} / {completed}</div>\n        </div>");
+      // Find label matching tv/movie pattern
+      var matchedLabel = labelArray.find(function (label) {
+        return /^(tv|movie)\/\d+$/.test(label);
+      });
+      if (!matchedLabel) return null;
 
-      // Card item template
-      Lampa.Template.add('lmetorrent_item__card', "<div class=\"card card--category selector layer--visible layer--render\">\n            <div class=\"card__view\">\n                <img src=\"{image}\" alt=\"{title}\" class=\"card__img\">\n                <div class=\"card__icons\">\n                    <div class=\"card__icons-inner\">\n                    </div>\n                </div>\n                <div class=\"lmetorrent_card__state\">{state}</div>\n                <div class=\"lmetorrent_card__size\">{size}</div>\n                <div class=\"lmetorrent_card__completed\" data-completed=\"{data-completed}\">{completed}</div>\n            </div>\n        </div>");
+      // Split matched label into parts
+      var _matchedLabel$split = matchedLabel.split('/'),
+        _matchedLabel$split2 = _slicedToArray(_matchedLabel$split, 2),
+        method = _matchedLabel$split2[0],
+        tID = _matchedLabel$split2[1];
+      return {
+        method: method,
+        tID: tID
+      };
     }
+
+    /**
+     * Show the torrent action menu
+     *
+     * @param {Object} torrentData - Data for the selected torrent
+     */
+    function showTorrentMenu(torrentData) {
+      var client = Lampa.Storage.field('lmetorrentSelect');
+      var enabled = Lampa.Controller.enabled().name;
+      var hasMetadata = torrentData.tmdb_id && torrentData.media_type || parseLabels(torrentData.labels);
+      var menuItems = [{
+        title: Lampa.Lang.translate('resume'),
+        action: 'resume'
+      }, {
+        title: Lampa.Lang.translate('pause'),
+        action: 'pause'
+      }, {
+        title: Lampa.Lang.translate('delete'),
+        action: 'delete'
+      }].concat(_toConsumableArray(hasMetadata ? [{
+        title: Lampa.Lang.translate('openCard'),
+        action: 'card'
+      }] : []), [{
+        title: Lampa.Lang.translate('add_metadata'),
+        action: 'parse'
+      }, {
+        title: Lampa.Lang.translate('add_metadata_all'),
+        action: 'parse-all'
+      }]);
+      if (client === 'keenetic') {
+        menuItems.push({
+          title: 'Play',
+          action: 'play'
+        });
+      }
+      if (client != 'synology') {
+        menuItems.push({
+          title: Lampa.Lang.translate('fullDelete'),
+          action: 'delete',
+          deleteFiles: true
+        });
+      }
+      Lampa.Select.show({
+        title: torrentData.name,
+        items: menuItems,
+        onBack: function onBack() {
+          // Повертаємось до попереднього контролера, якщо він існує
+          var currentController = Lampa.Controller.enabled();
+          if (currentController && currentController.name !== enabled) {
+            Lampa.Controller.toggle(enabled);
+          } else {
+            // Якщо контролер не змінився, просто вимикаємо меню
+            Lampa.Controller.toggle('menu');
+          }
+        },
+        onSelect: function onSelect(action) {
+          handleTorrentAction(action, torrentData);
+        }
+      });
+    }
+
+    /**
+     * Handle torrent action selection
+     *
+     * @param {Object} action - Selected action
+     * @param {Object} torrentData - Data for the selected torrent
+     */
+    function handleTorrentAction(_x, _x2) {
+      return _handleTorrentAction.apply(this, arguments);
+    }
+    function _handleTorrentAction() {
+      _handleTorrentAction = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(action, torrentData) {
+        var client, cardInfo, _t, _t2;
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
+            case 0:
+              client = Lampa.Storage.field('lmetorrentSelect');
+              if (!(action.action === 'card')) {
+                _context.n = 1;
+                break;
+              }
+              cardInfo = null; // Спочатку перевіряємо новий метод (з DB)
+              if (torrentData.tmdb_id && torrentData.media_type) {
+                cardInfo = {
+                  tID: torrentData.tmdb_id,
+                  method: torrentData.media_type
+                };
+              }
+              // Якщо не вийшло, перевіряємо старий метод (з labels)
+              else {
+                cardInfo = parseLabels(torrentData.labels);
+              }
+              if (cardInfo) {
+                Lampa.Activity.push({
+                  url: '',
+                  component: 'full',
+                  id: cardInfo.tID,
+                  method: cardInfo.method,
+                  source: Lampa.Storage.field('source') || 'tmdb'
+                });
+              } else {
+                Lampa.Bell.push({
+                  text: 'No metadata available for this torrent'
+                });
+              }
+              _context.n = 15;
+              break;
+            case 1:
+              _context.p = 1;
+              _t = client;
+              _context.n = _t === 'qBittorent' ? 2 : _t === 'transmission' ? 4 : _t === 'keenetic' ? 6 : _t === 'synology' ? 8 : 12;
+              break;
+            case 2:
+              _context.n = 3;
+              return Qbittorent.SendCommand(action, torrentData);
+            case 3:
+              return _context.a(3, 13);
+            case 4:
+              _context.n = 5;
+              return Transmission.SendCommand(action, torrentData);
+            case 5:
+              return _context.a(3, 13);
+            case 6:
+              _context.n = 7;
+              return Keenetic.SendCommand(action, torrentData);
+            case 7:
+              return _context.a(3, 13);
+            case 8:
+              if (!(action.action === 'parse')) {
+                _context.n = 10;
+                break;
+              }
+              _context.n = 9;
+              return update(torrentData);
+            case 9:
+              _context.n = 11;
+              break;
+            case 10:
+              _context.n = 11;
+              return Synology.SendCommand(action, torrentData);
+            case 11:
+              return _context.a(3, 13);
+            case 12:
+              Lampa.Bell.push({
+                text: 'Unknown client type'
+              });
+            case 13:
+              _context.n = 15;
+              break;
+            case 14:
+              _context.p = 14;
+              _t2 = _context.v;
+              console.error('TDM', 'Error handling action:', _t2);
+              Lampa.Bell.push({
+                text: Lampa.Lang.translate('actionReturnedError')
+              });
+            case 15:
+              return _context.a(2);
+          }
+        }, _callee, null, [[1, 14]]);
+      }));
+      return _handleTorrentAction.apply(this, arguments);
+    }
+
+    var HeaderIconController = /*#__PURE__*/function () {
+      function HeaderIconController(element) {
+        _classCallCheck(this, HeaderIconController);
+        this.element = element;
+        this.bind();
+        this.listen();
+      }
+      return _createClass(HeaderIconController, [{
+        key: "bind",
+        value: function bind() {
+          this.element.on('hover:enter', this.showSidebar.bind(this));
+        }
+      }, {
+        key: "listen",
+        value: function listen() {
+          TorrentStateManager$1.on('torrents:status_changed', this.updateColor.bind(this));
+        }
+      }, {
+        key: "showSidebar",
+        value: function showSidebar() {
+          var torrents = TorrentStateManager$1.torrents;
+          var sortedTorrents = this.sortTorrents(torrents);
+          var activeDownloads = torrents.filter(function (t) {
+            return t.state === 'downloading' || t.state === 'checking';
+          }).length;
+
+          // Create items for Lampa.Select.show
+          var items = _toConsumableArray(sortedTorrents.map(function (torrent) {
+            return {
+              title: "".concat(torrent.name, " (").concat(Math.round((torrent.completed || 0) * 100), "%)"),
+              action: 'torrent',
+              torrent: torrent
+            };
+          }));
+          Lampa.Select.show({
+            title: "Torrents (".concat(activeDownloads, "/").concat(torrents.length, ")"),
+            items: items,
+            onBack: function onBack() {
+              Lampa.Controller.toggle('content');
+            },
+            onSelect: function onSelect(item) {
+              if (item.action === 'torrent') {
+                showTorrentMenu(item.torrent);
+              }
+              // For summary item, we could show a general menu or just do nothing
+            }
+          });
+        }
+      }, {
+        key: "sortTorrents",
+        value: function sortTorrents(torrents) {
+          return torrents.sort(function (a, b) {
+            if (a.state === 'downloading' && b.state !== 'downloading') return -1;
+            if (a.state !== 'downloading' && b.state === 'downloading') return 1;
+            return b.id - a.id;
+          });
+        }
+      }, {
+        key: "updateColor",
+        value: function updateColor(event) {
+          if (event.active) {
+            this.element.style.color = 'yellow';
+          } else {
+            this.element.style.color = 'limegreen';
+          }
+        }
+      }]);
+    }();
+
+    function headerIcon() {
+      var icon_html = "\n        <div class=\"head__action selector torrent-manager-icon\">\n            <svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path d=\"M12 4L12 14\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n                <path d=\"M16 10L12 14L8 10\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n                <path d=\"M4 18H20\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n            </svg>\n        </div>";
+      var element = document.createElement('div');
+      element.innerHTML = icon_html;
+      return element.firstElementChild;
+    }
+    var DomInjector = /*#__PURE__*/function () {
+      function DomInjector() {
+        _classCallCheck(this, DomInjector);
+      }
+      return _createClass(DomInjector, [{
+        key: "inject",
+        value: function inject() {
+          var iconElement = headerIcon();
+          Lampa.Head.render().find('.open--search').after(iconElement);
+          return new HeaderIconController(iconElement);
+        }
+      }]);
+    }();
+    var DomInjector$1 = new DomInjector();
 
     /**
      * Torrent Manager Plugin for Lampa
@@ -4456,18 +4838,35 @@
      * @author @lme_chat
      */
 
-    /**
+    /** 
      * Plugin manifest information
      */
     var MANIFEST = {
       type: 'other',
       version: '2.4',
       author: '@lme_chat',
-      name: 'LME Torrent Manager',
+      name: 'Torrent Manager',
       description: 'Manager and Runner query',
       component: 'lmetorrent',
-      icon: "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\" viewBox=\"0 0 48 48\" width=\"48px\" height=\"48px\">\n            <path fill=\"currentColor\" d=\"M 23.501953 4.125 C 12.485953 4.125 3.5019531 13.11 3.5019531 24.125 C 3.5019531 32.932677 9.2467538 40.435277 17.179688 43.091797 L 17.146484 42.996094 L 7 16 L 15 14 C 17.573 20.519 20.825516 32.721688 27.728516 30.929688 C 35.781516 28.948688 28.615 16.981172 27 12.076172 L 34 11 C 38.025862 19.563024 39.693648 25.901226 43.175781 27.089844 C 43.191423 27.095188 43.235077 27.103922 43.275391 27.113281 C 43.422576 26.137952 43.501953 25.140294 43.501953 24.125 C 43.501953 13.11 34.517953 4.125 23.501953 4.125 z M34 .90429729 .314453 C34 .25029734 .64845328 .81135921 .06957826 .94335935 .51757826 .31640643 .76367226 .39257843 .91406233 .17699342 .92392538 .87264541 .50576441 .66015632 .48437541 .60366532 .48546541 .54628432 .48641841 .52929732 .48632838 .92840532 .47256736 .60755231 .57296734 .90429729 .314453 z\"></path>\n          </svg>"
+      icon: "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\" viewBox=\"0 0 24 24\"><path fill=\"currentColor\" d=\"M13.684 23.94a12.013 12.013 0 0 0 9.599-7.79c-.118.044-.26.096-.432.147c-2 .59-3.404-.466-3.687-.649c-.283-.18-.587-.48-.643-.464c-.183 1.132-1.218 2.706-3.58 3.42c-1.295.391-2.687.4-3.681-.157l.328.822c.13.328.351.866.488 1.192c0 0 .858 2.044 1.608 3.48M2.723 7.153l3.54-.66c.323-.059.68.124.794.407l2.432 6.07c.332.633.399.773.615 1.043c0 0 1.68 2.398 4.24 1.812c1.726-.394 2.532-1.69 2.587-2.612c.057-.296-.032-.669-.185-1.016L13.832 5.61c-.117-.266.022-.527.306-.581l2.953-.55a.69.69 0 0 1 .706.376l3.227 6.91c.13.276.394.712.588.966c0 0 .671.964 1.747.78c.266 0 .569-.143.569-.143c.047-.43.072-.866.072-1.31c0-6.627-5.373-12-12.002-12C5.372.06 0 5.433 0 12.06c0 5.319 3.46 9.827 8.252 11.402a24.768 24.768 0 0 1-.919-2.121L2.298 7.808c-.111-.297.083-.59.425-.654\"/></svg>"
     };
+
+    /**
+     * Register all UI templates with Lampa
+     */
+    function registerTemplates() {
+      // CSS styles
+      Lampa.Template.add('lmemStyle', "\n        <style>\n            @charset 'UTF-8';.btnTDdownload{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}svg.btnTDdownload{width:36px;height:36px;margin-right:5%}.lmetorrent-error_body{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center}.lmetorrent-error_body .lmetorrent-error_result{margin-top:2em}.lmetorrent-head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;padding:0 2% 0 2%;margin:0 2% 2% 2%}.lmetorrent-header__update{white-space:nowrap}.lmetorrent-header__space{margin-left:auto}.lmetorrent-catalog--list.category-full{margin-left:2%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:start;-webkit-justify-content:flex-start;-ms-flex-pack:start;justify-content:flex-start}.lmetorrent_card__completed{position:absolute;right:0;bottom:0;font-size:.8em;-webkit-border-radius:.3em;-moz-border-radius:.3em;padding:.4em .4em;border-radius:.3em;text-align:center;font-weight:bold;background-color:var(--background-color);color:var(--text-color)}.lmetorrent_card__completed[data-completed]:nth-child(n):nth-last-child(n+51){--background-color:#fcc;--text-color:#900}.lmetorrent_card__completed[data-completed]:nth-child(n+51):nth-last-child(n+2){--background-color:#ffc;--text-color:#990}.lmetorrent_card__completed[data-completed='100']{--background-color:#cfc;--text-color:#090}.lmetorrent_card__state{left:0;top:0}.lmetorrent_card__size{left:0;bottom:0}.lmetorrent_card__size,.lmetorrent_card__state{position:absolute;padding:.4em .4em;background:#fff;color:#000;font-size:.8em;-webkit-border-radius:.3em;border-radius:.3em}.lmetorrent-item{margin-right:.5em;margin-bottom:1em;width:13%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;border:solid .01em #fff;-webkit-border-radius:.8em;border-radius:.8em}.lmetorrent-item.focus{border:solid .26em #fff}.lmetorrent-item__data{margin-bottom:.4em}.lmetorrent-item__state{top:.5em;left:.5em;padding:.1em .3em;font-weight:bold;-webkit-border-radius:.25em;border-radius:.25em;color:#292d32;background-color:#eee}.lmetorrent-item__badge>svg{width:1em;height:1em;vertical-align:bottom}.lmetorrent-item__name{font-size:1.1em;margin-top:.8em;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}@media screen and (max-width:580px){.lmetorrent-item{width:21%}}@media screen and (max-width:385px){.lmetorrent-item__name{display:none}}.torrent-manager-icon{--icon-status-color:limegreen;color:var(--icon-status-color)}.torrent-manager-sidebar{position:fixed;top:0;right:-350px;width:350px;height:100%;background-color:rgba(0,0,0,0.85);z-index:1000;-webkit-transition:right .3s;-o-transition:right .3s;transition:right .3s;color:white;padding:20px;-webkit-box-sizing:border-box;box-sizing:border-box;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column}.torrent-manager-sidebar.visible{right:0}.torrent-manager-sidebar__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;margin-bottom:20px;font-weight:bold;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.torrent-manager-sidebar__list{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:10px;overflow-y:auto;-webkit-box-flex:1;-webkit-flex-grow:1;-ms-flex-positive:1;flex-grow:1}.torrent-manager-sidebar__item{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;padding:10px;background-color:rgba(255,255,255,0.1);-webkit-border-radius:5px;border-radius:5px;cursor:pointer;gap:10px}.torrent-manager-sidebar__item:hover{background-color:rgba(255,255,255,0.2)}.torrent-manager-sidebar__item-name{white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;-webkit-box-flex:1;-webkit-flex-grow:1;-ms-flex-positive:1;flex-grow:1}.torrent-manager-sidebar__item-percent{-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}\n        </style>\n    ");
+
+      // Header template
+      Lampa.Template.add('lmetorrent_header', "<div class=\"lmetorrent-header__data lmetorrent-header__update simple-button selector\">Update</div>\n          <div class=\"lmetorrent-header__data lmetorrent-header__space\">Free space: {space}</div>\n        ");
+
+      // List item template
+      Lampa.Template.add('lmetorrent_item', "<div class=\"card selector lmetorrent-item\">\n            <div class=\"lmetorrent-item__data lmetorrent-item__name\">{name}</div>\n            <div class=\"lmetorrent-item__data lmetorrent-item__state\">{state}</div>\n            <div class=\"lmetorrent-item__data lmetorrent-item__progress\">{size} / {completed}</div>\n        </div>");
+
+      // Card item template
+      Lampa.Template.add('lmetorrent_item__card', "<div class=\"card card--category selector layer--visible layer--render\">\n            <div class=\"card__view\">\n                <img src=\"{image}\" alt=\"{title}\" class=\"card__img\">\n                <div class=\"card__icons\">\n                    <div class=\"card__icons-inner\">\n                    </div>\n                </div>\n                <div class=\"lmetorrent_card__state\">{state}</div>\n                <div class=\"lmetorrent_card__size\">{size}</div>\n                <div class=\"lmetorrent_card__completed\" data-completed=\"{data-completed}\">{completed}</div>\n            </div>\n        </div>");
+    }
 
     /**
      * Check if a session key date is older than 5 days
@@ -4555,6 +4954,10 @@
 
         // Initialize client authentication
         initializeClientAuth();
+
+        // Initialize new header feature
+        var iconController = DomInjector$1.inject();
+        TorrentStateManager$1.start();
       } catch (error) {
         console.error('TDM', 'Error initializing Torrent Manager plugin:', error);
       }
