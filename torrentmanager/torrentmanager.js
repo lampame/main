@@ -4843,7 +4843,7 @@
      */
     var MANIFEST = {
       type: 'other',
-      version: '2.4',
+      version: '2.6',
       author: '@lme_chat',
       name: 'Torrent Manager',
       description: 'Manager and Runner query',
