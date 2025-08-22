@@ -4755,6 +4755,25 @@
       return _handleTorrentAction.apply(this, arguments);
     }
 
+    /**
+     * Utility functions for Torrent Manager plugin
+     */
+
+    /**
+     * Create a panel navigation item for Lampa.Select.show
+     * @returns {Function} Function that calls Lampa.Activity.push
+     */
+    function createPanelNavigationItem() {
+      return function () {
+        Lampa.Activity.push({
+          url: '',
+          title: Lampa.Storage.get('lmetorrentSelect').toUpperCase() + " Manager",
+          component: 'lmetorrentPanel',
+          page: 1
+        });
+      };
+    }
+
     var HeaderIconController = /*#__PURE__*/function () {
       function HeaderIconController(element) {
         _classCallCheck(this, HeaderIconController);
@@ -4782,15 +4801,23 @@
           var activeDownloads = torrents.filter(function (t) {
             return t.state === 'Downloading' || t.state === 'Сhecking';
           }).length;
-          console.log('TDM', 'Torrent list', torrents);
           // Create items for Lampa.Select.show
-          var items = _toConsumableArray(sortedTorrents.map(function (torrent) {
+          var items = [
+          // Panel navigation item
+          //createPanelNavigationItem(),
+          {
+            title: Lampa.Storage.get('lmetorrentSelect').toUpperCase() + " Manager",
+            action: 'panel',
+            onSelect: function onSelect() {
+              createPanelNavigationItem()();
+            }
+          }].concat(_toConsumableArray(sortedTorrents.map(function (torrent) {
             return {
               title: "".concat(torrent.name, " (").concat(Math.round((torrent.completed || 0) * 100), "%)"),
               action: 'torrent',
               torrent: torrent
             };
-          }));
+          })));
           Lampa.Select.show({
             title: "Torrents (".concat(activeDownloads, "/").concat(TorrentStateManager$1.torrents.length, ")"),
             items: items,
@@ -4800,6 +4827,8 @@
             onSelect: function onSelect(item) {
               if (item.action === 'torrent') {
                 showTorrentMenu(item.torrent);
+              } else if (item.action === 'panel') {
+                item.onSelect();
               }
               // For summary item, we could show a general menu or just do nothing
             }
@@ -4911,12 +4940,7 @@
     function createMenuButton() {
       var button = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\">".concat(MANIFEST.icon, "</div>\n            <div class=\"menu__text\">").concat(MANIFEST.name, "</div>\n        </li>"));
       button.on('hover:enter', function () {
-        Lampa.Activity.push({
-          url: '',
-          title: Lampa.Storage.get(MANIFEST.component + 'Select').toUpperCase() + " Manager",
-          component: 'lmetorrentPanel',
-          page: 1
-        });
+        createPanelNavigationItem()();
       });
       return button;
     }
