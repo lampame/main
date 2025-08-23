@@ -3661,6 +3661,7 @@
 
   var completionCache = new Map(); // key -> { ts, token, status }
   var lockQueues = new Map(); // key -> array of resolvers for queued locks
+  var requestInProgress = {}; // Об'єкт для відстеження запитів, що виконуються
 
   function nowSec() {
     return Math.floor(Date.now() / 1000);
@@ -4066,7 +4067,21 @@
               reason: 'no_token'
             });
           case 1:
-            key = getCompletionKey(media); // DEBUG: Log key used in finish
+            key = getCompletionKey(media); // START -- RACE CONDITION FIX
+            if (!requestInProgress[key]) {
+              _context5.n = 2;
+              break;
+            }
+            slog('Request for key is already in progress, skipping.', key);
+            return _context5.a(2, {
+              skipped: true,
+              reason: 'in_progress'
+            });
+          case 2:
+            requestInProgress[key] = true;
+            // END -- RACE CONDITION FIX
+            _context5.p = 3;
+            // DEBUG: Log key used in finish
             if (Lampa.Storage.field('trakt_enable_logging')) {
               console.log('TraktTV', 'DEBUG - finish function key:', {
                 key: key,
@@ -4257,19 +4272,25 @@
                 return _ref5.apply(this, arguments);
               };
             }();
-            _context5.n = 2;
+            _context5.n = 4;
             return finishWithIdempotency({
               key: key,
               token: token,
               doFinish: doFinish,
               logPrefix: 'finish'
             });
-          case 2:
+          case 4:
             result = _context5.v;
             slog('finish result', key, result);
             return _context5.a(2, result);
+          case 5:
+            _context5.p = 5;
+            delete requestInProgress[key]; // Завжди знімаємо блокування
+            return _context5.f(5);
+          case 6:
+            return _context5.a(2);
         }
-      }, _callee5);
+      }, _callee5, null, [[3,, 5, 6]]);
     }));
     return _finish.apply(this, arguments);
   }
