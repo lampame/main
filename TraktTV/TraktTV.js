@@ -2719,15 +2719,6 @@
       (Api$2 && Api$2.recommendations({
         limit: limit
       })).then(function (data) {
-        var _data$results, _data$results2;
-        // Логування для аналізу API відповіді
-        console.log('🔍 [TraktTV Recommendations] API відповідь:', {
-          hasData: !!data,
-          hasResults: Array.isArray(data === null || data === void 0 ? void 0 : data.results),
-          resultsCount: (data === null || data === void 0 || (_data$results = data.results) === null || _data$results === void 0 ? void 0 : _data$results.length) || 0,
-          sampleResults: data === null || data === void 0 || (_data$results2 = data.results) === null || _data$results2 === void 0 ? void 0 : _data$results2.slice(0, 3) // Перші 3 елементи для аналізу
-        });
-
         // Додаємо перевірку на Array.isArray(data.results)
         if (data && Array.isArray(data.results) && data.results.length > 0) {
           Lampa.Storage.set('trakttv_cached_recommendations', data.results);
@@ -2781,21 +2772,17 @@
         var getContentType = function getContentType(data) {
           // Спочатку перевіряємо method (для upnext API)
           if (data.method) {
-            console.log('🔍 [TraktTV UpNext] Використано method поле:', data.method);
             return data.method;
           }
           // Потім перевіряємо type (для recommendations API)
           if (data.type) {
-            console.log('🔍 [TraktTV UpNext] Використано type поле:', data.type);
             return data.type;
           }
           // Потім перевіряємо card_type (fallback)
           if (data.card_type) {
-            console.log('🔍 [TraktTV UpNext] Використано card_type поле:', data.card_type);
             return data.card_type;
           }
           // fallback за замовчуванням
-          console.log('🔍 [TraktTV UpNext] Використано fallback: movie');
           return 'movie';
         };
         var contentType = getContentType(item);
