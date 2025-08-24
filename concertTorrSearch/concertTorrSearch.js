@@ -560,7 +560,8 @@
       var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
       var onerror = arguments.length > 2 ? arguments[2] : undefined;
       network.timeout(1000 * Lampa.Storage.field('parse_timeout'));
-      var u = url + '/api/v2.0/indexers/' + (Lampa.Storage.field('jackett_interview') === 'healthy' ? 'status:healthy' : 'all') + '/results?apikey=' + Lampa.Storage.field('jackett_key') + '&Tracker%5B%5D=noname-clubl&Tracker%5B%5D=kinozal-magnet&Tracker%5B%5D=rutracker&Tracker%5B%5D=toloka&Category%5B%5D=3000&Category%5B%5D=3020&Category%5B%5D=100048&Category%5B%5D=100258&Category%5B%5D=100883&Category%5B%5D=100955&Query=' + encodeURIComponent(params.search);
+      //&Tracker%5B%5D=noname-clubl&Tracker%5B%5D=kinozal-magnet&Tracker%5B%5D=rutracker&Tracker%5B%5D=toloka&
+      var u = url + '/api/v2.0/indexers/' + (Lampa.Storage.field('jackett_interview') === 'healthy' ? 'status:healthy' : 'all') + '/results?apikey=' + Lampa.Storage.field('jackett_key') + '&Category%5B%5D=3000&Category%5B%5D=3020&Category%5B%5D=100048&Category%5B%5D=100258&Category%5B%5D=100883&Category%5B%5D=100955&Query=' + encodeURIComponent(params.search);
       if (!params.from_search) {
         var genres = params.movie.genres.map(function (a) {
           return a.name;
@@ -1692,7 +1693,7 @@
             url: '',
             title: manifest.name,
             component: manifest.component,
-            search: '',
+            search: 'Metallica',
             from_search: true,
             noinfo: true,
             movie: {
