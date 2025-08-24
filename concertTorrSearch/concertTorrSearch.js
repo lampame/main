@@ -1,6 +1,448 @@
 (function () {
     'use strict';
 
+    var SERVER = {};
+    var timers = {};
+    var callback;
+    var callback_back;
+    var autostart_timer;
+    var autostart_progress;
+    var formats_individual = ['vob', 'm2ts'];
+    function start(element, movie) {
+      SERVER.object = element;
+      if (movie) SERVER.movie = movie;
+      if (Lampa.Platform.is('android') && !Lampa.Storage.field('internal_torrclient')) {
+        Lampa.Android.openTorrent(SERVER);
+        if (movie && movie.id) Lampa.Favorite.add('history', movie, 100);
+        if (callback) callback();
+      } else if (Lampa.Torserver.url()) {
+        loading();
+        connect();
+      } else install();
+    }
+    function open(hash, movie) {
+      SERVER.hash = hash;
+      if (movie) SERVER.movie = movie;
+      if (Lampa.Platform.is('android') && !Lampa.Storage.field('internal_torrclient')) {
+        Lampa.Android.playHash(SERVER);
+        if (callback) callback();
+      } else if (Lampa.Torserver.url()) {
+        loading();
+        files();
+      } else install();
+    }
+    function loading() {
+      Lampa.Modal.open({
+        title: '',
+        html: Lampa.Template.get('modal_loading'),
+        size: 'large',
+        mask: true,
+        onBack: function onBack() {
+          Lampa.Modal.close();
+          close();
+        }
+      });
+    }
+    function connect() {
+      Lampa.Torserver.connected(function () {
+        hash();
+      }, function (echo) {
+        Lampa.Torserver.error();
+      });
+    }
+    function hash() {
+      Lampa.Torserver.hash({
+        title: SERVER.object.title,
+        link: SERVER.object.MagnetUri || SERVER.object.Link,
+        poster: SERVER.object.poster,
+        data: {
+          lampa: true,
+          movie: SERVER.movie
+        }
+      }, function (json) {
+        SERVER.hash = json.hash;
+        files();
+      }, function (echo) {
+        //Torserver.error()
+
+        var jac = Lampa.Storage.field('parser_torrent_type') == 'jackett';
+        var tpl = Lampa.Template.get('torrent_nohash', {
+          title: Lampa.Lang.translate('title_error'),
+          text: Lampa.Lang.translate('torrent_parser_no_hash'),
+          url: SERVER.object.MagnetUri || SERVER.object.Link,
+          echo: echo
+        });
+        if (jac) tpl.find('.is--torlook').remove();else tpl.find('.is--jackett').remove();
+        Lampa.Modal.update(tpl);
+      });
+    }
+    function files() {
+      var repeat = 0;
+      timers.files = setInterval(function () {
+        repeat++;
+        Lampa.Torserver.files(SERVER.hash, function (json) {
+          if (json.file_stats) {
+            clearInterval(timers.files);
+            show(json.file_stats);
+          }
+        });
+        if (repeat >= 45) {
+          Lampa.Modal.update(Lampa.Template.get('error', {
+            title: Lampa.Lang.translate('title_error'),
+            text: Lampa.Lang.translate('torrent_parser_timeout')
+          }));
+          Lampa.Torserver.clear();
+          Lampa.Torserver.drop(SERVER.hash);
+        }
+      }, 2000);
+    }
+    function install() {
+      Lampa.Modal.open({
+        title: '',
+        html: Lampa.Template.get('torrent_install', {}),
+        size: 'large',
+        onBack: function onBack() {
+          Lampa.Modal.close();
+          Lampa.Controller.toggle('content');
+        }
+      });
+    }
+    function show(files) {
+      files.sort(function (a, b) {
+        var an = a.path.replace(/\d+/g, function (m) {
+          return m.length > 3 ? m : ('000' + m).substr(-4);
+        });
+        var bn = b.path.replace(/\d+/g, function (m) {
+          return m.length > 3 ? m : ('000' + m).substr(-4);
+        });
+        return an.localeCompare(bn);
+      });
+      var active = Lampa.Activity.active(),
+        movie = active.movie || SERVER.movie || {};
+      var plays = Lampa.Torserver.clearFileName(files);
+      var seasons = [];
+      plays.forEach(function (element) {
+        var info = Lampa.Torserver.parse({
+          movie: movie,
+          files: plays,
+          filename: element.path_human,
+          path: element.path
+        });
+        if (info.serial && info.season && seasons.indexOf(info.season) == -1) {
+          seasons.push(info.season);
+        }
+      });
+      if (seasons.length) {
+        Api.seasons(movie, seasons, function (data) {
+          list(plays, {
+            movie: movie,
+            seasons: data,
+            files: files
+          });
+        });
+      } else {
+        list(plays, {
+          movie: movie,
+          files: files
+        });
+      }
+    }
+    function preload(data, run) {
+      var need_preload = Lampa.Torserver.ip() && data.url.indexOf(Lampa.Torserver.ip()) > -1 && data.url.indexOf('&preload') > -1;
+      if (need_preload) {
+        var checkout;
+        var network = new Request();
+        var first = true;
+        Loading.start(function () {
+          clearInterval(checkout);
+          network.clear();
+          Loading.stop();
+        });
+        var update = function update() {
+          network.timeout(2000);
+          network.silent(first ? data.url : data.url.replace('preload', 'stat'), function (res) {
+            var pb = res.preloaded_bytes || 0,
+              ps = res.preload_size || 0,
+              sp = res.download_speed ? Utils.bytesToSize(res.download_speed * 8, true) : '0.0';
+            var progress = Math.min(100, pb * 100 / ps);
+            if (progress >= 95 || isNaN(progress)) {
+              Loading.stop();
+              clearInterval(checkout);
+              run();
+            } else {
+              Loading.setText(Math.round(progress) + '%' + ' - ' + sp);
+            }
+          });
+          first = false;
+        };
+        checkout = setInterval(update, 1000);
+        update();
+      } else run();
+    }
+    function list(items, params) {
+      var html = $('<div class="torrent-files"></div>');
+      var playlist = [];
+      var scroll_to_element;
+      var first_item;
+      Lampa.Listener.send('torrent_file', {
+        type: 'list_open',
+        items: items
+      });
+      var folder = '';
+      items.forEach(function (element, inx) {
+        var exe = element.path.split('.').pop().toLowerCase();
+        var info = Lampa.Torserver.parse({
+          movie: params.movie,
+          files: items,
+          filename: element.path_human,
+          path: element.path,
+          is_file: formats_individual.indexOf(exe) >= 0
+        });
+        var view = Lampa.Timeline.view(info.hash);
+        var item;
+        Lampa.Arrays.extend(element, {
+          season: info.season,
+          episode: info.episode,
+          title: element.path_human,
+          first_title: params.movie.name || params.movie.title,
+          size: Lampa.Utils.bytesToSize(element.length),
+          url: Lampa.Torserver.stream(element.path, SERVER.hash, element.id),
+          torrent_hash: SERVER.hash,
+          ffprobe: SERVER.object && SERVER.object.ffprobe ? SERVER.object.ffprobe : false,
+          timeline: view,
+          air_date: '--',
+          img: './img/img_broken.svg',
+          exe: exe
+        });
+        if (params.seasons) {
+          var episodes = params.seasons[info.season];
+          element.title = (info.episode ? info.episode + ' / ' : '') + element.path_human;
+          element.fname = element.title;
+          if (episodes) {
+            var episode = episodes.episodes.filter(function (a) {
+              return a.episode_number == info.episode;
+            })[0];
+            if (episode) {
+              element.title = info.episode + ' / ' + episode.name;
+              element.air_date = Lampa.Utils.parseTime(episode.air_date).full;
+              element.fname = episode.name;
+              if (episode.still_path) element.img = Lampa.Api.img(episode.still_path);else if (episode.img) element.img = episode.img;
+            }
+          }
+          if (info.episode) {
+            item = Lampa.Template.get('torrent_file_serial', element);
+            item.find('.torrent-serial__content').append(Lampa.Timeline.render(view));
+          } else {
+            item = Lampa.Template.get('torrent_file', element);
+            item.append(Lampa.Timeline.render(view));
+          }
+        } else if (items.length == 1 && params.movie && !params.movie.name) {
+          element.fname = params.movie.title || element.title;
+          if (params.movie.backdrop_path) element.img = Lampa.Api.img(params.movie.backdrop_path);
+          item = Lampa.Template.get('torrent_file_serial', element);
+          item.find('.torrent-serial__line').empty().text(params.movie.tagline || '');
+          item.find('.torrent-serial__episode').remove();
+          item.find('.torrent-serial__content').append(Lampa.Timeline.render(view));
+        } else {
+          item = Lampa.Template.get('torrent_file', element);
+          item.append(Lampa.Timeline.render(view));
+          if (params.movie.title) element.title = params.movie.title;
+        }
+        item[0].visibility = 'hidden';
+        if (view.percent > 0) scroll_to_element = item;
+
+        //element.subtitles = parseSubs(element.path, params.files);
+
+        element.title = (element.fname || element.title).replace(/<[^>]*>?/gm, '');
+        playlist.push(element);
+        item.on('hover:enter', function () {
+          stopAutostart();
+
+          //если это андроид, но не андроид, то нефиг смотреть
+          if (navigator.userAgent.toLowerCase().indexOf('android') >= 0 && !Lampa.Platform.is('android')) return Lampa.Platform.install('apk');
+          if (params.movie.id) Lampa.Favorite.add('history', params.movie, 100);
+          if ((Lampa.Platform.is('android') || Lampa.Platform.is('apple_tv')) && playlist.length > 1) {
+            var trim_playlist = [];
+            playlist.forEach(function (elem) {
+              trim_playlist.push({
+                title: elem.title,
+                url: elem.url,
+                timeline: elem.timeline
+              });
+            });
+            element.playlist = trim_playlist;
+          }
+          preload(element, function () {
+            Lampa.Player.play(element);
+            Lampa.Player.callback(function () {
+              Lampa.Controller.toggle('modal');
+            });
+            Lampa.Player.playlist(playlist);
+            Lampa.Player.stat(element.url);
+            if (callback) {
+              callback();
+              callback = false;
+            }
+            Lampa.Listener.send('torrent_file', {
+              type: 'onenter',
+              element: element,
+              item: item,
+              items: items
+            });
+          });
+        }).on('hover:long', function () {
+          stopAutostart();
+          var enabled = Lampa.Controller.enabled().name;
+          var menu = [{
+            title: Lampa.Lang.translate('time_reset'),
+            timeclear: true
+          }];
+          if (Lampa.Platform.is('webos')) {
+            menu.push({
+              title: Lampa.Lang.translate('player_lauch') + ' - WebOS',
+              player: 'webos'
+            });
+          }
+          if (Lampa.Platform.is('android')) {
+            menu.push({
+              title: Lampa.Lang.translate('player_lauch') + ' - Android',
+              player: 'android'
+            });
+          }
+          menu.push({
+            title: Lampa.Lang.translate('player_lauch') + ' - Lampa',
+            player: 'lampa'
+          });
+          if (!Lampa.Platform.tv()) {
+            menu.push({
+              title: Lampa.Lang.translate('copy_link'),
+              link: true
+            });
+          }
+          Lampa.Listener.send('torrent_file', {
+            type: 'onlong',
+            element: element,
+            item: item,
+            menu: menu,
+            items: items
+          });
+          Lampa.Select.show({
+            title: Lampa.Lang.translate('title_action'),
+            items: menu,
+            onBack: function onBack() {
+              Lampa.Controller.toggle(enabled);
+            },
+            onSelect: function onSelect(a) {
+              if (a.timeclear) {
+                view.percent = 0;
+                view.time = 0;
+                view.duration = 0;
+                element.timeline = view;
+                Lampa.Timeline.update(view);
+              }
+              if (a.link) {
+                Lampa.Utils.copyTextToClipboard(element.url.replace('&preload', '&play'), function () {
+                  Lampa.Noty.show(Lampa.Lang.translate('copy_secuses'));
+                }, function () {
+                  Lampa.Noty.show(Lampa.Lang.translate('copy_error'));
+                });
+              }
+              Lampa.Controller.toggle(enabled);
+              if (a.player) {
+                Lampa.Player.runas(a.player);
+                item.trigger('hover:enter');
+              }
+            }
+          });
+        }).on('hover:focus', function () {
+          Lampa.Listener.send('torrent_file', {
+            type: 'onfocus',
+            element: element,
+            item: item,
+            items: items
+          });
+          Lampa.Helper.show('torrents_view', Lampa.Lang.translate('helper_torrents_view'), item);
+        }).on('visible', function () {
+          var img = item.find('img');
+          img[0].onload = function () {
+            img.addClass('loaded');
+          };
+          img[0].src = img.attr('data-src');
+        });
+        if (element.folder_name && element.folder_name !== folder) {
+          html.append($('<div class="torrnet-folder-name' + (folder ? '' : ' selector') + '">' + element.folder_name + '</div>'));
+          folder = element.folder_name;
+        }
+        html.append(item);
+        if (!first_item) first_item = item;
+        Lampa.Listener.send('torrent_file', {
+          type: 'render',
+          element: element,
+          item: item,
+          items: items
+        });
+      });
+      if (items.length == 0) html = Lampa.Template.get('error', {
+        title: Lampa.Lang.translate('empty_title'),
+        text: Lampa.Lang.translate('torrent_parser_nofiles')
+      });else Lampa.Modal.title(Lampa.Lang.translate('title_files'));
+      if (playlist.length == 1) autostart(first_item);
+      Lampa.Modal.update(html);
+      if (scroll_to_element) Lampa.Controller.collectionFocus(scroll_to_element, Lampa.Modal.scroll().render());
+    }
+    function autostart(item) {
+      var tim = Date.now();
+      var div = $('<div class="torrent-serial__progress"></div>');
+      autostart_timer = setInterval(function () {
+        var dif = (Date.now() - tim) / 1000;
+        div.css('height', Math.round(dif / 10 * 100) + '%');
+        if (dif > 10) {
+          stopAutostart();
+          item.trigger('hover:enter');
+        }
+      }, 10);
+      Lampa.Keypad.listener.follow('keydown', listenKeydown);
+      autostart_progress = div;
+      item.prepend(div);
+    }
+    function listenKeydown() {
+      stopAutostart();
+      Lampa.Keypad.listener.remove('keydown', listenKeydown);
+    }
+    function stopAutostart() {
+      clearInterval(autostart_timer);
+      if (autostart_progress) autostart_progress.remove();
+      autostart_progress = null;
+    }
+    function opened(call) {
+      callback = call;
+    }
+    function back(call) {
+      callback_back = call;
+    }
+    function close() {
+      Lampa.Torserver.drop(SERVER.hash);
+      Lampa.Torserver.clear();
+      clearInterval(timers.files);
+      if (callback_back) {
+        callback_back();
+      } else {
+        Lampa.Controller.toggle('content');
+      }
+      callback_back = false;
+      SERVER = {};
+      clearInterval(autostart_timer);
+      Lampa.Listener.send('torrent_file', {
+        type: 'list_close'
+      });
+    }
+    var Torrent = {
+      start: start,
+      open: open,
+      opened: opened,
+      back: back
+    };
+
     var url;
     var network = new Lampa.Reguest();
     function init() {
@@ -54,7 +496,7 @@
           });
         },
         onSelect: function onSelect(params, close) {
-          Lampa.Torrent.start(params.element, {
+          Torrent.start(params.element, {
             title: params.element.Title
           });
           Lampa.Torrent.back(params.line.toggle.bind(params.line));
@@ -118,7 +560,7 @@
       var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
       var onerror = arguments.length > 2 ? arguments[2] : undefined;
       network.timeout(1000 * Lampa.Storage.field('parse_timeout'));
-      var u = url + '/api/v2.0/indexers/' + (Lampa.Storage.field('jackett_interview') === 'healthy' ? 'status:healthy' : 'all') + '/results?apikey=' + Lampa.Storage.field('jackett_key') + '&Tracker%5B%5D=noname-clubl&Tracker%5B%5D=kinozal-magnet&Tracker%5B%5D=rutracker&Category%5B%5D=3020&Category%5B%5D=100048&Category%5B%5D=100258&Category%5B%5D=100883&Category%5B%5D=100955&Query=' + encodeURIComponent(params.search);
+      var u = url + '/api/v2.0/indexers/' + (Lampa.Storage.field('jackett_interview') === 'healthy' ? 'status:healthy' : 'all') + '/results?apikey=' + Lampa.Storage.field('jackett_key') + '&Tracker%5B%5D=noname-clubl&Tracker%5B%5D=kinozal-magnet&Tracker%5B%5D=rutracker&Tracker%5B%5D=toloka&Category%5B%5D=3000&Category%5B%5D=3020&Category%5B%5D=100048&Category%5B%5D=100258&Category%5B%5D=100883&Category%5B%5D=100955&Query=' + encodeURIComponent(params.search);
       if (!params.from_search) {
         var genres = params.movie.genres.map(function (a) {
           return a.name;
@@ -965,7 +1407,7 @@
           Lampa.Modal.close();
           element.poster = object.movie.img;
           _this4.start();
-          if (call) call();else Lampa.Torrent.start(element, object.movie);
+          if (call) call();else Torrent.start(element, object.movie);
         }, function (text) {
           Lampa.Modal.update(Lampa.Template.get('error', {
             title: Lampa.Lang.translate('title_error'),
@@ -1124,7 +1566,7 @@
             } else {
               element.poster = object.movie.img;
               _this5.start();
-              Lampa.Torrent.start(element, object.movie);
+              Torrent.start(element, object.movie);
             }
             Lampa.Listener.send('torrent', {
               type: 'onenter',
