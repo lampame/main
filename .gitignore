@@ -132,3 +132,8 @@ dist
 #other
 .vscode
 .idea
+.clinerules-architect
+.clinerules-ask
+.clinerules-code
+.clinerules-debug
+.clinerules-test
