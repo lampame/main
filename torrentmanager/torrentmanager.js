@@ -4551,7 +4551,12 @@
     }();
     var TorrentStateManager$1 = new TorrentStateManager();
 
-    // Parse torrent labels to extract media information
+    /**
+     * Parse torrent labels to extract media information
+     * 
+     * @param {Array|string} labels - Labels to parse
+     * @returns {Object|null} - Parsed media type and ID, or null if not found
+     */
     function parseLabels(labels) {
       if (!labels) return null;
 
@@ -4577,10 +4582,11 @@
 
     /**
      * Show the torrent action menu
-     *
+     * 
      * @param {Object} torrentData - Data for the selected torrent
+     * @param {Array} allTorrents - All torrents (needed for 'parse-all' action)
      */
-    function showTorrentMenu(torrentData) {
+    function showTorrentMenu(torrentData, allTorrents) {
       var client = Lampa.Storage.field('lmetorrentSelect');
       var enabled = Lampa.Controller.enabled().name;
       var hasMetadata = torrentData.tmdb_id && torrentData.media_type || parseLabels(torrentData.labels);
@@ -4630,22 +4636,23 @@
           }
         },
         onSelect: function onSelect(action) {
-          handleTorrentAction(action, torrentData);
+          handleTorrentAction(action, torrentData, allTorrents);
         }
       });
     }
 
     /**
      * Handle torrent action selection
-     *
+     * 
      * @param {Object} action - Selected action
      * @param {Object} torrentData - Data for the selected torrent
+     * @param {Array} allTorrents - All torrents (needed for 'parse-all' action)
      */
-    function handleTorrentAction(_x, _x2) {
+    function handleTorrentAction(_x, _x2, _x3) {
       return _handleTorrentAction.apply(this, arguments);
     }
     function _handleTorrentAction() {
-      _handleTorrentAction = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(action, torrentData) {
+      _handleTorrentAction = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(action, torrentData, allTorrents) {
         var client, cardInfo, _t, _t2;
         return _regenerator().w(function (_context) {
           while (1) switch (_context.n) {
@@ -4679,28 +4686,28 @@
                   text: 'No metadata available for this torrent'
                 });
               }
-              _context.n = 15;
+              _context.n = 17;
               break;
             case 1:
               _context.p = 1;
               _t = client;
-              _context.n = _t === 'qBittorent' ? 2 : _t === 'transmission' ? 4 : _t === 'keenetic' ? 6 : _t === 'synology' ? 8 : 12;
+              _context.n = _t === 'qBittorent' ? 2 : _t === 'transmission' ? 4 : _t === 'keenetic' ? 6 : _t === 'synology' ? 8 : 14;
               break;
             case 2:
               _context.n = 3;
               return Qbittorent.SendCommand(action, torrentData);
             case 3:
-              return _context.a(3, 13);
+              return _context.a(3, 15);
             case 4:
               _context.n = 5;
-              return Transmission.SendCommand(action, torrentData);
+              return Transmission.SendCommand(action, action.action === 'parse-all' ? allTorrents : torrentData);
             case 5:
-              return _context.a(3, 13);
+              return _context.a(3, 15);
             case 6:
               _context.n = 7;
-              return Keenetic.SendCommand(action, torrentData);
+              return Keenetic.SendCommand(action, action.action === 'parse-all' ? allTorrents : torrentData);
             case 7:
-              return _context.a(3, 13);
+              return _context.a(3, 15);
             case 8:
               if (!(action.action === 'parse')) {
                 _context.n = 10;
@@ -4709,33 +4716,62 @@
               _context.n = 9;
               return update(torrentData);
             case 9:
-              _context.n = 11;
+              _context.n = 13;
               break;
             case 10:
+              if (!(action.action === 'parse-all')) {
+                _context.n = 12;
+                break;
+              }
               _context.n = 11;
-              return Synology.SendCommand(action, torrentData);
+              return update(allTorrents);
             case 11:
-              return _context.a(3, 13);
+              _context.n = 13;
+              break;
             case 12:
+              _context.n = 13;
+              return Synology.SendCommand(action, torrentData);
+            case 13:
+              return _context.a(3, 15);
+            case 14:
               Lampa.Bell.push({
                 text: 'Unknown client type'
               });
-            case 13:
-              _context.n = 15;
+            case 15:
+              _context.n = 17;
               break;
-            case 14:
-              _context.p = 14;
+            case 16:
+              _context.p = 16;
               _t2 = _context.v;
               console.error('TDM', 'Error handling action:', _t2);
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('actionReturnedError')
               });
-            case 15:
+            case 17:
               return _context.a(2);
           }
-        }, _callee, null, [[1, 14]]);
+        }, _callee, null, [[1, 16]]);
       }));
       return _handleTorrentAction.apply(this, arguments);
+    }
+
+    /**
+     * Utility functions for Torrent Manager plugin
+     */
+
+    /**
+     * Create a panel navigation item for Lampa.Select.show
+     * @returns {Function} Function that calls Lampa.Activity.push
+     */
+    function createPanelNavigationItem() {
+      return function () {
+        Lampa.Activity.push({
+          url: '',
+          title: Lampa.Storage.get('lmetorrentSelect').toUpperCase() + " Manager",
+          component: 'lmetorrentPanel',
+          page: 1
+        });
+      };
     }
 
     var HeaderIconController = /*#__PURE__*/function () {
@@ -4758,22 +4794,32 @@
       }, {
         key: "showSidebar",
         value: function showSidebar() {
-          var torrents = TorrentStateManager$1.torrents;
+          var torrents = TorrentStateManager$1.torrents.filter(function (t) {
+            return t.state !== 'Finished' && t.completed !== 1;
+          });
           var sortedTorrents = this.sortTorrents(torrents);
           var activeDownloads = torrents.filter(function (t) {
-            return t.state === 'downloading' || t.state === 'checking';
+            return t.state === 'Downloading' || t.state === 'Сhecking';
           }).length;
-
           // Create items for Lampa.Select.show
-          var items = _toConsumableArray(sortedTorrents.map(function (torrent) {
+          var items = [
+          // Panel navigation item
+          //createPanelNavigationItem(),
+          {
+            title: Lampa.Storage.get('lmetorrentSelect').toUpperCase() + " Manager",
+            action: 'panel',
+            onSelect: function onSelect() {
+              createPanelNavigationItem()();
+            }
+          }].concat(_toConsumableArray(sortedTorrents.map(function (torrent) {
             return {
               title: "".concat(torrent.name, " (").concat(Math.round((torrent.completed || 0) * 100), "%)"),
               action: 'torrent',
               torrent: torrent
             };
-          }));
+          })));
           Lampa.Select.show({
-            title: "Torrents (".concat(activeDownloads, "/").concat(torrents.length, ")"),
+            title: "Torrents (".concat(activeDownloads, "/").concat(TorrentStateManager$1.torrents.length, ")"),
             items: items,
             onBack: function onBack() {
               Lampa.Controller.toggle('content');
@@ -4781,6 +4827,8 @@
             onSelect: function onSelect(item) {
               if (item.action === 'torrent') {
                 showTorrentMenu(item.torrent);
+              } else if (item.action === 'panel') {
+                item.onSelect();
               }
               // For summary item, we could show a general menu or just do nothing
             }
@@ -4892,12 +4940,7 @@
     function createMenuButton() {
       var button = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\">".concat(MANIFEST.icon, "</div>\n            <div class=\"menu__text\">").concat(MANIFEST.name, "</div>\n        </li>"));
       button.on('hover:enter', function () {
-        Lampa.Activity.push({
-          url: '',
-          title: Lampa.Storage.get(MANIFEST.component + 'Select').toUpperCase() + " Manager",
-          component: 'lmetorrentPanel',
-          page: 1
-        });
+        createPanelNavigationItem()();
       });
       return button;
     }
