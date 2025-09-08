@@ -561,7 +561,8 @@
       var onerror = arguments.length > 2 ? arguments[2] : undefined;
       network.timeout(1000 * Lampa.Storage.field('parse_timeout'));
       //&Tracker%5B%5D=noname-clubl&Tracker%5B%5D=kinozal-magnet&Tracker%5B%5D=rutracker&Tracker%5B%5D=toloka&
-      var u = url + '/api/v2.0/indexers/' + (Lampa.Storage.field('jackett_interview') === 'healthy' ? 'status:healthy' : 'all') + '/results?apikey=' + Lampa.Storage.field('jackett_key') + '&Category%5B%5D=3000&Category%5B%5D=3020&Category%5B%5D=100048&Category%5B%5D=100258&Category%5B%5D=100883&Category%5B%5D=100955&Query=' + encodeURIComponent(params.search);
+      //&Category%5B%5D=100098&Category%5B%5D=3000&Category%5B%5D=3020&Category%5B%5D=100375&Category%5B%5D=100258&Category%5B%5D=100883&Category%5B%5D=100955&Query=
+      var u = url + '/api/v2.0/indexers/' + (Lampa.Storage.field('jackett_interview') === 'healthy' ? 'status:healthy' : 'all') + '/results?apikey=' + Lampa.Storage.field('jackett_key') + '&Category%5B%5D=3020&Category%5B%5D=3040&Category%5B%5D=100375&Query=' + encodeURIComponent(params.search);
       if (!params.from_search) {
         var genres = params.movie.genres.map(function (a) {
           return a.name;
@@ -1676,6 +1677,24 @@
     }
 
     function startPlugin() {
+      // Функція для очищення старих запитів
+      function cleanupUserClarifys() {
+        var clarifys = Lampa.Storage.get('user_clarifys', '{}');
+
+        // Перевіряємо, чи є ключ 'undefined' і чи це масив
+        if (clarifys.undefined && Array.isArray(clarifys.undefined)) {
+          // Якщо в масиві більше 3 елементів, залишаємо тільки 3 останніх
+          if (clarifys.undefined.length > 3) {
+            clarifys.undefined = clarifys.undefined.slice(-3);
+          }
+        }
+
+        // Зберігаємо оновлений об'єкт
+        Lampa.Storage.set('user_clarifys', clarifys);
+      }
+
+      // Очищуємо сховище при старті плагіна
+      cleanupUserClarifys();
       window.lmeConcertSearch_ready = true;
       var manifest = {
         type: 'other',
