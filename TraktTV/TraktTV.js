@@ -349,7 +349,7 @@
 
   var CLIENT_ID = 'a77093dcf5db97106d9303f3ab7d46a80a93a6e0c1d7a2ff8a1aacebe0dc161b';
   var CLIENT_SECRET = 'a8cf25070f8c9a609782deecf56197f99e96084b080c1c86fccf9dc682465f1b';
-  var API_URL = 'https://lampame.v6.rocks/https://api.trakt.tv';
+  var API_URL = 'https://lampame.v6.rocks/api.trakt.tv';
   function getImageUrl(media) {
     var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'poster';
     var imageSet = media.images && media.images[type];

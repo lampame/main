@@ -553,8 +553,8 @@
         var proxyTMDBApi;
         var proxyTMDBImage;
         if (Lampa.Storage.field('lmetorrentproxyTMDB') == true) {
-          proxyTMDBApi = "https://lampame.v6.rocks/https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key());
-          proxyTMDBImage = 'https://lampame.v6.rocks/https://tmdb.melonhu.cn/img/t/p/';
+          proxyTMDBApi = "https://lampame.v6.rocks/tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key());
+          proxyTMDBImage = 'https://lampame.v6.rocks/tmdb.melonhu.cn/img/t/p/';
         }
 
         // Делаем GET-запрос к API TMDB
@@ -593,6 +593,7 @@
     var proxy$1 = "";
     if (Lampa.Storage.field("lmetorrentqBittorentProxy") === true) {
       proxy$1 = 'https://lampame.v6.rocks/';
+      url$1 = url$1.replace(/^https?:\/\//, '');
     }
     function getHeaders$3(type) {
       var headers = {};
@@ -1058,9 +1059,19 @@
      * 
      * @returns {string} - Complete API URL
      */
+    // function getApiUrl() {
+    //     const config = getConfig();
+    //     return `${config.useProxy ? config.proxy : ''}${config.url}${config.path}`;
+    // }
+
     function getApiUrl$1() {
       var config = getConfig$1();
-      return "".concat(config.useProxy ? config.proxy : '').concat(config.url).concat(config.path);
+      if (config.useProxy) {
+        // Видаляємо протокол з URL при використанні проксі
+        var urlWithoutProtocol = config.url.replace(/^https?:\/\//, '');
+        return "".concat(config.proxy).concat(urlWithoutProtocol).concat(config.path);
+      }
+      return "".concat(config.url).concat(config.path);
     }
 
     /**
@@ -1734,6 +1745,8 @@
     var proxy = "";
     if (Lampa.Storage.field("lmetorrentsynologyProxy") === true) {
       proxy = 'https://lampame.v6.rocks/';
+      // Видаляємо протокол з URL при використанні проксі
+      url = url.replace(/^https?:\/\//, '');
     }
     function getHeaders$1() {
       var headers = {
@@ -2116,7 +2129,12 @@
      */
     function getApiUrl() {
       var config = getConfig();
-      return "".concat(config.useProxy ? config.proxy : '').concat(config.url).concat(config.path);
+      if (config.useProxy) {
+        // Видаляємо протокол з URL при використанні проксі
+        var urlWithoutProtocol = config.url.replace(/^https?:\/\//, '');
+        return "".concat(config.proxy).concat(urlWithoutProtocol).concat(config.path);
+      }
+      return "".concat(config.url).concat(config.path);
     }
 
     /**
@@ -2800,7 +2818,7 @@
                 useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
                 posterSize = Lampa.Storage.field('poster_size') || 'w200'; // Базовий URL з Lampa
                 directBaseUrl = Lampa.TMDB.image('t/p/'); // Проксі URL
-                proxyBaseUrl = 'https://lampame.v6.rocks/https://tmdb.melonhu.cn/img/t/p/';
+                proxyBaseUrl = 'https://lampame.v6.rocks/tmdb.melonhu.cn/img/t/p/';
                 baseUrl = useProxy ? proxyBaseUrl : directBaseUrl; // Формуємо фінальний URL, додаючи слеш між розміром та шляхом
                 // imagePath від API приходить з початковим слешем, видаляємо його
                 imageUrl = baseUrl + posterSize + '/' + imagePath.replace(/^\//, '');
