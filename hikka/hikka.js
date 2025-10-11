@@ -1,6 +1,27 @@
 (function () {
   'use strict';
 
+  function _assertThisInitialized(e) {
+    if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    return e;
+  }
+  function _callSuper(t, o, e) {
+    return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e));
+  }
+  function _classCallCheck(a, n) {
+    if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function");
+  }
+  function _defineProperties(e, r) {
+    for (var t = 0; t < r.length; t++) {
+      var o = r[t];
+      o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o);
+    }
+  }
+  function _createClass(e, r, t) {
+    return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", {
+      writable: !1
+    }), e;
+  }
   function _defineProperty(e, r, t) {
     return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
       value: t,
@@ -8,6 +29,40 @@
       configurable: !0,
       writable: !0
     }) : e[r] = t, e;
+  }
+  function _get() {
+    return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) {
+      var p = _superPropBase(e, t);
+      if (p) {
+        var n = Object.getOwnPropertyDescriptor(p, t);
+        return n.get ? n.get.call(arguments.length < 3 ? e : r) : n.value;
+      }
+    }, _get.apply(null, arguments);
+  }
+  function _getPrototypeOf(t) {
+    return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) {
+      return t.__proto__ || Object.getPrototypeOf(t);
+    }, _getPrototypeOf(t);
+  }
+  function _inherits(t, e) {
+    if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function");
+    t.prototype = Object.create(e && e.prototype, {
+      constructor: {
+        value: t,
+        writable: !0,
+        configurable: !0
+      }
+    }), Object.defineProperty(t, "prototype", {
+      writable: !1
+    }), e && _setPrototypeOf(t, e);
+  }
+  function _isNativeReflectConstruct() {
+    try {
+      var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {}));
+    } catch (t) {}
+    return (_isNativeReflectConstruct = function () {
+      return !!t;
+    })();
   }
   function ownKeys(e, r) {
     var t = Object.keys(e);
@@ -30,6 +85,26 @@
     }
     return e;
   }
+  function _possibleConstructorReturn(t, e) {
+    if (e && ("object" == typeof e || "function" == typeof e)) return e;
+    if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined");
+    return _assertThisInitialized(t);
+  }
+  function _setPrototypeOf(t, e) {
+    return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) {
+      return t.__proto__ = e, t;
+    }, _setPrototypeOf(t, e);
+  }
+  function _superPropBase(t, o) {
+    for (; !{}.hasOwnProperty.call(t, o) && null !== (t = _getPrototypeOf(t)););
+    return t;
+  }
+  function _superPropGet(t, o, e, r) {
+    var p = _get(_getPrototypeOf(1 & r ? t.prototype : t), o, e);
+    return 2 & r && "function" == typeof p ? function (t) {
+      return p.apply(e, t);
+    } : p;
+  }
   function _toPrimitive(t, r) {
     if ("object" != typeof t || !t) return t;
     var e = t[Symbol.toPrimitive];
@@ -46,7 +121,16 @@
   }
 
   var network = new Lampa.Reguest();
-  var api_url = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://api.hikka.io/';
+  var proxy_url = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
+  var api_url = proxy_url + 'https://api.hikka.io/';
+
+  // Функція для створення заголовків з проксі хедером
+  function getProxyHeaders() {
+    var additionalHeaders = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    return _objectSpread2({
+      'x-requested-with': 'lme-ukraine'
+    }, additionalHeaders);
+  }
 
   // Маппінг статусів для локалізації
   var STATUS_MAP = {
@@ -65,20 +149,30 @@
     'music': 'Музичний'
   };
   function normalizeAnimeData(anime) {
+    // Отримуємо правильну локалізовану назву типу медіа
+    var getMediaTypeLabel = function getMediaTypeLabel(mediaType) {
+      return MEDIA_TYPE_MAP[mediaType] || mediaType || 'ТВ Серіал';
+    };
     return {
       id: anime.slug,
       title: anime.title_ua || anime.title_en || anime.title_ja,
       name: anime.title_ua || anime.title_en,
+      original_title: anime.title_en || anime.title_ja,
+      // КЛЮЧОВЕ ПОЛЕ: original_name визначає тип картки (TV vs MOV)
+      original_name: anime.media_type === 'movie' ? null : anime.title_en || anime.title_ja || anime.title_ua,
       img: anime.image,
-      // Direct external URL - no TMDB processing
       poster: anime.image,
-      // Direct external URL - no TMDB processing
-      // Remove backdrop_path to avoid TMDB URL construction
       vote_average: anime.score || anime.native_score || 0,
       overview: anime.synopsis_ua || anime.synopsis_en || '',
       year: anime.year,
+      release_year: anime.year || '2023',
       status: STATUS_MAP[anime.status] || anime.status,
-      media_type: MEDIA_TYPE_MAP[anime.media_type] || anime.media_type,
+      // Використовуємо quality для заміни стандартного бейджу типу
+      quality: getMediaTypeLabel(anime.media_type),
+      // Поле для іконки перекладу
+      has_translation: anime.translated_ua,
+      translated_ua: true,
+      // Для іконки українського прапора
       hikka_slug: anime.slug
     };
   }
@@ -115,9 +209,9 @@
         error();
       }, JSON.stringify(postData), {
         method: 'POST',
-        headers: {
+        headers: getProxyHeaders({
           'Content-Type': 'application/json'
-        }
+        })
       });
     },
     getAnimeListWithFilters: function getAnimeListWithFilters(filters, page, success, error) {
@@ -159,9 +253,9 @@
         error();
       }, JSON.stringify(postData), {
         method: 'POST',
-        headers: {
+        headers: getProxyHeaders({
           'Content-Type': 'application/json'
-        }
+        })
       });
     },
     getTmdbId: function getTmdbId(hikka_slug, success, error) {
@@ -176,7 +270,7 @@
           console.log('[Hikka] Found MAL ID:', mal_id);
 
           // Step 2: Get Trakt data from MyAnimeList API
-          var mal_api_url = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://animeapi.my.id/myanimelist/' + mal_id;
+          var mal_api_url = proxy_url + 'https://animeapi.my.id/myanimelist/' + mal_id;
           network.silent(mal_api_url, function (mal_data) {
             console.log('[Hikka] MAL API response:', mal_data);
             if (mal_data && mal_data.trakt && mal_data.trakt_type) {
@@ -190,7 +284,7 @@
               console.log('[Hikka] Found Trakt ID:', trakt_id, 'Type:', trakt_type);
 
               // Step 3: Get TMDB ID from Trakt API
-              var trakt_api_url = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://api.trakt.tv/search/trakt/' + trakt_id + '?type=' + trakt_type;
+              var trakt_api_url = proxy_url + 'https://api.trakt.tv/search/trakt/' + trakt_id + '?type=' + trakt_type;
               network.silent(trakt_api_url, function (trakt_data) {
                 console.log('[Hikka] Trakt API response:', trakt_data);
                 if (trakt_data && trakt_data.length > 0) {
@@ -220,10 +314,10 @@
                 console.log('[Hikka] Trakt API error:', trakt_error);
                 error('Помилка Trakt API');
               }, false, {
-                headers: {
+                headers: getProxyHeaders({
                   'trakt-api-version': '2',
                   'trakt-api-key': 'a77093dcf5db97106d9303f3ab7d46a80a93a6e0c1d7a2ff8a1aacebe0dc161b'
-                }
+                })
               });
             } else {
               console.log('[Hikka] No Trakt data in MAL response');
@@ -241,9 +335,9 @@
         console.log('[Hikka] Hikka API error:', hikka_error);
         error('Помилка Hikka API');
       }, false, {
-        headers: {
+        headers: getProxyHeaders({
           'Content-Type': 'application/json'
-        }
+        })
       });
     },
     getGenres: function getGenres(success, error) {
@@ -263,6 +357,199 @@
       });
     }
   };
+
+  // Функція для видалення елемента
+  function remove(elem) {
+    if (elem) elem.remove();
+  }
+
+  // Кастомна аніме картка з розширеними параметрами
+  var AnimeCard = /*#__PURE__*/function (_Lampa$Card) {
+    function AnimeCard(data) {
+      var _this;
+      var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      _classCallCheck(this, AnimeCard);
+      _this = _callSuper(this, AnimeCard, [data, params]);
+      _this.data = data;
+      return _this;
+    }
+    _inherits(AnimeCard, _Lampa$Card);
+    return _createClass(AnimeCard, [{
+      key: "build",
+      value: function build() {
+        console.log('[Hikka] Starting AnimeCard build for:', this.data.title || 'Unknown');
+
+        // Спочатку викликаємо батьківський build для ініціалізації стандартної структури
+        _superPropGet(AnimeCard, "build", this, 3)([]);
+
+        // Перевіряємо чи карта була створена правильно
+        if (!this.card) {
+          console.error('[Hikka] Card element not created by parent build');
+          return;
+        }
+        console.log('[Hikka] Parent build completed, card structure exists');
+
+        // Створюємо кастомний бейдж типу для всіх карток
+        this.createCustomTypeBadge();
+
+        // Додаємо іконку перекладу для has_translation після створення бейджу
+        if (this.data.has_translation) {
+          console.log('[Hikka] Adding translation icon');
+          this.addicon('book'); // Використовуємо book як тимчасову іконку
+        }
+      }
+
+      /**
+       * Завантажити зображення
+       */
+    }, {
+      key: "image",
+      value: function image() {
+        var _this2 = this;
+        // Перевизначаємо батьківський метод для використання правильного джерела зображення
+        if (this.data.img) {
+          this.img.src = this.data.img;
+        } else if (this.data.poster) {
+          this.img.src = this.data.poster;
+        } else {
+          this.img.src = './img/img_broken.svg';
+        }
+        this.img.onload = function () {
+          _this2.card.classList.add('card--loaded');
+        };
+        this.img.onerror = function () {
+          _this2.img.src = './img/img_broken.svg';
+        };
+      }
+
+      /**
+       * Створити картку
+       */
+    }, {
+      key: "create",
+      value: function create() {
+        var _this3 = this;
+        this.build();
+        this.card.addEventListener('hover:focus', function () {
+          if (_this3.onFocus) _this3.onFocus(_this3.card, _this3.data);
+        });
+        this.card.addEventListener('hover:touch', function () {
+          if (_this3.onTouch) _this3.onTouch(_this3.card, _this3.data);
+        });
+        this.card.addEventListener('hover:hover', function () {
+          if (_this3.onHover) _this3.onHover(_this3.card, _this3.data);
+        });
+        this.card.addEventListener('hover:enter', function () {
+          // Запобігаємо повторним натисканням
+          if (_this3.loading) return;
+          _this3.loading = true;
+
+          // Показуємо індикатор завантаження
+          var loader = document.createElement('div');
+          loader.innerHTML = '⏳';
+          loader.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px; z-index: 1000;';
+          _this3.card.appendChild(loader);
+
+          // Використовуємо централізований API метод
+          Api.getTmdbId(_this3.data.id, function (tmdb_id, media_type) {
+            _this3.loading = false;
+
+            // Видаляємо індикатор завантаження
+            if (loader.parentNode) loader.parentNode.removeChild(loader);
+            if (tmdb_id) {
+              console.log('Navigating to TMDB card:', tmdb_id, media_type);
+              Lampa.Activity.push({
+                url: '',
+                component: 'full',
+                id: tmdb_id,
+                method: media_type === 'movie' ? 'movie' : 'tv',
+                card: _objectSpread2(_objectSpread2({}, _this3.data), {}, {
+                  id: tmdb_id
+                }),
+                source: 'tmdb'
+              });
+            } else {
+              // Якщо не вдалося отримати TMDB ID, показуємо детальну інформацію з hikka
+              console.log('Navigating to Hikka details');
+              Lampa.Activity.push({
+                url: _this3.data.id,
+                title: _this3.data.title || _this3.data.name,
+                component: 'hikka_anime_details',
+                anime_data: _this3.data,
+                page: 1
+              });
+            }
+          }, function (error) {
+            _this3.loading = false;
+            if (loader.parentNode) loader.parentNode.removeChild(loader);
+            console.log('[Hikka] Error getting TMDB ID:', error);
+            Lampa.Noty.show('Помилка при пошуку TMDB ID: ' + error);
+          });
+        });
+        this.image();
+      }
+
+      /**
+       * Завантажити зображення коли картка видима
+       */
+    }, {
+      key: "visible",
+      value: function visible() {
+        if (this.onVisible) this.onVisible(this.card, this.data);
+      }
+
+      /**
+       * Знищити картку
+       */
+    }, {
+      key: "destroy",
+      value: function destroy() {
+        if (this.img) {
+          this.img.onerror = function () {};
+          this.img.onload = function () {};
+          this.img.src = '';
+        }
+        remove(this.card);
+        this.card = null;
+        this.img = null;
+      }
+
+      /**
+       * Створюємо кастомний бейдж типу замість стандартного
+       */
+    }, {
+      key: "createCustomTypeBadge",
+      value: function createCustomTypeBadge() {
+        console.log('[Hikka] Creating custom type badge:', this.data.quality);
+
+        // Ховаємо стандартний бейдж типу
+        this.card.classList.add('hikka-hide-type');
+
+        // Створюємо кастомний бейдж типу
+        if (this.data.quality) {
+          var customBadge = document.createElement('div');
+          customBadge.className = 'hikka-custom-type-badge';
+          customBadge.innerText = this.data.quality;
+
+          // Додаємо кастомний бейдж в card__view
+          var viewElement = this.card.querySelector('.card__view');
+          if (viewElement) {
+            viewElement.appendChild(customBadge);
+            console.log('[Hikka] Custom type badge created:', this.data.quality);
+          }
+        }
+      }
+
+      /**
+       * Рендер
+       */
+    }, {
+      key: "render",
+      value: function render(js) {
+        return js ? this.card : $(this.card);
+      }
+    }]);
+  }(Lampa.Card);
 
   function component(object) {
     var network = new Lampa.Reguest();
@@ -410,8 +697,6 @@
       // Content container for scrollable items
       contentContainer.classList.add('category-full', 'items', 'items--cards');
       scroll.append(contentContainer);
-
-      // КРИТИЧНО: Налаштовуємо scroll обробники як в робочих прикладах
       scroll.onScroll = this.limit.bind(this);
       scroll.onWheel = function (step) {
         if (!Lampa.Controller.own(_this)) _this.start();
@@ -435,7 +720,7 @@
         horizontal: true
       });
       var filterBody = document.createElement('div');
-      filterBody.className = 'torrent-filter';
+      filterBody.className = 'hikka torrent-filter';
 
       // Media Type filter
       var mediaTypeBtn = document.createElement('div');
@@ -554,14 +839,9 @@
         if (data && data.results && data.results.length) {
           total_pages = data.total_pages || 1;
           _this4.append(data.results);
-
-          // КРИТИЧНО ВАЖЛИВО: Викликаємо scroll.minus() для правильного розрахунку висоти
           if (current_page === 1) {
             scroll.minus();
-            console.log('[Hikka Debug] scroll.minus() called for first page');
           }
-
-          // Налаштування пагінації для автозавантаження
           if (current_page < total_pages) {
             scroll.onEnd = function () {
               if (!loading) {
@@ -570,7 +850,6 @@
               }
             };
           } else {
-            // Видаляємо onEnd якщо досягнуто останньої сторінки
             scroll.onEnd = null;
           }
         } else if (current_page === 1) {
@@ -587,31 +866,23 @@
     this.append = function (results) {
       var _this5 = this;
       results.forEach(function (element) {
-        var card = new Lampa.Card(element, {
+        var card = new AnimeCard(element, {
           object: object,
-          card_wide: true,
+          card_category: true,
           card_small: false
         });
         card.create();
         card.onFocus = function (target, card_data) {
           last = target;
           active = items.indexOf(card);
-
-          // Викликаємо scroll.update для візуального скролу
           scroll.update(card.render(true));
-
-          // Зміна фону
           if (card_data.img || card_data.poster) {
             Lampa.Background.change(card_data.img || card_data.poster);
           }
         };
         card.onEnter = function (target, card_data) {
           console.log('[Hikka] Clicked on card:', card_data.hikka_slug);
-
-          // Показуємо лоадер під час пошуку TMDB ID
           _this5.activity.loader(true);
-
-          // Отримуємо TMDB ID для Hikka slug
           Api.getTmdbId(card_data.hikka_slug, function (tmdb_id, media_type) {
             console.log('[Hikka] Found TMDB ID:', tmdb_id, 'Type:', media_type);
             if (tmdb_id) {
@@ -626,8 +897,6 @@
                 }),
                 source: 'tmdb'
               });
-
-              // Відключаємо лоадер після успішного переходу
               _this5.activity.loader(false);
             } else {
               _this5.activity.loader(false);
@@ -640,23 +909,16 @@
             Lampa.Noty.show('Помилка при пошуку TMDB ID: ' + error);
           });
         };
-
-        // Додаємо карту до контейнера
         var cardElement = card.render(true);
-
-        // КРИТИЧНО: Додаємо клас selector для Navigator
         cardElement.classList.add('selector');
         contentContainer.appendChild(cardElement);
         items.push(card);
       });
-
-      // Запускаємо навігацію тільки на першому завантаженні
       if (current_page === 1) {
         Lampa.Layer.update(html);
         this.activity.toggle();
         this.start();
       } else {
-        // Для нових сторінок додаємо тільки нові елементи до колекції
         results.forEach(function (element, index) {
           var cardIndex = items.length - results.length + index;
           if (items[cardIndex]) {
@@ -666,16 +928,10 @@
       }
       this.limit();
     };
-
-    // КРИТИЧНО ВАЖЛИВА ФУНКЦІЯ: limit() як в робочих прикладах
     this.limit = function () {
       var limit_view = 12;
       var limit_collection = 36;
-
-      // Визначаємо видимі елементи навколо активного
       var collection = items.slice(Math.max(0, active - limit_view), active + limit_view);
-
-      // Додаємо/видаляємо класи рендерингу
       items.forEach(function (item) {
         if (collection.indexOf(item) === -1) {
           item.render(true).classList.remove('layer--render');
@@ -683,14 +939,10 @@
           item.render(true).classList.add('layer--render');
         }
       });
-
-      // КРИТИЧНО: Оновлюємо Navigator колекцію як в NC плагіні
       Navigator.setCollection(items.slice(Math.max(0, active - limit_collection), active + limit_collection).map(function (c) {
         return c.render(true);
       }));
       Navigator.focused(last);
-
-      // Оновлюємо видимість
       Lampa.Layer.visible(scroll.render(true));
     };
     this.render = function () {
@@ -718,12 +970,7 @@
         link: this,
         toggle: function toggle() {
           if (_this6.activity.canRefresh()) return false;
-
-          // Спочатку встановлюємо основну колекцію
           Lampa.Controller.collectionSet(contentContainer, scroll.render(true));
-
-          // КРИТИЧНО: Додаємо фільтри до навігаційної колекції
-          // Знаходимо всі фільтри в html та додаємо їх
           var filterButtons = html.querySelectorAll('.simple-button--filter.selector');
           filterButtons.forEach(function (button) {
             Lampa.Controller.collectionAppend(button);
@@ -927,6 +1174,11 @@
   }
 
   function startPlugin() {
+    // Додаємо стилі для плагіну через шаблонну систему
+    function addStyles() {
+      Lampa.Template.add('hikka_styles', "\n            <style>\n            @charset 'UTF-8';.card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.card__quality[data-quality=ua]{display:none}.card__quality[data-quality=ua]::after{content:'';position:absolute;top:0;left:0;width:100%;height:100%;background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.card--tv .card__type,.card--movie .card__type,.card--ova .card__type,.card--ona .card__type,.card--special .card__type,.card--music .card__type{display:none !important;visibility:hidden !important;opacity:0 !important;position:absolute !important;left:-9999px !important;z-index:-1 !important}.hikka-custom-type-badge{position:absolute;top:8px;left:8px;background:-webkit-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:-o-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:linear-gradient(135deg,#667eea 0,#764ba2 100%);color:white;padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;z-index:10}.hikka-anime-card__rating,.hikka-anime-card__episodes,.hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-anime-card__rating{color:#ffd700}.hikka-anime-card__status{color:#90ee90}.hikka-custom-type.card--tv,.card--tv .hikka-custom-type{background-color:rgba(0,123,255,0.8) !important}.hikka-custom-type.card--movie,.card--movie .hikka-custom-type{background-color:rgba(220,53,69,0.8) !important}.hikka-custom-type.card--ova,.hikka-custom-type.card--ona,.hikka-custom-type.card--special,.hikka-custom-type.card--music,.card--ova .hikka-custom-type,.card--ona .hikka-custom-type,.card--special .hikka-custom-type,.card--music .hikka-custom-type{background-color:rgba(108,117,125,0.8) !important}\n            </style>\n        ");
+    }
+
     // Додаємо пункт у меню
     function addMenuItem() {
       var button = $("<li class=\"menu__item selector\" data-action=\"hikka_anime\">\n            <div class=\"menu__ico\">\n                <svg viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\" fill=\"#000000\">\n                    <g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g>\n                    <g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g>\n                    <g id=\"SVGRepo_iconCarrier\">\n                        <defs>\n                            <style>.a{fill:currentColor;stroke:#ffffff;stroke-linecap:round;stroke-linejoin:round;}</style>\n                        </defs>\n                        <rect class=\"a\" x=\"6.1336\" y=\"9.4032\" width=\"35.7327\" height=\"26.5581\" rx=\"6.7532\"></rect>\n                        <line class=\"a\" x1=\"17.4835\" y1=\"4.5\" x2=\"20.4078\" y2=\"9.4032\"></line>\n                        <line class=\"a\" x1=\"13.2594\" y1=\"21.6849\" x2=\"20.0829\" y2=\"18.9592\"></line>\n                        <line class=\"a\" x1=\"30.5165\" y1=\"4.5\" x2=\"27.5922\" y2=\"9.4032\"></line>\n                        <line class=\"a\" x1=\"34.7406\" y1=\"21.6849\" x2=\"27.9171\" y2=\"18.9592\"></line>\n                        <path class=\"a\" d=\"M29.0544,24.9161c-.5827,1.4721-1.1508,2.54-2.5273,2.54-1.074,0-1.666-.4976-2.5271-1.8363-.8611,1.3387-1.4531,1.8363-2.5271,1.8363-1.3765,0-1.9446-1.0682-2.5273-2.54\"></path>\n                        <path class=\"a\" d=\"M25.9676,35.9613v2.033s8.6917.2889,8.6917,5.5057H13.3407c0-5.2168,8.6917-5.5057,8.6917-5.5057v-2.033\"></path>\n                    </g>\n                </svg>\n            </div>\n            <div class=\"menu__text\">Hikka Anime</div>\n        </li>");
@@ -948,12 +1200,16 @@
     // Реєструємо компонент
     Lampa.Component.add('hikka_anime', component);
 
-    // Додаємо пункт меню після завантаження додатка
+    // Додаємо стилі та пункт меню після завантаження додатка
     if (window.appready) {
+      addStyles();
       addMenuItem();
     } else {
       Lampa.Listener.follow('app', function (e) {
-        if (e.type == 'ready') addMenuItem();
+        if (e.type == 'ready') {
+          addStyles();
+          addMenuItem();
+        }
       });
     }
   }
