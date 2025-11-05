@@ -1610,180 +1610,310 @@
   }
 
   // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
-  var Api$3 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
+  var Api$2 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
+
+  // Version check for Lampa 3.0+ modular system
+  var isLampa3 = window.Lampa && window.Lampa.Manifest && window.Lampa.Manifest.app_digital >= 300;
   function baseComponent(object, type) {
-    var comp = new Lampa.InteractionCategory(object);
+    var comp;
     var total_pages = 0;
     var waitload = false;
-    comp.create = function () {
-      var _this = this;
-      var params = _objectSpread2({}, object); // Копіюємо всі властивості
 
-      // Явно встановлюємо id для типу 'list', щоб уникнути можливих перетворень
-      if (type === 'list' && object.id) {
-        params.id = object.id;
-      } else if (type === 'list' && object.list_id) {
-        // Додаємо fallback, якщо раптом object.id не спрацює
-        params.id = object.list_id;
-      }
-
-      // Встановлюємо ліміт для різних типів
-      if (type === 'upnext') {
-        params.limit = 36;
-      } else {
-        params.limit = 36;
-      }
-
-      // Встановлюємо номер сторінки, якщо не вказано
-      params.page = params.page || 1;
-      if (!Api$3) {
-        var _Lampa;
-        if ((_Lampa = Lampa) !== null && _Lampa !== void 0 && (_Lampa = _Lampa.Storage) !== null && _Lampa !== void 0 && _Lampa.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/component/main.js');
-        return;
-      }
-      (Api$3 && Api$3[type](params)).then(function (data) {
-        // Зберігаємо загальну кількість сторінок, якщо є
-        // Для 'upnext' Api.upnext не повертає total_pages, тому не використовуємо
-        if (type !== 'upnext' && data && data.total_pages) {
-          total_pages = data.total_pages;
+    // Use modular system for Lampa 3.0+, fallback to old system for compatibility
+    if (isLampa3 && Lampa.Maker) {
+      comp = Lampa.Maker.make('Category', object);
+      comp.use({
+        onCreate: function onCreate() {
+          var _this = this;
+          var params = _objectSpread2({}, object);
+          if (type === 'list' && object.id) {
+            params.id = object.id;
+          } else if (type === 'list' && object.list_id) {
+            params.id = object.list_id;
+          }
+          params.limit = 36;
+          params.page = params.page || 1;
+          if (!Api$2) {
+            var _Lampa;
+            if ((_Lampa = Lampa) !== null && _Lampa !== void 0 && (_Lampa = _Lampa.Storage) !== null && _Lampa !== void 0 && _Lampa.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+            this.empty();
+            return;
+          }
+          Api$2[type](params).then(function (data) {
+            if (type !== 'upnext' && data && data.total_pages) {
+              total_pages = data.total_pages;
+            }
+            _this.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+              results: []
+            });
+          })["catch"](function () {
+            _this.empty();
+          });
+        },
+        onNext: function onNext(resolve, reject) {
+          var _this2 = this;
+          if (waitload) {
+            reject.call(this);
+            return;
+          }
+          if (object.page < total_pages) {
+            waitload = true;
+            object.page++;
+            var params = _objectSpread2({}, object);
+            if (type === 'list' && object.id) {
+              params.id = object.id;
+            } else if (type === 'list' && object.list_id) {
+              params.id = object.list_id;
+            }
+            params.limit = 36;
+            if (!Api$2) {
+              waitload = false;
+              reject.call(this);
+              return;
+            }
+            Api$2[type](params).then(function (data) {
+              resolve.call(_this2, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+                results: []
+              });
+              waitload = false;
+            })["catch"](function () {
+              waitload = false;
+              reject.call(_this2);
+            });
+          } else {
+            reject.call(this);
+          }
+        },
+        onInstance: function onInstance(card, element) {
+          if (element.method === 'tv' || element.type === 'show') {
+            card.render().addClass('card--tv').append('<div class="card__type">' + Lampa.Lang.translate('trakttv_card_type_tv') + '</div>');
+          }
+          card.use({
+            onlyMenu: false,
+            onlyEnter: function onlyEnter() {
+              Lampa.Activity.push(this.data);
+            }
+          });
         }
-
-        // Перевіряємо, чи data є об'єктом і має властивість 'results', інакше передаємо порожній масив
-        _this.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
-          results: []
-        });
-
-        // Налаштовуємо скрол для завантаження наступної сторінки
-        if (_this.activity.scroll) {
-          _this.activity.scroll.onEnd = _this.next.bind(_this);
-        }
-      })["catch"](function () {
-        _this.empty();
       });
-    };
-
-    // Метод для завантаження наступної сторінки
-    comp.next = function () {
-      var _this2 = this;
-      if (waitload) return;
-      if (object.page < total_pages) {
-        waitload = true;
-        object.page++;
+    } else {
+      // Backward compatibility for Lampa < 3.0
+      comp = new Lampa.InteractionCategory(object);
+      comp.create = function () {
+        var _this3 = this;
         var params = _objectSpread2({}, object);
-        // Явно встановлюємо id для типу 'list' в next, якщо object.id є
         if (type === 'list' && object.id) {
           params.id = object.id;
         } else if (type === 'list' && object.list_id) {
           params.id = object.list_id;
         }
-        if (type === 'upnext') {
-          params.limit = 36;
-        } else {
-          params.limit = 36;
-        }
-        if (!Api$3) {
+        params.limit = 36;
+        params.page = params.page || 1;
+        if (!Api$2) {
           var _Lampa2;
-          if ((_Lampa2 = Lampa) !== null && _Lampa2 !== void 0 && (_Lampa2 = _Lampa2.Storage) !== null && _Lampa2 !== void 0 && _Lampa2.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/component/main.js');
+          if ((_Lampa2 = Lampa) !== null && _Lampa2 !== void 0 && (_Lampa2 = _Lampa2.Storage) !== null && _Lampa2 !== void 0 && _Lampa2.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
           return;
         }
-        (Api$3 && Api$3[type](params)).then(function (data) {
-          _this2.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+        Api$2[type](params).then(function (data) {
+          if (type !== 'upnext' && data && data.total_pages) {
+            total_pages = data.total_pages;
+          }
+          _this3.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
             results: []
           });
-          waitload = false;
+          if (_this3.activity.scroll) {
+            _this3.activity.scroll.onEnd = _this3.next.bind(_this3);
+          }
         })["catch"](function () {
-          waitload = false;
+          _this3.empty();
         });
-      }
-    };
-    comp.cardRender = function (object, element, card) {
-      if (element.method === 'tv' || element.type === 'show') {
-        card.render().addClass('card--tv').append('<div class="card__type">' + Lampa.Lang.translate('trakttv_card_type_tv') + '</div>');
-      }
-      card.onMenu = false;
-      card.onEnter = function () {
-        Lampa.Activity.push(card.data);
       };
-    };
+      comp.next = function () {
+        var _this4 = this;
+        if (waitload) return;
+        if (object.page < total_pages) {
+          waitload = true;
+          object.page++;
+          var params = _objectSpread2({}, object);
+          if (type === 'list' && object.id) {
+            params.id = object.id;
+          } else if (type === 'list' && object.list_id) {
+            params.id = object.list_id;
+          }
+          params.limit = 36;
+          if (!Api$2) {
+            var _Lampa3;
+            if ((_Lampa3 = Lampa) !== null && _Lampa3 !== void 0 && (_Lampa3 = _Lampa3.Storage) !== null && _Lampa3 !== void 0 && _Lampa3.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+            return;
+          }
+          Api$2[type](params).then(function (data) {
+            _this4.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+              results: []
+            });
+            waitload = false;
+          })["catch"](function () {
+            waitload = false;
+          });
+        }
+      };
+      comp.cardRender = function (object, element, card) {
+        if (element.method === 'tv' || element.type === 'show') {
+          card.render().addClass('card--tv').append('<div class="card__type">' + Lampa.Lang.translate('trakttv_card_type_tv') + '</div>');
+        }
+        card.onMenu = false;
+        card.onEnter = function () {
+          Lampa.Activity.push(card.data);
+        };
+      };
+    }
     return comp;
   }
   function baseRecommendations(object) {
-    var comp = new Lampa.InteractionCategory(object);
+    var comp;
     var total_pages = 0;
     var waitload = false;
-    comp.create = function () {
-      var _this3 = this;
-      // Встановлюємо параметри для рекомендацій
-      var params = _objectSpread2({}, object);
-      params.limit = 36; // Зменшуємо ліміт для пагінації
-      params.page = params.page || 1;
-      if (!Api$3) {
-        var _Lampa3;
-        if ((_Lampa3 = Lampa) !== null && _Lampa3 !== void 0 && (_Lampa3 = _Lampa3.Storage) !== null && _Lampa3 !== void 0 && _Lampa3.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/component/main.js');
-        return;
-      }
-      (Api$3 && Api$3.recommendations(params)).then(function (recommendations) {
-        // Перевіряємо чи є results і чи він не порожній
-        // Перевіряємо, чи recommendations є об'єктом і має властивість 'results', інакше передаємо порожній масив
-        _this3.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : {
-          results: []
-        });
 
-        // Зберігаємо загальну кількість сторінок, якщо є
-        if (recommendations && recommendations.total_pages) {
-          total_pages = recommendations.total_pages;
+    // Use modular system for Lampa 3.0+, fallback to old system for compatibility
+    if (isLampa3 && Lampa.Maker) {
+      comp = Lampa.Maker.make('Category', object);
+      comp.use({
+        onCreate: function onCreate() {
+          var _this5 = this;
+          var params = _objectSpread2({}, object);
+          params.limit = 36;
+          params.page = params.page || 1;
+          if (!Api$2) {
+            var _Lampa4;
+            if ((_Lampa4 = Lampa) !== null && _Lampa4 !== void 0 && (_Lampa4 = _Lampa4.Storage) !== null && _Lampa4 !== void 0 && _Lampa4.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+            this.empty();
+            return;
+          }
+          Api$2.recommendations(params).then(function (recommendations) {
+            _this5.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : {
+              results: []
+            });
+            if (recommendations && recommendations.total_pages) {
+              total_pages = recommendations.total_pages;
+            }
+          })["catch"](function () {
+            _this5.empty();
+          });
+        },
+        onNext: function onNext(resolve, reject) {
+          var _this6 = this;
+          if (waitload) {
+            reject.call(this);
+            return;
+          }
+          if (object.page < total_pages) {
+            waitload = true;
+            object.page++;
+            var params = _objectSpread2({}, object);
+            params.limit = 36;
+            if (!Api$2) {
+              waitload = false;
+              reject.call(this);
+              return;
+            }
+            Api$2.recommendations(params).then(function (data) {
+              resolve.call(_this6, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+                results: []
+              });
+              waitload = false;
+            })["catch"](function () {
+              waitload = false;
+              reject.call(_this6);
+            });
+          } else {
+            reject.call(this);
+          }
+        },
+        onInstance: function onInstance(card, element) {
+          if (element.method === 'tv') {
+            card.render().addClass('card--tv').append('<div class="card__type">' + Lampa.Lang.translate('trakttv_card_type_tv') + '</div>');
+          }
+          card.use({
+            onlyMenu: false,
+            onlyEnter: function onlyEnter() {
+              Lampa.Activity.push({
+                url: '',
+                component: 'full',
+                id: element.id,
+                method: element.method,
+                card: this.data,
+                source: 'tmdb'
+              });
+            }
+          });
         }
-
-        // Налаштовуємо скрол для завантаження наступної сторінки
-        if (_this3.activity.scroll) {
-          _this3.activity.scroll.onEnd = _this3.next.bind(_this3);
-        }
-      })["catch"](function (error) {
-        _this3.empty();
       });
-    };
-
-    // Метод для завантаження наступної сторінки
-    comp.next = function () {
-      var _this4 = this;
-      if (waitload) return;
-      if (object.page < total_pages) {
-        waitload = true;
-        object.page++;
+    } else {
+      // Backward compatibility for Lampa < 3.0
+      comp = new Lampa.InteractionCategory(object);
+      comp.create = function () {
+        var _this7 = this;
         var params = _objectSpread2({}, object);
         params.limit = 36;
-        if (!Api$3) {
-          var _Lampa4;
-          if ((_Lampa4 = Lampa) !== null && _Lampa4 !== void 0 && (_Lampa4 = _Lampa4.Storage) !== null && _Lampa4 !== void 0 && _Lampa4.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/component/main.js');
+        params.page = params.page || 1;
+        if (!Api$2) {
+          var _Lampa5;
+          if ((_Lampa5 = Lampa) !== null && _Lampa5 !== void 0 && (_Lampa5 = _Lampa5.Storage) !== null && _Lampa5 !== void 0 && _Lampa5.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
           return;
         }
-        (Api$3 && Api$3.recommendations(params)).then(function (data) {
-          _this4.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+        Api$2.recommendations(params).then(function (recommendations) {
+          _this7.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : {
             results: []
           });
-          waitload = false;
+          if (recommendations && recommendations.total_pages) {
+            total_pages = recommendations.total_pages;
+          }
+          if (_this7.activity.scroll) {
+            _this7.activity.scroll.onEnd = _this7.next.bind(_this7);
+          }
         })["catch"](function () {
-          waitload = false;
-        });
-      }
-    };
-    comp.cardRender = function (object, element, card) {
-      // Додаємо мітку TV для серіалів
-      if (element.method === 'tv') {
-        card.render().addClass('card--tv').append('<div class="card__type">' + Lampa.Lang.translate('trakttv_card_type_tv') + '</div>');
-      }
-      card.onMenu = false;
-      card.onEnter = function () {
-        Lampa.Activity.push({
-          url: '',
-          component: 'full',
-          id: element.id,
-          method: element.method,
-          card: card,
-          source: 'tmdb'
+          _this7.empty();
         });
       };
-    };
+      comp.next = function () {
+        var _this8 = this;
+        if (waitload) return;
+        if (object.page < total_pages) {
+          waitload = true;
+          object.page++;
+          var params = _objectSpread2({}, object);
+          params.limit = 36;
+          if (!Api$2) {
+            var _Lampa6;
+            if ((_Lampa6 = Lampa) !== null && _Lampa6 !== void 0 && (_Lampa6 = _Lampa6.Storage) !== null && _Lampa6 !== void 0 && _Lampa6.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+            return;
+          }
+          Api$2.recommendations(params).then(function (data) {
+            _this8.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+              results: []
+            });
+            waitload = false;
+          })["catch"](function () {
+            waitload = false;
+          });
+        }
+      };
+      comp.cardRender = function (object, element, card) {
+        if (element.method === 'tv') {
+          card.render().addClass('card--tv').append('<div class="card__type">' + Lampa.Lang.translate('trakttv_card_type_tv') + '</div>');
+        }
+        card.onMenu = false;
+        card.onEnter = function () {
+          Lampa.Activity.push({
+            url: '',
+            component: 'full',
+            id: element.id,
+            method: element.method,
+            card: card,
+            source: 'tmdb'
+          });
+        };
+      };
+    }
     return comp;
   }
   function watchlist$1(object) {
@@ -1802,70 +1932,147 @@
     return new baseRecommendations(object);
   }
   function lists(object) {
-    var comp = new Lampa.InteractionCategory(object);
+    var comp;
     var total_pages = 0;
     var waitload = false;
-    comp.create = function () {
-      var _this5 = this;
-      var params = _objectSpread2({}, object);
-      params.limit = 36;
-      params.page = params.page || 1;
-      if (!Api$3) {
-        var _Lampa5;
-        if ((_Lampa5 = Lampa) !== null && _Lampa5 !== void 0 && (_Lampa5 = _Lampa5.Storage) !== null && _Lampa5 !== void 0 && _Lampa5.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/component/main.js');
-        return;
-      }
-      (Api$3 && Api$3.likesLists(params)).then(function (data) {
-        if (data.total_pages) {
-          total_pages = data.total_pages;
+
+    // Use modular system for Lampa 3.0+, fallback to old system for compatibility
+    if (isLampa3 && Lampa.Maker) {
+      comp = Lampa.Maker.make('Category', object);
+      comp.use({
+        onCreate: function onCreate() {
+          var _this9 = this;
+          var params = _objectSpread2({}, object);
+          params.limit = 36;
+          params.page = params.page || 1;
+          if (!Api$2) {
+            var _Lampa7;
+            if ((_Lampa7 = Lampa) !== null && _Lampa7 !== void 0 && (_Lampa7 = _Lampa7.Storage) !== null && _Lampa7 !== void 0 && _Lampa7.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+            this.empty();
+            return;
+          }
+          Api$2.likesLists(params).then(function (data) {
+            if (data.total_pages) {
+              total_pages = data.total_pages;
+            }
+            _this9.build(data);
+          })["catch"](function (error) {
+            console.error('TraktTV', 'Likes Lists API response:', error);
+            _this9.empty();
+          });
+        },
+        onNext: function onNext(resolve, reject) {
+          var _this0 = this;
+          if (waitload) {
+            reject.call(this);
+            return;
+          }
+          if (object.page < total_pages) {
+            waitload = true;
+            object.page++;
+            var params = _objectSpread2({}, object);
+            params.limit = 36;
+            if (!Api$2) {
+              waitload = false;
+              reject.call(this);
+              return;
+            }
+            Api$2.likesLists(params).then(function (data) {
+              resolve.call(_this0, data);
+              waitload = false;
+            })["catch"](function () {
+              waitload = false;
+              reject.call(_this0);
+            });
+          } else {
+            reject.call(this);
+          }
+        },
+        onInstance: function onInstance(card, element) {
+          card.render().find('.card__title').remove();
+          var itemCountText = element.item_count ? "[".concat(element.item_count, "] ") : '';
+          card.render().find('.card__view').append("<div class=\"card__title\">".concat(itemCountText).concat(element.title, "</div>"));
+          card.use({
+            onlyMenu: false,
+            onlyEnter: function onlyEnter() {
+              Lampa.Activity.push({
+                url: '',
+                title: Lampa.Lang.translate('trakt_list_title_named').replace('{name}', element.title),
+                component: 'trakt_list_detail',
+                id: element.id,
+                name: element.title,
+                description: element.description,
+                source: 'tmdb'
+              });
+            }
+          });
         }
-        _this5.build(data);
-        if (_this5.activity.scroll) {
-          _this5.activity.scroll.onEnd = _this5.next.bind(_this5);
-        }
-      })["catch"](function (error) {
-        console.error('TraktTV', 'Likes Lists API response:', error);
-        _this5.empty();
       });
-    };
-    comp.next = function () {
-      var _this6 = this;
-      if (waitload) return;
-      if (object.page < total_pages) {
-        waitload = true;
-        object.page++;
+    } else {
+      // Backward compatibility for Lampa < 3.0
+      comp = new Lampa.InteractionCategory(object);
+      comp.create = function () {
+        var _this1 = this;
         var params = _objectSpread2({}, object);
         params.limit = 36;
-        if (!Api$3) {
-          var _Lampa6;
-          if ((_Lampa6 = Lampa) !== null && _Lampa6 !== void 0 && (_Lampa6 = _Lampa6.Storage) !== null && _Lampa6 !== void 0 && _Lampa6.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/component/main.js');
+        params.page = params.page || 1;
+        if (!Api$2) {
+          var _Lampa8;
+          if ((_Lampa8 = Lampa) !== null && _Lampa8 !== void 0 && (_Lampa8 = _Lampa8.Storage) !== null && _Lampa8 !== void 0 && _Lampa8.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
           return;
         }
-        (Api$3 && Api$3.likesLists(params)).then(function (data) {
-          _this6.append(data);
-          waitload = false;
-        })["catch"](function () {
-          waitload = false;
-        });
-      }
-    };
-    comp.cardRender = function (object, element, card) {
-      card.render().find('.card__title').remove();
-      var itemCountText = element.item_count ? "[".concat(element.item_count, "] ") : '';
-      card.render().find('.card__view').append("<div class=\"card__title\">".concat(itemCountText).concat(element.title, "</div>"));
-      card.onMenu = false;
-      card.onEnter = function () {
-        Lampa.Activity.push({
-          url: '',
-          title: Lampa.Lang.translate('trakt_list_title_named').replace('{name}', element.title),
-          component: 'trakt_list_detail',
-          id: element.id,
-          name: element.title,
-          description: element.description,
-          source: 'tmdb'
+        Api$2.likesLists(params).then(function (data) {
+          if (data.total_pages) {
+            total_pages = data.total_pages;
+          }
+          _this1.build(data);
+          if (_this1.activity.scroll) {
+            _this1.activity.scroll.onEnd = _this1.next.bind(_this1);
+          }
+        })["catch"](function (error) {
+          console.error('TraktTV', 'Likes Lists API response:', error);
+          _this1.empty();
         });
       };
-    };
+      comp.next = function () {
+        var _this10 = this;
+        if (waitload) return;
+        if (object.page < total_pages) {
+          waitload = true;
+          object.page++;
+          var params = _objectSpread2({}, object);
+          params.limit = 36;
+          if (!Api$2) {
+            var _Lampa9;
+            if ((_Lampa9 = Lampa) !== null && _Lampa9 !== void 0 && (_Lampa9 = _Lampa9.Storage) !== null && _Lampa9 !== void 0 && _Lampa9.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+            return;
+          }
+          Api$2.likesLists(params).then(function (data) {
+            _this10.append(data);
+            waitload = false;
+          })["catch"](function () {
+            waitload = false;
+          });
+        }
+      };
+      comp.cardRender = function (object, element, card) {
+        card.render().find('.card__title').remove();
+        var itemCountText = element.item_count ? "[".concat(element.item_count, "] ") : '';
+        card.render().find('.card__view').append("<div class=\"card__title\">".concat(itemCountText).concat(element.title, "</div>"));
+        card.onMenu = false;
+        card.onEnter = function () {
+          Lampa.Activity.push({
+            url: '',
+            title: Lampa.Lang.translate('trakt_list_title_named').replace('{name}', element.title),
+            component: 'trakt_list_detail',
+            id: element.id,
+            name: element.title,
+            description: element.description,
+            source: 'tmdb'
+          });
+        };
+      };
+    }
     return comp;
   }
   function list_detail(object) {
@@ -2603,283 +2810,6 @@
     createHeaderWithIcon: createHeaderWithIcon
   };
 
-  // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
-  var Api$2 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
-  /**
-   * Плагін для відображення рекомендацій на головній сторінці
-   */
-  var recommendationsPlugin = {
-    type: "video",
-    version: "2.5",
-    author: '@lme_chat',
-    name: "LME TraktTV",
-    inMemoryCache: [],
-    /**
-     * Функція для відображення рекомендацій на головній сторінці
-     * @returns {Object} Об'єкт з результатами для відображення
-     */
-    onMain: function onMain() {
-      if (!Lampa.Storage.field('trakttv_show_on_main', true)) return {
-        results: []
-      };
-      var userHasPermission = Lampa.Storage.get('trakt_token') && Lampa.Storage.field('trakttv_show_recommendations', true);
-      if (!userHasPermission) return {
-        results: []
-      };
-
-      // Отримуємо кешовані дані з внутрішнього кешу
-      var recommendations = Lampa.Storage.get('trakttv_cached_recommendations', '[]');
-
-      // Запускаємо оновлення в фоні (не блокуючи onMain)
-      this.updateRecommendationsInBackground();
-      if (!Array.isArray(recommendations) || recommendations.length === 0) {
-        return {
-          results: []
-        };
-      }
-
-      // Нормалізуємо дані
-      var normalizedResults = recommendations.map(function (item) {
-        var normalized = _objectSpread2({}, item);
-        if (item.type === 'tv' || item.card_type === 'tv') {
-          normalized.name = item.title || item.original_title;
-          normalized.first_air_date = item.release_date;
-        }
-        if (item.type === 'movie' || item.card_type === 'movie') {
-          delete normalized.name;
-          normalized.release_date = item.release_date;
-          normalized.title = item.title || item.original_title;
-        }
-        return normalized;
-      });
-      return {
-        title: icons.createHeaderWithIcon(icons.TRAKT_ICON, Lampa.Lang.translate('trakttv_recommendations')),
-        results: normalizedResults,
-        line_type: 'trakttv_recommendations',
-        onMore: function onMore() {
-          Lampa.Activity.push({
-            title: Lampa.Lang.translate('trakttv_recommendations'),
-            component: "trakttv_recommendations"
-          });
-        },
-        cardClass: function cardClass(item, params) {
-          var card = new Lampa.Card(item, params);
-          card.onEnter = function (target, card_data) {
-            // Логування для аналізу логіки визначення типу
-            var detectedType = card_data.type || card_data.card_type || (card_data.name ? 'tv' : 'movie');
-            Lampa.Activity.push({
-              url: card_data.url,
-              component: 'full',
-              id: card_data.id,
-              method: detectedType,
-              card: card_data,
-              source: card_data.source || params.object.source
-            });
-          };
-          // Додаємо перевірку на існування item перед використанням
-          if (item) {
-            setTimeout(function () {
-              // Отримуємо рендер-картку (елемент)
-              var card_element = card.render();
-
-              // Додаємо клас, якщо потрібно
-              if ((item.method || item.type || item.card_type || (item.name ? 'tv' : 'movie')) === 'tv') {
-                $(card_element).addClass('card--tv');
-
-                // Створюємо елемент типу
-                var cardTypeElement = $("<div>", {
-                  "class": "card__type",
-                  text: Lampa.Lang.translate('trakttv_card_type_tv')
-                });
-
-                // Додаємо у .card__view якщо знайдено
-                $(card_element).find(".card__view").append(cardTypeElement);
-              }
-            }, 1); // Можливо треба більшу затримку, якщо картка ще не в DOM (наприклад, 50 чи 100 мс)
-          }
-          return card;
-        }
-      };
-    },
-    /**
-     * Оновлює рекомендації в фоновому режимі
-     * @param {boolean} isMainPage - Чи викликається з головної сторінки
-     */
-    updateRecommendationsInBackground: function updateRecommendationsInBackground() {
-      var isMainPage = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
-      // Оновлюємо дані в фоні
-      // Якщо запит з головної сторінки, обмежуємо до 10 результатів
-      // Якщо запит зі сторінки рекомендацій, отримуємо 50 результатів
-      var limit = isMainPage ? 20 : 50;
-      if (!Api$2) {
-        var _Lampa;
-        if ((_Lampa = Lampa) !== null && _Lampa !== void 0 && (_Lampa = _Lampa.Storage) !== null && _Lampa !== void 0 && _Lampa.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/plugins/recommendations.js');
-        return;
-      }
-      (Api$2 && Api$2.recommendations({
-        limit: limit
-      })).then(function (data) {
-        // Додаємо перевірку на Array.isArray(data.results)
-        if (data && Array.isArray(data.results) && data.results.length > 0) {
-          Lampa.Storage.set('trakttv_cached_recommendations', data.results);
-        } else {
-          if (Lampa.Storage.field('trakt_enable_logging')) console.warn('TraktTV', 'Recommendations data results is not a valid array or is empty:', data.results);
-          Lampa.Storage.set('trakttv_cached_recommendations', []);
-        }
-      })["catch"](function (error) {
-        console.error('TraktTV', error);
-        // У випадку помилки, переконаємося, що кеш очищено
-        Lampa.Storage.set('trakttv_cached_recommendations', []);
-      });
-    }
-  };
-
-  // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
-  var Api$1 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
-
-  /**
-   * Плагін для відображення Up Next на головній сторінці
-   */
-  var upnextPlugin = {
-    type: "video",
-    version: "1.0",
-    author: '@lme_chat',
-    name: "LME TraktTV Up Next",
-    inMemoryCache: [],
-    /**
-     * Функція для відображення Up Next на головній сторінці
-     * @returns {Object} Об'єкт з результатами для відображення
-     */
-    onMain: function onMain() {
-      if (!Lampa.Storage.field('trakttv_show_on_main', true)) return {
-        results: []
-      };
-      var userHasPermission = Lampa.Storage.get('trakt_token') && Lampa.Storage.field('trakttv_show_upnext', true);
-      if (!userHasPermission) return {
-        results: []
-      };
-      var upnext = Lampa.Storage.get('trakttv_cached_upnext', '[]');
-      this.updateUpNextInBackground();
-      if (!Array.isArray(upnext) || upnext.length === 0) {
-        return {
-          results: []
-        };
-      }
-      var normalizedResults = upnext.map(function (item) {
-        var normalized = _objectSpread2({}, item);
-
-        // Створюємо уніфіковану функцію визначення типу контенту
-        var getContentType = function getContentType(data) {
-          // Спочатку перевіряємо method (для upnext API)
-          if (data.method) {
-            return data.method;
-          }
-          // Потім перевіряємо type (для recommendations API)
-          if (data.type) {
-            return data.type;
-          }
-          // Потім перевіряємо card_type (fallback)
-          if (data.card_type) {
-            return data.card_type;
-          }
-          // fallback за замовчуванням
-          return 'movie';
-        };
-        var contentType = getContentType(item);
-        if (contentType === 'tv' || contentType === 'show') {
-          normalized.name = item.title || item.original_title;
-          normalized.first_air_date = item.release_date;
-          normalized.type = 'tv'; // Додаємо type для сумісності
-          normalized.card_type = 'tv'; // Додаємо card_type для сумісності
-        }
-        if (contentType === 'movie') {
-          delete normalized.name;
-          normalized.release_date = item.release_date;
-          normalized.title = item.title || item.original_title;
-          normalized.type = 'movie'; // Додаємо type для сумісності
-          normalized.card_type = 'movie'; // Додаємо card_type для сумісності
-        }
-        if (contentType === 'episode') {
-          normalized.name = item.title || item.original_title;
-          normalized.first_air_date = item.release_date;
-          normalized.type = 'episode'; // Додаємо type для сумісності
-          normalized.card_type = 'episode'; // Додаємо card_type для сумісності
-        }
-        return normalized;
-      });
-      return {
-        title: icons.createHeaderWithIcon(icons.TRAKT_ICON, Lampa.Lang.translate('trakttv_upnext')),
-        results: normalizedResults,
-        line_type: 'trakttv_upnext',
-        onMore: function onMore() {
-          Lampa.Activity.push({
-            title: Lampa.Lang.translate('trakttv_upnext'),
-            component: "trakt_upnext"
-          });
-        },
-        cardClass: function cardClass(item, params) {
-          var card = new Lampa.Card(item, params);
-          card.onEnter = function (target, card_data) {
-            // Створюємо уніфіковану функцію визначення типу контенту
-            var getContentType = function getContentType(data) {
-              // Спочатку перевіряємо method (для upnext API)
-              if (data.method) {
-                return data.method;
-              }
-              // Потім перевіряємо type (для recommendations API)
-              if (data.type) {
-                return data.type;
-              }
-              // Потім перевіряємо card_type (fallback)
-              if (data.card_type) {
-                return data.card_type;
-              }
-              // fallback за замовчуванням
-              return 'movie';
-            };
-            var detectedType = getContentType(card_data);
-            Lampa.Activity.push({
-              url: card_data.url,
-              component: 'full',
-              id: card_data.id,
-              method: detectedType,
-              card: card_data,
-              source: card_data.source || params.object.source,
-              season: card_data.season,
-              episode: card_data.episode
-            });
-          };
-          return card;
-        }
-      };
-    },
-    /**
-     * Оновлює Up Next в фоновому режимі
-     * @param {boolean} isMainPage - Чи викликається з головної сторінки
-     */
-    updateUpNextInBackground: function updateUpNextInBackground() {
-      var isMainPage = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
-      var limit = isMainPage ? 20 : 50;
-      if (!Api$1) {
-        return;
-      }
-      (Api$1 && Api$1.upnext({
-        limit: limit
-      })).then(function (data) {
-        // Логування для аналізу API відповіді
-
-        if (Array.isArray(data === null || data === void 0 ? void 0 : data.results) && data.results.length > 0) {
-          Lampa.Storage.set('trakttv_cached_upnext', data.results);
-        } else {
-          Lampa.Storage.set('trakttv_cached_upnext', []);
-        }
-      })["catch"](function (error) {
-        console.error('TraktTV', error);
-        Lampa.Storage.set('trakttv_cached_upnext', []);
-      });
-    }
-  };
-
   function addWatchlistButton(card) {
     var button = document.createElement('div');
     button.className = 'full-start__button selector watchlist-button';
@@ -3220,7 +3150,7 @@
   }
 
   // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
-  var Api = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
+  var Api$1 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
   function main() {
     // Додаємо компонент Trakt.TV у налаштування
     Lampa.SettingsApi.addComponent({
@@ -3249,12 +3179,12 @@
         // Показати лоадер
         var loading = $("<div class=\"settings-param__value\">".concat(Lampa.Lang.translate('loading'), "</div>"));
         item.append(loading);
-        if (!Api) {
+        if (!Api$1) {
           var _Lampa;
           if ((_Lampa = Lampa) !== null && _Lampa !== void 0 && (_Lampa = _Lampa.Storage) !== null && _Lampa !== void 0 && _Lampa.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/config.js');
           return;
         }
-        Promise.all([Api && Api.get('/users/me'), Api && Api.get('/users/me/stats')]).then(function (_ref) {
+        Promise.all([Api$1 && Api$1.get('/users/me'), Api$1 && Api$1.get('/users/me/stats')]).then(function (_ref) {
           var _ref2 = _slicedToArray(_ref, 2),
             user = _ref2[0],
             stats = _ref2[1];
@@ -3308,12 +3238,12 @@
         if (Lampa.Storage.get('trakt_token')) return;
 
         // Device OAuth only
-        if (!Api) {
+        if (!Api$1) {
           var _Lampa2;
           if ((_Lampa2 = Lampa) !== null && _Lampa2 !== void 0 && (_Lampa2 = _Lampa2.Storage) !== null && _Lampa2 !== void 0 && _Lampa2.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/config.js');
           return;
         }
-        (Api && Api.auth.device.login()).then(function (data) {
+        (Api$1 && Api$1.auth.device.login()).then(function (data) {
           // Expect raw body: { device_code, user_code, verification_url, interval, expires_in }
           if (!data || !data.user_code || !data.verification_url) {
             Lampa.Bell.push({
@@ -3381,12 +3311,12 @@
         }
       },
       onChange: function onChange() {
-        if (!Api) {
+        if (!Api$1) {
           var _Lampa3;
           if ((_Lampa3 = Lampa) !== null && _Lampa3 !== void 0 && (_Lampa3 = _Lampa3.Storage) !== null && _Lampa3 !== void 0 && _Lampa3.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/config.js');
           return;
         }
-        Api && Api.auth.logout();
+        Api$1 && Api$1.auth.logout();
         Lampa.Bell.push({
           text: Lampa.Lang.translate('trakttvLogoutNoty')
         });
@@ -3581,12 +3511,12 @@
         return; // Stop polling
       }
       log('tick');
-      if (!Api) {
+      if (!Api$1) {
         log('Api missing in plugins/TraktTV/config.js');
         handlePollingError(modalInstance, 'trakttvAuthError', 'Authentication error', 'api-missing');
         return;
       }
-      Api.auth.device.poll(data.device_code).then(function (response) {
+      Api$1.auth.device.poll(data.device_code).then(function (response) {
         // Trakt.tv returns 200 OK with token on success
         handleAuthSuccess(modalInstance, response);
       })["catch"](function (error) {
@@ -3688,7 +3618,7 @@
    */
   function getCompletionKey(media) {
     try {
-      var type = getContentType(media) === 'show' ? 'episode' : 'movie';
+      var type = getContentType$1(media) === 'show' ? 'episode' : 'movie';
       var ids = media.ids || {};
       if (type === 'movie') {
         if (ids.trakt) return "movie:trakt:".concat(ids.trakt);
@@ -4040,7 +3970,7 @@
               console.log('TraktTV', 'DEBUG - finish function called:', {
                 mediaId: media.id,
                 mediaHash: media.hash,
-                mediaType: getContentType(media),
+                mediaType: getContentType$1(media),
                 tokenAvailable: !!token,
                 timestamp: new Date().toISOString()
               });
@@ -4084,7 +4014,7 @@
                   while (1) switch (_context4.n) {
                     case 0:
                       // replicate existing logic but only final "history" call
-                      type = getContentType(media); // if movie -> addToHistory({method:'movie', id, ids})
+                      type = getContentType$1(media); // if movie -> addToHistory({method:'movie', id, ids})
                       if (!(type === 'movie')) {
                         _context4.n = 4;
                         break;
@@ -4281,7 +4211,7 @@
     }));
     return _finish.apply(this, arguments);
   }
-  function getContentType(card) {
+  function getContentType$1(card) {
     if (card.episode_run_time || card.first_air_date || card.created_by || card.number_of_seasons || card.number_of_episodes) {
       return 'show';
     }
@@ -4432,7 +4362,7 @@
         if (this.isLoggingEnabled()) {
           console.log('TraktTV', 'DEBUG - Timeline route media:', {
             cardId: card.id,
-            cardType: getContentType(card),
+            cardType: getContentType$1(card),
             percent: percent,
             minProgress: minProgress,
             currentHash: hash,
@@ -4448,7 +4378,7 @@
             mediaIds: media.ids,
             mediaId: media.id,
             mediaHash: media.hash,
-            contentType: getContentType(media)
+            contentType: getContentType$1(media)
           });
         }
         slog('Timeline threshold reached, finish intent and attempt', {
@@ -4549,7 +4479,7 @@
       }
 
       // Визначаємо тип вмісту
-      var contentType = getContentType(card);
+      var contentType = getContentType$1(card);
       console.log('TraktTV', 'Determined content type:', contentType);
 
       // Отримуємо Trakt ID за TMDB ID
@@ -4789,10 +4719,21 @@
      * @param {Object} e - Об'єкт події
      */
     addRelatedListsBlock: function addRelatedListsBlock(e) {
+      var _e$object;
       // Перевіряємо наявність об'єкта події
       if (!e) {
         console.error('TraktTV', 'Cannot add related lists block - event object is missing');
         return;
+      }
+
+      // Перевірка чи вже додано (дедуплікація)
+      if (e.object && e.object.activity && typeof e.object.activity.render === 'function') {
+        if (e.object.activity.render().find('.tag-count.trakttv-lists').length > 0) {
+          if (Lampa.Storage.field('trakt_enable_logging')) {
+            console.log('TraktTV', 'Related lists block already exists, skipping');
+          }
+          return;
+        }
       }
 
       // Перевіряємо наявність даних картки
@@ -4802,8 +4743,22 @@
         return;
       }
 
-      // Перевіряємо наявність методу
-      var method = e.object && e.object.method ? e.object.method : card.method || 'movie';
+      // Визначаємо тип контенту - e.object.method є primary джерело
+      var method = (_e$object = e.object) === null || _e$object === void 0 ? void 0 : _e$object.method; // 'tv' or 'movie'
+
+      // Fallback через евристики з e.data.movie
+      if (!method && e.data && e.data.movie) {
+        method = e.data.movie.name || e.data.movie.first_air_date ? 'tv' : 'movie';
+      }
+
+      // Fallback через card евристики
+      if (!method && card) {
+        method = card.method || card.card_type || (card.first_air_date || card.name ? 'tv' : 'movie');
+      }
+      if (Lampa.Storage.field('trakt_enable_logging')) {
+        var _e$object2;
+        console.log('TraktTV', 'addRelatedListsBlock method:', method, 'from e.object.method:', (_e$object2 = e.object) === null || _e$object2 === void 0 ? void 0 : _e$object2.method);
+      }
 
       // Перевіряємо наявність ID
       if (!card.id && (!card.external_ids || !card.external_ids.trakt_id)) {
@@ -4812,6 +4767,7 @@
       }
 
       // Параметри для запиту
+      // Trakt API використовує 'show' замість 'tv'
       var params = {
         id: card.id,
         method: method === 'tv' ? 'show' : 'movie'
@@ -4862,7 +4818,7 @@
         }
 
         // Створюємо елемент для відображення кількості списків
-        var listsCountElement = $("\n                <div class=\"tag-count selector\">\n                    <div class=\"tag-count__name\">".concat(Lampa.Lang.translate('trakttv_related_lists'), "</div>\n                </div>\n            "));
+        var listsCountElement = $("\n                <div class=\"tag-count selector trakttv-lists\">\n                    <div class=\"tag-count__name\">".concat(Lampa.Lang.translate('trakttv_related_lists'), "</div>\n                </div>\n            "));
 
         // Додаємо обробник кліку для відображення списків
         listsCountElement.on('hover:enter', function () {
@@ -4918,6 +4874,18 @@
       // Перевіряємо наявність необхідних даних
       if (!e || !e.data) {
         return;
+      }
+
+      // Логування для дебагу
+      if (Lampa.Storage.field('trakt_enable_logging')) {
+        var _e$object3, _e$data, _e$data2, _e$data3, _e$data4;
+        console.log('TraktTV', 'onFullCardReady:', {
+          'e.object.method': (_e$object3 = e.object) === null || _e$object3 === void 0 ? void 0 : _e$object3.method,
+          'e.data.movie.name': (_e$data = e.data) === null || _e$data === void 0 || (_e$data = _e$data.movie) === null || _e$data === void 0 ? void 0 : _e$data.name,
+          'e.data.movie.first_air_date': (_e$data2 = e.data) === null || _e$data2 === void 0 || (_e$data2 = _e$data2.movie) === null || _e$data2 === void 0 ? void 0 : _e$data2.first_air_date,
+          'card.id': (_e$data3 = e.data) === null || _e$data3 === void 0 ? void 0 : _e$data3.id,
+          'card.ids': (_e$data4 = e.data) === null || _e$data4 === void 0 ? void 0 : _e$data4.ids
+        });
       }
 
       // Перевіряємо наявність activity
@@ -4986,6 +4954,340 @@
     }
   };
 
+  /**
+   * Helper functions for ContentRows integration (Lampa 3.0+)
+   */
+
+  /**
+   * Check if user has permission to see UpNext content
+   * @returns {boolean}
+   */
+  function checkUpNextPermissions() {
+    if (!Lampa.Storage.field('trakttv_show_on_main', true)) return false;
+    if (!Lampa.Storage.get('trakt_token')) return false;
+    if (!Lampa.Storage.field('trakttv_show_upnext', true)) return false;
+    return true;
+  }
+
+  /**
+   * Check if user has permission to see Recommendations content
+   * @returns {boolean}
+   */
+  function checkRecommendationsPermissions() {
+    if (!Lampa.Storage.field('trakttv_show_on_main', true)) return false;
+    if (!Lampa.Storage.get('trakt_token')) return false;
+    if (!Lampa.Storage.field('trakttv_show_recommendations', true)) return false;
+    return true;
+  }
+
+  /**
+   * Unified content type detection
+   * @param {Object} data - Item data
+   * @returns {string} - Content type: 'movie', 'tv', 'show', 'episode'
+   */
+  function getContentType(data) {
+    if (data.method) return data.method;
+    if (data.type) return data.type;
+    if (data.card_type) return data.card_type;
+    return data.name ? 'tv' : 'movie';
+  }
+
+  /**
+   * Normalize content data for display (Lampa 3.0+)
+   * Always adds params.emit for modular card system
+   * @param {Array} items - Array of content items
+   * @returns {Array} - Normalized items with params.emit
+   */
+  function normalizeContentData(items) {
+    return items.map(function (item) {
+      var normalized = _objectSpread2({}, item);
+      var contentType = getContentType(item);
+      if (contentType === 'tv' || contentType === 'show') {
+        normalized.name = item.title || item.original_title;
+        normalized.first_air_date = item.release_date;
+        normalized.type = 'tv';
+        normalized.card_type = 'tv';
+      }
+      if (contentType === 'movie') {
+        delete normalized.name;
+        normalized.release_date = item.release_date;
+        normalized.title = item.title || item.original_title;
+        normalized.type = 'movie';
+        normalized.card_type = 'movie';
+      }
+      if (contentType === 'episode') {
+        normalized.name = item.title || item.original_title;
+        normalized.first_air_date = item.release_date;
+        normalized.type = 'episode';
+        normalized.card_type = 'episode';
+      }
+
+      // Add params.emit for Lampa 3.0+ modular system
+      // CRITICAL: Use normalized closure variables instead of this.data
+      // to prevent runtime modification by Lampa
+      normalized.params = {
+        emit: {
+          onEnter: function onEnter() {
+            var _this$data3;
+            // Use normalized.method (fixed at creation time) instead of getContentType(this.data)
+            var fixedMethod = normalized.method || normalized.card_type || normalized.type;
+            if (Lampa.Storage.field('trakt_enable_logging')) {
+              var _this$data, _this$data2;
+              console.log('TraktTV', 'onEnter called:', {
+                'normalized.method': normalized.method,
+                'normalized.id': normalized.id,
+                'normalized.title': normalized.title || normalized.name,
+                'this.data.method': (_this$data = this.data) === null || _this$data === void 0 ? void 0 : _this$data.method,
+                'this.data.id': (_this$data2 = this.data) === null || _this$data2 === void 0 ? void 0 : _this$data2.id,
+                'fixedMethod': fixedMethod
+              });
+            }
+            Lampa.Activity.push({
+              url: ((_this$data3 = this.data) === null || _this$data3 === void 0 ? void 0 : _this$data3.url) || normalized.url,
+              component: 'full',
+              id: normalized.id,
+              // Use normalized.id (fixed)
+              method: fixedMethod,
+              // Use fixed method from normalized
+              card: normalized,
+              // Pass normalized instead of this.data
+              source: normalized.source || 'tmdb',
+              season: normalized.season,
+              episode: normalized.episode
+            });
+          }
+        }
+      };
+      return normalized;
+    });
+  }
+
+  /**
+   * Filter items by content type
+   * @param {Array} items - Array of items to filter
+   * @param {string} filterType - Type to filter: 'movie', 'tv', 'show'
+   * @returns {Array} - Filtered items
+   */
+  function filterByContentType(items, filterType) {
+    return items.filter(function (item) {
+      var type = getContentType(item);
+      if (filterType === 'tv') {
+        return type === 'tv' || type === 'show';
+      }
+      return type === filterType;
+    });
+  }
+
+  // Local safe resolver for Api
+  var Api = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
+
+  /**
+   * Initialize ContentRows for TraktTV plugin (Lampa 3.0+)
+   * Registers content rows for main and category screens
+   */
+  function initContentRows() {
+    console.log('TraktTV', 'Registering ContentRows...');
+
+    // Cleanup deprecated cache keys
+    Lampa.Storage.set('trakttv_cached_upnext', null);
+    Lampa.Storage.set('trakttv_cached_recommendations', null);
+
+    // Register UpNext row
+    registerUpNextRow();
+
+    // Register Recommendations rows
+    registerRecommendationsRows();
+    console.log('TraktTV', 'ContentRows registered successfully');
+  }
+
+  /**
+   * Register UpNext content row
+   * Shows on: Main screen, TV category only
+   */
+  function registerUpNextRow() {
+    Lampa.ContentRows.add({
+      index: 1,
+      screen: ['main', 'category'],
+      call: function call(params, screen) {
+        // Filter: only show on main OR tv category
+        if (screen === 'category' && params.url !== 'tv') return;
+
+        // Permission checks
+        if (!checkUpNextPermissions()) return;
+        return function (call) {
+          // Load data directly from API without caching
+          if (!Api) {
+            console.error('TraktTV', 'Api not available in registerUpNextRow');
+            return call();
+          }
+          Api.upnext({
+            limit: 20
+          }).then(function (data) {
+            if (!data || !Array.isArray(data.results) || data.results.length === 0) {
+              return call();
+            }
+
+            // Normalize data
+            var normalizedResults = normalizeContentData(data.results);
+            call({
+              title: Lampa.Lang.translate('trakttv_upnext'),
+              results: normalizedResults,
+              onMore: function onMore() {
+                Lampa.Activity.push({
+                  title: Lampa.Lang.translate('trakttv_upnext'),
+                  component: "trakt_upnext"
+                });
+              }
+            });
+          })["catch"](function (error) {
+            console.error('TraktTV', 'UpNext load error:', error);
+            call(); // Call empty callback on error
+          });
+        };
+      }
+    });
+  }
+
+  /**
+   * Register Recommendations content rows
+   * Shows on: Main screen (all), Movie category (movies only), TV category (TV only)
+   */
+  function registerRecommendationsRows() {
+    // Main screen: show all recommendations (mixed)
+    Lampa.ContentRows.add({
+      index: 2,
+      screen: ['main'],
+      call: function call(params, screen) {
+        // Permission checks
+        if (!checkRecommendationsPermissions()) return;
+        return function (call) {
+          // Load data directly from API without caching
+          if (!Api) {
+            console.error('TraktTV', 'Api not available in registerRecommendationsRows (main)');
+            return call();
+          }
+          Api.recommendations({
+            limit: 20
+          }).then(function (data) {
+            if (!data || !Array.isArray(data.results) || data.results.length === 0) {
+              return call();
+            }
+
+            // Normalize data
+            var normalizedResults = normalizeContentData(data.results);
+            call({
+              title: Lampa.Lang.translate('trakttv_recommendations'),
+              results: normalizedResults,
+              onMore: function onMore() {
+                Lampa.Activity.push({
+                  title: Lampa.Lang.translate('trakttv_recommendations'),
+                  component: "trakttv_recommendations"
+                });
+              }
+            });
+          })["catch"](function (error) {
+            console.error('TraktTV', 'Recommendations load error (main):', error);
+            call(); // Call empty callback on error
+          });
+        };
+      }
+    });
+
+    // Movie category: show only movies
+    Lampa.ContentRows.add({
+      index: 2,
+      screen: ['category'],
+      call: function call(params, screen) {
+        // Only show on Movie category
+        if (params.url !== 'movie') return;
+
+        // Permission checks
+        if (!checkRecommendationsPermissions()) return;
+        return function (call) {
+          // Load data directly from API without caching
+          if (!Api) {
+            console.error('TraktTV', 'Api not available in registerRecommendationsRows (movie)');
+            return call();
+          }
+          Api.recommendations({
+            limit: 20
+          }).then(function (data) {
+            if (!data || !Array.isArray(data.results) || data.results.length === 0) {
+              return call();
+            }
+
+            // Filter movies only
+            var filtered = filterByContentType(data.results, 'movie');
+            if (filtered.length === 0) return call();
+
+            // Normalize data
+            var normalizedResults = normalizeContentData(filtered);
+            call({
+              title: Lampa.Lang.translate('trakttv_recommendations'),
+              results: normalizedResults,
+              onMore: function onMore() {
+                Lampa.Activity.push({
+                  title: Lampa.Lang.translate('trakttv_recommendations'),
+                  component: "trakttv_recommendations"
+                });
+              }
+            });
+          })["catch"](function (error) {
+            console.error('TraktTV', 'Recommendations load error (movie):', error);
+            call(); // Call empty callback on error
+          });
+        };
+      }
+    });
+
+    // TV category: show only TV shows
+    Lampa.ContentRows.add({
+      index: 2,
+      screen: ['category'],
+      call: function call(params, screen) {
+        // Only show on TV category
+        if (params.url !== 'tv') return;
+
+        // Permission checks
+        if (!checkRecommendationsPermissions()) return;
+        return function (call) {
+          // Load data directly from API without caching
+          if (!Api) {
+            console.error('TraktTV', 'Api not available in registerRecommendationsRows (tv)');
+            return call();
+          }
+          Api.recommendations({
+            limit: 20
+          }).then(function (data) {
+            if (!data || !Array.isArray(data.results) || data.results.length === 0) {
+              return call();
+            }
+
+            // Filter TV shows only
+            var filtered = filterByContentType(data.results, 'tv');
+            if (filtered.length === 0) return call();
+
+            // Normalize data
+            var normalizedResults = normalizeContentData(filtered);
+            call({
+              title: Lampa.Lang.translate('trakttv_recommendations'),
+              results: normalizedResults,
+              onMore: function onMore() {
+                Lampa.Activity.push({
+                  title: Lampa.Lang.translate('trakttv_recommendations'),
+                  component: "trakttv_recommendations"
+                });
+              }
+            });
+          })["catch"](function (error) {
+            console.error('TraktTV', 'Recommendations load error (tv):', error);
+            call(); // Call empty callback on error
+          });
+        };
+      }
+    });
+  }
+
   // Helper getter: prefer module api, fallback to global bridge
   function getGlobalApi() {
     try {
@@ -5031,13 +5333,6 @@
     // Додаємо стилі
     Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
-
-    // Реєструємо плагіни
-    if (!Array.isArray(Lampa.Manifest.plugins)) {
-      Lampa.Manifest.plugins = [];
-    }
-    Lampa.Manifest.plugins.push(recommendationsPlugin);
-    Lampa.Manifest.plugins.push(upnextPlugin);
 
     // Фонове оновлення токена при старті
     // Викликати refresh ТІЛЬКИ якщо є refresh_token і не активний Device OAuth
@@ -5095,6 +5390,16 @@
     events.init();
     // Ініціалізуємо модуль відстеження перегляду
     watching.init();
+
+    // Initialize ContentRows (Lampa 3.0+ required)
+    try {
+      initContentRows();
+      if (Lampa.Storage.field('trakt_enable_logging')) {
+        console.log('TraktTV', 'ContentRows initialized successfully');
+      }
+    } catch (error) {
+      console.error('TraktTV', 'ContentRows initialization failed:', error);
+    }
   }
   if (!window.plugin_trakt_ready) {
     // Додаємо глобальний обробник unhandledrejection на самому початку
