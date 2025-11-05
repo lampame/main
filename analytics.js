@@ -6,7 +6,7 @@
 
     var STORAGE_KEY = 'LME.Analytics.sent.v1';
     // ЗАМІНИТИ ***** на реальний apiKey
-    var API_URL = 'https://api.jsonstorage.net/v1/json/?Name=TorrentManager&apiKey=0cc5e548-b14c-4beb-bc54-7ac5596dc0c6';
+    var API_URL = 'https://api.jsonstorage.net/v1/json/?Name=Analytics&apiKey=0cc5e548-b14c-4beb-bc54-7ac5596dc0c6';
 
     function loadSent(){
         try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
