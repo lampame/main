@@ -553,8 +553,8 @@
         var proxyTMDBApi;
         var proxyTMDBImage;
         if (Lampa.Storage.field('lmetorrentproxyTMDB') == true) {
-          proxyTMDBApi = "https://lampame.v6.rocks?destination=https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key());
-          proxyTMDBImage = 'https://lampame.v6.rocks?destination=https://tmdb.melonhu.cn/img/t/p/';
+          proxyTMDBApi = "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key());
+          proxyTMDBImage = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/img/t/p/';
         }
 
         // Делаем GET-запрос к API TMDB
@@ -592,7 +592,7 @@
     var url$1 = Lampa.Storage.field("lmetorrentqBittorentUrl");
     var proxy$1 = "";
     if (Lampa.Storage.field("lmetorrentqBittorentProxy") === true) {
-      proxy$1 = 'https://lampame.v6.rocks?destination=';
+      proxy$1 = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
     }
     function getHeaders$3(type) {
       var headers = {};
@@ -1024,7 +1024,7 @@
         useProxy: Lampa.Storage.field("".concat(CONFIG_PREFIX$1, "Proxy")) === true,
         autostart: Lampa.Storage.field("".concat(CONFIG_PREFIX$1, "Autostart")),
         sequentialDownload: Lampa.Storage.field("".concat(CONFIG_PREFIX$1, "SequentialDownload")),
-        proxy: 'https://lampame.v6.rocks?destination='
+        proxy: 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/'
       };
     }
 
@@ -1687,7 +1687,7 @@
     var pass = Lampa.Storage.field("lmetorrentsynologyPass");
     var proxy = "";
     if (Lampa.Storage.field("lmetorrentsynologyProxy") === true) {
-      proxy = 'https://lampame.v6.rocks?destination=';
+      proxy = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
     }
     function getHeaders$1() {
       var headers = {
@@ -2034,7 +2034,7 @@
         autostart: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Autostart")),
         sequentialDownload: Lampa.Storage.field("".concat(CONFIG_PREFIX, "SequentialDownload")),
         webdavUrl: Lampa.Storage.field("".concat(CONFIG_PREFIX, "WebdavUrl")),
-        proxy: 'https://lampame.v6.rocks?destination='
+        proxy: 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/'
       };
     }
 
@@ -2946,7 +2946,7 @@
                 pass: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Pass")),
                 path: Lampa.Storage.get("".concat(CONFIG_PREFIX, "Path")) || DEFAULT_RPC_PATH,
                 useProxy: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Proxy")) === true,
-                proxy: 'https://lampame.v6.rocks?destination='
+                proxy: 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/'
               }; // Формуємо заголовки
               headers = {
                 'Authorization': "Basic ".concat(btoa(config.user + ":" + config.pass)),
@@ -2991,7 +2991,7 @@
                 pass: Lampa.Storage.field("".concat(_CONFIG_PREFIX, "Pass")),
                 path: Lampa.Storage.get("".concat(_CONFIG_PREFIX, "Path")) || _DEFAULT_RPC_PATH,
                 useProxy: Lampa.Storage.field("".concat(_CONFIG_PREFIX, "Proxy")) === true,
-                proxy: 'https://lampame.v6.rocks?destination='
+                proxy: 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/'
               }; // Формуємо заголовки
               _headers = {
                 'Authorization': "Basic ".concat(btoa(_config.user + ":" + _config.pass)),
@@ -3100,7 +3100,7 @@
               url = Lampa.Storage.field("lmetorrentqBittorentUrl");
               proxy = "";
               if (Lampa.Storage.field("lmetorrentqBittorentProxy") === true) {
-                proxy = 'https://lampame.v6.rocks?destination=';
+                proxy = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
               }
               _context6.n = 2;
               return $.ajax({
