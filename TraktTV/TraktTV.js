@@ -1235,7 +1235,7 @@
           // Отримуємо інформацію про останній вийшовший епізод для кожного серіалу паралельно
           var lastEpisodePromises = watching.map(function (item) {
             var showId = item.show.ids.trakt;
-            return requestApi('GET', "/shows/".concat(showId, "/last_episode")).then(function (lastEpisode) {
+            return requestApi('GET', "/shows/".concat(showId, "/last_episode?extended=full")).then(function (lastEpisode) {
               var watchedEpisodes = 0;
               if (Array.isArray(item.seasons)) {
                 item.seasons.forEach(function (season) {
