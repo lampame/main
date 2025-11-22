@@ -1215,6 +1215,8 @@
         requestApi('GET', '/sync/watched/shows?extended=images,full,seasons').then(function (watchedResponse) {
           if (logging) console.log('TraktTV', 'upnext: watchedResponse', watchedResponse);
           var watched = Array.isArray(watchedResponse) ? watchedResponse : [];
+
+          // Фільтруємо серіали з непереглянутими епізодами
           var watching = watched.filter(function (item) {
             if (!item.show || typeof item.show.aired_episodes !== 'number') return false;
             var totalEpisodes = item.show.aired_episodes;
@@ -1229,47 +1231,74 @@
             return totalEpisodes > watchedEpisodes;
           });
           if (logging) console.log('TraktTV', 'upnext: watching (filtered)', watching);
-          var results = watching.map(function (item) {
-            var watchedEpisodes = 0;
-            var lastWatchedDate = null;
-            if (Array.isArray(item.seasons)) {
-              item.seasons.forEach(function (season) {
-                if (Array.isArray(season.episodes) && season.number > 0) {
-                  watchedEpisodes += season.episodes.length;
-                  season.episodes.forEach(function (episode) {
-                    if (episode.last_watched_at) {
-                      var episodeDate = new Date(episode.last_watched_at);
-                      if (!lastWatchedDate || episodeDate > lastWatchedDate) {
-                        lastWatchedDate = episodeDate;
-                      }
-                    }
-                  });
-                }
-              });
-            }
-            return {
-              component: 'full',
-              id: item.show.ids.tmdb || item.show.ids.trakt,
-              ids: item.show.ids,
-              // Додаємо всі ids
-              title: item.show.title,
-              original_title: item.show.original_title || item.show.title,
-              release_date: item.show.year ? String(item.show.year) : '',
-              vote_average: item.show.rating || 0,
-              poster: getImageUrl(item.show, 'poster'),
-              image: getImageUrl(item.show, 'fanart'),
-              method: 'tv',
-              release_quality: "".concat(watchedEpisodes, "/").concat(item.show.aired_episodes),
-              status: item.show.status,
-              last_watched: lastWatchedDate
-            };
+
+          // Отримуємо інформацію про останній вийшовший епізод для кожного серіалу паралельно
+          var lastEpisodePromises = watching.map(function (item) {
+            var showId = item.show.ids.trakt;
+            return requestApi('GET', "/shows/".concat(showId, "/last_episode")).then(function (lastEpisode) {
+              var watchedEpisodes = 0;
+              if (Array.isArray(item.seasons)) {
+                item.seasons.forEach(function (season) {
+                  if (Array.isArray(season.episodes) && season.number > 0) {
+                    watchedEpisodes += season.episodes.length;
+                  }
+                });
+              }
+              return {
+                component: 'full',
+                id: item.show.ids.tmdb || item.show.ids.trakt,
+                ids: item.show.ids,
+                title: item.show.title,
+                original_title: item.show.original_title || item.show.title,
+                release_date: item.show.year ? String(item.show.year) : '',
+                vote_average: item.show.rating || 0,
+                poster: getImageUrl(item.show, 'poster'),
+                image: getImageUrl(item.show, 'fanart'),
+                method: 'tv',
+                release_quality: "".concat(watchedEpisodes, "/").concat(item.show.aired_episodes),
+                status: item.show.status,
+                last_aired: (lastEpisode === null || lastEpisode === void 0 ? void 0 : lastEpisode.first_aired) || null
+              };
+            })["catch"](function (error) {
+              // Якщо не вдалося отримати останній епізод, повертаємо без дати
+              if (logging) console.warn('TraktTV', "Failed to get last episode for show ".concat(item.show.title, ":"), error);
+              var watchedEpisodes = 0;
+              if (Array.isArray(item.seasons)) {
+                item.seasons.forEach(function (season) {
+                  if (Array.isArray(season.episodes) && season.number > 0) {
+                    watchedEpisodes += season.episodes.length;
+                  }
+                });
+              }
+              return {
+                component: 'full',
+                id: item.show.ids.tmdb || item.show.ids.trakt,
+                ids: item.show.ids,
+                title: item.show.title,
+                original_title: item.show.original_title || item.show.title,
+                release_date: item.show.year ? String(item.show.year) : '',
+                vote_average: item.show.rating || 0,
+                poster: getImageUrl(item.show, 'poster'),
+                image: getImageUrl(item.show, 'fanart'),
+                method: 'tv',
+                release_quality: "".concat(watchedEpisodes, "/").concat(item.show.aired_episodes),
+                status: item.show.status,
+                last_aired: null
+              };
+            });
           });
+
+          // Чекаємо на всі запити
+          return Promise.all(lastEpisodePromises);
+        }).then(function (results) {
           if (logging) console.log('TraktTV', 'upnext: results (mapped)', results);
+
+          // Сортуємо по даті виходу останнього епізоду (найновіші першими)
           results.sort(function (a, b) {
-            if (!a.last_watched && !b.last_watched) return 0;
-            if (!a.last_watched) return 1;
-            if (!b.last_watched) return -1;
-            return new Date(b.last_watched) - new Date(a.last_watched);
+            if (!a.last_aired && !b.last_aired) return 0;
+            if (!a.last_aired) return 1;
+            if (!b.last_aired) return -1;
+            return new Date(b.last_aired) - new Date(a.last_aired);
           });
 
           // Calculate total items and pages
