@@ -1356,41 +1356,6 @@
   }();
 
   function addMenuItem() {
-    // let button = $(`<li class="menu__item selector" data-action="hikka_anime">
-    //     <div class="menu__ico">
-    //         <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="#000000">
-    //             <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-    //             <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-    //             <g id="SVGRepo_iconCarrier">
-    //                 <defs>
-    //                     <style>.a{fill:currentColor;stroke:#ffffff;stroke-linecap:round;stroke-linejoin:round;}</style>
-    //                 </defs>
-    //                 <rect class="a" x="6.1336" y="9.4032" width="35.7327" height="26.5581" rx="6.7532"></rect>
-    //                 <line class="a" x1="17.4835" y1="4.5" x2="20.4078" y2="9.4032"></line>
-    //                 <line class="a" x1="13.2594" y1="21.6849" x2="20.0829" y2="18.9592"></line>
-    //                 <line class="a" x1="30.5165" y1="4.5" x2="27.5922" y2="9.4032"></line>
-    //                 <line class="a" x1="34.7406" y1="21.6849" x2="27.9171" y2="18.9592"></line>
-    //                 <path class="a" d="M29.0544,24.9161c-.5827,1.4721-1.1508,2.54-2.5273,2.54-1.074,0-1.666-.4976-2.5271-1.8363-.8611,1.3387-1.4531,1.8363-2.5271,1.8363-1.3765,0-1.9446-1.0682-2.5273-2.54"></path>
-    //                 <path class="a" d="M25.9676,35.9613v2.033s8.6917.2889,8.6917,5.5057H13.3407c0-5.2168,8.6917-5.5057,8.6917-5.5057v-2.033"></path>
-    //             </g>
-    //         </svg>
-    //     </div>
-    //     <div class="menu__text">Hikka Anime</div>
-    // </li>`)
-
-    // // Додаємо обробник події
-    // button.on('hover:enter', function () {
-    //     Lampa.Activity.push({
-    //         url: '',
-    //         title: 'Hikka Anime',
-    //         component: 'hikka_anime',
-    //         page: 1
-    //     })
-    // })
-
-    // // Вставляємо пункт у меню
-    // $('.menu .menu__list').eq(0).append(button)
-
     var button = Lampa.Menu.addButton('<svg><use xlink:href="#sprite-anime"></use></svg>', 'Hikka Anime', function () {
       Lampa.Activity.push({
         url: '',
