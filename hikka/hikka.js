@@ -256,12 +256,13 @@
       first_air_date: anime.media_type !== 'movie' && anime.year ? anime.year + '-01-01' : undefined,
       status: STATUS_MAP[anime.status] || anime.status,
       media_type: anime.media_type,
-      // Використовуємо quality для заміни стандартного бейджу типу
-      quality: getMediaTypeLabel(anime.media_type),
+      // Quality: 'UA' if translated, otherwise undefined (or real quality if we had it)
+      quality: anime.translated_ua ? 'UA' : undefined,
+      // Custom label for our badge
+      media_type_label: getMediaTypeLabel(anime.media_type),
       // Поле для іконки перекладу
       has_translation: anime.translated_ua,
-      translated_ua: true,
-      // Для іконки українського прапора
+      translated_ua: anime.translated_ua,
       hikka_slug: anime.slug
     };
   }
@@ -736,15 +737,26 @@
         render.addClass('selector');
         render.addClass('hikka-card'); // Add scoped class
 
-        // Додаємо кастомний type badge для Hikka
-        if (element.quality) {
-          render.addClass('hikka-hide-type');
+        // Hide standard type and add custom one
+        render.addClass('hikka-hide-type');
+        if (element.media_type_label) {
           var customBadge = document.createElement('div');
           customBadge.className = 'hikka-custom-type-badge';
-          customBadge.innerText = element.quality;
+          customBadge.innerText = element.media_type_label;
           var viewElement = render[0].querySelector('.card__view');
           if (viewElement) {
             viewElement.appendChild(customBadge);
+          }
+        }
+
+        // Handle UA translation badge
+        if (element.translated_ua) {
+          var translateBadge = document.createElement('div');
+          translateBadge.className = 'hikka-custom-translate-badge';
+          translateBadge.innerText = 'Солов\'їна';
+          var _viewElement = render[0].querySelector('.card__view');
+          if (_viewElement) {
+            _viewElement.appendChild(translateBadge);
           }
         }
 
@@ -1819,7 +1831,9 @@
 
   function init() {
     // Додаємо стилі для плагіну через шаблонну систему
-    Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card.hikka-hide-type .card__type{display:none !important;visibility:hidden !important;opacity:0 !important;position:absolute !important;left:-9999px !important;z-index:-1 !important}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-card .card__quality[data-quality=ua]{display:none}.hikka-card .card__quality[data-quality=ua]::after{content:'';position:absolute;top:0;left:0;width:100%;height:100%;background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card .hikka-custom-type-badge{position:absolute;top:8px;left:8px;background:-webkit-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:-o-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:linear-gradient(135deg,#667eea 0,#764ba2 100%);color:white;padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;z-index:10}.hikka-card.card--tv .hikka-custom-type-badge{background-color:rgba(0,123,255,0.8) !important}.hikka-card.card--movie .hikka-custom-type-badge{background-color:rgba(220,53,69,0.8) !important}.hikka-card.card--ova .hikka-custom-type-badge,.hikka-card.card--ona .hikka-custom-type-badge,.hikka-card.card--special .hikka-custom-type-badge,.hikka-card.card--music .hikka-custom-type-badge{background-color:rgba(108,117,125,0.8) !important}\n        </style>\n    ");
+    Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card.hikka-hide-type .card__type{display:none !important;visibility:hidden !important;opacity:0 !important;position:absolute !important;left:-9999px !important;z-index:-1 !important}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-card.hikka-hide-type .card__type{display:none !important}.hikka-card .hikka-custom-translate-badge{position:absolute;bottom:8px;left:8px;background:-webkit-gradient(linear,left top,right top,from(#0057b7),to(#ffd700));background:-webkit-linear-gradient(left,#0057b7 0,#ffd700 100%);background:-o-linear-gradient(left,#0057b7 0,#ffd700 100%);background:linear-gradient(90deg,#0057b7 0,#ffd700 100%);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5);padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;text-transform:uppercase;z-index:10}.hikka-card .hikka-custom-type-badge{position:absolute;top:8px;left:8px;background:-webkit-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:-o-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:linear-gradient(135deg,#667eea 0,#764ba2 100%);color:white;padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;z-index:10}.hikka-card.card--tv .hikka-custom-type-badge{background-color:rgba(0,123,255,0.8) !important}.hikka-card.card--movie .hikka-custom-type-badge{background-color:rgba(220,53,69,0.8) !important}.hikka-card.card--ova .hikka-custom-type-badge,.hikka-card.card--ona .hikka-custom-type-badge,.hikka-card.card--special .hikka-custom-type-badge,.hikka-card.card--music .hikka-custom-type-badge{background-color:rgba(108,117,125,0.8) !important}\n        </style>\n    ");
+    // Inject styles
+    $('body').append(Lampa.Template.get('hikka_styles'));
 
     // Додаємо пункт меню
     addMenuItem();
