@@ -773,30 +773,26 @@
 
       // Ensure page starts from 0
       var page = Math.max(0, (params.page || 1) - 1);
-      $.ajax({
-        url: 'https://api.trakt.tv/networks',
-        method: 'GET',
-        headers: trakt_headers,
-        success: function success(networks) {
-          if (params.searchQuery) {
-            console.log('Search query:', params.searchQuery);
-            networks = networks.filter(function (network) {
-              return network.name.toLowerCase().includes(params.searchQuery.toLowerCase());
-            });
-            console.log('Filtered networks by searchQuery:', networks);
-          }
-          if (!params.searchQuery && (params.geoSearchQuery || Lampa.Storage.get('nc_networksListGeo'))) {
-            var countryCode = (Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery).toLowerCase();
-            networks = networks.filter(function (network) {
-              return network.country && network.country.toLowerCase() === countryCode;
-            });
-          }
-          allNetworks = networks;
-          processPage(page, _toConsumableArray(allNetworks), oncomplite);
-        },
-        error: function error(jqXHR, textStatus, errorThrown) {
-          onerror(new Error("".concat(textStatus, ": ").concat(errorThrown)));
+      network["native"]('https://api.trakt.tv/networks', function (networks) {
+        if (params.searchQuery) {
+          console.log('Search query:', params.searchQuery);
+          networks = networks.filter(function (network) {
+            return network.name.toLowerCase().includes(params.searchQuery.toLowerCase());
+          });
+          console.log('Filtered networks by searchQuery:', networks);
         }
+        if (!params.searchQuery && (params.geoSearchQuery || Lampa.Storage.get('nc_networksListGeo'))) {
+          var countryCode = (Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery).toLowerCase();
+          networks = networks.filter(function (network) {
+            return network.country && network.country.toLowerCase() === countryCode;
+          });
+        }
+        allNetworks = networks;
+        processPage(page, _toConsumableArray(allNetworks), oncomplite);
+      }, function (error) {
+        onerror(error);
+      }, false, {
+        headers: trakt_headers
       });
     }
     function processPage(page, networks, oncomplite) {
@@ -815,39 +811,36 @@
         return;
       }
       var pageNetworks = networks.slice(start, end);
-      var promises = pageNetworks.map(function (network) {
+      var promises = pageNetworks.map(function (network_item) {
         return new Promise(function (resolve) {
-          if (network.ids.tmdb) {
-            $.ajax({
-              url: "".concat(Lampa.TMDB.api('network/' + network.ids.tmdb + '/images' + '?api_key=' + Lampa.TMDB.key())),
-              success: function success(json) {
-                var _json$logos, _network$country;
-                resolve({
-                  name: network.name,
-                  logo_path: ((_json$logos = json.logos) === null || _json$logos === void 0 || (_json$logos = _json$logos[0]) === null || _json$logos === void 0 ? void 0 : _json$logos.file_path) || '',
-                  origin_country: ((_network$country = network.country) === null || _network$country === void 0 ? void 0 : _network$country.toUpperCase()) || null,
-                  $id: network.ids.tmdb,
-                  tmdb_id: network.ids.tmdb
-                });
-              },
-              error: function error() {
-                var _network$country2;
-                resolve({
-                  name: network.name,
-                  logo_path: '',
-                  origin_country: ((_network$country2 = network.country) === null || _network$country2 === void 0 ? void 0 : _network$country2.toUpperCase()) || null,
-                  $id: network.ids.tmdb,
-                  tmdb_id: network.ids.tmdb
-                });
-              }
+          if (network_item.ids.tmdb) {
+            var tmdbUrl = "".concat(Lampa.TMDB.api('network/' + network_item.ids.tmdb + '/images' + '?api_key=' + Lampa.TMDB.key()));
+            network["native"](tmdbUrl, function (json) {
+              var _json$logos, _network_item$country;
+              resolve({
+                name: network_item.name,
+                logo_path: ((_json$logos = json.logos) === null || _json$logos === void 0 || (_json$logos = _json$logos[0]) === null || _json$logos === void 0 ? void 0 : _json$logos.file_path) || '',
+                origin_country: ((_network_item$country = network_item.country) === null || _network_item$country === void 0 ? void 0 : _network_item$country.toUpperCase()) || null,
+                $id: network_item.ids.tmdb,
+                tmdb_id: network_item.ids.tmdb
+              });
+            }, function () {
+              var _network_item$country2;
+              resolve({
+                name: network_item.name,
+                logo_path: '',
+                origin_country: ((_network_item$country2 = network_item.country) === null || _network_item$country2 === void 0 ? void 0 : _network_item$country2.toUpperCase()) || null,
+                $id: network_item.ids.tmdb,
+                tmdb_id: network_item.ids.tmdb
+              });
             });
           } else {
-            var _network$country3;
+            var _network_item$country3;
             resolve({
-              name: network.name,
+              name: network_item.name,
               logo_path: '',
-              origin_country: ((_network$country3 = network.country) === null || _network$country3 === void 0 ? void 0 : _network$country3.toUpperCase()) || null,
-              $id: network.ids.tmdb,
+              origin_country: ((_network_item$country3 = network_item.country) === null || _network_item$country3 === void 0 ? void 0 : _network_item$country3.toUpperCase()) || null,
+              $id: network_item.ids.tmdb,
               tmdb_id: null
             });
           }

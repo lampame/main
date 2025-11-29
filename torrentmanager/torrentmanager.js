@@ -553,7 +553,7 @@
         var proxyTMDBApi;
         var proxyTMDBImage;
         if (Lampa.Storage.field('lmetorrentproxyTMDB') == true) {
-          proxyTMDBApi = "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key());
+          proxyTMDBApi = "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key(), "&language=").concat(Lampa.Storage.get('language'));
           proxyTMDBImage = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/img/t/p/';
         }
 
