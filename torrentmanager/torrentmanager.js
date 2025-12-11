@@ -1745,7 +1745,7 @@
           while (1) switch (_context3.n) {
             case 0:
               settings = {
-                url: "".concat(proxy).concat(encodeURIComponent("".concat(url, "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=list&additional=file,transfer&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID, "&limit=-1"))),
+                url: "".concat(proxy).concat(url, "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=3&method=list&additional=file,transfer&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID, "&limit=-1"),
                 method: "GET",
                 timeout: 0,
                 headers: getHeaders$1() // Если getHeaders возвращает объект с ключом headers
@@ -1834,7 +1834,7 @@
               _context4.p = 0;
               // Get volume status information
               volumeSettings = {
-                url: "".concat(proxy).concat(encodeURIComponent("".concat(url, "/webapi/entry.cgi?version=2&api=SYNO.FileStation.List&method=list_share&additional=[\"volume_status\"]&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID))),
+                url: "".concat(proxy).concat(url, "/webapi/entry.cgi?version=2&api=SYNO.FileStation.List&method=list_share&additional=[\"volume_status\"]&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID),
                 method: "GET",
                 timeout: 0,
                 headers: getHeaders$1()
@@ -1940,7 +1940,7 @@
     }
     function SendCommand$1(a, torrent_data) {
       var settings = {
-        url: "".concat(proxy).concat(encodeURIComponent("".concat(url, "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=").concat(a.action, "&id=").concat(torrent_data.id, "&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID))),
+        url: "".concat(proxy).concat(url, "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=").concat(a.action, "&id=").concat(torrent_data.id, "&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID),
         method: "GET",
         timeout: 0,
         headers: getHeaders$1() // Если getHeaders возвращает объект с ключом headers
@@ -1969,7 +1969,7 @@
     function SendTask$1(selectedTorrent, labels, dtype) {
       var path = Lampa.Storage.get("lmetorrentsynologyPath".concat(dtype)) ? "&destination=".concat(Lampa.Storage.get("lmetorrentsynologyPath".concat(dtype))) : '';
       var settings = {
-        url: "".concat(proxy).concat(encodeURIComponent("".concat(url, "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=create&uri=").concat(encodeURIComponent(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link)).concat(path, "&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID))),
+        url: "".concat(proxy).concat(url, "/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=create&uri=").concat(encodeURIComponent(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link)).concat(path, "&_sid=").concat(Lampa.Storage.field('lmetorrentsynologyKey').sID),
         method: "GET",
         timeout: 0,
         headers: getHeaders$1() // Если getHeaders возвращает объект с ключом headers
