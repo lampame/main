@@ -2013,7 +2013,7 @@
         header.appendChild(baseInfo);
         if (data.documents.length) {
           total_pages = data.total_pages;
-          body.classList.add('lme-catalog', 'category-full');
+          body.classList.add('lme-catalog', 'category-full', 'cols--6');
           scroll.minus();
           scroll.onEnd = this.next.bind(this);
           scroll.onScroll = this.limit.bind(this);

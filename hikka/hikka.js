@@ -1139,7 +1139,7 @@
         this.html.appendChild(filterRender);
 
         // Content Container
-        this.contentContainer.classList.add('category-full', 'items', 'items--cards');
+        this.contentContainer.classList.add('category-full', 'items', 'items--cards', 'cols--6');
         this.scroll.append(this.contentContainer);
 
         // Scroll Events
