@@ -536,57 +536,112 @@
       }, _wrapRegExp.apply(this, arguments);
     }
 
-    function getPosterFromLabels(labels) {
-      return new Promise(function (resolve, reject) {
-        // Ищем лейблы, которые начинаются на tv или movie и содержат цифры после косой
-        var labelArray = Array.isArray(labels) ? labels : labels.split(',');
-
-        // Find label matching tv/movie pattern
-        var label = labelArray.find(function (label) {
-          return /^(tv|movie)\/\d+$/.test(label);
-        });
-        if (!label) {
-          return resolve('./img/img_load.svg');
-        }
-        var directTMDBApi = "".concat(Lampa.TMDB.api(label), "/images?api_key=").concat(Lampa.TMDB.key()); // Прямой запрос к API TMDB
-        var directTMDBImage = Lampa.TMDB.image("t/p/"); // Прямой запрос к API TMDB для получения изображения
-        var proxyTMDBApi;
-        var proxyTMDBImage;
-        if (Lampa.Storage.field('lmetorrentproxyTMDB') == true) {
-          proxyTMDBApi = "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key(), "&language=").concat(Lampa.Storage.get('language'));
-          proxyTMDBImage = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/img/t/p/';
-        }
-
-        // Делаем GET-запрос к API TMDB
-        $.ajax({
-          url: Lampa.Storage.field('lmetorrentproxyTMDB') == true ? proxyTMDBApi : directTMDBApi,
-          method: 'GET',
-          headers: {
-            "x-requested-with": "lme-plugins"
-          },
-          success: function success(response) {
-            try {
-              // Проверяем, есть ли постеры в ответе
-              var poster = response.posters && response.posters[0];
-              if (poster && poster.file_path) {
-                // Формируем ссылку на изображение
-                //const imageUrl = Lampa.TMDB.image(`t/p/${(Lampa.Storage.field('poster_size')||'w200')+poster.file_path}`);
-                var imageUrl = Lampa.Storage.field('lmetorrentproxyTMDB') == true ? proxyTMDBImage + (Lampa.Storage.field('poster_size') || 'w200') + poster.file_path : directTMDBImage + (Lampa.Storage.field('poster_size') || 'w200') + poster.file_path;
-                resolve(imageUrl);
-              } else {
-                resolve('./img/img_load.svg'); // Если постеров нет, возвращаем картинку по умолчанию
-              }
-            } catch (error) {
-              //resolve('./img/img_load.svg'); // Если постеров нет, возвращаем картинку по умолчанию
-              reject(new Error('Ошибка при обработке ответа TMDB'));
-            }
-          },
-          error: function error(jqXHR, textStatus, errorThrown) {
-            //reject(new Error(`Ошибка запроса к TMDB: ${textStatus} - ${errorThrown}`));
-            resolve('./img/img_load.svg'); // Если постеров нет, возвращаем картинку по умолчанию
-          }
+    function buildTmdbImageUrl(path) {
+      var posterSize = Lampa.Storage.field('poster_size') || 'w200';
+      var useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
+      var hasNativeProxy = Lampa.Storage.field('proxy_tmdb') && Lampa.Storage.field('tmdb_proxy_image');
+      if (!useProxy || hasNativeProxy) {
+        return Lampa.Api.img(path, posterSize);
+      }
+      var proxyBaseUrl = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/img/t/p/';
+      return proxyBaseUrl + posterSize + '/' + path.replace(/^\//, '');
+    }
+    function buildTmdbImagesApiUrl(label) {
+      var tmdbLang = Lampa.Storage.field('tmdb_lang') || Lampa.Storage.get('language') || 'en';
+      var useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
+      var hasNativeProxy = Lampa.Storage.field('proxy_tmdb') && Lampa.Storage.field('tmdb_proxy_api');
+      if (!useProxy || hasNativeProxy) {
+        return Lampa.TMDB.api("".concat(label, "/images?api_key=").concat(Lampa.TMDB.key(), "&language=").concat(tmdbLang));
+      }
+      return "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key(), "&language=").concat(tmdbLang);
+    }
+    function buildProxyHeaders() {
+      var useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
+      var hasNativeProxy = Lampa.Storage.field('proxy_tmdb') && Lampa.Storage.field('tmdb_proxy_api');
+      if (useProxy && !hasNativeProxy) {
+        return {
+          origin: 'LME'
+        };
+      }
+      return {};
+    }
+    function fetchPosterFromSource(method, id) {
+      var source = Lampa.Storage.get('source', 'tmdb');
+      if (!source || source === 'tmdb') return Promise.resolve('');
+      return new Promise(function (resolve) {
+        Lampa.Api.full({
+          id: id,
+          method: method,
+          source: source
+        }, function (data) {
+          var movie = data.movie || data;
+          var poster = movie.poster || movie.img || '';
+          if (poster) return resolve(poster);
+          var path = movie.poster_path || movie.backdrop_path || movie.profile_path || '';
+          if (path) return resolve(buildTmdbImageUrl(path));
+          resolve('');
+        }, function () {
+          return resolve('');
         });
       });
+    }
+    function getPosterFromLabels(_x) {
+      return _getPosterFromLabels.apply(this, arguments);
+    }
+    function _getPosterFromLabels() {
+      _getPosterFromLabels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(labels) {
+        var labelArray, label, _label$split, _label$split2, method, id, sourcePoster;
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
+            case 0:
+              // Ищем лейблы, которые начинаются на tv или movie и содержат цифры после косой
+              labelArray = Array.isArray(labels) ? labels : labels.split(','); // Find label matching tv/movie pattern
+              label = labelArray.find(function (label) {
+                return /^(tv|movie)\/\d+$/.test(label);
+              });
+              if (label) {
+                _context.n = 1;
+                break;
+              }
+              return _context.a(2, './img/img_load.svg');
+            case 1:
+              _label$split = label.split('/'), _label$split2 = _slicedToArray(_label$split, 2), method = _label$split2[0], id = _label$split2[1];
+              _context.n = 2;
+              return fetchPosterFromSource(method, id);
+            case 2:
+              sourcePoster = _context.v;
+              if (!sourcePoster) {
+                _context.n = 3;
+                break;
+              }
+              return _context.a(2, sourcePoster);
+            case 3:
+              return _context.a(2, new Promise(function (resolve) {
+                $.ajax({
+                  url: buildTmdbImagesApiUrl(label),
+                  method: 'GET',
+                  headers: buildProxyHeaders(),
+                  success: function success(response) {
+                    try {
+                      var poster = response.posters && response.posters[0];
+                      if (poster && poster.file_path) {
+                        resolve(buildTmdbImageUrl(poster.file_path));
+                      } else {
+                        resolve('./img/img_load.svg');
+                      }
+                    } catch (error) {
+                      resolve('./img/img_load.svg');
+                    }
+                  },
+                  error: function error() {
+                    resolve('./img/img_load.svg');
+                  }
+                });
+              }));
+          }
+        }, _callee);
+      }));
+      return _getPosterFromLabels.apply(this, arguments);
     }
 
     var url$1 = Lampa.Storage.field("lmetorrentqBittorentUrl");
@@ -781,12 +836,38 @@
         });
       });
     }
+    function setTags(_x3, _x4) {
+      return _setTags.apply(this, arguments);
+    }
+    function _setTags() {
+      _setTags = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(torrentId, tags) {
+        var tagValue;
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
+            case 0:
+              tagValue = Array.isArray(tags) ? tags.join(',') : tags;
+              return _context3.a(2, $.ajax({
+                url: "".concat(proxy$1).concat(url$1, "/api/v2/torrents/addTags"),
+                method: "POST",
+                timeout: 0,
+                headers: getHeaders$3("application/x-www-form-urlencoded"),
+                data: {
+                  hashes: torrentId,
+                  tags: tagValue
+                }
+              }));
+          }
+        }, _callee3);
+      }));
+      return _setTags.apply(this, arguments);
+    }
     var Qbittorent = {
       auth: auth$3,
       GetData: GetData$3,
       GetInfo: GetInfo$3,
       SendCommand: SendCommand$3,
-      SendTask: SendTask$3
+      SendTask: SendTask$3,
+      setTags: setTags
     };
 
     /**
@@ -795,9 +876,6 @@
      * This module provides functionality to parse torrent names and
      * fetch corresponding metadata from TMDB.
      */
-
-    // TMDB API key
-    var TMDB_API_KEY = '4ef0d7355d9ffb5151e987764708ce96';
 
     /**
      * Clean torrent name by removing quality, year, and other technical information
@@ -842,17 +920,25 @@
      */
     function _searchTMDB() {
       _searchTMDB = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(query) {
-        var url, _t;
+        var tmdbLang, url, useProxy, hasNativeProxy, headers, _t;
         return _regenerator().w(function (_context) {
           while (1) switch (_context.n) {
             case 0:
-              url = "https://api.themoviedb.org/3/search/multi?include_adult=true&query=".concat(encodeURIComponent(query), "&api_key=").concat(TMDB_API_KEY);
+              tmdbLang = Lampa.Storage.field('tmdb_lang') || Lampa.Storage.get('language') || 'en';
+              url = Lampa.TMDB.api("search/multi?include_adult=true&query=".concat(encodeURIComponent(query), "&api_key=").concat(Lampa.TMDB.key(), "&language=").concat(tmdbLang));
+              useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
+              hasNativeProxy = Lampa.Storage.field('proxy_tmdb') && Lampa.Storage.field('tmdb_proxy_api');
+              headers = useProxy && !hasNativeProxy ? {
+                origin: 'LME'
+              } : {};
               _context.p = 1;
               _context.n = 2;
               return $.ajax({
                 url: url,
                 method: 'GET',
-                timeout: 10000 // 10 second timeout
+                timeout: 10000,
+                // 10 second timeout
+                headers: headers
               });
             case 2:
               return _context.a(2, _context.v);
@@ -1074,8 +1160,10 @@
       return _makeRequest$1.apply(this, arguments);
     }
     /**
-     * Authenticate with the Transmission server
-     * 
+     * Update labels for a torrent
+     *
+     * @param {number|string} torrentId - Torrent ID
+     * @param {string|string[]} labels - Labels to set
      * @returns {Promise<void>}
      */
     function _makeRequest$1() {
@@ -1129,6 +1217,36 @@
       }));
       return _makeRequest$1.apply(this, arguments);
     }
+    function setLabels$1(_x2, _x3) {
+      return _setLabels$1.apply(this, arguments);
+    }
+    /**
+     * Authenticate with the Transmission server
+     * 
+     * @returns {Promise<void>}
+     */
+    function _setLabels$1() {
+      _setLabels$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(torrentId, labels) {
+        var labelList;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.n) {
+            case 0:
+              labelList = Array.isArray(labels) ? labels : [labels];
+              _context2.n = 1;
+              return makeRequest$1({
+                method: 'torrent-set',
+                arguments: {
+                  ids: [torrentId],
+                  labels: labelList
+                }
+              });
+            case 1:
+              return _context2.a(2);
+          }
+        }, _callee2);
+      }));
+      return _setLabels$1.apply(this, arguments);
+    }
     function auth$2() {
       return _auth$1.apply(this, arguments);
     }
@@ -1138,13 +1256,13 @@
      * @returns {Promise<Array>} - Promise resolving to array of torrent data
      */
     function _auth$1() {
-      _auth$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+      _auth$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
         var sessionId, _t2;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
             case 0:
-              _context2.p = 0;
-              _context2.n = 1;
+              _context3.p = 0;
+              _context3.n = 1;
               return makeRequest$1({
                 method: 'session-get'
               });
@@ -1152,11 +1270,11 @@
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('AuthSuccess')
               });
-              _context2.n = 3;
+              _context3.n = 3;
               break;
             case 2:
-              _context2.p = 2;
-              _t2 = _context2.v;
+              _context3.p = 2;
+              _t2 = _context3.v;
               if (_t2.status === 409) {
                 // 409 is expected for the first request (CSRF protection)
                 sessionId = _t2.getResponseHeader('X-Transmission-Session-Id');
@@ -1173,9 +1291,9 @@
                 });
               }
             case 3:
-              return _context2.a(2);
+              return _context3.a(2);
           }
-        }, _callee2, null, [[0, 2]]);
+        }, _callee3, null, [[0, 2]]);
       }));
       return _auth$1.apply(this, arguments);
     }
@@ -1188,13 +1306,13 @@
      * @returns {Promise<Object>} - Promise resolving to session info
      */
     function _GetData$2() {
-      _GetData$2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+      _GetData$2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
         var response, _t3;
-        return _regenerator().w(function (_context4) {
-          while (1) switch (_context4.n) {
+        return _regenerator().w(function (_context5) {
+          while (1) switch (_context5.n) {
             case 0:
-              _context4.p = 0;
-              _context4.n = 1;
+              _context5.p = 0;
+              _context5.n = 1;
               return makeRequest$1({
                 method: 'torrent-get',
                 arguments: {
@@ -1202,19 +1320,19 @@
                 }
               });
             case 1:
-              response = _context4.v;
-              _context4.n = 2;
+              response = _context5.v;
+              _context5.n = 2;
               return Promise.all(response.arguments.torrents.map(/*#__PURE__*/function () {
-                var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(torrent) {
+                var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(torrent) {
                   var imageUrl;
-                  return _regenerator().w(function (_context3) {
-                    while (1) switch (_context3.n) {
+                  return _regenerator().w(function (_context4) {
+                    while (1) switch (_context4.n) {
                       case 0:
-                        _context3.n = 1;
+                        _context4.n = 1;
                         return getPosterFromLabels(torrent.labels);
                       case 1:
-                        imageUrl = _context3.v;
-                        return _context3.a(2, {
+                        imageUrl = _context4.v;
+                        return _context4.a(2, {
                           name: torrent.name,
                           id: torrent.id,
                           size: torrent.totalSize,
@@ -1224,23 +1342,23 @@
                           completed: torrent.percentDone
                         });
                     }
-                  }, _callee3);
+                  }, _callee4);
                 }));
-                return function (_x7) {
+                return function (_x9) {
                   return _ref.apply(this, arguments);
                 };
               }()));
             case 2:
-              return _context4.a(2, _context4.v);
+              return _context5.a(2, _context5.v);
             case 3:
-              _context4.p = 3;
-              _t3 = _context4.v;
+              _context5.p = 3;
+              _t3 = _context5.v;
               console.error('TDM', 'Error fetching torrent data:', _t3);
               throw new Error("Failed to fetch torrent data: ".concat(_t3.statusText || _t3.message));
             case 4:
-              return _context4.a(2);
+              return _context5.a(2);
           }
-        }, _callee4, null, [[0, 3]]);
+        }, _callee5, null, [[0, 3]]);
       }));
       return _GetData$2.apply(this, arguments);
     }
@@ -1255,34 +1373,34 @@
      * @returns {Promise<void>} - Promise resolving when command completes
      */
     function _GetInfo$2() {
-      _GetInfo$2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+      _GetInfo$2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
         var response, _t4;
-        return _regenerator().w(function (_context5) {
-          while (1) switch (_context5.n) {
+        return _regenerator().w(function (_context6) {
+          while (1) switch (_context6.n) {
             case 0:
-              _context5.p = 0;
-              _context5.n = 1;
+              _context6.p = 0;
+              _context6.n = 1;
               return makeRequest$1({
                 method: 'session-get'
               });
             case 1:
-              response = _context5.v;
-              return _context5.a(2, {
+              response = _context6.v;
+              return _context6.a(2, {
                 space: response.arguments['download-dir-free-space']
               });
             case 2:
-              _context5.p = 2;
-              _t4 = _context5.v;
+              _context6.p = 2;
+              _t4 = _context6.v;
               console.error('TDM', 'Error fetching session info:', _t4);
               throw new Error("Failed to fetch session info: ".concat(_t4.statusText || _t4.message));
             case 3:
-              return _context5.a(2);
+              return _context6.a(2);
           }
-        }, _callee5, null, [[0, 2]]);
+        }, _callee6, null, [[0, 2]]);
       }));
       return _GetInfo$2.apply(this, arguments);
     }
-    function SendCommand$2(_x2, _x3) {
+    function SendCommand$2(_x4, _x5) {
       return _SendCommand$1.apply(this, arguments);
     }
     /**
@@ -1294,28 +1412,28 @@
      * @returns {Promise<void>} - Promise resolving when task is added
      */
     function _SendCommand$1() {
-      _SendCommand$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(action, torrentData) {
+      _SendCommand$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(action, torrentData) {
         var response, mediaTypeId, method, _t5, _t6;
-        return _regenerator().w(function (_context6) {
-          while (1) switch (_context6.n) {
+        return _regenerator().w(function (_context7) {
+          while (1) switch (_context7.n) {
             case 0:
-              _context6.p = 0;
+              _context7.p = 0;
               if (!(action.action === 'parse' || action.action === 'parse-all')) {
-                _context6.n = 4;
+                _context7.n = 4;
                 break;
               }
-              _context6.n = 1;
+              _context7.n = 1;
               return processTorrents(torrentData);
             case 1:
-              response = _context6.v;
+              response = _context7.v;
               if (!(!response || response.length === 0)) {
-                _context6.n = 2;
+                _context7.n = 2;
                 break;
               }
               throw new Error('No valid metadata found');
             case 2:
               mediaTypeId = "".concat(response[0].media_type, "/").concat(response[0].id);
-              _context6.n = 3;
+              _context7.n = 3;
               return makeRequest$1({
                 method: 'torrent-set',
                 arguments: {
@@ -1327,24 +1445,24 @@
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('actionSentSuccessfully')
               });
-              return _context6.a(2);
+              return _context7.a(2);
             case 4:
               _t5 = action.action;
-              _context6.n = _t5 === 'resume' ? 5 : _t5 === 'pause' ? 6 : _t5 === 'delete' ? 7 : 8;
+              _context7.n = _t5 === 'resume' ? 5 : _t5 === 'pause' ? 6 : _t5 === 'delete' ? 7 : 8;
               break;
             case 5:
               method = 'torrent-start';
-              return _context6.a(3, 9);
+              return _context7.a(3, 9);
             case 6:
               method = 'torrent-stop';
-              return _context6.a(3, 9);
+              return _context7.a(3, 9);
             case 7:
               method = 'torrent-remove';
-              return _context6.a(3, 9);
+              return _context7.a(3, 9);
             case 8:
               throw new Error("Unknown action: ".concat(action.action));
             case 9:
-              _context6.n = 10;
+              _context7.n = 10;
               return makeRequest$1({
                 method: method,
                 arguments: {
@@ -1356,41 +1474,41 @@
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('actionSentSuccessfully')
               });
-              _context6.n = 12;
+              _context7.n = 12;
               break;
             case 11:
-              _context6.p = 11;
-              _t6 = _context6.v;
+              _context7.p = 11;
+              _t6 = _context7.v;
               console.error('TDM', 'Error sending command:', _t6);
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('actionReturnedError')
               });
               throw _t6;
             case 12:
-              return _context6.a(2);
+              return _context7.a(2);
           }
-        }, _callee6, null, [[0, 11]]);
+        }, _callee7, null, [[0, 11]]);
       }));
       return _SendCommand$1.apply(this, arguments);
     }
-    function SendTask$2(_x4, _x5, _x6) {
+    function SendTask$2(_x6, _x7, _x8) {
       return _SendTask$1.apply(this, arguments);
     }
     function _SendTask$1() {
-      _SendTask$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(selectedTorrent, labels, dtype) {
+      _SendTask$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8(selectedTorrent, labels, dtype) {
         var config, _addResponse$argument, addResponse, torrentId, labelResponse, _t7;
-        return _regenerator().w(function (_context7) {
-          while (1) switch (_context7.n) {
+        return _regenerator().w(function (_context8) {
+          while (1) switch (_context8.n) {
             case 0:
               if (selectedTorrent) {
-                _context7.n = 1;
+                _context8.n = 1;
                 break;
               }
               throw new Error('No torrent selected');
             case 1:
               config = getConfig$1();
-              _context7.p = 2;
-              _context7.n = 3;
+              _context8.p = 2;
+              _context8.n = 3;
               return makeRequest$1({
                 method: 'torrent-add',
                 arguments: _objectSpread2({
@@ -1403,9 +1521,9 @@
                 } : {})
               });
             case 3:
-              addResponse = _context7.v;
+              addResponse = _context8.v;
               if (!(addResponse.result !== 'success' || Object.keys(addResponse.arguments).length === 0)) {
-                _context7.n = 4;
+                _context8.n = 4;
                 break;
               }
               throw new Error("Failed to add torrent: ".concat(addResponse.result));
@@ -1413,12 +1531,12 @@
               // Get the torrent ID
               torrentId = (_addResponse$argument = addResponse.arguments['torrent-added']) === null || _addResponse$argument === void 0 ? void 0 : _addResponse$argument.id;
               if (torrentId) {
-                _context7.n = 5;
+                _context8.n = 5;
                 break;
               }
               throw new Error('Torrent added but no ID returned');
             case 5:
-              _context7.n = 6;
+              _context8.n = 6;
               return makeRequest$1({
                 method: 'torrent-set',
                 arguments: {
@@ -1427,9 +1545,9 @@
                 }
               });
             case 6:
-              labelResponse = _context7.v;
+              labelResponse = _context8.v;
               if (!(labelResponse.result !== 'success')) {
-                _context7.n = 7;
+                _context8.n = 7;
                 break;
               }
               throw new Error("Failed to set labels: ".concat(labelResponse.result));
@@ -1437,20 +1555,20 @@
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('actionSentSuccessfully')
               });
-              _context7.n = 9;
+              _context8.n = 9;
               break;
             case 8:
-              _context7.p = 8;
-              _t7 = _context7.v;
+              _context8.p = 8;
+              _t7 = _context8.v;
               console.error('TDM', 'Error adding torrent:', _t7);
               Lampa.Bell.push({
                 text: _t7.message || Lampa.Lang.translate('actionReturnedError')
               });
               throw _t7;
             case 9:
-              return _context7.a(2);
+              return _context8.a(2);
           }
-        }, _callee7, null, [[2, 8]]);
+        }, _callee8, null, [[2, 8]]);
       }));
       return _SendTask$1.apply(this, arguments);
     }
@@ -1460,6 +1578,7 @@
       GetInfo: GetInfo$2,
       SendCommand: SendCommand$2,
       SendTask: SendTask$2,
+      setLabels: setLabels$1,
       transmissionStatus: TRANSMISSION_STATUS$1
     };
 
@@ -2085,8 +2204,10 @@
       return _makeRequest.apply(this, arguments);
     }
     /**
-     * Authenticate with the Transmission server
+     * Update labels for a torrent
      *
+     * @param {number|string} torrentId - Torrent ID
+     * @param {string|string[]} labels - Labels to set
      * @returns {Promise<void>}
      */
     function _makeRequest() {
@@ -2140,6 +2261,36 @@
       }));
       return _makeRequest.apply(this, arguments);
     }
+    function setLabels(_x2, _x3) {
+      return _setLabels.apply(this, arguments);
+    }
+    /**
+     * Authenticate with the Transmission server
+     *
+     * @returns {Promise<void>}
+     */
+    function _setLabels() {
+      _setLabels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(torrentId, labels) {
+        var labelList;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.n) {
+            case 0:
+              labelList = Array.isArray(labels) ? labels : [labels];
+              _context2.n = 1;
+              return makeRequest({
+                method: 'torrent-set',
+                arguments: {
+                  ids: [torrentId],
+                  labels: labelList
+                }
+              });
+            case 1:
+              return _context2.a(2);
+          }
+        }, _callee2);
+      }));
+      return _setLabels.apply(this, arguments);
+    }
     function auth() {
       return _auth.apply(this, arguments);
     }
@@ -2149,13 +2300,13 @@
      * @returns {Promise<Array>} - Promise resolving to array of torrent data
      */
     function _auth() {
-      _auth = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+      _auth = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
         var sessionId, _t2;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
             case 0:
-              _context2.p = 0;
-              _context2.n = 1;
+              _context3.p = 0;
+              _context3.n = 1;
               return makeRequest({
                 method: 'session-get'
               });
@@ -2163,11 +2314,11 @@
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('AuthSuccess')
               });
-              _context2.n = 3;
+              _context3.n = 3;
               break;
             case 2:
-              _context2.p = 2;
-              _t2 = _context2.v;
+              _context3.p = 2;
+              _t2 = _context3.v;
               if (_t2.status === 409) {
                 // 409 is expected for the first request (CSRF protection)
                 sessionId = _t2.getResponseHeader('X-Transmission-Session-Id');
@@ -2184,9 +2335,9 @@
                 });
               }
             case 3:
-              return _context2.a(2);
+              return _context3.a(2);
           }
-        }, _callee2, null, [[0, 2]]);
+        }, _callee3, null, [[0, 2]]);
       }));
       return _auth.apply(this, arguments);
     }
@@ -2199,13 +2350,13 @@
      * @returns {Promise<Object>} - Promise resolving to session info
      */
     function _GetData() {
-      _GetData = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+      _GetData = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
         var response, _t3;
-        return _regenerator().w(function (_context4) {
-          while (1) switch (_context4.n) {
+        return _regenerator().w(function (_context5) {
+          while (1) switch (_context5.n) {
             case 0:
-              _context4.p = 0;
-              _context4.n = 1;
+              _context5.p = 0;
+              _context5.n = 1;
               return makeRequest({
                 method: 'torrent-get',
                 arguments: {
@@ -2213,19 +2364,19 @@
                 }
               });
             case 1:
-              response = _context4.v;
-              _context4.n = 2;
+              response = _context5.v;
+              _context5.n = 2;
               return Promise.all(response.arguments.torrents.map(/*#__PURE__*/function () {
-                var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(torrent) {
+                var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(torrent) {
                   var imageUrl;
-                  return _regenerator().w(function (_context3) {
-                    while (1) switch (_context3.n) {
+                  return _regenerator().w(function (_context4) {
+                    while (1) switch (_context4.n) {
                       case 0:
-                        _context3.n = 1;
+                        _context4.n = 1;
                         return getPosterFromLabels(torrent.labels);
                       case 1:
-                        imageUrl = _context3.v;
-                        return _context3.a(2, {
+                        imageUrl = _context4.v;
+                        return _context4.a(2, {
                           name: torrent.name,
                           id: torrent.id,
                           size: torrent.totalSize,
@@ -2237,23 +2388,23 @@
                           files: torrent.files
                         });
                     }
-                  }, _callee3);
+                  }, _callee4);
                 }));
-                return function (_x7) {
+                return function (_x9) {
                   return _ref.apply(this, arguments);
                 };
               }()));
             case 2:
-              return _context4.a(2, _context4.v);
+              return _context5.a(2, _context5.v);
             case 3:
-              _context4.p = 3;
-              _t3 = _context4.v;
+              _context5.p = 3;
+              _t3 = _context5.v;
               console.error('TDM', 'Error fetching torrent data:', _t3);
               throw new Error("Failed to fetch torrent data: ".concat(_t3.statusText || _t3.message));
             case 4:
-              return _context4.a(2);
+              return _context5.a(2);
           }
-        }, _callee4, null, [[0, 3]]);
+        }, _callee5, null, [[0, 3]]);
       }));
       return _GetData.apply(this, arguments);
     }
@@ -2268,34 +2419,34 @@
      * @returns {Promise<void>} - Promise resolving when command completes
      */
     function _GetInfo() {
-      _GetInfo = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+      _GetInfo = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
         var response, _t4;
-        return _regenerator().w(function (_context5) {
-          while (1) switch (_context5.n) {
+        return _regenerator().w(function (_context6) {
+          while (1) switch (_context6.n) {
             case 0:
-              _context5.p = 0;
-              _context5.n = 1;
+              _context6.p = 0;
+              _context6.n = 1;
               return makeRequest({
                 method: 'session-get'
               });
             case 1:
-              response = _context5.v;
-              return _context5.a(2, {
+              response = _context6.v;
+              return _context6.a(2, {
                 space: response.arguments['download-dir-free-space']
               });
             case 2:
-              _context5.p = 2;
-              _t4 = _context5.v;
+              _context6.p = 2;
+              _t4 = _context6.v;
               console.error('TDM', 'Error fetching session info:', _t4);
               throw new Error("Failed to fetch session info: ".concat(_t4.statusText || _t4.message));
             case 3:
-              return _context5.a(2);
+              return _context6.a(2);
           }
-        }, _callee5, null, [[0, 2]]);
+        }, _callee6, null, [[0, 2]]);
       }));
       return _GetInfo.apply(this, arguments);
     }
-    function SendCommand(_x2, _x3) {
+    function SendCommand(_x4, _x5) {
       return _SendCommand.apply(this, arguments);
     }
     /**
@@ -2307,28 +2458,28 @@
      * @returns {Promise<void>} - Promise resolving when task is added
      */
     function _SendCommand() {
-      _SendCommand = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(action, torrentData) {
+      _SendCommand = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(action, torrentData) {
         var response, mediaTypeId, config, mediaFiles, downloadDir, dirName, sortFiles, file, filePath, webdavFilePath, authUrl, _updateFileList, method, _t5, _t6;
-        return _regenerator().w(function (_context6) {
-          while (1) switch (_context6.n) {
+        return _regenerator().w(function (_context7) {
+          while (1) switch (_context7.n) {
             case 0:
-              _context6.p = 0;
+              _context7.p = 0;
               if (!(action.action === 'parse' || action.action === 'parse-all')) {
-                _context6.n = 4;
+                _context7.n = 4;
                 break;
               }
-              _context6.n = 1;
+              _context7.n = 1;
               return processTorrents(torrentData);
             case 1:
-              response = _context6.v;
+              response = _context7.v;
               if (!(!response || response.length === 0)) {
-                _context6.n = 2;
+                _context7.n = 2;
                 break;
               }
               throw new Error('No valid metadata found');
             case 2:
               mediaTypeId = "".concat(response[0].media_type, "/").concat(response[0].id);
-              _context6.n = 3;
+              _context7.n = 3;
               return makeRequest({
                 method: 'torrent-set',
                 arguments: {
@@ -2340,21 +2491,21 @@
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('actionSentSuccessfully')
               });
-              return _context6.a(2);
+              return _context7.a(2);
             case 4:
               if (!(action.action === 'play')) {
-                _context6.n = 9;
+                _context7.n = 9;
                 break;
               }
               if (!(!torrentData.files || torrentData.files.length === 0)) {
-                _context6.n = 5;
+                _context7.n = 5;
                 break;
               }
               throw new Error('No files available for playback');
             case 5:
               config = getConfig();
               if (config.webdavUrl) {
-                _context6.n = 6;
+                _context7.n = 6;
                 break;
               }
               throw new Error('WebDAV URL not configured');
@@ -2365,7 +2516,7 @@
                 return ['mp4', 'mkv', 'avi', 'mov', 'webm', 'ts', 'm4v', 'mpg', 'mpeg'].includes(ext);
               });
               if (!(mediaFiles.length === 0)) {
-                _context6.n = 7;
+                _context7.n = 7;
                 break;
               }
               throw new Error('No media files found in torrent');
@@ -2398,7 +2549,7 @@
 
               // If only one file, play it directly
               if (!(mediaFiles.length === 1)) {
-                _context6.n = 8;
+                _context7.n = 8;
                 break;
               }
               file = mediaFiles[0];
@@ -2410,7 +2561,7 @@
                 title: file.name.split('/').pop(),
                 timeline: false
               });
-              return _context6.a(2);
+              return _context7.a(2);
             case 8:
               // Function to update the file list with new sorting
               _updateFileList = function updateFileList(sortType) {
@@ -2498,24 +2649,24 @@
                 });
               }; // Initial file list display
               _updateFileList('name');
-              return _context6.a(2);
+              return _context7.a(2);
             case 9:
               _t5 = action.action;
-              _context6.n = _t5 === 'resume' ? 10 : _t5 === 'pause' ? 11 : _t5 === 'delete' ? 12 : 13;
+              _context7.n = _t5 === 'resume' ? 10 : _t5 === 'pause' ? 11 : _t5 === 'delete' ? 12 : 13;
               break;
             case 10:
               method = 'torrent-start';
-              return _context6.a(3, 14);
+              return _context7.a(3, 14);
             case 11:
               method = 'torrent-stop';
-              return _context6.a(3, 14);
+              return _context7.a(3, 14);
             case 12:
               method = 'torrent-remove';
-              return _context6.a(3, 14);
+              return _context7.a(3, 14);
             case 13:
               throw new Error("Unknown action: ".concat(action.action));
             case 14:
-              _context6.n = 15;
+              _context7.n = 15;
               return makeRequest({
                 method: method,
                 arguments: {
@@ -2527,41 +2678,41 @@
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('actionSentSuccessfully')
               });
-              _context6.n = 17;
+              _context7.n = 17;
               break;
             case 16:
-              _context6.p = 16;
-              _t6 = _context6.v;
+              _context7.p = 16;
+              _t6 = _context7.v;
               console.error('TDM', 'Error sending command:', _t6);
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('actionReturnedError')
               });
               throw _t6;
             case 17:
-              return _context6.a(2);
+              return _context7.a(2);
           }
-        }, _callee6, null, [[0, 16]]);
+        }, _callee7, null, [[0, 16]]);
       }));
       return _SendCommand.apply(this, arguments);
     }
-    function SendTask(_x4, _x5, _x6) {
+    function SendTask(_x6, _x7, _x8) {
       return _SendTask.apply(this, arguments);
     }
     function _SendTask() {
-      _SendTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(selectedTorrent, labels, dtype) {
+      _SendTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8(selectedTorrent, labels, dtype) {
         var config, _addResponse$argument, addResponse, torrentId, labelResponse, _t7;
-        return _regenerator().w(function (_context7) {
-          while (1) switch (_context7.n) {
+        return _regenerator().w(function (_context8) {
+          while (1) switch (_context8.n) {
             case 0:
               if (selectedTorrent) {
-                _context7.n = 1;
+                _context8.n = 1;
                 break;
               }
               throw new Error('No torrent selected');
             case 1:
               config = getConfig();
-              _context7.p = 2;
-              _context7.n = 3;
+              _context8.p = 2;
+              _context8.n = 3;
               return makeRequest({
                 method: 'torrent-add',
                 arguments: _objectSpread2({
@@ -2574,9 +2725,9 @@
                 } : {})
               });
             case 3:
-              addResponse = _context7.v;
+              addResponse = _context8.v;
               if (!(addResponse.result !== 'success' || Object.keys(addResponse.arguments).length === 0)) {
-                _context7.n = 4;
+                _context8.n = 4;
                 break;
               }
               throw new Error("Failed to add torrent: ".concat(addResponse.result));
@@ -2584,12 +2735,12 @@
               // Get the torrent ID
               torrentId = (_addResponse$argument = addResponse.arguments['torrent-added']) === null || _addResponse$argument === void 0 ? void 0 : _addResponse$argument.id;
               if (torrentId) {
-                _context7.n = 5;
+                _context8.n = 5;
                 break;
               }
               throw new Error('Torrent added but no ID returned');
             case 5:
-              _context7.n = 6;
+              _context8.n = 6;
               return makeRequest({
                 method: 'torrent-set',
                 arguments: {
@@ -2598,9 +2749,9 @@
                 }
               });
             case 6:
-              labelResponse = _context7.v;
+              labelResponse = _context8.v;
               if (!(labelResponse.result !== 'success')) {
-                _context7.n = 7;
+                _context8.n = 7;
                 break;
               }
               throw new Error("Failed to set labels: ".concat(labelResponse.result));
@@ -2608,20 +2759,20 @@
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('actionSentSuccessfully')
               });
-              _context7.n = 9;
+              _context8.n = 9;
               break;
             case 8:
-              _context7.p = 8;
-              _t7 = _context7.v;
+              _context8.p = 8;
+              _t7 = _context8.v;
               console.error('TDM', 'Error adding torrent:', _t7);
               Lampa.Bell.push({
                 text: _t7.message || Lampa.Lang.translate('actionReturnedError')
               });
               throw _t7;
             case 9:
-              return _context7.a(2);
+              return _context8.a(2);
           }
-        }, _callee7, null, [[2, 8]]);
+        }, _callee8, null, [[2, 8]]);
       }));
       return _SendTask.apply(this, arguments);
     }
@@ -2631,23 +2782,57 @@
       GetInfo: GetInfo,
       SendCommand: SendCommand,
       SendTask: SendTask,
+      setLabels: setLabels,
       transmissionStatus: TRANSMISSION_STATUS
     };
 
     var regexp2 = /(?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB-Rip|WEB-DL|WEB|TS|(?:PPV )?WEB-?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv/;
+    var PROXY_IMAGE_PREFIX = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/img/t/p/';
+    function needsProxyHeader(url) {
+      if (!url) return false;
+      var useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
+      var hasNativeProxy = Lampa.Storage.field('proxy_tmdb') && Lampa.Storage.field('tmdb_proxy_image');
+      return useProxy && !hasNativeProxy && url.indexOf(PROXY_IMAGE_PREFIX) === 0;
+    }
+    function loadImageWithHeader(img, url) {
+      if (!needsProxyHeader(url)) {
+        img.src = url;
+        return;
+      }
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.responseType = 'blob';
+      xhr.setRequestHeader('origin', 'LME');
+      xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300 && xhr.response) {
+          var objectUrl = URL.createObjectURL(xhr.response);
+          img.dataset.objectUrl = objectUrl;
+          img.src = objectUrl;
+        } else {
+          img.src = './img/img_broken.svg';
+        }
+      };
+      xhr.onerror = function () {
+        img.src = './img/img_broken.svg';
+      };
+      xhr.send();
+    }
     function Item(data) {
       this.id = data.id; // зберігаємо ідентифікатор торренту
-
+      var useProxyHeader = needsProxyHeader(data.image);
       var itemN = Lampa.Template.get('lmetorrent_item__card', {
         title: data.name,
         size: Lampa.Utils.bytesToSize(data.size, 0),
         state: data.state,
         "data-completed": Number((data.completed * 100).toFixed(2)),
         completed: Number((data.completed * 100).toFixed(2)) + "%",
-        image: data.image,
+        image: useProxyHeader ? './img/img_load.svg' : data.image,
+        image_src: useProxyHeader ? data.image : '',
         quality: data.name.match(regexp2) ? data.name.match(regexp2).toString().replace(/[ .()]/g, '') : ''
       });
       this.render = function () {
+        var img = itemN.find('img')[0];
+        if (img) loadImageWithHeader(img, img.dataset.src || data.image);
         return itemN;
       };
 
@@ -2660,6 +2845,10 @@
         itemN.find('.lmetorrent_card__completed').text(progress + "%");
       };
       this.destroy = function () {
+        var img = itemN.find('img')[0];
+        if (img && img.dataset.objectUrl) {
+          URL.revokeObjectURL(img.dataset.objectUrl);
+        }
         itemN.remove();
       };
     }
@@ -2911,128 +3100,13 @@
     }
 
     /**
-     * Встановлення лейблу для Transmission/Keenetic
-     *
-     * @param {Object} torrent - об'єкт торента
-     * @param {Object} client - інформація про клієнта
-     * @param {string} label - лейбл для встановлення
-     * @returns {Promise} - Promise виконання операції
-     */
-    function setTransmissionLabel(_x5, _x6, _x7) {
-      return _setTransmissionLabel.apply(this, arguments);
-    }
-    /**
      * Оновлення метаданих для Transmission/Keenetic
      *
      * @param {Object} torrent - об'єкт торента
      * @param {Object} client - інформація про клієнта
      * @param {Object} mediaInfo - інформація про медіа з TMDB
      */
-    function _setTransmissionLabel() {
-      _setTransmissionLabel = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(torrent, client, label) {
-        var CONFIG_PREFIX, DEFAULT_RPC_PATH, config, headers, sessionId, apiUrl, _CONFIG_PREFIX, _DEFAULT_RPC_PATH, _config, _headers, _sessionId, _apiUrl;
-        return _regenerator().w(function (_context4) {
-          while (1) switch (_context4.n) {
-            case 0:
-              if (!(client.type === 'transmission')) {
-                _context4.n = 2;
-                break;
-              }
-              // Отримуємо конфігурацію Transmission
-              CONFIG_PREFIX = 'lmetorrenttransmission';
-              DEFAULT_RPC_PATH = '/transmission/rpc';
-              config = {
-                url: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Url")),
-                user: Lampa.Storage.field("".concat(CONFIG_PREFIX, "User")),
-                pass: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Pass")),
-                path: Lampa.Storage.get("".concat(CONFIG_PREFIX, "Path")) || DEFAULT_RPC_PATH,
-                useProxy: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Proxy")) === true,
-                proxy: 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/'
-              }; // Формуємо заголовки
-              headers = {
-                'Authorization': "Basic ".concat(btoa(config.user + ":" + config.pass)),
-                'Content-Type': 'application/json'
-              }; // Додаємо session ID якщо є
-              sessionId = Lampa.Storage.get("".concat(CONFIG_PREFIX, "Key"));
-              if (sessionId) {
-                headers['X-Transmission-Session-Id'] = sessionId;
-              }
-              if (config.useProxy) {
-                headers['x-requested-with'] = 'lme-plugins';
-              }
-
-              // Формуємо URL
-              apiUrl = "".concat(config.useProxy ? config.proxy : '').concat(config.url).concat(config.path); // Відправляємо запит
-              _context4.n = 1;
-              return $.ajax({
-                url: apiUrl,
-                method: 'POST',
-                headers: headers,
-                data: JSON.stringify({
-                  method: 'torrent-set',
-                  arguments: {
-                    ids: [torrent.id],
-                    labels: [label]
-                  }
-                })
-              });
-            case 1:
-              return _context4.a(2, _context4.v);
-            case 2:
-              if (!(client.type === 'keenetic')) {
-                _context4.n = 4;
-                break;
-              }
-              // Отримуємо конфігурацію Keenetic
-              _CONFIG_PREFIX = 'lmetorrentkeenetic';
-              _DEFAULT_RPC_PATH = '/transmission/rpc';
-              _config = {
-                url: Lampa.Storage.field("".concat(_CONFIG_PREFIX, "Url")),
-                user: Lampa.Storage.field("".concat(_CONFIG_PREFIX, "User")),
-                pass: Lampa.Storage.field("".concat(_CONFIG_PREFIX, "Pass")),
-                path: Lampa.Storage.get("".concat(_CONFIG_PREFIX, "Path")) || _DEFAULT_RPC_PATH,
-                useProxy: Lampa.Storage.field("".concat(_CONFIG_PREFIX, "Proxy")) === true,
-                proxy: 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/'
-              }; // Формуємо заголовки
-              _headers = {
-                'Authorization': "Basic ".concat(btoa(_config.user + ":" + _config.pass)),
-                'Content-Type': 'application/json'
-              }; // Додаємо session ID якщо є
-              _sessionId = Lampa.Storage.get("".concat(_CONFIG_PREFIX, "Key"));
-              if (_sessionId) {
-                _headers['X-Transmission-Session-Id'] = _sessionId;
-              }
-              if (_config.useProxy) {
-                _headers['x-requested-with'] = 'lme-plugins';
-              }
-
-              // Формуємо URL
-              _apiUrl = "".concat(_config.useProxy ? _config.proxy : '').concat(_config.url).concat(_config.path); // Відправляємо запит
-              _context4.n = 3;
-              return $.ajax({
-                url: _apiUrl,
-                method: 'POST',
-                headers: _headers,
-                data: JSON.stringify({
-                  method: 'torrent-set',
-                  arguments: {
-                    ids: [torrent.id],
-                    labels: [label]
-                  }
-                })
-              });
-            case 3:
-              return _context4.a(2, _context4.v);
-            case 4:
-              throw new Error("Unsupported client type: ".concat(client.type));
-            case 5:
-              return _context4.a(2);
-          }
-        }, _callee4);
-      }));
-      return _setTransmissionLabel.apply(this, arguments);
-    }
-    function updateTransmissionLikeMetadata(_x8, _x9, _x0) {
+    function updateTransmissionLikeMetadata(_x5, _x6, _x7) {
       return _updateTransmissionLikeMetadata.apply(this, arguments);
     }
     /**
@@ -3043,36 +3117,46 @@
      * @param {Object} mediaInfo - інформація про медіа з TMDB
      */
     function _updateTransmissionLikeMetadata() {
-      _updateTransmissionLikeMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(torrent, client, mediaInfo) {
+      _updateTransmissionLikeMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(torrent, client, mediaInfo) {
         var label, _t3;
-        return _regenerator().w(function (_context5) {
-          while (1) switch (_context5.n) {
+        return _regenerator().w(function (_context4) {
+          while (1) switch (_context4.n) {
             case 0:
               label = buildMetadataTag(mediaInfo);
-              _context5.p = 1;
-              _context5.n = 2;
-              return setTransmissionLabel(torrent, client, label);
+              _context4.p = 1;
+              if (!(client.type === 'transmission')) {
+                _context4.n = 3;
+                break;
+              }
+              _context4.n = 2;
+              return Transmission.setLabels(torrent.id, label);
             case 2:
+              _context4.n = 4;
+              break;
+            case 3:
+              _context4.n = 4;
+              return Keenetic.setLabels(torrent.id, label);
+            case 4:
               Lampa.Bell.push({
                 text: 'Метадані оновлено'
               });
-              _context5.n = 4;
+              _context4.n = 6;
               break;
-            case 3:
-              _context5.p = 3;
-              _t3 = _context5.v;
+            case 5:
+              _context4.p = 5;
+              _t3 = _context4.v;
               console.error('TDM', 'updateTransmissionLikeMetadata error:', _t3);
               Lampa.Bell.push({
                 text: 'Помилка оновлення метаданих'
               });
-            case 4:
-              return _context5.a(2);
+            case 6:
+              return _context4.a(2);
           }
-        }, _callee5, null, [[1, 3]]);
+        }, _callee4, null, [[1, 5]]);
       }));
       return _updateTransmissionLikeMetadata.apply(this, arguments);
     }
-    function updateQbittorrentMetadata(_x1, _x10, _x11) {
+    function updateQbittorrentMetadata(_x8, _x9, _x0) {
       return _updateQbittorrentMetadata.apply(this, arguments);
     }
     /**
@@ -3083,58 +3167,36 @@
      * @param {Object} mediaInfo - інформація про медіа з TMDB
      */
     function _updateQbittorrentMetadata() {
-      _updateQbittorrentMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(torrent, client, mediaInfo) {
-        var tagValue, getHeaders, url, proxy, _t4;
-        return _regenerator().w(function (_context6) {
-          while (1) switch (_context6.n) {
+      _updateQbittorrentMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(torrent, client, mediaInfo) {
+        var tagValue, _t4;
+        return _regenerator().w(function (_context5) {
+          while (1) switch (_context5.n) {
             case 0:
               tagValue = buildMetadataTag(mediaInfo); // той самий формат, що й при додаванні
-              _context6.p = 1;
-              getHeaders = function getHeaders(type) {
-                var headers = {};
-                if (type) headers["Content-Type"] = type;
-                if (Lampa.Storage.get("lmetorrentqBittorentKey")) headers["set-cookie"] = Lampa.Storage.get("lmetorrentqBittorentKey");
-                if (Lampa.Storage.field('lmetorrentqBittorentProxy') === true) headers["x-requested-with"] = 'lme-plugins';
-                return headers;
-              };
-              // Отримуємо конфігурацію qBittorrent
-              url = Lampa.Storage.field("lmetorrentqBittorentUrl");
-              proxy = "";
-              if (Lampa.Storage.field("lmetorrentqBittorentProxy") === true) {
-                proxy = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
-              }
-              _context6.n = 2;
-              return $.ajax({
-                url: "".concat(proxy).concat(url, "/api/v2/torrents/addTags"),
-                method: 'POST',
-                headers: getHeaders('application/x-www-form-urlencoded'),
-                data: {
-                  hashes: torrent.id,
-                  // або хеш, якщо так у тебе
-                  tags: tagValue
-                }
-              });
+              _context5.p = 1;
+              _context5.n = 2;
+              return Qbittorent.setTags(torrent.id, tagValue);
             case 2:
               Lampa.Bell.push({
                 text: 'Метадані оновлено'
               });
-              _context6.n = 4;
+              _context5.n = 4;
               break;
             case 3:
-              _context6.p = 3;
-              _t4 = _context6.v;
+              _context5.p = 3;
+              _t4 = _context5.v;
               console.error('TDM', 'updateQbittorrentMetadata error:', _t4);
               Lampa.Bell.push({
                 text: 'Помилка оновлення метаданих'
               });
             case 4:
-              return _context6.a(2);
+              return _context5.a(2);
           }
-        }, _callee6, null, [[1, 3]]);
+        }, _callee5, null, [[1, 3]]);
       }));
       return _updateQbittorrentMetadata.apply(this, arguments);
     }
-    function updateSynologyMetadata(_x12, _x13, _x14) {
+    function updateSynologyMetadata(_x1, _x10, _x11) {
       return _updateSynologyMetadata.apply(this, arguments);
     }
     /**
@@ -3144,10 +3206,10 @@
      * @param {Object} client - інформація про клієнта
      */
     function _updateSynologyMetadata() {
-      _updateSynologyMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(torrent, client, mediaInfo) {
+      _updateSynologyMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(torrent, client, mediaInfo) {
         var key;
-        return _regenerator().w(function (_context7) {
-          while (1) switch (_context7.n) {
+        return _regenerator().w(function (_context6) {
+          while (1) switch (_context6.n) {
             case 0:
               try {
                 key = 'synology_torrent_' + torrent.id; // використовуємо id замість hash
@@ -3166,59 +3228,59 @@
                 });
               }
             case 1:
-              return _context7.a(2);
+              return _context6.a(2);
           }
-        }, _callee7);
+        }, _callee6);
       }));
       return _updateSynologyMetadata.apply(this, arguments);
     }
-    function updateAllMetadata(_x15, _x16) {
+    function updateAllMetadata(_x12, _x13) {
       return _updateAllMetadata.apply(this, arguments);
     }
     function _updateAllMetadata() {
-      _updateAllMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8(torrents, client) {
+      _updateAllMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(torrents, client) {
         var _iterator, _step, torrent, _t5;
-        return _regenerator().w(function (_context8) {
-          while (1) switch (_context8.n) {
+        return _regenerator().w(function (_context7) {
+          while (1) switch (_context7.n) {
             case 0:
               _iterator = _createForOfIteratorHelper(torrents);
-              _context8.p = 1;
+              _context7.p = 1;
               _iterator.s();
             case 2:
               if ((_step = _iterator.n()).done) {
-                _context8.n = 5;
+                _context7.n = 5;
                 break;
               }
               torrent = _step.value;
-              _context8.n = 3;
+              _context7.n = 3;
               return updateMetadataForTorrent(torrent, client);
             case 3:
-              _context8.n = 4;
+              _context7.n = 4;
               return new Promise(function (resolve) {
                 return setTimeout(resolve, 500);
               });
             case 4:
-              _context8.n = 2;
+              _context7.n = 2;
               break;
             case 5:
-              _context8.n = 7;
+              _context7.n = 7;
               break;
             case 6:
-              _context8.p = 6;
-              _t5 = _context8.v;
+              _context7.p = 6;
+              _t5 = _context7.v;
               _iterator.e(_t5);
             case 7:
-              _context8.p = 7;
+              _context7.p = 7;
               _iterator.f();
-              return _context8.f(7);
+              return _context7.f(7);
             case 8:
               Lampa.Bell.push({
                 text: 'Оновлення метаданих завершено'
               });
             case 9:
-              return _context8.a(2);
+              return _context7.a(2);
           }
-        }, _callee8, null, [[1, 6, 7, 8]]);
+        }, _callee7, null, [[1, 6, 7, 8]]);
       }));
       return _updateAllMetadata.apply(this, arguments);
     }
@@ -5468,7 +5530,7 @@
       Lampa.Template.add('lmetorrent_item', "<div class=\"card selector lmetorrent-item\">\n            <div class=\"lmetorrent-item__data lmetorrent-item__name\">{name}</div>\n            <div class=\"lmetorrent-item__data lmetorrent-item__state\">{state}</div>\n            <div class=\"lmetorrent-item__data lmetorrent-item__progress\">{size} / {completed}</div>\n        </div>");
 
       // Card item template
-      Lampa.Template.add('lmetorrent_item__card', "<div class=\"card card--category selector layer--visible layer--render\">\n            <div class=\"card__view\">\n                <img src=\"{image}\" alt=\"{title}\" class=\"card__img\">\n                <div class=\"card__icons\">\n                    <div class=\"card__icons-inner\">\n                    </div>\n                </div>\n                <div class=\"lmetorrent_card__state\">{state}</div>\n                <div class=\"lmetorrent_card__size\">{size}</div>\n                <div class=\"lmetorrent_card__completed\" data-completed=\"{data-completed}\">{completed}</div>\n            </div>\n        </div>");
+      Lampa.Template.add('lmetorrent_item__card', "<div class=\"card card--category selector layer--visible layer--render\">\n            <div class=\"card__view\">\n                <img src=\"{image}\" data-src=\"{image_src}\" alt=\"{title}\" class=\"card__img\">\n                <div class=\"card__icons\">\n                    <div class=\"card__icons-inner\">\n                    </div>\n                </div>\n                <div class=\"lmetorrent_card__state\">{state}</div>\n                <div class=\"lmetorrent_card__size\">{size}</div>\n                <div class=\"lmetorrent_card__completed\" data-completed=\"{data-completed}\">{completed}</div>\n            </div>\n        </div>");
     }
 
     /**
