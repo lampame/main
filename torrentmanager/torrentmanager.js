@@ -563,32 +563,11 @@
 
     function buildTmdbImageUrl(path) {
       var posterSize = Lampa.Storage.field('poster_size') || 'w200';
-      var useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
-      var hasNativeProxy = Lampa.Storage.field('proxy_tmdb') && Lampa.Storage.field('tmdb_proxy_image');
-      if (!useProxy || hasNativeProxy) {
-        return Lampa.Api.img(path, posterSize);
-      }
-      var proxyBaseUrl = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/img/t/p/';
-      return proxyBaseUrl + posterSize + '/' + path.replace(/^\//, '');
+      return Lampa.Api.img(path, posterSize);
     }
     function buildTmdbImagesApiUrl(label) {
       var tmdbLang = Lampa.Storage.field('tmdb_lang') || Lampa.Storage.get('language') || 'en';
-      var useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
-      var hasNativeProxy = Lampa.Storage.field('proxy_tmdb') && Lampa.Storage.field('tmdb_proxy_api');
-      if (!useProxy || hasNativeProxy) {
-        return Lampa.TMDB.api("".concat(label, "/images?api_key=").concat(Lampa.TMDB.key(), "&language=").concat(tmdbLang));
-      }
-      return "https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/get/".concat(label, "/images?api_key=").concat(Lampa.TMDB.key(), "&language=").concat(tmdbLang);
-    }
-    function buildProxyHeaders() {
-      var useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
-      var hasNativeProxy = Lampa.Storage.field('proxy_tmdb') && Lampa.Storage.field('tmdb_proxy_api');
-      if (useProxy && !hasNativeProxy) {
-        return {
-          origin: 'LME'
-        };
-      }
-      return {};
+      return Lampa.TMDB.api("".concat(label, "/images?api_key=").concat(Lampa.TMDB.key(), "&language=").concat(tmdbLang));
     }
     function fetchPosterFromSource(method, id) {
       var source = Lampa.Storage.get('source', 'tmdb');
@@ -615,7 +594,7 @@
     }
     function _getPosterFromLabels() {
       _getPosterFromLabels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(labels) {
-        var labelArray, label, _label$split, _label$split2, method, id, sourcePoster;
+        var labelArray, label, _label$split, _label$split2, method, id, sourcePoster, response, poster, _t;
         return _regenerator().w(function (_context) {
           while (1) switch (_context.n) {
             case 0:
@@ -641,30 +620,30 @@
               }
               return _context.a(2, sourcePoster);
             case 3:
-              return _context.a(2, new Promise(function (resolve) {
-                $.ajax({
-                  url: buildTmdbImagesApiUrl(label),
-                  method: 'GET',
-                  headers: buildProxyHeaders(),
-                  success: function success(response) {
-                    try {
-                      var poster = response.posters && response.posters[0];
-                      if (poster && poster.file_path) {
-                        resolve(buildTmdbImageUrl(poster.file_path));
-                      } else {
-                        resolve('./img/img_load.svg');
-                      }
-                    } catch (error) {
-                      resolve('./img/img_load.svg');
-                    }
-                  },
-                  error: function error() {
-                    resolve('./img/img_load.svg');
-                  }
-                });
-              }));
+              _context.p = 3;
+              _context.n = 4;
+              return new Promise(function (resolve, reject) {
+                Lampa.Network.silent(buildTmdbImagesApiUrl(label), resolve, reject);
+              });
+            case 4:
+              response = _context.v;
+              poster = response && response.posters && response.posters[0];
+              if (!(poster && poster.file_path)) {
+                _context.n = 5;
+                break;
+              }
+              return _context.a(2, buildTmdbImageUrl(poster.file_path));
+            case 5:
+              _context.n = 7;
+              break;
+            case 6:
+              _context.p = 6;
+              _t = _context.v;
+              console.log('getPosterFromLabels: images API failed', _t);
+            case 7:
+              return _context.a(2, './img/img_load.svg');
           }
-        }, _callee);
+        }, _callee, null, [[3, 6]]);
       }));
       return _getPosterFromLabels.apply(this, arguments);
     }
@@ -945,25 +924,18 @@
      */
     function _searchTMDB() {
       _searchTMDB = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(query) {
-        var tmdbLang, url, useProxy, hasNativeProxy, headers, _t;
+        var tmdbLang, url, _t;
         return _regenerator().w(function (_context) {
           while (1) switch (_context.n) {
             case 0:
               tmdbLang = Lampa.Storage.field('tmdb_lang') || Lampa.Storage.get('language') || 'en';
               url = Lampa.TMDB.api("search/multi?include_adult=true&query=".concat(encodeURIComponent(query), "&api_key=").concat(Lampa.TMDB.key(), "&language=").concat(tmdbLang));
-              useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
-              hasNativeProxy = Lampa.Storage.field('proxy_tmdb') && Lampa.Storage.field('tmdb_proxy_api');
-              headers = useProxy && !hasNativeProxy ? {
-                origin: 'LME'
-              } : {};
               _context.p = 1;
               _context.n = 2;
-              return $.ajax({
-                url: url,
-                method: 'GET',
-                timeout: 10000,
-                // 10 second timeout
-                headers: headers
+              return new Promise(function (resolve, reject) {
+                Lampa.Network.silent(url, resolve, reject, null, {
+                  timeout: 10000
+                });
               });
             case 2:
               return _context.a(2, _context.v);
@@ -2812,52 +2784,20 @@
     };
 
     var regexp2 = /(?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB-Rip|WEB-DL|WEB|TS|(?:PPV )?WEB-?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv/;
-    var PROXY_IMAGE_PREFIX = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://tmdb.melonhu.cn/img/t/p/';
-    function needsProxyHeader(url) {
-      if (!url) return false;
-      var useProxy = Lampa.Storage.field('lmetorrentproxyTMDB') === true;
-      var hasNativeProxy = Lampa.Storage.field('proxy_tmdb') && Lampa.Storage.field('tmdb_proxy_image');
-      return useProxy && !hasNativeProxy && url.indexOf(PROXY_IMAGE_PREFIX) === 0;
-    }
-    function loadImageWithHeader(img, url) {
-      if (!needsProxyHeader(url)) {
-        img.src = url;
-        return;
-      }
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', url, true);
-      xhr.responseType = 'blob';
-      xhr.setRequestHeader('origin', 'LME');
-      xhr.onload = function () {
-        if (xhr.status >= 200 && xhr.status < 300 && xhr.response) {
-          var objectUrl = URL.createObjectURL(xhr.response);
-          img.dataset.objectUrl = objectUrl;
-          img.src = objectUrl;
-        } else {
-          img.src = './img/img_broken.svg';
-        }
-      };
-      xhr.onerror = function () {
-        img.src = './img/img_broken.svg';
-      };
-      xhr.send();
-    }
     function Item(data) {
       this.id = data.id; // зберігаємо ідентифікатор торренту
-      var useProxyHeader = needsProxyHeader(data.image);
+
       var itemN = Lampa.Template.get('lmetorrent_item__card', {
         title: data.name,
         size: Lampa.Utils.bytesToSize(data.size, 0),
         state: data.state,
         "data-completed": Number((data.completed * 100).toFixed(2)),
         completed: Number((data.completed * 100).toFixed(2)) + "%",
-        image: useProxyHeader ? './img/img_load.svg' : data.image,
-        image_src: useProxyHeader ? data.image : '',
+        image: data.image,
+        image_src: '',
         quality: data.name.match(regexp2) ? data.name.match(regexp2).toString().replace(/[ .()]/g, '') : ''
       });
       this.render = function () {
-        var img = itemN.find('img')[0];
-        if (img) loadImageWithHeader(img, img.dataset.src || data.image);
         return itemN;
       };
 
@@ -2870,10 +2810,6 @@
         itemN.find('.lmetorrent_card__completed').text(progress + "%");
       };
       this.destroy = function () {
-        var img = itemN.find('img')[0];
-        if (img && img.dataset.objectUrl) {
-          URL.revokeObjectURL(img.dataset.objectUrl);
-        }
         itemN.remove();
       };
     }
@@ -3929,32 +3865,32 @@
         }
       });
       //Proxy TMDB
-      Lampa.SettingsApi.addParam({
-        component: manifest.component,
-        param: {
-          name: manifest.component + 'proxyTMDB',
-          type: 'trigger',
-          "default": 'false',
-          values: {
-            "true": Lampa.Lang.translate('true'),
-            "false": Lampa.Lang.translate('false')
-          }
-        },
-        field: {
-          name: 'Proxy TMDB posters'
-        },
-        onRender: function onRender(item) {
-          var forbiddenValues = ["universalClient", "synology", "no_client"];
-          var clientValue = Lampa.Storage.field(manifest.component + 'proxyTMDB');
-          // indexOf возвращает -1, если значения нет в массиве
-          if (forbiddenValues.indexOf(clientValue) === -1) {
-            item.show();
-          } else item.hide();
-        },
-        onChange: function onChange(value) {
-          Lampa.Settings.update();
-        }
-      });
+      // Lampa.SettingsApi.addParam({
+      //     component: manifest.component,
+      //     param: {
+      //         name: manifest.component + 'proxyTMDB',
+      //         type: 'trigger',
+      //         default: 'false',
+      //         values: {
+      //             true: Lampa.Lang.translate('true'),
+      //             false: Lampa.Lang.translate('false')
+      //         },
+      //     },
+      //     field: {
+      //         name: 'Proxy TMDB posters',
+      //     },
+      //     onRender: function (item) {
+      //         var forbiddenValues = ["universalClient", "synology", "no_client"];
+      //         var clientValue = Lampa.Storage.field(manifest.component + 'proxyTMDB');
+      //         // indexOf возвращает -1, если значения нет в массиве
+      //         if (forbiddenValues.indexOf(clientValue) === -1) {
+      //             item.show();
+      //         } else item.hide();
+      //     },
+      //     onChange: function () {
+      //         Lampa.Settings.update();
+      //     }
+      // })
       //Universal action
       Lampa.SettingsApi.addParam({
         component: manifest.component,
