@@ -148,6 +148,31 @@
           ru: "Добавить метаданные",
           uk: "Додати метадані"
         },
+        torrentmanager_nothing_found: {
+          en: "Nothing found",
+          ru: "Ничего не найдено",
+          uk: "Нічого не знайдено"
+        },
+        torrentmanager_metadata_updated: {
+          en: "Metadata updated",
+          ru: "Метаданные обновлены",
+          uk: "Метадані оновлено"
+        },
+        torrentmanager_metadata_error: {
+          en: "Metadata error",
+          ru: "Ошибка метаданных",
+          uk: "Помилка метаданів"
+        },
+        torrentmanager_metadata_updated_all: {
+          en: "Metadata updated",
+          ru: "Метаданные обновлены",
+          uk: "Метадані оновлено"
+        },
+        torrentmanager_metadata_added: {
+          en: "Metadata added",
+          ru: "Метаданные добавлены",
+          uk: "Метадані додано"
+        },
         add_metadata_all: {
           en: "Parse all",
           ru: "Парсить все",
@@ -2949,7 +2974,7 @@
                 break;
               }
               Lampa.Bell.push({
-                text: 'Нічого не знайдено для ' + torrent.name
+                text: Lampa.Lang.translate('torrentmanager_nothing_found') //'Нічого не знайдено для ' + torrent.name
               });
               return _context2.a(2, null);
             case 2:
@@ -3138,7 +3163,7 @@
               return Keenetic.setLabels(torrent.id, label);
             case 4:
               Lampa.Bell.push({
-                text: 'Метадані оновлено'
+                text: Lampa.Lang.translate('torrentmanager_metadata_updated') //'Метадані оновлено'
               });
               _context4.n = 6;
               break;
@@ -3147,7 +3172,7 @@
               _t3 = _context4.v;
               console.error('TDM', 'updateTransmissionLikeMetadata error:', _t3);
               Lampa.Bell.push({
-                text: 'Помилка оновлення метаданих'
+                text: Lampa.Lang.translate('torrentmanager_metadata_error') //'Помилка оновлення метаданих'
               });
             case 6:
               return _context4.a(2);
@@ -3178,7 +3203,7 @@
               return Qbittorent.setTags(torrent.id, tagValue);
             case 2:
               Lampa.Bell.push({
-                text: 'Метадані оновлено'
+                text: Lampa.Lang.translate('torrentmanager_metadata_updated') //'Метадані оновлено'
               });
               _context5.n = 4;
               break;
@@ -3187,7 +3212,7 @@
               _t4 = _context5.v;
               console.error('TDM', 'updateQbittorrentMetadata error:', _t4);
               Lampa.Bell.push({
-                text: 'Помилка оновлення метаданих'
+                text: Lampa.Lang.translate('torrentmanager_metadata_error') //'Помилка оновлення метаданих'
               });
             case 4:
               return _context5.a(2);
@@ -3219,12 +3244,12 @@
                   updated_at: Date.now()
                 });
                 Lampa.Bell.push({
-                  text: 'Метадані оновлено'
+                  text: Lampa.Lang.translate('torrentmanager_metadata_updated') //'Метадані оновлено'
                 });
               } catch (e) {
                 console.error('TDM', 'updateSynologyMetadata error:', e);
                 Lampa.Bell.push({
-                  text: 'Помилка оновлення метаданих'
+                  text: Lampa.Lang.translate('torrentmanager_metadata_error') //'Помилка оновлення метаданих'
                 });
               }
             case 1:
@@ -3275,7 +3300,7 @@
               return _context7.f(7);
             case 8:
               Lampa.Bell.push({
-                text: 'Оновлення метаданих завершено'
+                text: Lampa.Lang.translate('torrentmanager_metadata_updated_all') //'Оновлення метаданих завершено'
               });
             case 9:
               return _context7.a(2);
