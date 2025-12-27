@@ -3423,18 +3423,18 @@
     });
 
     // Параметр для відображення рекомендацій на головній
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakttv_show_on_main',
-        type: 'trigger',
-        "default": true
-      },
-      field: {
-        name: Lampa.Lang.translate('trakttv_show_recommendations'),
-        description: Lampa.Lang.translate('trakttv_show_recommendations')
-      }
-    });
+    // Lampa.SettingsApi.addParam({
+    //     component: 'trakt',
+    //     param: {
+    //         name: 'trakttv_show_on_main',
+    //         type: 'trigger',
+    //         default: true
+    //     },
+    //     field: {
+    //         name: Lampa.Lang.translate('trakttv_show_recommendations'),
+    //         description: Lampa.Lang.translate('trakttv_show_recommendations')
+    //     }
+    // });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -5031,9 +5031,7 @@
    * @returns {boolean}
    */
   function checkUpNextPermissions() {
-    if (!Lampa.Storage.field('trakttv_show_on_main', true)) return false;
     if (!Lampa.Storage.get('trakt_token')) return false;
-    if (!Lampa.Storage.field('trakttv_show_upnext', true)) return false;
     return true;
   }
 
@@ -5042,9 +5040,7 @@
    * @returns {boolean}
    */
   function checkRecommendationsPermissions() {
-    if (!Lampa.Storage.field('trakttv_show_on_main', true)) return false;
     if (!Lampa.Storage.get('trakt_token')) return false;
-    if (!Lampa.Storage.field('trakttv_show_recommendations', true)) return false;
     return true;
   }
 
@@ -5090,12 +5086,13 @@
         normalized.card_type = 'episode';
       }
 
-      // Add params.emit for Lampa 3.0+ modular system
+      // Add params.emit for Lampa 3.0+ modular system.
+      // Use onlyEnter to avoid default navigation firing as well.
       // CRITICAL: Use normalized closure variables instead of this.data
-      // to prevent runtime modification by Lampa
+      // to prevent runtime modification by Lampa.
       normalized.params = {
         emit: {
-          onEnter: function onEnter() {
+          onlyEnter: function onlyEnter() {
             var _this$data3;
             // Use normalized.method (fixed at creation time) instead of getContentType(this.data)
             var fixedMethod = normalized.method || normalized.card_type || normalized.type;
@@ -5174,6 +5171,8 @@
    */
   function registerUpNextRow() {
     Lampa.ContentRows.add({
+      name: 'TraktUpNextRow',
+      title: 'Trakt UpNext',
       index: 1,
       screen: ['main', 'category'],
       call: function call(params, screen) {
@@ -5223,6 +5222,8 @@
   function registerRecommendationsRows() {
     // Main screen: show all recommendations (mixed)
     Lampa.ContentRows.add({
+      name: 'TraktRecommendationsRow',
+      title: 'Trakt Recommendations',
       index: 2,
       screen: ['main'],
       call: function call(params, screen) {
@@ -5263,6 +5264,8 @@
 
     // Movie category: show only movies
     Lampa.ContentRows.add({
+      name: 'TraktRecommendationsRow',
+      title: 'Trakt Recommendations in Movie',
       index: 2,
       screen: ['category'],
       call: function call(params, screen) {
@@ -5310,6 +5313,8 @@
 
     // TV category: show only TV shows
     Lampa.ContentRows.add({
+      name: 'TraktRecommendationsRow',
+      title: 'Trakt Recommendations in TV',
       index: 2,
       screen: ['category'],
       call: function call(params, screen) {
