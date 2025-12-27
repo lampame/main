@@ -64,7 +64,247 @@
       main: main$8
     };
 
+    var STYLE_ID = 'lme-button-style';
+    var ORDER_KEY = 'lme_buttonsort';
+    var HIDE_KEY = 'lme_buttonhide';
+    var lastFullContainer = null;
+    var lastStartInstance = null;
+    var FALLBACK_TITLES = {
+      'button--play': function buttonPlay() {
+        return Lampa.Lang.translate('title_watch');
+      },
+      'button--book': function buttonBook() {
+        return Lampa.Lang.translate('settings_input_links');
+      },
+      'button--reaction': function buttonReaction() {
+        return Lampa.Lang.translate('title_reactions');
+      },
+      'button--subscribe': function buttonSubscribe() {
+        return Lampa.Lang.translate('title_subscribe');
+      },
+      'button--options': function buttonOptions() {
+        return Lampa.Lang.translate('more');
+      },
+      'view--torrent': function viewTorrent() {
+        return Lampa.Lang.translate('full_torrents');
+      },
+      'view--trailer': function viewTrailer() {
+        return Lampa.Lang.translate('full_trailers');
+      }
+    };
+    function ensureStyles() {
+      if (document.getElementById(STYLE_ID)) return;
+      var style = "\n        .lme-buttons {\n            display: flex;\n            flex-wrap: wrap;\n            gap: 10px;\n        }\n        .lme-button-hide {\n            display: none !important;\n        }\n        .lme-button-text-hidden span {\n            display: none;\n        }\n    ";
+      $('head').append("<style id=\"".concat(STYLE_ID, "\">").concat(style, "</style>"));
+    }
+    function readArray(key) {
+      var value = Lampa.Storage.get(key);
+      if (Array.isArray(value)) return value.slice();
+      if (typeof value === 'string') {
+        try {
+          var parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return value.split(',').map(function (v) {
+            return v.trim();
+          }).filter(Boolean);
+        }
+      }
+      return [];
+    }
+    function getFullContainer(e) {
+      if (e && e.body) return e.body;
+      if (e && e.link && e.link.html) return e.link.html;
+      if (e && e.object && e.object.activity && typeof e.object.activity.render === 'function') return e.object.activity.render();
+      return null;
+    }
+    function resolveActiveFullContainer() {
+      var current = $('.full-start-new').first();
+      if (current.length) return current;
+      return null;
+    }
+    function getButtonId($button) {
+      var className = ($button.attr('class') || '').split(/\s+/);
+      var idClass = className.find(function (c) {
+        return c.startsWith('button--') && c !== 'button--priority';
+      }) || className.find(function (c) {
+        return c.startsWith('view--');
+      });
+      if (idClass) return idClass;
+      var dataId = $button.data('id') || $button.data('name') || $button.attr('data-name');
+      if (dataId) return "data:".concat(dataId);
+      var title = $button.text().trim();
+      if (title) return "text:".concat(title);
+      return "html:".concat(Lampa.Utils.hash($button.clone().removeClass('focus').prop('outerHTML')));
+    }
+    function getButtonTitle(id, $button) {
+      var label = $button.find('span').first().text().trim() || $button.text().trim();
+      if (label) return label;
+      if (FALLBACK_TITLES[id]) return FALLBACK_TITLES[id]();
+      return id;
+    }
+    function scanButtons(fullContainer, detach) {
+      var targetContainer = fullContainer.find('.full-start-new__buttons');
+      var extraContainer = fullContainer.find('.buttons--container');
+      var items = [];
+      var map = {};
+      function collect($buttons) {
+        $buttons.each(function () {
+          var $btn = $(this);
+          if ($btn.hasClass('button--play') || $btn.hasClass('button--priority')) return;
+          var id = getButtonId($btn);
+          if (!id || map[id]) return;
+          map[id] = detach ? $btn.detach() : $btn;
+          items.push(id);
+        });
+      }
+      collect(targetContainer.find('.full-start__button'));
+      collect(extraContainer.find('.full-start__button'));
+      return {
+        items: items,
+        map: map,
+        targetContainer: targetContainer,
+        extraContainer: extraContainer
+      };
+    }
+    function normalizeOrder(order, ids) {
+      var result = [];
+      var known = new Set(ids);
+      order.forEach(function (id) {
+        if (known.has(id)) result.push(id);
+      });
+      ids.forEach(function (id) {
+        if (!result.includes(id)) result.push(id);
+      });
+      return result;
+    }
+    function applyHidden(map) {
+      var hidden = new Set(readArray(HIDE_KEY));
+      Object.keys(map).forEach(function (id) {
+        map[id].toggleClass('lme-button-hide', hidden.has(id));
+      });
+    }
+    function applyLayout(fullContainer) {
+      if (!fullContainer || !fullContainer.length) return;
+      ensureStyles();
+      var priority = fullContainer.find('.full-start-new__buttons .button--priority').detach();
+      fullContainer.find('.full-start-new__buttons .button--play').remove();
+      var _scanButtons = scanButtons(fullContainer, true),
+        items = _scanButtons.items,
+        map = _scanButtons.map,
+        targetContainer = _scanButtons.targetContainer;
+      var order = normalizeOrder(readArray(ORDER_KEY), items);
+      targetContainer.empty();
+      if (priority.length) targetContainer.append(priority);
+      order.forEach(function (id) {
+        if (map[id]) targetContainer.append(map[id]);
+      });
+      targetContainer.toggleClass('lme-button-text-hidden', Lampa.Storage.get('lme_showbuttonwn') == true);
+      targetContainer.addClass('lme-buttons');
+      applyHidden(map);
+      Lampa.Controller.toggle("full_start");
+      if (lastStartInstance && lastStartInstance.html && fullContainer[0] === lastStartInstance.html[0]) {
+        var firstButton = targetContainer.find('.full-start__button.selector').not('.hide').not('.lme-button-hide').first();
+        if (firstButton.length) lastStartInstance.last = firstButton[0];
+      }
+    }
+    function openEditor(fullContainer) {
+      if (!fullContainer || !fullContainer.length) return;
+      var _scanButtons2 = scanButtons(fullContainer, false),
+        items = _scanButtons2.items,
+        map = _scanButtons2.map;
+      var order = normalizeOrder(readArray(ORDER_KEY), items);
+      var hidden = new Set(readArray(HIDE_KEY));
+      var list = $('<div class="menu-edit-list"></div>');
+      order.forEach(function (id) {
+        var $btn = map[id];
+        if (!$btn || !$btn.length) return;
+        var title = getButtonTitle(id, $btn);
+        var icon = $btn.find('svg').first().prop('outerHTML') || '';
+        var item = $("<div class=\"menu-edit-list__item\" data-id=\"".concat(id, "\">\n            <div class=\"menu-edit-list__icon\"></div>\n            <div class=\"menu-edit-list__title\">").concat(title, "</div>\n            <div class=\"menu-edit-list__move move-up selector\">\n                <svg width=\"22\" height=\"14\" viewBox=\"0 0 22 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M2 12L11 3L20 12\" stroke=\"currentColor\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n                </svg>\n            </div>\n            <div class=\"menu-edit-list__move move-down selector\">\n                <svg width=\"22\" height=\"14\" viewBox=\"0 0 22 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M2 2L11 11L20 2\" stroke=\"currentColor\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n                </svg>\n            </div>\n            <div class=\"menu-edit-list__toggle toggle selector\">\n                <svg width=\"26\" height=\"26\" viewBox=\"0 0 26 26\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <rect x=\"1.89111\" y=\"1.78369\" width=\"21.793\" height=\"21.793\" rx=\"3.5\" stroke=\"currentColor\" stroke-width=\"3\"/>\n                    <path d=\"M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588\" stroke=\"currentColor\" stroke-width=\"3\" class=\"dot\" opacity=\"0\" stroke-linecap=\"round\"/>\n                </svg>\n            </div>\n        </div>"));
+        if (icon) item.find('.menu-edit-list__icon').append(icon);
+        item.toggleClass('lme-button-hidden', hidden.has(id));
+        item.find('.dot').attr('opacity', hidden.has(id) ? 0 : 1);
+        item.find('.move-up').on('hover:enter', function () {
+          var prev = item.prev();
+          if (prev.length) item.insertBefore(prev);
+        });
+        item.find('.move-down').on('hover:enter', function () {
+          var next = item.next();
+          if (next.length) item.insertAfter(next);
+        });
+        item.find('.toggle').on('hover:enter', function () {
+          item.toggleClass('lme-button-hidden');
+          item.find('.dot').attr('opacity', item.hasClass('lme-button-hidden') ? 0 : 1);
+        });
+        list.append(item);
+      });
+      Lampa.Modal.open({
+        title: 'Edit buttons',
+        html: list,
+        size: 'small',
+        scroll_to_center: true,
+        onBack: function onBack() {
+          var newOrder = [];
+          var newHidden = [];
+          list.find('.menu-edit-list__item').each(function () {
+            var id = $(this).data('id');
+            if (!id) return;
+            newOrder.push(id);
+            if ($(this).hasClass('lme-button-hidden')) newHidden.push(id);
+          });
+          Lampa.Storage.set(ORDER_KEY, newOrder);
+          Lampa.Storage.set(HIDE_KEY, newHidden);
+          Lampa.Modal.close();
+          applyLayout(fullContainer);
+        }
+      });
+    }
+    function openEditorFromSettings() {
+      if (!lastFullContainer || !lastFullContainer.length || !document.body.contains(lastFullContainer[0])) {
+        var current = resolveActiveFullContainer();
+        if (current) {
+          lastFullContainer = current;
+        }
+      }
+      if (!lastFullContainer || !lastFullContainer.length || !document.body.contains(lastFullContainer[0])) {
+        Lampa.Modal.open({
+          title: Lampa.Lang.translate('title_error'),
+          html: Lampa.Template.get('error', {
+            title: Lampa.Lang.translate('title_error'),
+            text: 'Open a movie card to edit buttons'
+          }),
+          size: 'small',
+          scroll_to_center: true,
+          onBack: function onBack() {
+            Lampa.Modal.close();
+          }
+        });
+        return;
+      }
+      openEditor(lastFullContainer);
+    }
     function main$7() {
+      Lampa.Listener.follow('full', function (e) {
+        if (e.type === 'build' && e.name === 'start' && e.item && e.item.html) {
+          lastStartInstance = e.item;
+        }
+        if (e.type === 'complite') {
+          var fullContainer = getFullContainer(e);
+          if (!fullContainer) return;
+          lastFullContainer = fullContainer;
+          setTimeout(function () {
+            applyLayout(fullContainer);
+          }, 0);
+        }
+      });
+    }
+    var showButton = {
+      main: main$7,
+      openEditorFromSettings: openEditorFromSettings
+    };
+
+    function main$6() {
       Lampa.SettingsApi.addComponent({
         component: "lme",
         name: 'Movie Enhancer',
@@ -185,6 +425,20 @@
             Lampa.Settings.update();
           }
         });
+        Lampa.SettingsApi.addParam({
+          component: "lme",
+          param: {
+            name: "lme_button_editor",
+            type: "button"
+          },
+          field: {
+            name: 'Edit buttons',
+            description: 'Reorder and hide card buttons'
+          },
+          onChange: function onChange() {
+            showButton.openEditorFromSettings();
+          }
+        });
       }
       //Switch Source
       Lampa.SettingsApi.addParam({
@@ -236,7 +490,7 @@
       });
     }
     var CONFIG = {
-      main: main$7
+      main: main$6
     };
 
     function asyncGeneratorStep(n, t, e, r, o, a, c) {
@@ -425,7 +679,7 @@
         $(selector).append(quality);
       }
     }
-    function main$6() {
+    function main$5() {
       Lampa.Listener.follow("full", function (e) {
         if (e.type === "complite") {
           findBestQualityItem(e.object).then(function (bestItem) {
@@ -449,10 +703,10 @@
       });
     }
     var StreamQuality = {
-      main: main$6
+      main: main$5
     };
 
-    function main$5() {
+    function main$4() {
       Lampa.Listener.follow("full", function (cardData) {
         //if (e.type === "complite" && Lampa.Storage.field('source') !== 'cub')
         if (cardData.type === "complite" && Lampa.Storage.field('source') === 'tmdb') {
@@ -504,10 +758,10 @@
       });
     }
     var englishData = {
-      main: main$5
+      main: main$4
     };
 
-    function main$4() {
+    function main$3() {
       Lampa.Listener.follow("full", function (cardData) {
         if (cardData.type === "complite" && cardData.object.method === "tv") {
           var imdbId = cardData.data.movie.imdb_id;
@@ -541,10 +795,10 @@
       });
     }
     var averageRuntime = {
-      main: main$4
+      main: main$3
     };
 
-    function main$3() {
+    function main$2() {
       var allSources = ['tmdb', 'cub']; // Усі плеери
       var logos = {
         tmdb: "<svg width=\"161\" height=\"37\" viewBox=\"0 0 161 37\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\"> <path d=\"M10.0846 35.8986H17.8727V7.01351H27.9572V0H0V6.99324H10.0846V35.8986ZM38.1417 35.8986H45.9298V8.36149H46.0296L54.9659 35.8784H60.9568L70.1927 8.36149H70.2925V35.8784H78.0806V0H66.3485L58.1611 23.4122H58.0612L49.9237 0H38.1417V35.8986ZM89.0039 0.121622H100.686C103.406 0.125865 106.115 0.466206 108.754 1.13514C111.157 1.7138 113.421 2.77522 115.414 4.25676C117.34 5.72744 118.892 7.64602 119.937 9.85135C121.118 12.4714 121.689 15.3326 121.604 18.2128C121.658 20.8662 121.104 23.4961 119.987 25.8953C118.946 28.0542 117.453 29.9565 115.613 31.4696C113.73 33.0023 111.579 34.1611 109.273 34.8851C106.835 35.6708 104.292 36.064 101.734 36.0507H89.0039V0.121622ZM96.792 28.7027H100.786C102.466 28.7143 104.141 28.5273 105.778 28.1453C107.239 27.8443 108.621 27.2329 109.832 26.3513C110.988 25.4631 111.908 24.2961 112.508 22.9561C113.209 21.335 113.55 19.5772 113.506 17.8074C113.536 16.2216 113.194 14.6514 112.508 13.2264C111.885 11.9635 110.987 10.8612 109.882 10.0034C108.733 9.13749 107.437 8.49491 106.058 8.10811C104.537 7.67642 102.964 7.46152 101.385 7.46959H96.792V28.7027ZM132.887 0.121622H146.067C147.613 0.122387 149.158 0.234152 150.69 0.456081C152.142 0.647089 153.551 1.09291 154.853 1.77365C156.07 2.41433 157.102 3.36414 157.849 4.5304C158.677 5.95358 159.076 7.59212 158.997 9.24324C159.065 11.0819 158.473 12.883 157.329 14.3108C156.163 15.6827 154.625 16.6765 152.906 17.1689V17.2297C154.012 17.39 155.084 17.7323 156.081 18.2432C157.002 18.7125 157.831 19.3479 158.528 20.1182C159.218 20.8897 159.75 21.7922 160.095 22.7736C160.467 23.8129 160.653 24.9112 160.644 26.0169C160.704 27.6822 160.288 29.3295 159.446 30.7601C158.663 32.0054 157.603 33.0468 156.351 33.8007C155.035 34.6026 153.593 35.1683 152.087 35.473C150.535 35.8108 148.952 35.9807 147.365 35.9797H132.887V0.121622ZM140.675 14.4628H146.316C146.914 14.4661 147.511 14.3981 148.094 14.2601C148.651 14.1373 149.182 13.9142 149.661 13.6014C150.129 13.2951 150.516 12.8776 150.789 12.3851C151.082 11.8239 151.226 11.1955 151.209 10.5608C151.241 9.91579 151.088 9.27513 150.769 8.71622C150.46 8.2373 150.038 7.8438 149.541 7.57095C148.985 7.28738 148.389 7.09253 147.774 6.99324C147.165 6.87376 146.547 6.81268 145.927 6.81081H140.635L140.675 14.4628ZM140.675 29.3108H147.664C148.279 29.3125 148.892 29.2445 149.491 29.1081C150.087 28.9843 150.654 28.7433 151.159 28.3986C151.663 28.0612 152.083 27.6103 152.387 27.0811C152.715 26.4768 152.877 25.7943 152.856 25.1047C152.883 24.3773 152.664 23.6623 152.237 23.0777C151.818 22.5517 151.276 22.1405 150.66 21.8818C150.02 21.6112 149.349 21.4239 148.663 21.3243C147.985 21.2266 147.301 21.1758 146.616 21.1723H140.725L140.675 29.3108Z\" fill=\"currentColor\"/> </svg>",
@@ -606,68 +860,6 @@
       });
     }
     var sourceSwitch = {
-      main: main$3
-    };
-
-    function main$2() {
-      Lampa.Listener.follow('full', function (e) {
-        if (e.type === 'complite') {
-          setTimeout(function () {
-            var fullContainer = e.object.activity.render();
-            var targetContainer = fullContainer.find('.full-start-new__buttons');
-            fullContainer.find('.button--play').remove();
-            var allButtons = fullContainer.find('.buttons--container .full-start__button').add(targetContainer.find('.full-start__button'));
-
-            // Визначаємо категорії кнопок за наявністю слів у класах
-            var categories = {
-              online: [],
-              torrent: [],
-              trailer: [],
-              other: []
-            };
-            allButtons.each(function () {
-              var $button = $(this);
-              var className = $button.attr('class');
-              if (className.includes('online')) {
-                categories.online.push($button);
-              } else if (className.includes('torrent')) {
-                categories.torrent.push($button);
-              } else if (className.includes('trailer')) {
-                categories.trailer.push($button);
-              } else {
-                categories.other.push($button.clone(true)); // Клонуємо з подіями
-              }
-            });
-
-            // Отримуємо порядок кнопок з Storage або використовуємо стандартний
-            var buttonSortOrder = Lampa.Storage.get('lme_buttonsort') || ['torrent', 'online', 'trailer', 'other'];
-
-            // Очищаємо та заповнюємо контейнер у відповідності до порядку
-            targetContainer.empty();
-            buttonSortOrder.forEach(function (category) {
-              categories[category].forEach(function ($button) {
-                targetContainer.append($button);
-              });
-            });
-            // Перевіряємо змінну lme_showbuttonwn
-            if (Lampa.Storage.get('lme_showbuttonwn') == true) {
-              targetContainer.find("span").remove();
-            }
-
-            // Додаємо стиль для переносу кнопок на наступний рядок
-            targetContainer.css({
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '10px' // Optional: adds space between buttons
-            });
-
-            // Вмикаємо "full_start" після виконання
-            Lampa.Controller.toggle("full_start");
-          }, 100); // Таймаут 100 мс для стабільності
-        }
-      });
-    }
-    var showButton = {
       main: main$2
     };
 
