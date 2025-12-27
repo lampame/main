@@ -493,179 +493,120 @@
       main: main$6
     };
 
-    function asyncGeneratorStep(n, t, e, r, o, a, c) {
-      try {
-        var i = n[a](c),
-          u = i.value;
-      } catch (n) {
-        return void e(n);
-      }
-      i.done ? t(u) : Promise.resolve(u).then(r, o);
-    }
-    function _asyncToGenerator(n) {
+    var API_BASE = "https://sociable-necessary-road.anvil.app/_/api/wm";
+    var STORAGE_KEY = "lme_wm_quality_map";
+    function debounce(func, wait) {
+      var timeout;
       return function () {
-        var t = this,
-          e = arguments;
-        return new Promise(function (r, o) {
-          var a = n.apply(t, e);
-          function _next(n) {
-            asyncGeneratorStep(a, r, o, _next, _throw, "next", n);
-          }
-          function _throw(n) {
-            asyncGeneratorStep(a, r, o, _next, _throw, "throw", n);
-          }
-          _next(void 0);
-        });
+        var context = this;
+        var args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(function () {
+          return func.apply(context, args);
+        }, wait);
       };
     }
-    function _regenerator() {
-      /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */
-      var e,
-        t,
-        r = "function" == typeof Symbol ? Symbol : {},
-        n = r.iterator || "@@iterator",
-        o = r.toStringTag || "@@toStringTag";
-      function i(r, n, o, i) {
-        var c = n && n.prototype instanceof Generator ? n : Generator,
-          u = Object.create(c.prototype);
-        return _regeneratorDefine(u, "_invoke", function (r, n, o) {
-          var i,
-            c,
-            u,
-            f = 0,
-            p = o || [],
-            y = !1,
-            G = {
-              p: 0,
-              n: 0,
-              v: e,
-              a: d,
-              f: d.bind(e, 4),
-              d: function (t, r) {
-                return i = t, c = 0, u = e, G.n = r, a;
-              }
-            };
-          function d(r, n) {
-            for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) {
-              var o,
-                i = p[t],
-                d = G.p,
-                l = i[2];
-              r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0));
-            }
-            if (o || r > 1) return a;
-            throw y = !0, n;
+    function Cache() {
+      var self = this;
+      var cacheSize = 1000;
+      var cacheTime = 1000 * 60 * 60 * 12; // 12h
+      var storage = {};
+      self.save = debounce(function () {
+        Lampa.Storage.set(STORAGE_KEY, storage);
+      }, 500);
+      self.init = function () {
+        storage = Lampa.Storage.get(STORAGE_KEY, {});
+        self.init = function () {};
+      };
+      self.get = function (id) {
+        var memory = storage[id];
+        if (memory) {
+          var cacheTimestamp = Date.now() - cacheTime;
+          if (memory.timestamp > cacheTimestamp) return memory.value;
+          for (var cacheId in storage) {
+            var node = storage[cacheId];
+            if (!(node && node.timestamp > cacheTimestamp)) delete storage[cacheId];
           }
-          return function (o, p, l) {
-            if (f > 1) throw TypeError("Generator is already running");
-            for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) {
-              i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u);
-              try {
-                if (f = 2, i) {
-                  if (c || (o = "next"), t = i[o]) {
-                    if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object");
-                    if (!t.done) return t;
-                    u = t.value, c < 2 && (c = 0);
-                  } else 1 === c && (t = i.return) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1);
-                  i = e;
-                } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break;
-              } catch (t) {
-                i = e, c = 1, u = t;
-              } finally {
-                f = 1;
-              }
-            }
-            return {
-              value: t,
-              done: y
-            };
-          };
-        }(r, o, i), !0), u;
-      }
-      var a = {};
-      function Generator() {}
-      function GeneratorFunction() {}
-      function GeneratorFunctionPrototype() {}
-      t = Object.getPrototypeOf;
-      var c = [][n] ? t(t([][n]())) : (_regeneratorDefine(t = {}, n, function () {
-          return this;
-        }), t),
-        u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c);
-      function f(e) {
-        return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e;
-      }
-      return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine(u), _regeneratorDefine(u, o, "Generator"), _regeneratorDefine(u, n, function () {
-        return this;
-      }), _regeneratorDefine(u, "toString", function () {
-        return "[object Generator]";
-      }), (_regenerator = function () {
-        return {
-          w: i,
-          m: f
-        };
-      })();
-    }
-    function _regeneratorDefine(e, r, n, t) {
-      var i = Object.defineProperty;
-      try {
-        i({}, "", {});
-      } catch (e) {
-        i = 0;
-      }
-      _regeneratorDefine = function (e, r, n, t) {
-        if (r) i ? i(e, r, {
-          value: n,
-          enumerable: !t,
-          configurable: !t,
-          writable: !t
-        }) : e[r] = n;else {
-          function o(r, n) {
-            _regeneratorDefine(e, r, function (e) {
-              return this._invoke(r, n, e);
-            });
-          }
-          o("next", 0), o("throw", 1), o("return", 2);
         }
-      }, _regeneratorDefine(e, r, n, t);
-    }
-
-    function findBestQualityItem(_x) {
-      return _findBestQualityItem.apply(this, arguments);
-    }
-    function _findBestQualityItem() {
-      _findBestQualityItem = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(object) {
-        var _object$card, mediaType, tid, settings, response, _t;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.n) {
-            case 0:
-              _context.p = 0;
-              mediaType = (object === null || object === void 0 ? void 0 : object.media_type) || (object !== null && object !== void 0 && object.first_air_date ? "tv" : "movie");
-              tid = (object === null || object === void 0 || (_object$card = object.card) === null || _object$card === void 0 ? void 0 : _object$card.imdb_id) || "".concat(mediaType, "-").concat(object.id);
-              settings = {
-                url: "https://lme-gateway.alwaysdata.net/wm.php?tid=".concat(tid, "&apiKey=").concat(Lampa.Storage.get('lme_wmquality'), "&tmdbId=").concat(mediaType, "-").concat(object.id),
-                method: "GET",
-                timeout: 0
-              };
-              _context.n = 1;
-              return $.ajax(settings);
-            case 1:
-              response = _context.v;
-              return _context.a(2, response.quality);
-            case 2:
-              _context.p = 2;
-              _t = _context.v;
-              console.error("LME", _t);
-              return _context.a(2, null);
+        return null;
+      };
+      self.set = function (id, value) {
+        var timestamp = Date.now();
+        var size = Object.keys(storage).length;
+        if (size >= cacheSize) {
+          var cacheTimestamp = timestamp - cacheTime;
+          for (var cacheId in storage) {
+            var node = storage[cacheId];
+            if (!(node && node.timestamp > cacheTimestamp)) delete storage[cacheId];
           }
-        }, _callee, null, [[0, 2]]);
-      }));
-      return _findBestQualityItem.apply(this, arguments);
+          size = Object.keys(storage).length;
+          if (size >= cacheSize) {
+            var timestamps = [];
+            for (var _cacheId in storage) {
+              var _node = storage[_cacheId];
+              timestamps.push(_node && _node.timestamp || 0);
+            }
+            timestamps.sort(function (a, b) {
+              return a - b;
+            });
+            cacheTimestamp = timestamps[Math.floor(timestamps.length / 2)];
+            for (var _cacheId2 in storage) {
+              var _node2 = storage[_cacheId2];
+              if (!(_node2 && _node2.timestamp > cacheTimestamp)) delete storage[_cacheId2];
+            }
+          }
+        }
+        storage[id] = {
+          timestamp: timestamp,
+          value: value
+        };
+        self.save();
+      };
+    }
+    function buildTid(object) {
+      var _object$card, _object$movie, _object$data, _object$movie2, _object$data2, _object$card2, _object$movie3, _object$movie4;
+      var imdbId = (object === null || object === void 0 ? void 0 : object.imdb_id) || (object === null || object === void 0 || (_object$card = object.card) === null || _object$card === void 0 ? void 0 : _object$card.imdb_id) || (object === null || object === void 0 || (_object$movie = object.movie) === null || _object$movie === void 0 ? void 0 : _object$movie.imdb_id) || (object === null || object === void 0 || (_object$data = object.data) === null || _object$data === void 0 ? void 0 : _object$data.imdb_id);
+      if (imdbId) return imdbId;
+      var id = (object === null || object === void 0 ? void 0 : object.id) || (object === null || object === void 0 || (_object$movie2 = object.movie) === null || _object$movie2 === void 0 ? void 0 : _object$movie2.id) || (object === null || object === void 0 || (_object$data2 = object.data) === null || _object$data2 === void 0 ? void 0 : _object$data2.id);
+      if (!id) return null;
+      var mediaType = (object === null || object === void 0 ? void 0 : object.media_type) || (object === null || object === void 0 || (_object$card2 = object.card) === null || _object$card2 === void 0 ? void 0 : _object$card2.media_type) || (object === null || object === void 0 || (_object$movie3 = object.movie) === null || _object$movie3 === void 0 ? void 0 : _object$movie3.media_type) || (object !== null && object !== void 0 && object.first_air_date || object !== null && object !== void 0 && object.number_of_seasons || object !== null && object !== void 0 && (_object$movie4 = object.movie) !== null && _object$movie4 !== void 0 && _object$movie4.first_air_date ? "tv" : "movie");
+      return "".concat(mediaType, "-").concat(id);
+    }
+    function fetchBestQualityItem(object) {
+      try {
+        var tid = buildTid(object);
+        var apiKey = Lampa.Storage.get("lme_wmquality");
+        if (!tid || !apiKey) return Promise.resolve(null);
+        var url = "".concat(API_BASE, "?tid=").concat(encodeURIComponent(tid), "&apiKey=").concat(encodeURIComponent(apiKey));
+        return new Promise(function (resolve) {
+          Lampa.Network.silent(url, function (response) {
+            return resolve(response && response.quality ? response.quality : null);
+          }, function () {
+            return resolve(null);
+          }, null, {
+            timeout: 10000
+          });
+        });
+      } catch (error) {
+        console.error("LME", error);
+        return Promise.resolve(null);
+      }
+    }
+    function renderQuality(html, quality) {
+      if (!quality) return;
+      var qualityContainer = $(".card__quality", html);
+      if (qualityContainer.length !== 1) {
+        qualityContainer = $('<div class="card__quality"><div></div></div>');
+        var icons = $(".card__icons", html);
+        if (icons.length) icons.after(qualityContainer);else $(".card__view", html).append(qualityContainer);
+      }
+      $("div", qualityContainer).text(quality);
     }
     function appendQualityElement(bestItem, selector) {
-      if (!bestItem) return; // Check if bestItem is empty
-      if (Lampa.Platform.screen('mobile') !== true) {
+      if (!bestItem) return;
+      if (Lampa.Platform.screen("mobile") !== true) {
         var container = $(selector);
-        container.find('.card__quality').remove();
+        container.find(".card__quality").remove();
         var quality = $("<div>", {
           "class": "card__quality",
           css: {
@@ -680,24 +621,38 @@
       }
     }
     function main$5() {
+      var cache = new Cache();
+      cache.init();
+      var inflight = {};
+      var card = Lampa.Maker.map("Card");
+      var onVisible = card.Card.onVisible;
+      card.Card.onVisible = function () {
+        var self = this;
+        onVisible.apply(self);
+        if (!self.data || Lampa.Storage.field("source") === "cub") return;
+        var tid = buildTid(self.data);
+        if (!tid) return;
+        var qualityCache = cache.get(tid);
+        if (qualityCache) {
+          renderQuality(self.html, qualityCache);
+          return;
+        }
+        if (inflight[tid]) return;
+        inflight[tid] = true;
+        fetchBestQualityItem(self.data).then(function (bestItem) {
+          if (bestItem) {
+            cache.set(tid, bestItem);
+            renderQuality(self.html, bestItem);
+          }
+        })["finally"](function () {
+          delete inflight[tid];
+        });
+      };
       Lampa.Listener.follow("full", function (e) {
         if (e.type === "complite") {
-          findBestQualityItem(e.object).then(function (bestItem) {
-            console.log("response", bestItem);
+          var _e$data;
+          fetchBestQualityItem(e.object || ((_e$data = e.data) === null || _e$data === void 0 ? void 0 : _e$data.movie)).then(function (bestItem) {
             appendQualityElement(bestItem, ".full-start-new__poster");
-          });
-        }
-      });
-      Lampa.Listener.follow("line", function (e) {
-        if (e.type === "append" && Lampa.Storage.field("source") !== "cub") {
-          $.each(e.items, function (_, movieCard) {
-            if (movieCard.data && (movieCard.data.id || movieCard.data.number_of_seasons)) {
-              findBestQualityItem(movieCard.data).then(function (bestItem) {
-                appendQualityElement(bestItem, movieCard.card.find(".card__view"));
-              });
-            } else {
-              console.warn("LME", "movieCard.data is undefined or missing id/number_of_seasons:", movieCard);
-            }
           });
         }
       });
