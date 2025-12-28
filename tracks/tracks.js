@@ -8,6 +8,18 @@
     var listProbeRequested = false;
     function log() {
     }
+    function stopAutostart() {
+      if (typeof Lampa !== 'undefined' && Lampa.Keypad && Lampa.Keypad.listener) {
+        Lampa.Keypad.listener.send('keydown', {
+          code: 0,
+          enabled: false,
+          event: {}
+        });
+      }
+    }
+    function stopAutostartSoon() {
+      setTimeout(stopAutostart, 0);
+    }
     function cacheGet(key) {
       var item = cache[key];
       if (!item) return null;
@@ -356,6 +368,7 @@
           listProbeRequested = false;
         }
         if (data.type == 'render' && data.items.length == 1 && listOpened) {
+          stopAutostartSoon();
           parseMetainfo(data);
         }
         if (data.type == 'render' && listOpened && data.items.length > 1 && !listProbeRequested) {
