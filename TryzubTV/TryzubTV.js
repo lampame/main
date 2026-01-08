@@ -187,7 +187,7 @@
             _context2.n = 2;
             return Promise.all(categories.map(/*#__PURE__*/function () {
               var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(category) {
-                var url, channelsResponse, channels, items, line, _t;
+                var url, channelsResponse, channels, total, items, title, lineTitle, line, _t;
                 return _regenerator().w(function (_context) {
                   while (1) switch (_context.n) {
                     case 0:
@@ -198,6 +198,7 @@
                     case 1:
                       channelsResponse = _context.v;
                       channels = channelsResponse && channelsResponse.data ? channelsResponse.data : [];
+                      total = channelsResponse && channelsResponse.meta && channelsResponse.meta.total ? channelsResponse.meta.total : channels.length;
                       items = channels.filter(isFreeChannel).filter(function (channel) {
                         return channel && channel.link;
                       }).map(function (channel) {
@@ -209,19 +210,22 @@
                       }
                       return _context.a(2, null);
                     case 2:
+                      title = category.name || '';
+                      lineTitle = total ? "".concat(title, " \xB7 ").concat(total) : title;
                       line = {
-                        title: category.name || '',
+                        title: lineTitle,
                         results: items,
                         total_pages: 2,
                         params: {
                           tryzubtv_category: category.slug || '',
-                          tryzubtv_category_title: category.name || ''
+                          tryzubtv_category_title: title,
+                          tryzubtv_category_total: total
                         }
                       };
                       if (LineModule) {
                         line.params.module = LineModule.toggle(LineModule.MASK.base, 'More');
                         line.params.more = {
-                          title: category.name || '',
+                          title: title,
                           component: 'tryzubtv_category',
                           category_slug: category.slug || ''
                         };
@@ -261,7 +265,7 @@
   }
   function _loadCategory() {
     _loadCategory = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(categorySlug, categoryTitle, oncomplete, onerror) {
-      var url, response, channels, title, items, _t3;
+      var url, response, channels, total, title, lineTitle, items, _t3;
       return _regenerator().w(function (_context3) {
         while (1) switch (_context3.n) {
           case 0:
@@ -272,7 +276,9 @@
           case 1:
             response = _context3.v;
             channels = response && response.data ? response.data : [];
+            total = response && response.meta && response.meta.total ? response.meta.total : channels.length;
             title = categoryTitle || categorySlug || '';
+            lineTitle = total ? "".concat(title, " \xB7 ").concat(total) : title;
             items = channels.filter(isFreeChannel).filter(function (channel) {
               return channel && channel.link;
             }).map(function (channel) {
@@ -282,12 +288,13 @@
               });
             }).filter(Boolean);
             oncomplete([{
-              title: '',
+              title: lineTitle,
               results: items,
               total_pages: 1,
               params: {
                 tryzubtv_category: categorySlug || '',
-                tryzubtv_category_title: title
+                tryzubtv_category_title: title,
+                tryzubtv_category_total: total
               }
             }]);
             _context3.n = 3;
