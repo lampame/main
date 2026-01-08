@@ -146,13 +146,22 @@
   function isFreeChannel(channel) {
     return channel && channel.package_block == null;
   }
+  function translateCategoryName(name) {
+    var raw = name || '';
+    if (!raw) return '';
+    var key = "tryzubtv_category_".concat(raw);
+    var translated = Lampa.Lang ? Lampa.Lang.translate(key) : key;
+    return translated === key ? raw : translated;
+  }
   function mapChannelToCard(channel, category) {
-    var logo = channel.icon_url_2 || channel.icon_url || '';
+    var logo = channel.icon_url || channel.icon_url_2 || '';
     var poster = logo || channel.frame_url || channel.frame_url_origin || '';
     var categorySlug = category ? category.slug : '';
-    var categoryTitle = category ? category.name : '';
+    var categoryTitle = translateCategoryName(category ? category.name : '');
+    var nowTitle = channel.epg_current && channel.epg_current.name ? channel.epg_current.name : '';
+    var fallbackTitle = channel.name || '';
     return {
-      title: channel.name || '',
+      title: nowTitle || fallbackTitle,
       poster: poster,
       cover: poster,
       img: logo,
@@ -165,7 +174,11 @@
       tryzubtv_now: channel.epg_current ? channel.epg_current.name : '',
       tryzubtv_category: categorySlug,
       tryzubtv_category_title: categoryTitle,
-      params: {}
+      params: {
+        style: {
+          name: 'wide'
+        }
+      }
     };
   }
   function loadMain(_x, _x2) {
@@ -187,7 +200,7 @@
             _context2.n = 2;
             return Promise.all(categories.map(/*#__PURE__*/function () {
               var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(category) {
-                var url, channelsResponse, channels, total, items, title, lineTitle, line, _t;
+                var url, channelsResponse, channels, total, categoryName, displayTitle, items, lineTitle, line, _t;
                 return _regenerator().w(function (_context) {
                   while (1) switch (_context.n) {
                     case 0:
@@ -199,6 +212,8 @@
                       channelsResponse = _context.v;
                       channels = channelsResponse && channelsResponse.data ? channelsResponse.data : [];
                       total = channelsResponse && channelsResponse.meta && channelsResponse.meta.total ? channelsResponse.meta.total : channels.length;
+                      categoryName = category && category.name ? category.name : '';
+                      displayTitle = translateCategoryName(categoryName);
                       items = channels.filter(isFreeChannel).filter(function (channel) {
                         return channel && channel.link;
                       }).map(function (channel) {
@@ -210,22 +225,21 @@
                       }
                       return _context.a(2, null);
                     case 2:
-                      title = category.name || '';
-                      lineTitle = total ? "".concat(title, " \xB7 ").concat(total) : title;
+                      lineTitle = total ? "".concat(displayTitle, " \xB7 ").concat(total) : displayTitle;
                       line = {
                         title: lineTitle,
                         results: items,
                         total_pages: 2,
                         params: {
                           tryzubtv_category: category.slug || '',
-                          tryzubtv_category_title: title,
+                          tryzubtv_category_title: displayTitle,
                           tryzubtv_category_total: total
                         }
                       };
                       if (LineModule) {
                         line.params.module = LineModule.toggle(LineModule.MASK.base, 'More');
                         line.params.more = {
-                          title: title,
+                          title: displayTitle,
                           component: 'tryzubtv_category',
                           category_slug: category.slug || ''
                         };
@@ -277,7 +291,7 @@
             response = _context3.v;
             channels = response && response.data ? response.data : [];
             total = response && response.meta && response.meta.total ? response.meta.total : channels.length;
-            title = categoryTitle || categorySlug || '';
+            title = translateCategoryName(categoryTitle || categorySlug || '');
             lineTitle = total ? "".concat(title, " \xB7 ").concat(total) : title;
             items = channels.filter(isFreeChannel).filter(function (channel) {
               return channel && channel.link;
@@ -406,7 +420,7 @@
                 name: channel.name || '',
                 slug: channel.slug || '',
                 url: channel.link || '',
-                logo: channel.icon_url_2 || channel.icon_url || '',
+                logo: channel.icon_url || channel.icon_url_2 || '',
                 epg_current: channel.epg_current || null
               };
             }));
@@ -478,7 +492,9 @@
         }
         var cached = epgCache[selected.slug];
         if (cached) {
-          renderProgramList(container, cached.items || [], typeof position === 'number' ? position : cached.position || 0);
+          var hasCachedPosition = typeof cached.position === 'number' && cached.position > 0;
+          var usePosition = typeof position === 'number' && position > 0 ? position : hasCachedPosition ? cached.position : 0;
+          renderProgramList(container, cached.items || [], usePosition);
           return;
         }
         renderProgramList(container, [], 0);
@@ -609,9 +625,9 @@
           onInstance: function onInstance(cardItem, cardData) {
             cardItem.use({
               onCreate: function onCreate() {
-                var cardElement = this.render ? this.render(true) : cardItem.render ? cardItem.render(true) : null;
-                if (!cardElement) return;
-                $(cardElement).addClass('card--tryzubtv');
+                if (this.html && this.html.classList) {
+                  this.html.classList.add('card--tryzubtv');
+                }
               },
               onEnter: function onEnter() {
                 Player.playChannel(cardData);
@@ -651,9 +667,9 @@
           onInstance: function onInstance(cardItem, cardData) {
             cardItem.use({
               onCreate: function onCreate() {
-                var cardElement = this.render ? this.render(true) : cardItem.render ? cardItem.render(true) : null;
-                if (!cardElement) return;
-                $(cardElement).addClass('card--tryzubtv');
+                if (this.html && this.html.classList) {
+                  this.html.classList.add('card--tryzubtv');
+                }
               },
               onEnter: function onEnter() {
                 Player.playChannel(cardData);
@@ -691,6 +707,38 @@
       tryzubtv_empty: {
         en: 'No channels available',
         uk: 'Немає доступних каналів'
+      },
+      tryzubtv_category_Movies: {
+        en: 'Movies',
+        uk: 'Фільми'
+      },
+      tryzubtv_category_Entertainment: {
+        en: 'Entertainment',
+        uk: 'Розваги'
+      },
+      tryzubtv_category_Series: {
+        en: 'Series',
+        uk: 'Серіали'
+      },
+      tryzubtv_category_Cognitive: {
+        en: 'Cognitive',
+        uk: 'Когнітивні'
+      },
+      tryzubtv_category_News: {
+        en: 'News',
+        uk: 'Новини'
+      },
+      tryzubtv_category_Music: {
+        en: 'Music',
+        uk: 'Музика'
+      },
+      tryzubtv_category_Sport: {
+        en: 'Sport',
+        uk: 'Спорт'
+      },
+      tryzubtv_category_Kids: {
+        en: 'Kids',
+        uk: 'Дитячі'
       }
     });
   }
@@ -698,7 +746,7 @@
   function startPlugin() {
     var manifest = {
       type: 'iptv',
-      version: '1.0.0',
+      version: '1.0.2',
       name: 'TryzubTV',
       description: 'Ukrainian TV channels',
       component: 'tryzubtv_main'
@@ -708,14 +756,14 @@
     Lampa.Component.add('tryzubtv_category', component);
     lang();
     var style = document.createElement('style');
-    style.textContent = "\n        .card--tryzubtv {\n            width: var(--tryzubtv-card-size, 6.5em);\n        }\n        .card--tryzubtv .card__view {\n            position: relative;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            width: var(--tryzubtv-card-size, 6.5em);\n            height: var(--tryzubtv-card-size, 6.5em);\n        }\n        .card--tryzubtv .card__img {\n            object-fit: contain;\n            background: transparent;\n            padding: 0;\n            max-width: 100%;\n            max-height: 100%;\n            width: auto !important;\n            height: auto !important;\n        }\n        .card--tryzubtv .card__title,\n        .card--tryzubtv .card__age {\n            display: none;\n        }\n    ";
+    style.textContent = "\n        .card--tryzubtv .card__img {\n            object-fit: contain;\n            object-position: center;\n            background: transparent;\n        }\n    ";
     document.head.appendChild(style);
     function addMenu() {
       var button = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\">\n                <svg viewBox=\"0 0 32 32\" enable-background=\"new 0 0 32 32\" version=\"1.1\" xml:space=\"preserve\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" fill=\"#ffffff\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <g id=\"_x36_0\"></g> <g id=\"_x35_9\"></g> <g id=\"_x35_8\"></g> <g id=\"_x35_7\"></g> <g id=\"_x35_6\"></g> <g id=\"_x35_5\"></g> <g id=\"_x35_4\"></g> <g id=\"_x35_3\"></g> <g id=\"_x35_2\"></g> <g id=\"_x35_1\"></g> <g id=\"_x35_0\"></g> <g id=\"_x34_9\"></g> <g id=\"_x34_8\"></g> <g id=\"_x34_7\"></g> <g id=\"_x34_6\"></g> <g id=\"_x34_5\"></g> <g id=\"_x34_4\"></g> <g id=\"_x34_3\"></g> <g id=\"_x34_2\"></g> <g id=\"_x34_1\"></g> <g id=\"_x34_0\"></g> <g id=\"_x33_9\"></g> <g id=\"_x33_8\"></g> <g id=\"_x33_7\"></g> <g id=\"_x33_6\"></g> <g id=\"_x33_5\"></g> <g id=\"_x33_4\"></g> <g id=\"_x33_3\"></g> <g id=\"_x33_2\"></g> <g id=\"_x33_1\"></g> <g id=\"_x33_0\"></g> <g id=\"_x32_9\"></g> <g id=\"_x32_8\"></g> <g id=\"_x32_7\"></g> <g id=\"_x32_6\"></g> <g id=\"_x32_5\"></g> <g id=\"_x32_4_1_\"></g> <g id=\"_x32_3\"></g> <g id=\"_x32_2\"></g> <g id=\"_x32_1\"></g> <g id=\"_x32_0\"></g> <g id=\"_x31_9\"></g> <g id=\"_x31_8\"></g> <g id=\"_x31_7\"></g> <g id=\"_x31_6\"></g> <g id=\"_x31_5\"></g> <g id=\"_x31_4\"></g> <g id=\"_x31_3\"></g> <g id=\"_x31_2\"> <path d=\"M30.1181641,15l0.7763672-1.5527344c0.1357422-0.2714844,0.140625-0.5893555,0.0141602-0.8652344 c-0.1269531-0.2753906-0.3720703-0.4785156-0.6660156-0.5522461L27,11.2192383V11c0-0.5522461-0.4477539-1-1-1h-2.5859375 L22,8.5859375V7c0-0.3081055-0.1420898-0.5986328-0.3847656-0.7880859 c-0.2431641-0.1899414-0.5605469-0.2583008-0.8579102-0.1821289l-4,1 c-0.2412109,0.0605469-0.4511719,0.2084961-0.5893555,0.4155273l-1.0439453,1.5664063l-0.2294922-0.4589844 c-0.144043-0.2875977-0.4169922-0.4882813-0.734375-0.5400391c-0.3144531-0.0488281-0.6401367,0.0537109-0.8671875,0.2802734 l-0.5336914,0.5336914L8.371582,7.0712891C8.152832,6.9838867,7.909668,6.9770508,7.6835938,7.0512695l-3,1 C4.159668,8.2260742,3.8764648,8.7924805,4.0512695,9.3164063l0.7255859,2.1772461l-1.2241211,0.6118164 C3.2138672,12.2749023,3,12.6210938,3,13v1.3818359l-1.4472656,0.7236328 c-0.4941406,0.2470703-0.6943359,0.8476563-0.4472656,1.3417969l1,2C2.2749023,18.7861328,2.6210938,19,3,19h4 c0.2651367,0,0.5195313-0.1054688,0.7070313-0.2929688l0.8330078-0.8330078l2.1899414-0.7299805L13.5859375,20 l-1.2929688,1.2929688c-0.0761719,0.0756836-0.1391602,0.1635742-0.1875,0.2597656l-1,2 c-0.1923828,0.3852539-0.1166992,0.8500977,0.1875,1.1542969l1,1C12.4804688,25.8945313,12.7348633,26,13,26h1 c0.2651367,0,0.5195313-0.1054688,0.7070313-0.2929688L16,24.4140625l0.2929688,0.2929688 c0.2270508,0.2265625,0.5483398,0.3286133,0.8671875,0.2802734c0.3173828-0.0517578,0.590332-0.2524414,0.734375-0.5400391 L18,24.2358398V25c0,0.3789063,0.2138672,0.7250977,0.5527344,0.8945313L20,26.6181641V27 c0,0.3466797,0.1796875,0.668457,0.4741211,0.8505859C20.6347656,27.949707,20.8173828,28,21,28 c0.152832,0,0.3061523-0.0351563,0.4472656-0.1054688l4-2c0.1933594-0.0966797,0.3505859-0.2539063,0.4472656-0.4472656l1-2 c0.1923828-0.3852539,0.1166992-0.8500977-0.1875-1.1542969c-0.3032227-0.3037109-0.7685547-0.3793945-1.1542969-0.1875 l-1.1054688,0.5527344l-0.1386719-0.2773438l4.2060547-2.5234375c0.1630859-0.0976563,0.2949219-0.2402344,0.3798828-0.4101563 L29.6181641,18H30c0.3466797,0,0.668457-0.1796875,0.8505859-0.4741211 c0.1821289-0.2949219,0.1987305-0.6630859,0.0439453-0.9731445L30.1181641,15z M28.1054688,14.5527344 c-0.140625,0.2817383-0.140625,0.612793,0,0.8945313l0.3554688,0.7104492 c-0.1494141,0.0957031-0.2729492,0.2304688-0.3554688,0.3950195l-0.8696289,1.7397461l-4.7504883,2.8500977 c-0.4477539,0.2685547-0.6132813,0.8374023-0.3798828,1.3046875l1,2c0.0537109,0.1074219,0.1240234,0.2006836,0.206543,0.2788086 l-1.4697266,0.7348633c-0.0957031-0.1494141-0.2304688-0.2729492-0.3950195-0.3554688L20,24.3818359v-0.1459961 l0.8945313-1.7885742c0.1547852-0.3100586,0.1381836-0.6782227-0.0439453-0.9731445C20.668457,21.1796875,20.3466797,21,20,21h-2 c-0.3789063,0-0.7250977,0.2138672-0.8945313,0.5527344l-0.3793945,0.7592773l-0.019043-0.019043 c-0.390625-0.390625-1.0234375-0.390625-1.4140625,0L13.5859375,24h-0.171875l-0.1972656-0.1972656l0.6049805-1.2104492 l1.8852539-1.8852539c0.390625-0.390625,0.390625-1.0234375,0-1.4140625l-4-4 c-0.2680664-0.269043-0.6640625-0.3623047-1.0234375-0.2416992l-3,1c-0.1469727,0.0493164-0.2807617,0.1318359-0.390625,0.2416992 L6.5859375,17H3.6181641l-0.2763672-0.5527344l1.1054688-0.5527344C4.7861328,15.7250977,5,15.3789063,5,15v-1.3818359 l1.4472656-0.7236328c0.4448242-0.2226563,0.6586914-0.7387695,0.5014648-1.2109375L6.2651367,9.6323242L7.96875,9.0644531 l4.659668,1.8642578c0.3720703,0.1479492,0.7963867,0.0620117,1.0786133-0.2216797l0.019043-0.019043l0.3793945,0.7592773 c0.159668,0.3188477,0.4765625,0.5288086,0.8325195,0.5507813c0.3510742,0.0263672,0.6962891-0.1469727,0.894043-0.4433594 l1.7856445-2.6782227L20,8.2807617V9c0,0.2651367,0.1054688,0.5195313,0.2929688,0.7070313l2,2 C22.4804688,11.8945313,22.7348633,12,23,12h2c0,0.4589844,0.3125,0.8588867,0.7573242,0.9702148l2.7905273,0.6977539 L28.1054688,14.5527344z\" fill=\"#ffffff\"></path> </g> <g id=\"_x31_1\"></g> <g id=\"_x31_0\"></g> <g id=\"_x39_\"></g> <g id=\"_x38_\"></g> <g id=\"_x37_\"></g> <g id=\"_x36_\"></g> <g id=\"_x35_\"></g> <g id=\"_x34_\"></g> <g id=\"_x33_\"></g> <g id=\"_x32_\"></g> <g id=\"_x31_\"></g> <g id=\"topic\"></g> <g id=\"Guides\"></g> </g></svg>\n            </div>\n            <div class=\"menu__text\">".concat(Lampa.Lang.translate('tryzubtv_title'), "</div>\n        </li>"));
       button.on('hover:enter', function () {
         Lampa.Activity.push({
           url: '',
-          title: Lampa.Lang.translate('tryzubtv_title'),
+          title: Lampa.Lang.translate('tryzubtv_title') + " | Спільнота t.me/mmssixxx",
           component: 'tryzubtv_main',
           page: 1,
           params: {
