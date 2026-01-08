@@ -64,9 +64,12 @@
 
   Lampa.Platform.tv();
   function add() {
+    function sanitizeUrl(url) {
+      return url.replace('&preload', '&play').replace(/\s/g, '%20');
+    }
     Lampa.Listener.follow('torrent_file', function (data) {
       if (data.type === 'onlong') {
-        data.element.url = data.element.url.replace('&preload', '&play').replace(/\s/g, '%20');
+        data.element.url = sanitizeUrl(data.element.url);
         var links_array = data.items;
         var formatted_urls = '';
         var _iterator = _createForOfIteratorHelper(links_array),
@@ -74,7 +77,7 @@
         try {
           for (_iterator.s(); !(_step = _iterator.n()).done;) {
             var item = _step.value;
-            formatted_urls += encodeURIComponent(item['url'] + '\n');
+            formatted_urls += encodeURIComponent(sanitizeUrl(item['url']) + '\n');
           }
         } catch (err) {
           _iterator.e(err);
@@ -105,7 +108,7 @@
               var trim_playlist = [];
               links_array.forEach(function (elem) {
                 trim_playlist.push({
-                  url: elem.url
+                  url: sanitizeUrl(elem.url)
                 });
               });
               var playlistURL = links_array.length > 0 ? encodeURIComponent(JSON.stringify(trim_playlist)) : '';
