@@ -3647,6 +3647,8 @@
   var completionCache = new Map(); // key -> { ts, token, status }
   var lockQueues = new Map(); // key -> array of resolvers for queued locks
   var requestInProgress = {}; // Об'єкт для відстеження запитів, що виконуються
+  var hashMetaCache = new Map(); // hash -> { ts, card, season, episode, ids }
+  var HASH_META_TTL_SEC = 60 * 60 * 24 * 7; // 7 days
 
   function nowSec() {
     return Math.floor(Date.now() / 1000);
@@ -3678,6 +3680,105 @@
     }
     if (logEnabled()) (_console = console).log.apply(_console, ['TraktTV'].concat(args));
   }
+  function normalizeCardForCache(card) {
+    if (!card) return null;
+    return {
+      id: card.id,
+      ids: card.ids,
+      original_name: card.original_name,
+      name: card.name,
+      original_title: card.original_title,
+      title: card.title,
+      first_air_date: card.first_air_date,
+      created_by: card.created_by,
+      number_of_seasons: card.number_of_seasons,
+      number_of_episodes: card.number_of_episodes,
+      episode_run_time: card.episode_run_time,
+      card_type: card.card_type,
+      media_type: card.media_type,
+      method: card.method
+    };
+  }
+  function loadHashMetaCache() {
+    var raw = Lampa.Storage.get('trakt_hash_meta_cache');
+    var now = nowSec();
+    hashMetaCache.clear();
+    if (raw && Array.isArray(raw.entries)) {
+      raw.entries.forEach(function (_ref) {
+        var _ref2 = _slicedToArray(_ref, 2),
+          k = _ref2[0],
+          v = _ref2[1];
+        if (v && now - v.ts <= HASH_META_TTL_SEC) {
+          hashMetaCache.set(k, v);
+        }
+      });
+    }
+    slog('hashMetaCache restored', Object.fromEntries(hashMetaCache));
+  }
+  function persistHashMetaCache() {
+    var now = nowSec();
+    var _iterator = _createForOfIteratorHelper(hashMetaCache.entries()),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var _step$value = _slicedToArray(_step.value, 2),
+          k = _step$value[0],
+          v = _step$value[1];
+        if (!v || now - v.ts > HASH_META_TTL_SEC) hashMetaCache["delete"](k);
+      }
+      // keep cache small
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    if (hashMetaCache.size > 300) {
+      var ordered = Array.from(hashMetaCache.entries()).sort(function (a, b) {
+        return (a[1].ts || 0) - (b[1].ts || 0);
+      });
+      ordered.slice(0, hashMetaCache.size - 300).forEach(function (_ref3) {
+        var _ref4 = _slicedToArray(_ref3, 1),
+          k = _ref4[0];
+        return hashMetaCache["delete"](k);
+      });
+    }
+    var payload = {
+      ts: now,
+      entries: Array.from(hashMetaCache.entries())
+    };
+    Lampa.Storage.set('trakt_hash_meta_cache', payload);
+  }
+  function setHashMeta(hash, meta) {
+    if (!hash || !meta) return;
+    var next = {
+      ts: nowSec(),
+      card: normalizeCardForCache(meta.card),
+      season: meta.season,
+      episode: meta.episode,
+      ids: meta.ids || meta.card && meta.card.ids
+    };
+    hashMetaCache.set(hash, next);
+    persistHashMetaCache();
+  }
+  function getHashMeta(hash) {
+    if (!hash) return null;
+    var rec = hashMetaCache.get(hash);
+    if (!rec) return null;
+    if (nowSec() - rec.ts > HASH_META_TTL_SEC) {
+      hashMetaCache["delete"](hash);
+      return null;
+    }
+    return rec;
+  }
+  function extractSeasonEpisode(obj) {
+    if (!obj) return {};
+    var season = obj.season_number || obj.season || obj.seasonNumber || obj.s;
+    var episode = obj.episode_number || obj.episode || obj.episodeNumber || obj.e;
+    return {
+      season: season,
+      episode: episode
+    };
+  }
 
   /**
    * Build idempotency key for media card or episode
@@ -3704,7 +3805,7 @@
       }
     } catch (e) {}
     // ultimate fallback: hashed title
-    var title = media.original_title || media.original_name || media.title || 'unknown';
+    var title = media.original_title || media.original_name || media.name || media.title || 'unknown';
     return "unknown:".concat(Lampa.Utils.hash(title));
   }
 
@@ -3717,10 +3818,10 @@
     var now = nowSec();
     completionCache.clear();
     if (raw && Array.isArray(raw.entries)) {
-      raw.entries.forEach(function (_ref) {
-        var _ref2 = _slicedToArray(_ref, 2),
-          k = _ref2[0],
-          v = _ref2[1];
+      raw.entries.forEach(function (_ref5) {
+        var _ref6 = _slicedToArray(_ref5, 2),
+          k = _ref6[0],
+          v = _ref6[1];
         if (v && now - v.ts <= ttl) {
           completionCache.set(k, v);
         }
@@ -3732,19 +3833,19 @@
     var ttl = getTTL();
     var now = nowSec();
     // cleanup expired
-    var _iterator = _createForOfIteratorHelper(completionCache.entries()),
-      _step;
+    var _iterator2 = _createForOfIteratorHelper(completionCache.entries()),
+      _step2;
     try {
-      for (_iterator.s(); !(_step = _iterator.n()).done;) {
-        var _step$value = _slicedToArray(_step.value, 2),
-          k = _step$value[0],
-          v = _step$value[1];
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var _step2$value = _slicedToArray(_step2.value, 2),
+          k = _step2$value[0],
+          v = _step2$value[1];
         if (!v || now - v.ts > ttl) completionCache["delete"](k);
       }
     } catch (err) {
-      _iterator.e(err);
+      _iterator2.e(err);
     } finally {
-      _iterator.f();
+      _iterator2.f();
     }
     var payload = {
       ts: now,
@@ -3867,12 +3968,12 @@
    * Debounced finish intent setter
    */
   function _finishWithIdempotency() {
-    _finishWithIdempotency = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(_ref3) {
-      var key, token, doFinish, _ref3$logPrefix, logPrefix;
+    _finishWithIdempotency = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(_ref7) {
+      var key, token, doFinish, _ref7$logPrefix, logPrefix;
       return _regenerator().w(function (_context3) {
         while (1) switch (_context3.n) {
           case 0:
-            key = _ref3.key, token = _ref3.token, doFinish = _ref3.doFinish, _ref3$logPrefix = _ref3.logPrefix, logPrefix = _ref3$logPrefix === void 0 ? 'finish' : _ref3$logPrefix;
+            key = _ref7.key, token = _ref7.token, doFinish = _ref7.doFinish, _ref7$logPrefix = _ref7.logPrefix, logPrefix = _ref7$logPrefix === void 0 ? 'finish' : _ref7$logPrefix;
             return _context3.a(2, withPerKeyLock(key, /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
               var check, delays, lastErr, attempt, res, status, _t;
               return _regenerator().w(function (_context2) {
@@ -4076,8 +4177,8 @@
               });
             }
             doFinish = /*#__PURE__*/function () {
-              var _ref5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
-                var type, tmdbId, search, e, traktId, res, _tmdbId, _search, _e, traktShowId, season, episode, seasons, _e2, last, originalName, found, _iterator2, _step2, s, _iterator3, _step3, ep, epHash, _e3, _res, _t2, _t3;
+              var _ref9 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+                var type, tmdbId, search, e, traktId, res, _tmdbId, _search, _e, traktShowId, season, episode, seasons, _e2, last, originalName, found, _iterator3, _step3, s, _iterator4, _step4, ep, epHash, _e3, _res, _t2, _t3;
                 return _regenerator().w(function (_context4) {
                   while (1) switch (_context4.n) {
                     case 0:
@@ -4152,32 +4253,32 @@
                     case 8:
                       // try map by stored last timeline hash + title
                       last = Lampa.Storage.get('trakt_last_card', media) || media;
-                      originalName = last.original_name || last.original_title || last.title || '';
-                      _iterator2 = _createForOfIteratorHelper(seasons);
+                      originalName = last.original_name || last.name || last.original_title || last.title || '';
+                      _iterator3 = _createForOfIteratorHelper(seasons);
                       _context4.p = 9;
-                      _iterator2.s();
+                      _iterator3.s();
                     case 10:
-                      if ((_step2 = _iterator2.n()).done) {
+                      if ((_step3 = _iterator3.n()).done) {
                         _context4.n = 20;
                         break;
                       }
-                      s = _step2.value;
+                      s = _step3.value;
                       if (s.episodes) {
                         _context4.n = 11;
                         break;
                       }
                       return _context4.a(3, 19);
                     case 11:
-                      _iterator3 = _createForOfIteratorHelper(s.episodes);
+                      _iterator4 = _createForOfIteratorHelper(s.episodes);
                       _context4.p = 12;
-                      _iterator3.s();
+                      _iterator4.s();
                     case 13:
-                      if ((_step3 = _iterator3.n()).done) {
+                      if ((_step4 = _iterator4.n()).done) {
                         _context4.n = 15;
                         break;
                       }
-                      ep = _step3.value;
-                      epHash = Lampa.Utils.hash('' + s.number + ep.number + originalName);
+                      ep = _step4.value;
+                      epHash = Lampa.Utils.hash([s.number, s.number > 10 ? ':' : '', ep.number, originalName].join(''));
                       if (!(media.hash && epHash === media.hash)) {
                         _context4.n = 14;
                         break;
@@ -4195,10 +4296,10 @@
                     case 16:
                       _context4.p = 16;
                       _t2 = _context4.v;
-                      _iterator3.e(_t2);
+                      _iterator4.e(_t2);
                     case 17:
                       _context4.p = 17;
-                      _iterator3.f();
+                      _iterator4.f();
                       return _context4.f(17);
                     case 18:
                       if (!found) {
@@ -4215,10 +4316,10 @@
                     case 21:
                       _context4.p = 21;
                       _t3 = _context4.v;
-                      _iterator2.e(_t3);
+                      _iterator3.e(_t3);
                     case 22:
                       _context4.p = 22;
-                      _iterator2.f();
+                      _iterator3.f();
                       return _context4.f(22);
                     case 23:
                       if (!(!season || !episode)) {
@@ -4254,7 +4355,7 @@
                 }, _callee4, null, [[12, 16, 17, 18], [9, 21, 22, 23]]);
               }));
               return function doFinish() {
-                return _ref5.apply(this, arguments);
+                return _ref9.apply(this, arguments);
               };
             }();
             _context5.n = 4;
@@ -4280,6 +4381,11 @@
     return _finish.apply(this, arguments);
   }
   function getContentType$1(card) {
+    if (!card) return 'movie';
+    if (card.method === 'tv' || card.method === 'show') return 'show';
+    if (card.card_type === 'tv' || card.card_type === 'show') return 'show';
+    if (card.media_type === 'tv' || card.media_type === 'show') return 'show';
+    if (card.original_name || card.name) return 'show';
     if (card.episode_run_time || card.first_air_date || card.created_by || card.number_of_seasons || card.number_of_episodes) {
       return 'show';
     }
@@ -4311,6 +4417,7 @@
 
       // Restore cache from session
       loadSessionCache();
+      loadHashMetaCache();
       slog('watching.init');
 
       // Слідкуємо за оновленнями Timeline
@@ -4349,6 +4456,26 @@
       if (this.isLoggingEnabled()) {
         console.log('TraktTV', 'Card saved to storage', card);
       }
+
+      // Кешуємо відповідність hash -> card/season/episode для стабільного фінішу
+      var timeline = data && data.timeline;
+      var hash = timeline && timeline.hash;
+      if (hash) {
+        var se = extractSeasonEpisode(data);
+        setHashMeta(hash, {
+          card: card,
+          season: se.season,
+          episode: se.episode,
+          ids: card && card.ids
+        });
+        if (this.isLoggingEnabled()) {
+          console.log('TraktTV', 'Hash meta cached from player start', {
+            hash: hash,
+            season: se.season,
+            episode: se.episode
+          });
+        }
+      }
     },
     /**
      * Обробник оновлень Timeline
@@ -4381,9 +4508,18 @@
         return;
       }
       var hash = data.data.hash;
-      var percent = data.data.road.percent;
+      var road = data.data.road || {};
+      var percent = parseFloat(road.percent || 0);
+      if (isNaN(percent)) percent = 0;
       var token = Lampa.Storage.get('trakt_token');
       var minProgress = parseInt(Lampa.Storage.field('trakt_min_progress') || config.minProgress);
+      window.last_timeline_event = {
+        data: {
+          hash: hash,
+          road: road
+        },
+        ts: Date.now()
+      };
       console.log('TraktTV', 'Timeline update data:', {
         hash: hash,
         percent: percent,
@@ -4406,6 +4542,22 @@
         return;
       }
       var card = this.getCurrentCard();
+      var meta = getHashMeta(hash);
+      if (!card && meta && meta.card) {
+        card = meta.card;
+        if (this.isLoggingEnabled()) {
+          console.log('TraktTV', 'Card restored from hash meta cache', card);
+        }
+      }
+      if (card && hash) {
+        var se = extractSeasonEpisode(card);
+        setHashMeta(hash, {
+          card: card,
+          season: se.season,
+          episode: se.episode,
+          ids: card.ids
+        });
+      }
       console.log('TraktTV', 'Card from getCurrentCard:', card);
       if (!card) {
         if (this.isLoggingEnabled()) {
@@ -4421,10 +4573,17 @@
 
       // Інтеграція нового фініш-флоу: при досягненні порогу формуємо key і викликаємо finish()
       console.log('TraktTV', 'Checking if should finish with idempotency, percent:', percent, 'minProgress:', minProgress);
-      if (percent >= minProgress) {
+      var watchedByPercent = (typeof percent === 'number' ? percent : 0) >= minProgress;
+      var watchedByTime = road && road.time && road.duration ? road.time / road.duration * 100 >= minProgress : false;
+      if (watchedByPercent || watchedByTime) {
         var media = Object.assign({}, card, {
           hash: hash
         });
+        if (meta) {
+          if (!media.season_number && meta.season) media.season_number = meta.season;
+          if (!media.episode_number && meta.episode) media.episode_number = meta.episode;
+          if (!media.ids && meta.ids) media.ids = meta.ids;
+        }
 
         // DEBUG: Log media object and hash source
         if (this.isLoggingEnabled()) {
@@ -4491,7 +4650,7 @@
      * @param {string} token - Токен авторизації
      */
     checkAndAddToShow: function checkAndAddToShow(card, hash, percent, token) {
-      var originalName = card.original_name || card.original_title || card.title;
+      var originalName = card.original_name || card.name || card.original_title || card.title;
       var firstEpisodeHash = Lampa.Utils.hash('11' + originalName);
 
       // Додаткове логування для налагодження
@@ -4600,6 +4759,14 @@
      */
     markFinishIntent: markFinishIntent,
     /**
+     * Отримати кешовані метадані за hash
+     */
+    getMetaByHash: getHashMeta,
+    /**
+     * Запам'ятати метадані за hash
+     */
+    rememberHashMeta: setHashMeta,
+    /**
      * Єдиний шлях відправити фінальний запит з ідемпотентністю
      */
     finish: finish,
@@ -4611,7 +4778,7 @@
      * @returns {Object|null} Інформація про епізод
      */
     findEpisodeByHash: function findEpisodeByHash(card, hash, seasons) {
-      var originalName = card.original_name || card.original_title || card.title;
+      var originalName = card.original_name || card.name || card.original_title || card.title;
 
       // Додаткове логування для налагодження
       console.log('TraktTV', 'findEpisodeByHash called with:', {
@@ -4625,7 +4792,7 @@
         if (!season.episodes) continue;
         for (var j = 0; j < season.episodes.length; j++) {
           var episode = season.episodes[j];
-          var episodeHashStr = '' + season.number + episode.number + originalName;
+          var episodeHashStr = [season.number, season.number > 10 ? ':' : '', episode.number, originalName].join('');
           var episodeHash = Lampa.Utils.hash(episodeHashStr);
 
           // Додаткове логування для налагодження
@@ -4680,6 +4847,9 @@
         // onEnded / onStop / onHidden -> markFinishIntent for the current media key
         var routeFinishIntent = function routeFinishIntent(evt) {
           try {
+            if (!Lampa.Storage.field('trakt_enable_watching')) return;
+            var token = Lampa.Storage.get('trakt_token');
+            if (!token) return;
             var card = Lampa.Activity.active && Lampa.Activity.active() && (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie) || Lampa.Storage.get('trakt_last_card');
             if (!card) return;
             // Include last known hash if available from timeline storage
@@ -4687,6 +4857,17 @@
             var media = Object.assign({}, card, {
               hash: lastTimeline.hash
             });
+            var meta = watching && typeof watching.getMetaByHash === 'function' ? watching.getMetaByHash(lastTimeline.hash) : null;
+            if (meta) {
+              if (!media.season_number && meta.season) media.season_number = meta.season;
+              if (!media.episode_number && meta.episode) media.episode_number = meta.episode;
+              if (!media.ids && meta.ids) media.ids = meta.ids;
+            }
+            var minProgress = parseInt(Lampa.Storage.field('trakt_min_progress') || config.minProgress);
+            var view = lastTimeline.hash && Lampa.Timeline && Lampa.Timeline.view ? Lampa.Timeline.view(lastTimeline.hash) : null;
+            var percent = view && typeof view.percent === 'number' ? view.percent : parseFloat(view && view.percent || 0);
+            var watchedByPercent = (isNaN(percent) ? 0 : percent) >= minProgress;
+            var watchedByTime = view && view.time && view.duration ? view.time / view.duration * 100 >= minProgress : false;
 
             // DEBUG: Log media object and hash source
             if (Lampa.Storage.field('trakt_enable_logging')) {
@@ -4755,6 +4936,13 @@
               if (Lampa.Storage.field('trakt_enable_logging')) {
                 console.log('TraktTV', 'Finish intent marked from event', evt && evt.type, key);
               }
+            }
+            if ((watchedByPercent || watchedByTime) && watching && typeof watching.finish === 'function') {
+              watching.finish(media)["catch"](function (e) {
+                if (Lampa.Storage.field('trakt_enable_logging')) {
+                  console.log('TraktTV', 'Finish error from event route', e);
+                }
+              });
             }
           } catch (e) {
             // swallow
