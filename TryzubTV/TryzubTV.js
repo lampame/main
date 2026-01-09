@@ -229,14 +229,14 @@
   }
 
   var API_BASE = 'https://dyvy.tv/api/v1';
-  var REPLAY_BASE = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://a.maincast.tv/items';
+  var REPLAY_BASE$1 = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://a.maincast.tv/items';
   var REPLAY_LIMIT = 10;
   var QR_CARD_POSTER$1 = 'https://iili.io/fkdGkSj.png';
   var CATALOG_ORDER_KEY = 'tryzubtv_catalog_order';
   var CATALOG_HIDE_KEY = 'tryzubtv_catalog_hidden';
   var SOURCE_TV = 'tv';
   var SOURCE_REPLAY = 'replay';
-  function request$1(url) {
+  function request$2(url) {
     return new Promise(function (resolve, reject) {
       Lampa.Network.silent(url, resolve, reject);
     });
@@ -428,7 +428,7 @@
         while (1) switch (_context.n) {
           case 0:
             _context.n = 1;
-            return request$1("".concat(API_BASE, "/categories?is_main=1"));
+            return request$2("".concat(API_BASE, "/categories?is_main=1"));
           case 1:
             response = _context.v;
             return _context.a(2, response && response.data ? response.data : []);
@@ -446,9 +446,9 @@
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.n) {
           case 0:
-            url = "".concat(REPLAY_BASE, "/discipline?filter={\"category\":\"sport\"}&fields=name,id,icon");
+            url = "".concat(REPLAY_BASE$1, "/discipline?filter={\"category\":\"sport\"}&fields=name,id,icon");
             _context2.n = 1;
-            return request$1(url);
+            return request$2(url);
           case 1:
             response = _context2.v;
             return _context2.a(2, response && response.data ? response.data : []);
@@ -583,11 +583,11 @@
     }));
     return _loadMain.apply(this, arguments);
   }
-  function loadCategory(_x3, _x4, _x5, _x6) {
-    return _loadCategory.apply(this, arguments);
+  function loadCategory$1(_x3, _x4, _x5, _x6) {
+    return _loadCategory$1.apply(this, arguments);
   }
-  function _loadCategory() {
-    _loadCategory = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(categorySlug, categoryTitle, oncomplete, onerror) {
+  function _loadCategory$1() {
+    _loadCategory$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(categorySlug, categoryTitle, oncomplete, onerror) {
       var url, response, channels, total, title, lineTitle, items, _t2;
       return _regenerator().w(function (_context5) {
         while (1) switch (_context5.n) {
@@ -595,7 +595,7 @@
             _context5.p = 0;
             url = "".concat(API_BASE, "/channels?category_slug=").concat(encodeURIComponent(categorySlug), "&limit=500");
             _context5.n = 1;
-            return request$1(url);
+            return request$2(url);
           case 1:
             response = _context5.v;
             channels = response && response.data ? response.data : [];
@@ -633,7 +633,7 @@
         }
       }, _callee5, null, [[0, 2]]);
     }));
-    return _loadCategory.apply(this, arguments);
+    return _loadCategory$1.apply(this, arguments);
   }
   function loadLineItems(_x7) {
     return _loadLineItems.apply(this, arguments);
@@ -663,7 +663,7 @@
           case 1:
             url = "".concat(API_BASE, "/channels?category_slug=").concat(encodeURIComponent(slug), "&limit=500");
             _context6.n = 2;
-            return request$1(url);
+            return request$2(url);
           case 2:
             response = _context6.v;
             channels = response && response.data ? response.data : [];
@@ -698,9 +698,9 @@
               total_pages: 1
             });
           case 4:
-            _url = "".concat(REPLAY_BASE, "/vod?filter={\"discipline\":").concat(disciplineId, "}&sort=-date&limit=").concat(REPLAY_LIMIT + 1);
+            _url = "".concat(REPLAY_BASE$1, "/vod?filter={\"discipline\":").concat(disciplineId, "}&sort=-date&limit=").concat(REPLAY_LIMIT + 1);
             _context6.n = 5;
-            return request$1(_url);
+            return request$2(_url);
           case 5:
             _response = _context6.v;
             vods = (_response && _response.data ? _response.data : []).filter(function (vod) {
@@ -727,7 +727,7 @@
   }
   var Api$1 = {
     loadMain: loadMain,
-    loadCategory: loadCategory,
+    loadCategory: loadCategory$1,
     loadLineItems: loadLineItems,
     fetchCategories: fetchCategories,
     fetchCatalogLines: fetchCatalogLines,
@@ -740,7 +740,7 @@
     SOURCE_REPLAY: SOURCE_REPLAY
   };
 
-  function request(url) {
+  function request$1(url) {
     return new Promise(function (resolve, reject) {
       Lampa.Network.silent(url, resolve, reject);
     });
@@ -803,7 +803,7 @@
   }
   function fetchChannelEpg(slug) {
     var url = buildChannelEpgUrl(slug);
-    return request(url).then(function (data) {
+    return request$1(url).then(function (data) {
       return data && data.data ? data.data : null;
     });
   }
@@ -818,7 +818,7 @@
           case 0:
             url = "".concat(Api$1.API_BASE, "/channels?category_slug=").concat(encodeURIComponent(categorySlug), "&limit=500");
             _context.n = 1;
-            return request(url);
+            return request$1(url);
           case 1:
             response = _context.v;
             channels = response && response.data ? response.data : [];
@@ -1033,7 +1033,6 @@
             return resolve(key);
           }
           if (socket && socket.readyState === WebSocket.CONNECTING) {
-            // Якщо вже підключаємось, просто чекаємо
             socket.onmessage = function (event) {
               handleMessage(event, resolve, reject);
             };
@@ -1041,18 +1040,18 @@
           }
           socket = new WebSocket('wss://vod-maincast.cosmonova-broadcast.tv/ws');
           socket.onopen = function () {
-            console.log('SaloPower: WebSocket connected');
+            console.log('TryzubTV: WebSocket connected');
           };
           socket.onmessage = function (event) {
             handleMessage(event, resolve, reject);
           };
-          socket.onerror = function (error) {
-            console.error('SaloPower: WebSocket error');
-            reject('SaloPower: WebSocket error');
+          socket.onerror = function () {
+            console.error('TryzubTV: WebSocket error');
+            reject('TryzubTV: WebSocket error');
             disconnect();
           };
           socket.onclose = function () {
-            console.log('SaloPower: WebSocket disconnected');
+            console.log('TryzubTV: WebSocket disconnected');
             socket = null;
             key = null;
           };
@@ -1063,25 +1062,21 @@
           var data = JSON.parse(event.data);
           if (data.type === 'auth' && data.payload && data.payload.hash) {
             key = data.payload.hash;
-            console.log('SaloPower: Key received');
+            console.log('TryzubTV: Key received');
             resolve(key);
           } else {
-            reject('SaloPower: Invalid auth response');
+            reject('TryzubTV: Invalid auth response');
           }
         } catch (e) {
-          reject('SaloPower: Failed to parse message');
+          reject('TryzubTV: Failed to parse message');
         }
       };
       var disconnect = function disconnect() {
-        if (socket) {
-          socket.close();
-        }
+        if (socket) socket.close();
       };
-
-      // Слухаємо подію знищення плеєра, щоб закрити сокет
       var listen = function listen() {
         Lampa.Player.listener.follow('destroy', function () {
-          console.log('SaloPower: Player destroyed, closing socket.');
+          console.log('TryzubTV: Player destroyed, closing socket.');
           disconnect();
         });
       };
@@ -1093,9 +1088,7 @@
     }
     return {
       getInstance: function getInstance() {
-        if (!instance) {
-          instance = createInstance();
-        }
+        if (!instance) instance = createInstance();
         return instance;
       }
     };
@@ -1279,6 +1272,9 @@
                   return;
                 }
                 Player.playChannel(cardData);
+              },
+              onMenu: function onMenu() {
+                return false;
               }
             });
           }
@@ -1327,6 +1323,9 @@
               },
               onEnter: function onEnter() {
                 Player.playChannel(cardData);
+              },
+              onMenu: function onMenu() {
+                return false;
               }
             });
           }
@@ -1592,7 +1591,12 @@
     });
   }
 
-  // Утилітарна функція для мапінгу VOD в картку
+  var REPLAY_BASE = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://a.maincast.tv/items';
+  function request(url) {
+    return new Promise(function (resolve, reject) {
+      Lampa.Network.silent(url, resolve, reject);
+    });
+  }
   function mapVodToCard(vod) {
     try {
       if (!vod.link || !vod.link.startsWith('http')) return null;
@@ -1601,13 +1605,20 @@
       if (!v) return null;
       var description = vod.description || '';
       var release_date = vod.date ? new Date(vod.date).toLocaleDateString() : '';
+      var cover = '';
+      if (vod.cover) {
+        cover = vod.cover.startsWith('http') ? vod.cover : "https://a.maincast.tv/assets/".concat(vod.cover);
+      } else if (vod.cover_url) {
+        cover = vod.cover_url;
+      } else if (vod.poster) {
+        cover = vod.poster.startsWith('http') ? vod.poster : "https://a.maincast.tv/assets/".concat(vod.poster);
+      }
       return {
         title: vod.name,
-        cover: "https://maincast.tv/api/assets/".concat(vod.cover),
-        poster: "https://maincast.tv/api/assets/".concat(vod.cover),
+        cover: cover,
+        poster: cover,
         description: description,
         salo_description: description,
-        release_date: release_date,
         salo_release_date: release_date,
         salo_vod_id: v,
         params: {
@@ -1620,162 +1631,50 @@
       return null;
     }
   }
+  function loadCategory(_x, _x2, _x3) {
+    return _loadCategory.apply(this, arguments);
+  }
+  function _loadCategory() {
+    _loadCategory = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(disciplineId, oncomplete, onerror) {
+      var url, response, vods, items, _t;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            _context.p = 0;
+            url = "".concat(REPLAY_BASE, "/vod?filter={\"discipline\":").concat(disciplineId, "}&sort=-date&limit=100");
+            _context.n = 1;
+            return request(url);
+          case 1:
+            response = _context.v;
+            vods = (response && response.data ? response.data : []).filter(function (vod) {
+              return vod && vod.link && !vod.link.includes('youtube');
+            });
+            items = vods.map(mapVodToCard).filter(Boolean);
+            oncomplete([{
+              title: '',
+              results: items,
+              total_pages: 1,
+              params: {
+                salopower: true,
+                disciplineId: disciplineId
+              }
+            }]);
+            _context.n = 3;
+            break;
+          case 2:
+            _context.p = 2;
+            _t = _context.v;
+            console.error("TryzubTV: Failed to load replay category ".concat(disciplineId), _t);
+            if (onerror) onerror(_t);
+          case 3:
+            return _context.a(2);
+        }
+      }, _callee, null, [[0, 2]]);
+    }));
+    return _loadCategory.apply(this, arguments);
+  }
   var Api = {
-    // Головна сторінка: по limit_ui елементів на дисципліну + 1 для перевірки More, з підтримкою card-more
-    load: function () {
-      var _load = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(params, oncomplete, onerror) {
-        var limit_ui, disciplines_response, disciplines, LineModule, line_promises, lines, _t2;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
-            case 0:
-              _context2.p = 0;
-              limit_ui = params && params.limit ? params.limit : 10;
-              _context2.n = 1;
-              return new Promise(function (resolve, reject) {
-                Lampa.Network.silent('https://a.maincast.tv/items/discipline?filter={"category":"sport"}&fields=name,id,icon', resolve, reject);
-              });
-            case 1:
-              disciplines_response = _context2.v;
-              disciplines = disciplines_response.data || [];
-              LineModule = Lampa.Maker && Lampa.Maker.module ? Lampa.Maker.module('Line') : null;
-              line_promises = disciplines.map(/*#__PURE__*/function () {
-                var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(discipline) {
-                  var vod_response, vods, mapped, hasMore, items, line, _t;
-                  return _regenerator().w(function (_context) {
-                    while (1) switch (_context.n) {
-                      case 0:
-                        _context.p = 0;
-                        _context.n = 1;
-                        return new Promise(function (resolve, reject) {
-                          Lampa.Network.silent("https://a.maincast.tv/items/vod?filter={\"discipline\":".concat(discipline.id, "}&sort=-date&limit=").concat(limit_ui + 1), resolve, reject);
-                        });
-                      case 1:
-                        vod_response = _context.v;
-                        vods = (vod_response.data || []).filter(function (vod) {
-                          return vod.link && !vod.link.includes('youtube');
-                        });
-                        if (vods.length) {
-                          _context.n = 2;
-                          break;
-                        }
-                        return _context.a(2, null);
-                      case 2:
-                        mapped = vods.map(mapVodToCard).filter(Boolean);
-                        if (mapped.length) {
-                          _context.n = 3;
-                          break;
-                        }
-                        return _context.a(2, null);
-                      case 3:
-                        hasMore = mapped.length > limit_ui; // Для card-more core очікує, що всі results вже в items, а more докидається окремо модулем
-                        // Тому results = перші limit_ui, але total_pages > 1 + модуль More з params.more
-                        items = hasMore ? mapped.slice(0, limit_ui) : mapped;
-                        if (items.length) {
-                          _context.n = 4;
-                          break;
-                        }
-                        return _context.a(2, null);
-                      case 4:
-                        line = {
-                          title: discipline.name,
-                          results: items,
-                          total_pages: hasMore ? 2 : 1,
-                          params: {
-                            salopower: true,
-                            disciplineId: discipline.id
-                          }
-                        };
-                        if (hasMore && LineModule) {
-                          // MASK.base вже включає Items/Create, додаємо More згідно рекомендацій deepwiki
-                          line.params.module = LineModule.toggle(LineModule.MASK.base, 'More');
-
-                          // Конфіг для компонента More (card-more) + для onMore
-                          line.params.more = {
-                            title: 'Усі відео: ' + discipline.name,
-                            component: 'salopower_category',
-                            disciplineId: discipline.id
-                          };
-                        }
-                        return _context.a(2, line);
-                      case 5:
-                        _context.p = 5;
-                        _t = _context.v;
-                        console.error("SaloPower: Failed to load VODs for discipline ".concat(discipline.id), _t);
-                        return _context.a(2, null);
-                    }
-                  }, _callee, null, [[0, 5]]);
-                }));
-                return function (_x4) {
-                  return _ref.apply(this, arguments);
-                };
-              }());
-              _context2.n = 2;
-              return Promise.all(line_promises);
-            case 2:
-              lines = _context2.v.filter(Boolean);
-              oncomplete(lines);
-              _context2.n = 4;
-              break;
-            case 3:
-              _context2.p = 3;
-              _t2 = _context2.v;
-              console.error('SaloPower API Error:', _t2);
-              onerror(_t2);
-            case 4:
-              return _context2.a(2);
-          }
-        }, _callee2, null, [[0, 3]]);
-      }));
-      function load(_x, _x2, _x3) {
-        return _load.apply(this, arguments);
-      }
-      return load;
-    }(),
-    // Категорія: до 100 елементів по дисципліні, без More (full список)
-    loadCategory: function () {
-      var _loadCategory = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(disciplineId, oncomplete, onerror) {
-        var url, vod_response, vods, items, _t3;
-        return _regenerator().w(function (_context3) {
-          while (1) switch (_context3.n) {
-            case 0:
-              _context3.p = 0;
-              url = "https://a.maincast.tv/items/vod?filter={\"discipline\":".concat(disciplineId, "}&sort=-date&limit=100");
-              _context3.n = 1;
-              return new Promise(function (resolve, reject) {
-                Lampa.Network.silent(url, resolve, reject);
-              });
-            case 1:
-              vod_response = _context3.v;
-              vods = (vod_response.data || []).filter(function (vod) {
-                return vod.link && !vod.link.includes('youtube');
-              });
-              items = vods.map(mapVodToCard).filter(Boolean);
-              oncomplete([{
-                title: '',
-                results: items,
-                total_pages: 1,
-                params: {
-                  salopower: true,
-                  disciplineId: disciplineId
-                }
-              }]);
-              _context3.n = 3;
-              break;
-            case 2:
-              _context3.p = 2;
-              _t3 = _context3.v;
-              console.error("SaloPower: Failed to load category for discipline ".concat(disciplineId), _t3);
-              onerror(_t3);
-            case 3:
-              return _context3.a(2);
-          }
-        }, _callee3, null, [[0, 2]]);
-      }));
-      function loadCategory(_x5, _x6, _x7) {
-        return _loadCategory.apply(this, arguments);
-      }
-      return loadCategory;
-    }()
+    loadCategory: loadCategory
   };
 
   function component(object) {
@@ -1784,15 +1683,12 @@
       onCreate: function onCreate() {
         var _this = this;
         this.activity.loader(true);
-
-        // Api.loadCategory вже повертає масив line-обʼєктів для build
         Api.loadCategory(object.disciplineId, function (lines) {
           _this.build(lines);
           _this.activity.loader(false);
         }, this.empty.bind(this));
       },
       onInstance: function onInstance(line_item, line_data) {
-        line_data.params || {};
         line_item.use({
           onInstance: function onInstance(card_item, card_data) {
             card_item.use({
@@ -1815,7 +1711,7 @@
                   });
                   card_view.append(tpl);
                 } catch (e) {
-                  console.error('SaloPower Category: card overlay create error', e);
+                  console.error('TryzubTV: replay card overlay create error', e);
                 }
               },
               onEnter: function () {
@@ -1847,7 +1743,7 @@
                       case 4:
                         _context.p = 4;
                         _t = _context.v;
-                        console.error('SaloPower: Failed to start playback', _t);
+                        console.error('TryzubTV: Failed to start replay playback', _t);
                         Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
                       case 5:
                         _context.p = 5;
@@ -1888,7 +1784,7 @@
     lang();
     initSettings();
     var style = document.createElement('style');
-    style.textContent = "\n        .card--tryzubtv .card__img {\n            object-fit: contain;\n            object-position: center;\n            background: transparent;\n        }\n\n        .card--tryzubtv.card--wide {\n            width: 15em;\n        }\n\n        .card--tryzubtv .card__promo-title {\n            font-size: 1em;\n            line-height: 1.2;\n            max-height: 2.4em;\n            overflow: hidden;\n            display: -webkit-box;\n            -webkit-line-clamp: 2;\n            line-clamp: 2;\n            -webkit-box-orient: vertical;\n            text-overflow: ellipsis;\n        }\n\n        .card--tryzubtv .card__promo-text {\n            display: none;\n        }\n\n        .card--tryzubtv.card--wide .card__title {\n            display: none;\n        }\n\n        .card--tryzubtv .card__promo {\n            overflow: hidden;\n            padding: 2em 1em 1em 1em;\n        }\n\n        .tryzubtv-activity .items-line {\n            padding-bottom: 1em;\n        }\n\n        .card--wide.card--salopower .card__view {\n            position: relative;\n        }\n\n        .card--wide.card--salopower .card__body--salopower {\n            position: absolute;\n            left: 0;\n            top: 0;\n            width: 100%;\n            height: 100%;\n            display: flex;\n            flex-direction: column;\n            padding: 1.2em 1.5em;\n            background-image: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%);\n            pointer-events: none;\n        }\n\n        .card--wide.card--salopower .card__promo {\n            display: none;\n        }\n\n        .card--wide.card--salopower .card__body--salopower .card__title {\n            font-size: 1.6em;\n            font-weight: 700;\n        }\n\n        .card--wide.card--salopower .card__salopower-data {\n            margin-top: auto;\n            padding-top: 1em;\n        }\n\n        .card--salopower .card__description {\n            font-size: 1.3em;\n            color: rgba(255, 255, 255, 0.7);\n            -webkit-line-clamp: 2;\n            -webkit-box-orient: vertical;\n            display: -webkit-box;\n            overflow: hidden;\n            text-overflow: ellipsis;\n        }\n        .card--salopower .card__release-date {\n            font-size: 1.2em;\n            color: rgba(255, 255, 255, 0.5);\n            margin-top: 0.5em;\n        }\n        .account-modal-split__text {\n            margin-bottom: 0;\n        }\n        .account-modal-split__qr-text>a {\n            text-decoration: none;\n        }\n    ";
+    style.textContent = "\n        .card--tryzubtv .card__img {\n            object-fit: contain;\n            object-position: center;\n            background: transparent;\n        }\n\n        .card--tryzubtv.card--wide {\n            width: 15em;\n        }\n\n        .card--tryzubtv .card__promo-title {\n            font-size: 1em;\n            line-height: 1.2;\n            max-height: 2.4em;\n            overflow: hidden;\n            display: -webkit-box;\n            -webkit-line-clamp: 2;\n            line-clamp: 2;\n            -webkit-box-orient: vertical;\n            text-overflow: ellipsis;\n        }\n\n        .card--tryzubtv .card__promo-text {\n            display: none;\n        }\n\n        .card--tryzubtv.card--wide .card__title {\n            display: none;\n        }\n\n        .card--tryzubtv .card__promo {\n            overflow: hidden;\n            padding: 2em 1em 1em 1em;\n        }\n\n        .tryzubtv-activity .items-line {\n            padding-bottom: 1em;\n        }\n\n        .card--wide.card--salopower .card__view {\n            position: relative;\n        }\n\n        .card--wide.card--salopower .card__body--salopower {\n            position: absolute;\n            left: 0;\n            top: 0;\n            width: 100%;\n            height: 100%;\n            display: flex;\n            flex-direction: column;\n            padding: 1.2em 1.5em;\n            background-image: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%);\n            pointer-events: none;\n        }\n\n        .card--wide.card--salopower .card__promo {\n            display: none;\n        }\n\n        .card--wide.card--salopower .card__body--salopower .card__title {\n            font-size: 1.6em;\n            font-weight: 700;\n        }\n\n        .card--wide.card--salopower .card__salopower-data {\n            margin-top: auto;\n            padding-top: 1em;\n        }\n\n        .card--salopower .card__description {\n            font-size: 1.3em;\n            color: rgba(255, 255, 255, 0.7);\n            -webkit-line-clamp: 2;\n            -webkit-box-orient: vertical;\n            display: -webkit-box;\n            overflow: hidden;\n            text-overflow: ellipsis;\n        }\n        .card--salopower .card__release-date {\n            font-size: 1.2em;\n            color: rgba(255, 255, 255, 0.5);\n            margin-top: 0.5em;\n        }\n        .account-modal-split__text {\n            margin-bottom: 0;\n        }\n        .account-modal-split__qr-text>a {\n            text-decoration: none;\n            color: #d8c39a;\n        }\n    ";
     document.head.appendChild(style);
     Lampa.Template.add('salopower_episode_card_data', "\n        <div class=\"card__body card__body--salopower\">\n            <div class=\"card__title\">{title}</div>\n            <div class=\"card__salopower-data\">\n                <div class=\"card__description\">{salo_description}</div>\n                <div class=\"card__release-date\">{salo_release_date}</div>\n            </div>\n        </div>\n    ");
     SocketManager.getInstance().listen();
