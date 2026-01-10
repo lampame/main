@@ -805,6 +805,46 @@
       }
     }
 
+    var QR_URL = 'https://lampame.donatik.me';
+    var QR_TEXT = "<a href=\"".concat(QR_URL, "\">\u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F</a>");
+    var QR_BODY = 'Подяка автору плагіну BanderaOnline добровільна, на розвиток якого витрачено багато часу та сил.';
+    var QR_CARD_POSTER = 'https://iili.io/fkdGkSj.png';
+    function openQrModal() {
+      var html = $('<div class="banderaonline-qr-modal">' + '<style>' + '.banderaonline-qr-modal__content{display:flex;flex-direction:row;gap:1.2em;align-items:center;text-align:center}' + '.banderaonline-qr-modal__info{max-width:28em}' + '.banderaonline-qr-modal__qr{display:flex;flex-direction:column;align-items:center}' + '@media (max-width: 600px){.banderaonline-qr-modal__content{flex-direction:column}}' + '</style>' + '<div class="banderaonline-qr-modal__content">' + '<div class="account-modal-split__info banderaonline-qr-modal__info">' + //`<div class="account-modal-split__title">${QR_TITLE}</div>` +
+      "<div class=\"account-modal-split__text\"><img src=\"".concat(QR_CARD_POSTER, "\" class=\"banderaonline-qr-modal__img\"><br />").concat(QR_BODY, "</div>") + '</div>' + '<div class="account-modal-split__qr banderaonline-qr-modal__qr">' + '<div class="account-modal-split__qr-code" style="margin-bottom:0;width: 13em;height: 13em;"></div>' + "<div class=\"account-modal-split__qr-text\">".concat(QR_TEXT, "</div>") + '</div>' + '</div>' + '</div>');
+      var qrElement = html.find('.account-modal-split__qr-code');
+      var renderQr = function renderQr() {
+        if (!window.qrcode) {
+          qrElement.text('QR недоступний');
+          return;
+        }
+        Lampa.Utils.qrcode(QR_URL, qrElement, function (error) {
+          console.error(error);
+        });
+      };
+      if (!window.qrcode && Lampa.Utils.putScript) {
+        var qrLib = window.location.protocol == 'file:' ? Lampa.Manifest.github_lampa + 'vender/qrcode/qrcode.js' : './vender/qrcode/qrcode.js';
+        Lampa.Utils.putScript([qrLib], renderQr, renderQr, null, false);
+      } else {
+        renderQr();
+      }
+      var svg = qrElement.find('svg');
+      if (svg[0]) {
+        svg[0].style.setProperty('width', '12em', 'important');
+        svg[0].style.setProperty('height', '12em', 'important');
+      }
+      var enabledController = Lampa.Controller.enabled().name;
+      Lampa.Modal.open({
+        title: '',
+        html: html,
+        size: 'medium',
+        onBack: function onBack() {
+          Lampa.Modal.close();
+          Lampa.Controller.toggle(enabledController);
+        }
+      });
+    }
+
     function component(object) {
       var network = new Lampa.Reguest();
       var scroll = new Lampa.Scroll({
@@ -866,6 +906,11 @@
         };
         if (filter.addButtonBack) filter.addButtonBack();
         filter.render().find('.filter--sort span').text(Lampa.Lang.translate('online_balanser'));
+        var donateButton = $('<div class="simple-button simple-button--filter selector filter--donate">' + '<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M17.726 13.02 14 16H9v-1h4.065a.5.5 0 0 0 .416-.777l-.888-1.332A1.995 1.995 0 0 0 10.93 12H3a1 1 0 0 0-1 1v6a2 2 0 0 0 2 2h9.639a3 3 0 0 0 2.258-1.024L22 13l-1.452-.484a2.998 2.998 0 0 0-2.822.504zm1.532-5.63c.451-.465.73-1.108.73-1.818s-.279-1.353-.73-1.818A2.447 2.447 0 0 0 17.494 3S16.25 2.997 15 4.286C13.75 2.997 12.506 3 12.506 3a2.45 2.45 0 0 0-1.764.753c-.451.466-.73 1.108-.730 1.818s.279 1.354.73 1.818L15 12l4.258-4.61z"></path></g></svg>' + '<span>Подяка</span><div class="hide"></div>' + '</div>');
+        filter.render().find('.filter--filter').after(donateButton);
+        donateButton.on('hover:enter', function () {
+          openQrModal();
+        });
         files.appendFiles(scroll.render());
         files.appendHead(filter.render());
         scroll.body().addClass('torrent-list');
