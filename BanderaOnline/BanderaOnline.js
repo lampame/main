@@ -153,6 +153,10 @@
             component.doesNotAnswer();
             return;
           }
+          if (isMovieFallback(json)) {
+            drawMovieStreams(json.streams || []);
+            return;
+          }
           series = json;
           filter();
           buildEpisodes();
@@ -200,6 +204,10 @@
         url = addParam(url, 'voice', voice.id);
         url = addParam(url, 'season', season);
         network.silent(url, function (json) {
+          if (isMovieFallback(json)) {
+            drawMovieStreams(json.streams || []);
+            return;
+          }
           var episodes = json && json.ok ? json.episodes || [] : [];
           if (!episodes.length) {
             component.doesNotAnswer();
@@ -271,6 +279,44 @@
                 file: stream.file,
                 quality: stream.qualitys
               });
+            });
+          }
+        });
+        component.loading(false);
+      }
+      function isMovieFallback(json) {
+        return json && json.ok && (json.type == 'movie' || json.fallback == 'movie');
+      }
+      function drawMovieStreams(streams) {
+        if (!streams.length) {
+          component.doesNotAnswer();
+          return;
+        }
+        var stream_info = buildQualityMap(streams);
+        var item = {
+          title: object.movie.title,
+          file: stream_info.file,
+          quality: stream_info.label,
+          qualitys: stream_info.qualitys,
+          info: ''
+        };
+        component.draw([item], {
+          onEnter: function onEnter(element) {
+            var first = {
+              url: element.file,
+              timeline: element.timeline,
+              quality: element.qualitys,
+              title: element.title,
+              subtitles: element.subtitles
+            };
+            Lampa.Player.play(first);
+            Lampa.Player.playlist([first]);
+            element.mark();
+          },
+          onContextMenu: function onContextMenu(element, html, data, call) {
+            call({
+              file: element.file,
+              quality: element.qualitys
             });
           }
         });
