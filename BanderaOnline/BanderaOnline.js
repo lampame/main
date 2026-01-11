@@ -16,7 +16,7 @@
         voice: 0,
         voice_name: ''
       };
-      var api_base = 'https://fearless-accomplished-kestrel.anvil.app/_/api/v1';
+      var api_base = 'https://banderabackend.lampame.v6.rocks/api/v1';
       var self = this;
       this.searchByTitle = function (_object, title) {
         object = _object;
@@ -323,7 +323,7 @@
         voice: 0,
         voice_name: ''
       };
-      var api_base = 'https://fearless-accomplished-kestrel.anvil.app/_/api/v1';
+      var api_base = 'https://banderabackend.lampame.v6.rocks/api/v1';
       var self = this;
       this.searchByTitle = function (_object, title) {
         object = _object;
@@ -564,7 +564,7 @@
         voice: 0,
         voice_name: ''
       };
-      var api_base = 'https://fearless-accomplished-kestrel.anvil.app/_/api/v1';
+      var api_base = 'https://banderabackend.lampame.v6.rocks/api/v1';
       var self = this;
       this.searchByTitle = function (_object, title) {
         object = _object;
@@ -609,10 +609,16 @@
         return Lampa.Utils.addUrlComponent(url, key + '=' + encodeURIComponent(value));
       }
       function search(title) {
-        var url = api_base + '/kurwabober/search';
+        var url = api_base + '/search';
         var movie = object.movie || {};
+        url = addParam(url, 'source', 'kurwabober');
         url = addParam(url, 'title', title);
         url = addParam(url, 'original_title', movie.original_title || movie.original_name);
+        url = addParam(url, 'name', movie.title || movie.name);
+        url = addParam(url, 'eng_name', movie.original_title || movie.original_name);
+        url = addParam(url, 'imdb_id', movie.imdb_id);
+        url = addParam(url, 'kinopoisk_id', movie.kinopoisk_id);
+        url = addParam(url, 'year', getYear(movie));
         network.silent(url, function (json) {
           var items = json && json.ok ? json.items || [] : [];
           if (!items.length) {
@@ -798,6 +804,10 @@
       function normalizeTitle(value) {
         if (value === null || value === undefined) return '';
         return String(value).trim();
+      }
+      function getYear(movie) {
+        var date = movie.release_date || movie.first_air_date || movie.year || movie.start_date;
+        return date ? (date + '').slice(0, 4) : '';
       }
       function parseNumber(value, fallback) {
         var match = String(value || '').match(/(\\d+)/);
