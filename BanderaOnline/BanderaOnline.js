@@ -3,6 +3,362 @@
 
     var api_base = 'https://banderabackend.lampame.v6.rocks/api/v1';
 
+    function uaflix(component, _object) {
+      var network = new Lampa.Reguest();
+      var object = _object;
+      var selected = null;
+      var series = null;
+      var episodes_cache = {};
+      var filter_items = {
+        season: [],
+        voice: []
+      };
+      var choice = {
+        season: 0,
+        voice: 0,
+        voice_name: ''
+      };
+      var self = this;
+      this.searchByTitle = function (_object, title) {
+        object = _object;
+        search(title);
+      };
+      this.search = function (_object, data) {
+        object = _object;
+        if (!data || !data.length) return component.doesNotAnswer();
+        selected = data[0];
+        series = null;
+        episodes_cache = {};
+        if (isMovie(selected.href)) loadMovie(selected.href);else loadSeries(selected.href);
+      };
+      this.extendChoice = function (saved) {
+        Lampa.Arrays.extend(choice, saved, true);
+      };
+      this.reset = function () {
+        component.reset();
+        choice = {
+          season: 0,
+          voice: 0,
+          voice_name: ''
+        };
+        filter();
+        buildEpisodes();
+      };
+      this.filter = function (type, a, b) {
+        choice[a.stype] = b.index;
+        if (a.stype == 'voice' && filter_items.voice[b.index]) {
+          choice.voice_name = filter_items.voice[b.index];
+        }
+        component.reset();
+        filter();
+        buildEpisodes();
+      };
+      this.cancel = function () {
+        network.clear();
+      };
+      this.destroy = function () {
+        network.clear();
+        selected = null;
+        series = null;
+        episodes_cache = {};
+      };
+      function isMovie(href) {
+        return /\/films\//.test(href) || /\/film\//.test(href);
+      }
+      function addParam(url, key, value) {
+        if (!value) return url;
+        return Lampa.Utils.addUrlComponent(url, key + '=' + encodeURIComponent(value));
+      }
+      function getYear(movie) {
+        var date = movie.release_date || movie.first_air_date || movie.year || movie.start_date;
+        return date ? (date + '').slice(0, 4) : '';
+      }
+      function search(title) {
+        var url = api_base + '/search';
+        var movie = object.movie || {};
+        url = addParam(url, 'source', 'uaflix');
+        url = addParam(url, 'title', title);
+        url = addParam(url, 'original_title', movie.original_title || movie.original_name);
+        url = addParam(url, 'imdb_id', movie.imdb_id);
+        url = addParam(url, 'kinopoisk_id', movie.kinopoisk_id);
+        url = addParam(url, 'year', getYear(movie));
+        network.silent(url, function (json) {
+          var items = json && json.ok ? json.items || [] : [];
+          if (!items.length) {
+            component.doesNotAnswer();
+            return;
+          }
+          items = items.map(function (item) {
+            return {
+              id: item.href,
+              title: item.title,
+              year: item.year,
+              href: item.href,
+              poster: item.poster
+            };
+          });
+          if (items.length == 1 || object.clarification) {
+            self.search(object, items);
+          } else {
+            component.similars(items);
+            component.loading(false);
+          }
+        }, function () {
+          component.doesNotAnswer();
+        });
+      }
+      function loadMovie(href) {
+        var url = api_base + '/uaflix/movie';
+        url = addParam(url, 'href', href);
+        network.silent(url, function (json) {
+          var streams = json && json.ok ? json.streams || [] : [];
+          if (!streams.length) {
+            component.doesNotAnswer();
+            return;
+          }
+          var stream_info = buildQualityMap(streams);
+          var item = {
+            title: object.movie.title,
+            file: stream_info.file,
+            quality: stream_info.label,
+            qualitys: stream_info.qualitys,
+            info: ''
+          };
+          component.draw([item], {
+            onEnter: function onEnter(element) {
+              var first = {
+                url: element.file,
+                timeline: element.timeline,
+                quality: element.qualitys,
+                title: element.title,
+                subtitles: element.subtitles
+              };
+              Lampa.Player.play(first);
+              Lampa.Player.playlist([first]);
+              element.mark();
+            },
+            onContextMenu: function onContextMenu(element, html, data, call) {
+              call({
+                file: element.file,
+                quality: element.qualitys
+              });
+            }
+          });
+          component.loading(false);
+        }, function () {
+          component.doesNotAnswer();
+        });
+      }
+      function loadSeries(href) {
+        var url = api_base + '/uaflix/series';
+        url = addParam(url, 'href', href);
+        network.silent(url, function (json) {
+          if (!json || !json.ok) {
+            component.doesNotAnswer();
+            return;
+          }
+          if (isMovieFallback(json)) {
+            drawMovieStreams(json.streams || []);
+            return;
+          }
+          series = json;
+          filter();
+          buildEpisodes();
+        }, function () {
+          component.doesNotAnswer();
+        });
+      }
+      function filter() {
+        filter_items = {
+          season: [],
+          voice: []
+        };
+        if (series) {
+          if (series.voices && series.voices.length) {
+            filter_items.voice = series.voices.map(function (voice) {
+              return voice.display_name || voice.id;
+            });
+          }
+          if (series.seasons && series.seasons.length) {
+            filter_items.season = series.seasons.map(function (season) {
+              return Lampa.Lang.translate('torrent_serial_season') + ' ' + season;
+            });
+          }
+        }
+        if (choice.season >= filter_items.season.length) choice.season = 0;
+        if (choice.voice >= filter_items.voice.length) choice.voice = 0;
+        if (filter_items.voice[choice.voice]) choice.voice_name = filter_items.voice[choice.voice];
+        component.filter(filter_items, choice);
+      }
+      function buildEpisodes() {
+        if (!series || !series.voices || !series.voices.length || !series.seasons || !series.seasons.length) {
+          component.loading(false);
+          return component.doesNotAnswer();
+        }
+        var voice = series.voices[choice.voice] || series.voices[0];
+        var season = series.seasons[choice.season] || series.seasons[0];
+        var cache_key = voice.id + ':' + season;
+        choice.voice_name = voice.display_name || voice.id;
+        if (episodes_cache[cache_key]) {
+          renderEpisodes(episodes_cache[cache_key], season, voice);
+          return;
+        }
+        var url = api_base + '/uaflix/episodes';
+        url = addParam(url, 'href', selected.href);
+        url = addParam(url, 'voice', voice.id);
+        url = addParam(url, 'season', season);
+        network.silent(url, function (json) {
+          if (isMovieFallback(json)) {
+            drawMovieStreams(json.streams || []);
+            return;
+          }
+          var episodes = json && json.ok ? json.episodes || [] : [];
+          if (!episodes.length) {
+            component.doesNotAnswer();
+            return;
+          }
+          episodes_cache[cache_key] = episodes;
+          renderEpisodes(episodes, season, voice);
+        }, function () {
+          component.doesNotAnswer();
+        });
+      }
+      function renderEpisodes(episodes, season, voice) {
+        var items = episodes.map(function (episode) {
+          return {
+            title: episode.title,
+            file: episode.file,
+            id: episode.id,
+            season: season,
+            episode: episode.number,
+            info: voice.display_name || voice.id,
+            voice_name: voice.display_name || voice.id,
+            voice_id: voice.id
+          };
+        });
+        component.draw(items, {
+          onEnter: function onEnter(item) {
+            getStream(item, function (stream) {
+              var first = {
+                url: stream.file,
+                timeline: item.timeline,
+                quality: stream.qualitys,
+                title: item.title,
+                subtitles: item.subtitles
+              };
+              Lampa.Player.play(first);
+              var playlist = [];
+              items.forEach(function (elem) {
+                var cell = {
+                  url: function url(call) {
+                    getStream(elem, function (next) {
+                      cell.url = next.file;
+                      cell.quality = next.qualitys;
+                      elem.mark();
+                      call();
+                    }, function () {
+                      cell.url = '';
+                      call();
+                    });
+                  },
+                  timeline: elem.timeline,
+                  title: elem.title,
+                  subtitles: elem.subtitles
+                };
+                if (elem == item) {
+                  cell.url = stream.file;
+                  cell.quality = stream.qualitys;
+                }
+                playlist.push(cell);
+              });
+              Lampa.Player.playlist(playlist);
+              item.mark();
+            }, function () {
+              Lampa.Noty.show(Lampa.Lang.translate('online_nolink'));
+            });
+          },
+          onContextMenu: function onContextMenu(item, html, data, call) {
+            getStream(item, function (stream) {
+              call({
+                file: stream.file,
+                quality: stream.qualitys
+              });
+            });
+          }
+        });
+        component.loading(false);
+      }
+      function isMovieFallback(json) {
+        return json && json.ok && (json.type == 'movie' || json.fallback == 'movie');
+      }
+      function drawMovieStreams(streams) {
+        if (!streams.length) {
+          component.doesNotAnswer();
+          return;
+        }
+        var stream_info = buildQualityMap(streams);
+        var item = {
+          title: object.movie.title,
+          file: stream_info.file,
+          quality: stream_info.label,
+          qualitys: stream_info.qualitys,
+          info: ''
+        };
+        component.draw([item], {
+          onEnter: function onEnter(element) {
+            var first = {
+              url: element.file,
+              timeline: element.timeline,
+              quality: element.qualitys,
+              title: element.title,
+              subtitles: element.subtitles
+            };
+            Lampa.Player.play(first);
+            Lampa.Player.playlist([first]);
+            element.mark();
+          },
+          onContextMenu: function onContextMenu(element, html, data, call) {
+            call({
+              file: element.file,
+              quality: element.qualitys
+            });
+          }
+        });
+        component.loading(false);
+      }
+      function buildQualityMap(streams) {
+        var qualitys = {};
+        streams.forEach(function (stream) {
+          if (stream.quality && stream.url) qualitys[stream.quality] = stream.url;
+        });
+        var preferred = Lampa.Storage.get('video_quality_default', '1080') + 'p';
+        var keys = Object.keys(qualitys).sort(function (a, b) {
+          return parseInt(b) - parseInt(a);
+        });
+        var file = qualitys[preferred] || qualitys[keys[0]];
+        if (!file && streams[0]) file = streams[0].url;
+        return {
+          file: file,
+          qualitys: qualitys,
+          label: keys.length ? keys[0] : ''
+        };
+      }
+      function getStream(item, success, fail) {
+        var url = api_base + '/uaflix/stream';
+        url = addParam(url, 'url', item.file);
+        network.silent(url, function (json) {
+          var streams = json && json.ok ? json.streams || [] : [];
+          if (!streams.length) {
+            if (fail) fail();
+            return;
+          }
+          success(buildQualityMap(streams));
+        }, function () {
+          if (fail) fail();
+        });
+      }
+    }
+
     function uatut(component, _object) {
       var network = new Lampa.Reguest();
       var object = _object;
@@ -1756,6 +2112,7 @@
       var filter = new Lampa.Filter(object);
       var sources = {
         uatut: uatut,
+        uaflix: uaflix,
         kurwabober: kurwabober,
         kurwaborz: kurwaborz,
         bambooua: bambooua,
@@ -1763,6 +2120,7 @@
         starlight: starlight
       };
       var balanser_titles = {
+        uaflix: 'UAflix',
         uatut: 'UATuT',
         kurwabober: 'KurwaBober',
         kurwaborz: 'Kurwaborz',
@@ -1798,7 +2156,7 @@
         }
         sources = filterEnabledSources(sources);
         if (!sources.length) {
-          sources = ['uatut', 'kurwabober', 'kurwaborz', 'starlight'];
+          sources = ['uatut', 'uaflix', 'kurwabober', 'kurwaborz', 'starlight'];
           if (shouldIncludeAnimeSources(movie)) {
             sources.push('bambooua', 'animeon');
           }
@@ -1812,7 +2170,7 @@
             return sources[name];
           });
         }
-        return ['uatut', 'kurwabober', 'kurwaborz', 'starlight'];
+        return ['uatut', 'uaflix', 'kurwabober', 'kurwaborz', 'starlight'];
       }
       function filterEnabledSources(list) {
         var enabled = getEnabledSources();
