@@ -2198,18 +2198,16 @@
       }
       function loadAvailableSources(call) {
         var cached = Lampa.Storage.cache('bandera_online_sources', 3000, null);
-        if (cached && Array.isArray(cached) && hasSourceTitles(cached)) {
-          applyAvailableSources(cached);
-          call();
-          return;
-        }
         network.silent(api_base + '/sources', function (json) {
           if (json && json.ok && Array.isArray(json.sources)) {
             applyAvailableSources(json.sources);
             Lampa.Storage.set('bandera_online_sources', available_sources);
+          } else if (cached && Array.isArray(cached)) {
+            applyAvailableSources(cached);
           }
           call();
         }, function () {
+          if (cached && Array.isArray(cached)) applyAvailableSources(cached);
           call();
         });
       }
@@ -2220,11 +2218,6 @@
           var display = extractSourceTitle(item);
           var key = mapSourceName(item.name);
           if (display && key && sources[key]) balanser_titles[key] = display;
-        });
-      }
-      function hasSourceTitles(list) {
-        return list.some(function (item) {
-          return item && extractSourceTitle(item);
         });
       }
       function extractSourceTitle(item) {
