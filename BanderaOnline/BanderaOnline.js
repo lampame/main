@@ -51,6 +51,9 @@
         filter();
         buildEpisodes();
       };
+      this.cancel = function () {
+        network.clear();
+      };
       this.destroy = function () {
         network.clear();
         selected = null;
@@ -290,6 +293,9 @@
         component.reset();
         filter();
         buildEpisodes();
+      };
+      this.cancel = function () {
+        network.clear();
       };
       this.destroy = function () {
         network.clear();
@@ -554,6 +560,9 @@
         component.reset();
         filter();
         buildEpisodes();
+      };
+      this.cancel = function () {
+        network.clear();
       };
       this.destroy = function () {
         network.clear();
@@ -823,6 +832,9 @@
         component.reset();
         filter();
         buildEpisodes();
+      };
+      this.cancel = function () {
+        network.clear();
       };
       this.destroy = function () {
         network.clear();
@@ -1116,6 +1128,9 @@
         component.reset();
         filter();
         buildEpisodes();
+      };
+      this.cancel = function () {
+        network.clear();
       };
       this.destroy = function () {
         network.clear();
@@ -1458,6 +1473,9 @@
         component.reset();
         filter();
         buildEpisodes();
+      };
+      this.cancel = function () {
+        network.clear();
       };
       this.destroy = function () {
         network.clear();
@@ -2694,8 +2712,14 @@
       this.back = function () {
         Lampa.Activity.backward();
       };
-      this.pause = function () {};
-      this.stop = function () {};
+      this.pause = function () {
+        this.stop();
+      };
+      this.stop = function () {
+        network.clear();
+        clearInterval(balanser_timer);
+        if (source && source.cancel) source.cancel();
+      };
       this.destroy = function () {
         network.clear();
         this.clearImages();
