@@ -1037,7 +1037,9 @@
           if (!item) return null;
           var list = item && item.list ? item.list : item;
           if (!list || !list.ids || !list.ids.trakt) {
-            console.warn('TraktTV Debug: Invalid list item received', item);
+            if (Lampa.Storage.field('trakt_enable_logging')) {
+              console.warn('TraktTV', 'Invalid list item received', item);
+            }
             return null;
           }
           var isLiked = likedListIds.includes(list.ids.trakt);
@@ -2814,6 +2816,8 @@
   // Стилі для заголовків з іконками
   var HEADER_STYLE = 'display:flex; align-items:center; gap:10px;';
   var ICON_STYLE = 'width:52px; height:52px;';
+  var LINE_TITLE_STYLE = 'display:inline-flex; align-items:center; gap:.4em;';
+  var LINE_ICON_STYLE = 'width:1em; height:1em; display:inline-block;';
 
   // Основна іконка Trakt.TV
   var TRAKT_ICON = "<svg xmlns=\"http://www.w3.org/2000/svg\" id=\"Layer_2\" viewBox=\"0 0 48 48\" fill=\"currentColor\">\n  <g id=\"_x2D_-production\">\n    <path id=\"logomark.square.white\" class=\"cls-1\" d=\"M30.17,30.22l-1.46-1.46,19.16-19.17c-.05-.39-.13-.77-.23-1.15l-20.31,20.33,2.16,2.16-1.46,1.46-3.62-3.62L46.85,6.29c-.15-.3-.31-.6-.5-.88l-23.33,23.35,4.31,4.31-1.46,1.46-14.39-14.4,1.46-1.46,8.62,8.62L45.1,3.72c-2.07-2.29-5.05-3.72-8.37-3.72H11.27C5.05,0,0,5.05,0,11.27v25.48c0,6.22,5.05,11.26,11.27,11.26h25.47c6.22,0,11.27-5.04,11.27-11.26V12.38l-17.83,17.84ZM21.54,25.91l-7.91-7.93,1.46-1.46,7.91,7.92-1.46,1.47ZM23.69,23.74l-7.91-7.92,1.46-1.46,7.92,7.92-1.47,1.46ZM43.4,35.12c0,4.57-3.71,8.28-8.28,8.28H12.88c-4.56,0-8.28-3.71-8.28-8.28V12.88c0-4.57,3.71-8.28,8.28-8.28h20.78v2.08H12.88c-3.42,0-6.2,2.78-6.2,6.2v22.23c0,3.42,2.78,6.21,6.2,6.21h22.24c3.42,0,6.2-2.79,6.2-6.21v-3.51h2.08v3.51Z\"/>\n  </g>\n</svg>";
@@ -2828,6 +2832,10 @@
   function createHeaderWithIcon(icon, text) {
     return "<div class=\"trakt-header\" style=\"".concat(HEADER_STYLE, "\"><div class=\"trakt-icon\" style=\"").concat(ICON_STYLE, "\">").concat(icon, "</div><div class=\"trakt-title\">").concat(text, "</div></div>");
   }
+  function createLineTitle(text) {
+    var sizedIcon = TRAKT_ICON.replace('<svg ', "<svg style=\"width:100%; height:100%; display:block;\" ");
+    return "<span class=\"trakt-line-title\" style=\"".concat(LINE_TITLE_STYLE, "\"><span class=\"trakt-line-title__icon\" style=\"").concat(LINE_ICON_STYLE, "\">").concat(sizedIcon, "</span><span>").concat(text, "</span></span>");
+  }
 
   // Експортуємо всі іконки та утиліти
   var icons = {
@@ -2836,17 +2844,34 @@
     HISTORY_ICON: HISTORY_ICON,
     HEADER_STYLE: HEADER_STYLE,
     ICON_STYLE: ICON_STYLE,
-    createHeaderWithIcon: createHeaderWithIcon
+    createHeaderWithIcon: createHeaderWithIcon,
+    createLineTitle: createLineTitle
   };
 
+  function normalizeCardParams(cardData) {
+    var source = (cardData === null || cardData === void 0 ? void 0 : cardData.movie) || (cardData === null || cardData === void 0 ? void 0 : cardData.card) || cardData || {};
+    var method = (cardData === null || cardData === void 0 ? void 0 : cardData.method) || source.method || source.card_type || (source.first_air_date || source.name ? 'tv' : 'movie');
+    var externalIds = (cardData === null || cardData === void 0 ? void 0 : cardData.external_ids) || {};
+    var ids = _objectSpread2({}, source.ids || (cardData === null || cardData === void 0 ? void 0 : cardData.ids) || {});
+    if (!ids.tmdb && externalIds.tmdb_id) ids.tmdb = externalIds.tmdb_id;
+    if (!ids.trakt && externalIds.trakt_id) ids.trakt = externalIds.trakt_id;
+    var id = source.id || (cardData === null || cardData === void 0 ? void 0 : cardData.id) || ids.tmdb;
+    return _objectSpread2(_objectSpread2({}, source), {}, {
+      method: method,
+      ids: ids,
+      id: id
+    });
+  }
   function addWatchlistButton(card) {
     var button = document.createElement('div');
     button.className = 'full-start__button selector watchlist-button';
     button.innerHTML = "\n        ".concat(icons.WATCHLIST_ICON, "\n        <span>").concat(Lampa.Lang.translate('trakt_watchlist_button'), "</span>\n    ");
+    var textNode = button.querySelector('span');
+    var params = normalizeCardParams(card);
 
     // Перевіряємо чи є в списку
-    api$1.inWatchlist(card.movie, function (isAdded) {
-      updateButtonStyle(button, isAdded);
+    api$1.inWatchlist(params, function (isAdded) {
+      updateButtonStyle(button, textNode, isAdded);
     }, function () {
       button.style.display = 'none';
     });
@@ -2855,22 +2880,22 @@
     button.on('hover:enter', function () {
       var isAdded = button.classList.contains('added');
       if (isAdded) {
-        api$1.removeFromWatchlist(card.movie, function () {
+        api$1.removeFromWatchlist(params, function () {
           Lampa.Bell.push({
             text: Lampa.Lang.translate('trakt_watchlist_remove')
           });
-          updateButtonStyle(button, false);
+          updateButtonStyle(button, textNode, false);
         }, function () {
           return Lampa.Bell.push({
             text: 'Помилка при видаленні'
           });
         });
       } else {
-        api$1.addToWatchlist(card.movie, function () {
+        api$1.addToWatchlist(params, function () {
           Lampa.Bell.push({
             text: Lampa.Lang.translate('trakt_watchlist_add')
           });
-          updateButtonStyle(button, true);
+          updateButtonStyle(button, textNode, true);
         }, function () {
           return Lampa.Bell.push({
             text: 'Помилка при додаванні'
@@ -2880,13 +2905,15 @@
     });
     return button;
   }
-  function updateButtonStyle(button, isAdded) {
+  function updateButtonStyle(button, textNode, isAdded) {
     if (isAdded) {
       button.classList.add('added');
       button.style.color = '#37ff54';
+      if (textNode) textNode.textContent = Lampa.Lang.translate('trakt_watchlist_remove');
     } else {
       button.classList.remove('added');
       button.style.color = '';
+      if (textNode) textNode.textContent = Lampa.Lang.translate('trakt_watchlist_button');
     }
   }
   var watchlist = {
@@ -2964,7 +2991,9 @@
             }
           }
         })["catch"](function (error) {
-          console.error('TraktTV', 'Error getting show history:', error);
+          if (Lampa.Storage.field('trakt_enable_logging')) {
+            console.error('TraktTV', 'Error getting show history:', error);
+          }
         });
       }
     },
@@ -3674,11 +3703,7 @@
     return Lampa.Storage.field('trakt_enable_logging');
   }
   function slog() {
-    var _console;
-    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-    if (logEnabled()) (_console = console).log.apply(_console, ['TraktTV'].concat(args));
+    if (logEnabled()) slog.apply(void 0, arguments);
   }
   function normalizeCardForCache(card) {
     if (!card) return null;
@@ -3865,7 +3890,7 @@
 
     // DEBUG: Log canFinishOnce check
     if (Lampa.Storage.field('trakt_enable_logging')) {
-      console.log('TraktTV', 'DEBUG - canFinishOnce check:', {
+      slog('DEBUG - canFinishOnce check:', {
         key: key,
         record: rec,
         ttl: ttl,
@@ -4083,7 +4108,7 @@
 
     // DEBUG: Log intent marking
     if (Lampa.Storage.field('trakt_enable_logging')) {
-      console.log('TraktTV', 'DEBUG - markFinishIntent called:', {
+      slog('DEBUG - markFinishIntent called:', {
         key: key,
         tokenAvailable: !!token,
         existingRecord: completionCache.get(key),
@@ -4136,7 +4161,7 @@
           case 0:
             token = Lampa.Storage.get('trakt_token'); // DEBUG: Log finish function call
             if (Lampa.Storage.field('trakt_enable_logging')) {
-              console.log('TraktTV', 'DEBUG - finish function called:', {
+              slog('DEBUG - finish function called:', {
                 mediaId: media.id,
                 mediaHash: media.hash,
                 mediaType: getContentType$1(media),
@@ -4169,7 +4194,7 @@
             _context5.p = 3;
             // DEBUG: Log key used in finish
             if (Lampa.Storage.field('trakt_enable_logging')) {
-              console.log('TraktTV', 'DEBUG - finish function key:', {
+              slog('DEBUG - finish function key:', {
                 key: key,
                 mediaIds: media.ids,
                 mediaId: media.id,
@@ -4410,7 +4435,7 @@
      */
     init: function init() {
       if (isInitialized) {
-        console.log('TraktTV', 'watching.init called while already initialized, skipping');
+        slog('watching.init called while already initialized, skipping');
         return;
       }
       isInitialized = true;
@@ -4438,15 +4463,15 @@
      */
     onPlayerStart: function onPlayerStart(data) {
       if (this.isLoggingEnabled()) {
-        console.log('TraktTV', 'Player start event received', data);
+        slog('Player start event received', data);
       }
       var card = data.card || Lampa.Activity.active() && Lampa.Activity.active().movie;
       if (this.isLoggingEnabled()) {
-        console.log('TraktTV', 'Card determined in onPlayerStart', card);
+        slog('Card determined in onPlayerStart', card);
       }
       if (!card) {
         if (this.isLoggingEnabled()) {
-          console.log('TraktTV', 'No card found in onPlayerStart');
+          slog('No card found in onPlayerStart');
         }
         return;
       }
@@ -4454,7 +4479,7 @@
       // Зберігаємо поточну картку для подальшої обробки
       Lampa.Storage.set('trakt_last_card', card);
       if (this.isLoggingEnabled()) {
-        console.log('TraktTV', 'Card saved to storage', card);
+        slog('Card saved to storage', card);
       }
 
       // Кешуємо відповідність hash -> card/season/episode для стабільного фінішу
@@ -4469,7 +4494,7 @@
           ids: card && card.ids
         });
         if (this.isLoggingEnabled()) {
-          console.log('TraktTV', 'Hash meta cached from player start', {
+          slog('Hash meta cached from player start', {
             hash: hash,
             season: se.season,
             episode: se.episode
@@ -4483,28 +4508,28 @@
      */
     processTimelineUpdate: function processTimelineUpdate(data) {
       // Додаткове логування для налагодження подвійних викликів
-      console.log('TraktTV', 'processTimelineUpdate called with data:', data);
+      slog('processTimelineUpdate called with data:', data);
       if (this.isLoggingEnabled()) {
-        console.log('TraktTV', 'Timeline update received', data);
+        slog('Timeline update received', data);
       }
 
       // Перевіряємо налаштування trakt_enable_watching
       var enableWatching = Lampa.Storage.field('trakt_enable_watching');
-      console.log('TraktTV', 'trakt_enable_watching setting:', enableWatching);
+      slog('trakt_enable_watching setting:', enableWatching);
       if (!enableWatching) {
         if (this.isLoggingEnabled()) {
-          console.log('TraktTV', 'Watching is disabled by settings');
+          slog('Watching is disabled by settings');
         }
         return;
       }
       if (!data || !data.data || !data.data.hash || !data.data.road) {
         if (this.isLoggingEnabled()) {
-          console.log('TraktTV', 'Invalid data received', data);
+          slog('Invalid data received', data);
         }
-        console.log('TraktTV', 'Invalid data - data:', data);
-        console.log('TraktTV', 'Invalid data - data.data:', data && data.data);
-        console.log('TraktTV', 'Invalid data - data.data.hash:', data && data.data && data.data.hash);
-        console.log('TraktTV', 'Invalid data - data.data.road:', data && data.data && data.data.road);
+        slog('Invalid data - data:', data);
+        slog('Invalid data - data.data:', data && data.data);
+        slog('Invalid data - data.data.hash:', data && data.data && data.data.hash);
+        slog('Invalid data - data.data.road:', data && data.data && data.data.road);
         return;
       }
       var hash = data.data.hash;
@@ -4520,14 +4545,14 @@
         },
         ts: Date.now()
       };
-      console.log('TraktTV', 'Timeline update data:', {
+      slog('Timeline update data:', {
         hash: hash,
         percent: percent,
         token: !!token,
         minProgress: minProgress
       });
       if (this.isLoggingEnabled()) {
-        console.log('TraktTV', 'Processing timeline update', {
+        slog('Processing timeline update', {
           hash: hash,
           percent: percent,
           token: !!token,
@@ -4536,9 +4561,9 @@
       }
       if (!token) {
         if (this.isLoggingEnabled()) {
-          console.log('TraktTV', 'No token found, skipping update');
+          slog('No token found, skipping update');
         }
-        console.log('TraktTV', 'No token found');
+        slog('No token found');
         return;
       }
       var card = this.getCurrentCard();
@@ -4546,7 +4571,7 @@
       if (!card && meta && meta.card) {
         card = meta.card;
         if (this.isLoggingEnabled()) {
-          console.log('TraktTV', 'Card restored from hash meta cache', card);
+          slog('Card restored from hash meta cache', card);
         }
       }
       if (card && hash) {
@@ -4558,21 +4583,21 @@
           ids: card.ids
         });
       }
-      console.log('TraktTV', 'Card from getCurrentCard:', card);
+      slog('Card from getCurrentCard:', card);
       if (!card) {
         if (this.isLoggingEnabled()) {
-          console.log('TraktTV', 'No card found, skipping update');
+          slog('No card found, skipping update');
         }
-        console.log('TraktTV', 'No card found, skipping update');
+        slog('No card found, skipping update');
         return;
       }
 
       // Перевіряємо, чи потрібно додати серіал в "Смотрю"
-      console.log('TraktTV', 'Calling checkAndAddToShow');
+      slog('Calling checkAndAddToShow');
       this.checkAndAddToShow(card, hash, percent, token);
 
       // Інтеграція нового фініш-флоу: при досягненні порогу формуємо key і викликаємо finish()
-      console.log('TraktTV', 'Checking if should finish with idempotency, percent:', percent, 'minProgress:', minProgress);
+      slog('Checking if should finish with idempotency, percent:', percent, 'minProgress:', minProgress);
       var watchedByPercent = (typeof percent === 'number' ? percent : 0) >= minProgress;
       var watchedByTime = road && road.time && road.duration ? road.time / road.duration * 100 >= minProgress : false;
       if (watchedByPercent || watchedByTime) {
@@ -4587,7 +4612,7 @@
 
         // DEBUG: Log media object and hash source
         if (this.isLoggingEnabled()) {
-          console.log('TraktTV', 'DEBUG - Timeline route media:', {
+          slog('DEBUG - Timeline route media:', {
             cardId: card.id,
             cardType: getContentType$1(card),
             percent: percent,
@@ -4600,7 +4625,7 @@
 
         // DEBUG: Log key generation
         if (this.isLoggingEnabled()) {
-          console.log('TraktTV', 'DEBUG - Timeline route key generation:', {
+          slog('DEBUG - Timeline route key generation:', {
             key: key,
             mediaIds: media.ids,
             mediaId: media.id,
@@ -4619,7 +4644,7 @@
           return slog('finish error', e);
         });
       } else {
-        console.log('TraktTV', 'Below minProgress, no finish');
+        slog('Below minProgress, no finish');
       }
     },
     /**
@@ -4631,14 +4656,14 @@
       if (!card) card = Lampa.Storage.get('trakt_last_card', null);
 
       // Додаткове логування для налагодження
-      console.log('TraktTV', 'getCurrentCard - Activity.active():', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active());
-      console.log('TraktTV', 'getCurrentCard - card_data:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card_data);
-      console.log('TraktTV', 'getCurrentCard - card:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card);
-      console.log('TraktTV', 'getCurrentCard - movie:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().movie);
-      console.log('TraktTV', 'getCurrentCard - trakt_last_card from storage:', Lampa.Storage.get('trakt_last_card', null));
-      console.log('TraktTV', 'getCurrentCard - final card:', card);
+      slog('getCurrentCard - Activity.active():', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active());
+      slog('getCurrentCard - card_data:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card_data);
+      slog('getCurrentCard - card:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card);
+      slog('getCurrentCard - movie:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().movie);
+      slog('getCurrentCard - trakt_last_card from storage:', Lampa.Storage.get('trakt_last_card', null));
+      slog('getCurrentCard - final card:', card);
       if (this.isLoggingEnabled()) {
-        console.log('TraktTV', 'Current card determined', card);
+        slog('Current card determined', card);
       }
       return card;
     },
@@ -4654,7 +4679,7 @@
       var firstEpisodeHash = Lampa.Utils.hash('11' + originalName);
 
       // Додаткове логування для налагодження
-      console.log('TraktTV', 'checkAndAddToShow called with:', {
+      slog('checkAndAddToShow called with:', {
         card: card,
         hash: hash,
         percent: percent,
@@ -4662,7 +4687,7 @@
         firstEpisodeHash: firstEpisodeHash
       });
       if (this.isLoggingEnabled()) {
-        console.log('TraktTV: Checking if show should be added to watching', {
+        slog('Checking if show should be added to watching', {
           card: card,
           hash: hash,
           percent: percent,
@@ -4671,12 +4696,12 @@
         });
       }
       var shouldAdd = hash === firstEpisodeHash;
-      console.log('TraktTV', 'Should add show to watching:', shouldAdd);
+      slog('Should add show to watching:', shouldAdd);
       if (shouldAdd) {
-        console.log('TraktTV', 'Adding show to watching');
+        slog('Adding show to watching');
         this.addShowToWatching(card, token);
       } else {
-        console.log('TraktTV', 'Not adding show to watching');
+        slog('Not adding show to watching');
       }
     },
     /**
@@ -4688,35 +4713,35 @@
       var _this = this;
       // Уникнення подвійних запитів
       if (isAddingShowToWatching) {
-        console.log('TraktTV', 'addShowToWatching called while already adding, skipping');
+        slog('addShowToWatching called while already adding, skipping');
         return;
       }
       isAddingShowToWatching = true;
       if (this.isLoggingEnabled()) {
-        console.log('TraktTV', 'Adding show to watching', card);
+        slog('Adding show to watching', card);
       }
 
       // Додаткове логування для налагодження
-      console.log('TraktTV', 'addShowToWatching called with card:', card);
+      slog('addShowToWatching called with card:', card);
       var tmdbId = card.id || card.ids && card.ids.tmdb;
-      console.log('TraktTV', 'Determined tmdbId:', tmdbId);
+      slog('Determined tmdbId:', tmdbId);
       if (!tmdbId) {
-        console.log('TraktTV', 'No tmdbId found, returning');
+        slog('No tmdbId found, returning');
         return;
       }
 
       // Визначаємо тип вмісту
       var contentType = getContentType$1(card);
-      console.log('TraktTV', 'Determined content type:', contentType);
+      slog('Determined content type:', contentType);
 
       // Отримуємо Trakt ID за TMDB ID
-      console.log('TraktTV', 'Searching for content by tmdbId:', tmdbId, 'type:', contentType);
+      slog('Searching for content by tmdbId:', tmdbId, 'type:', contentType);
       api$1.get("/search/tmdb/".concat(tmdbId, "?type=").concat(contentType)).then(function (response) {
-        console.log('TraktTV', 'Search response:', response);
+        slog('Search response:', response);
         if (response && response.length > 0) {
           var item = response[0];
           var traktId = item.show && item.show.ids.trakt || item.movie && item.movie.ids.trakt;
-          console.log('TraktTV', 'Found traktId:', traktId);
+          slog('Found traktId:', traktId);
 
           // Додаємо вміст в "Смотрю"
           var body = {};
@@ -4737,17 +4762,16 @@
               watched_at: new Date().toISOString()
             }];
           }
-          console.log('TraktTV', 'Body for adding content to watching:', body);
+          slog('Body for adding content to watching:', body);
           if (_this.isLoggingEnabled()) {
-            console.log('TraktTV', 'Sending request to add content to watching', body);
+            slog('Sending request to add content to watching', body);
           }
           return api$1.get('/sync/watchlist', body);
         } else {
-          console.log('TraktTV', 'No show found or no traktId in response');
+          slog('No show found or no traktId in response');
         }
       })["catch"](function (error) {
         console.error('TraktTV', 'Error adding show to watching', error);
-        console.log('TraktTV', 'Error details:', error);
       })["finally"](function () {
         // Скидаємо стан після виконання запиту
         isAddingShowToWatching = false;
@@ -4781,12 +4805,12 @@
       var originalName = card.original_name || card.name || card.original_title || card.title;
 
       // Додаткове логування для налагодження
-      console.log('TraktTV', 'findEpisodeByHash called with:', {
+      slog('findEpisodeByHash called with:', {
         card: card,
         hash: hash,
         seasons: seasons && seasons.length
       });
-      console.log('TraktTV', 'originalName:', originalName);
+      slog('originalName:', originalName);
       for (var i = 0; i < seasons.length; i++) {
         var season = seasons[i];
         if (!season.episodes) continue;
@@ -4796,7 +4820,7 @@
           var episodeHash = Lampa.Utils.hash(episodeHashStr);
 
           // Додаткове логування для налагодження
-          console.log('TraktTV', 'Checking episode:', {
+          slog('Checking episode:', {
             season: season.number,
             episode: episode.number,
             episodeHashStr: episodeHashStr,
@@ -4809,12 +4833,12 @@
               season: season.number,
               episode: episode.number
             };
-            console.log('TraktTV', 'Found matching episode:', result);
+            slog('Found matching episode:', result);
             return result;
           }
         }
       }
-      console.log('TraktTV', 'No matching episode found');
+      slog('No matching episode found');
       return null;
     }
   };
@@ -5339,8 +5363,6 @@
    * Registers content rows for main and category screens
    */
   function initContentRows() {
-    console.log('TraktTV', 'Registering ContentRows...');
-
     // Cleanup deprecated cache keys
     Lampa.Storage.set('trakttv_cached_upnext', null);
     Lampa.Storage.set('trakttv_cached_recommendations', null);
@@ -5350,7 +5372,6 @@
 
     // Register Recommendations rows
     registerRecommendationsRows();
-    console.log('TraktTV', 'ContentRows registered successfully');
   }
 
   /**
@@ -5385,7 +5406,7 @@
             // Normalize data
             var normalizedResults = normalizeContentData(data.results);
             call({
-              title: Lampa.Lang.translate('trakttv_upnext'),
+              title: icons.createLineTitle(Lampa.Lang.translate('trakttv_upnext')),
               results: normalizedResults,
               onMore: function onMore() {
                 Lampa.Activity.push({
@@ -5433,7 +5454,7 @@
             // Normalize data
             var normalizedResults = normalizeContentData(data.results);
             call({
-              title: Lampa.Lang.translate('trakttv_recommendations'),
+              title: icons.createLineTitle(Lampa.Lang.translate('trakttv_recommendations')),
               results: normalizedResults,
               onMore: function onMore() {
                 Lampa.Activity.push({
@@ -5482,7 +5503,7 @@
             // Normalize data
             var normalizedResults = normalizeContentData(filtered);
             call({
-              title: Lampa.Lang.translate('trakttv_recommendations'),
+              title: icons.createLineTitle(Lampa.Lang.translate('trakttv_recommendations')),
               results: normalizedResults,
               onMore: function onMore() {
                 Lampa.Activity.push({
@@ -5531,7 +5552,7 @@
             // Normalize data
             var normalizedResults = normalizeContentData(filtered);
             call({
-              title: Lampa.Lang.translate('trakttv_recommendations'),
+              title: icons.createLineTitle(Lampa.Lang.translate('trakttv_recommendations')),
               results: normalizedResults,
               onMore: function onMore() {
                 Lampa.Activity.push({
@@ -5592,7 +5613,7 @@
     } catch (e) {/* noop */}
 
     // Додаємо стилі
-    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}</style>");
+    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     // Фонове оновлення токена при старті
@@ -5600,12 +5621,6 @@
     // Заборонити /oauth/token під час Device-полінгу
     if (Lampa.Storage.get('trakt_refresh_token') && Lampa.Storage.get('trakt_active_device_auth') !== true) {
       var _getGlobalApi;
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.log('TraktTV', 'refresh_check', {
-          has_refresh: true,
-          active_device_auth: Lampa.Storage.get('trakt_active_device_auth') === true
-        });
-      }
       // Prefer module api; if unavailable at runtime, attempt global fallback
       var authApi = (_getGlobalApi = getGlobalApi()) === null || _getGlobalApi === void 0 ? void 0 : _getGlobalApi.auth;
       if (authApi && typeof authApi.refresh === 'function') {
@@ -5619,13 +5634,6 @@
             typeOfRefresh: _typeof(authApi === null || authApi === void 0 ? void 0 : authApi.refresh)
           });
         }
-      }
-    } else {
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.log('TraktTV', 'skip_refresh', {
-          has_refresh: !!Lampa.Storage.get('trakt_refresh_token'),
-          active_device_auth: Lampa.Storage.get('trakt_active_device_auth') === true
-        });
       }
     }
 
@@ -5655,17 +5663,79 @@
     // Initialize ContentRows (Lampa 3.0+ required)
     try {
       initContentRows();
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.log('TraktTV', 'ContentRows initialized successfully');
-      }
     } catch (error) {
       console.error('TraktTV', 'ContentRows initialization failed:', error);
     }
+    if (window.appready) {
+      initTraktHeadButton();
+    } else if (Lampa.Listener) {
+      Lampa.Listener.follow('app', function (e) {
+        if (e.type === 'ready') initTraktHeadButton();
+      });
+    }
+  }
+  function initTraktHeadButton() {
+    if (typeof Lampa === 'undefined' || !Lampa.Head) return;
+    if (window.trakt_head_button) return;
+    var head = Lampa.Head.render ? Lampa.Head.render() : null;
+    if (!head || !head.find) return;
+    if (head.find('.trakt-head-action').length) return;
+    var button = Lampa.Head.addIcon("<span class=\"trakt-head-icon\">".concat(icons.TRAKT_ICON, "</span>"), openTraktSettings);
+    button.addClass('trakt-head-action');
+    window.trakt_head_button = button;
+    var scheduleUpdate = function scheduleUpdate() {
+      var delay = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+      if (window.trakt_head_status_timer) clearTimeout(window.trakt_head_status_timer);
+      window.trakt_head_status_timer = setTimeout(function () {
+        updateTraktHeadStatus(button);
+      }, delay);
+    };
+    scheduleUpdate(0);
+    if (Lampa.Storage && Lampa.Storage.listener) {
+      Lampa.Storage.listener.follow('change', function (e) {
+        if (!e || !e.name) return;
+        if (e.name === 'trakt_token' || e.name === 'trakt_refresh_token') {
+          scheduleUpdate(300);
+        }
+      });
+    }
+  }
+  function openTraktSettings() {
+    if (typeof Lampa === 'undefined') return;
+    var open = function open() {
+      if (Lampa.Controller) Lampa.Controller.toggle('settings');
+      setTimeout(function () {
+        if (Lampa.Settings && typeof Lampa.Settings.create === 'function') {
+          Lampa.Settings.create('trakt');
+        }
+      }, 0);
+    };
+    if (Lampa.ParentalControl && typeof Lampa.ParentalControl.personal === 'function') {
+      Lampa.ParentalControl.personal('settings', open, false, true);
+    } else {
+      open();
+    }
+  }
+  function updateTraktHeadStatus(button) {
+    if (!button) return;
+    var token = Lampa.Storage && Lampa.Storage.get ? Lampa.Storage.get('trakt_token') : null;
+    if (!token) return setTraktHeadStatus(button, 'error');
+    var Api = getGlobalApi();
+    if (!Api || typeof Api.get !== 'function') return setTraktHeadStatus(button, 'error');
+    Api.get('/users/me').then(function () {
+      return setTraktHeadStatus(button, 'ok');
+    })["catch"](function () {
+      return setTraktHeadStatus(button, 'error');
+    });
+  }
+  function setTraktHeadStatus(button, status) {
+    button.removeClass('trakt-head-action--ok trakt-head-action--error');
+    if (status === 'ok') button.addClass('trakt-head-action--ok');else button.addClass('trakt-head-action--error');
   }
   if (!window.plugin_trakt_ready) {
     // Додаємо глобальний обробник unhandledrejection на самому початку
     window.addEventListener('unhandledrejection', function (event) {
-      console.error('TraktTV: Unhandled promise rejection:', event.reason);
+      console.error('TraktTV', 'Unhandled promise rejection:', event.reason);
     });
     startPlugin();
   }
