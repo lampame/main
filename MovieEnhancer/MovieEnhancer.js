@@ -185,11 +185,17 @@
       var extraContainer = fullContainer.find('.buttons--container');
       var items = [];
       var map = {};
+      function makeUniqueId(id, $btn) {
+        if (!map[id]) return id;
+        var fingerprint = Lampa.Utils.hash($btn.clone().removeClass('focus').prop('outerHTML'));
+        return "".concat(id, ":").concat(fingerprint);
+      }
       function collect($buttons) {
         $buttons.each(function () {
           var $btn = $(this);
           if ($btn.hasClass('button--play') || $btn.hasClass('button--priority')) return;
-          var id = getButtonId($btn);
+          var baseId = getButtonId($btn);
+          var id = baseId ? makeUniqueId(baseId, $btn) : null;
           if (!id || map[id]) return;
           map[id] = detach ? $btn.detach() : $btn;
           items.push(id);
