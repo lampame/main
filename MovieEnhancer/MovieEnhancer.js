@@ -140,7 +140,7 @@
         });
       }
       if (idClass) return idClass;
-      var dataId = $button.data('id') || $button.data('name') || $button.attr('data-name');
+      var dataId = $button.data('id') || $button.data('name') || $button.data('action') || $button.data('type') || $button.attr('data-name') || $button.attr('data-action');
       if (dataId) return "data:".concat(dataId);
       var title = $button.text().trim();
       if (title) return "text:".concat(title);
@@ -149,8 +149,36 @@
     function getButtonTitle(id, $button) {
       var label = $button.find('span').first().text().trim() || $button.text().trim();
       if (label) return label;
+      var titled = $button.attr('aria-label') || $button.attr('title') || $button.data('title');
+      if (titled) return titled;
       if (FALLBACK_TITLES[id]) return FALLBACK_TITLES[id]();
       return id;
+    }
+    function collectButtonNodes($container) {
+      var results = [];
+      var seen = new Set();
+      function push(el) {
+        if (el && !seen.has(el)) {
+          seen.add(el);
+          results.push(el);
+        }
+      }
+      $container.find('.full-start__button, .full-start-new__button').each(function () {
+        push(this);
+      });
+      $container.find('[class*="button--"], [class*="view--"]').each(function () {
+        var $el = $(this);
+        var closest = $el.closest('.full-start__button, .full-start-new__button, .selector, button, [role="button"]');
+        push(closest.length ? closest[0] : this);
+      });
+      if (!results.length) {
+        $container.find('.selector, button, [role="button"]').each(function () {
+          var $el = $(this);
+          if ($el.find('.selector').length) return;
+          push(this);
+        });
+      }
+      return $(results);
     }
     function scanButtons(fullContainer, detach) {
       var targetContainer = fullContainer.find('.full-start-new__buttons');
@@ -167,8 +195,8 @@
           items.push(id);
         });
       }
-      collect(targetContainer.find('.full-start__button'));
-      collect(extraContainer.find('.full-start__button'));
+      collect(collectButtonNodes(targetContainer));
+      collect(collectButtonNodes(extraContainer));
       return {
         items: items,
         map: map,
