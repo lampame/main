@@ -1472,10 +1472,12 @@
         var type = params.method === 'movie' ? 'movies' : 'shows';
         var url = "/sync/watchlist/".concat(type, "?extended=full");
         var ids = resolveTraktIds(params);
+        var tmdbId = ids.tmdb || params.id;
+        var traktId = ids.trakt;
         requestApi('GET', url).then(function (response) {
           var found = response.find(function (item) {
             var _item$movie, _item$show, _item$movie2, _item$show2;
-            return ((_item$movie = item.movie) === null || _item$movie === void 0 ? void 0 : _item$movie.ids.tmdb) === params.id || ((_item$show = item.show) === null || _item$show === void 0 ? void 0 : _item$show.ids.tmdb) === params.id || ids.trakt && (((_item$movie2 = item.movie) === null || _item$movie2 === void 0 ? void 0 : _item$movie2.ids.trakt) === ids.trakt || ((_item$show2 = item.show) === null || _item$show2 === void 0 ? void 0 : _item$show2.ids.trakt) === ids.trakt);
+            return tmdbId && (String((_item$movie = item.movie) === null || _item$movie === void 0 ? void 0 : _item$movie.ids.tmdb) === String(tmdbId) || String((_item$show = item.show) === null || _item$show === void 0 ? void 0 : _item$show.ids.tmdb) === String(tmdbId)) || traktId && (String((_item$movie2 = item.movie) === null || _item$movie2 === void 0 ? void 0 : _item$movie2.ids.trakt) === String(traktId) || String((_item$show2 = item.show) === null || _item$show2 === void 0 ? void 0 : _item$show2.ids.trakt) === String(traktId));
           });
           resolve(!!found);
         })["catch"](function (error) {
@@ -1488,10 +1490,12 @@
         var type = params.method === 'movie' ? 'movies' : 'shows';
         var url = "/sync/history/".concat(type, "?extended=full");
         var ids = resolveTraktIds(params);
+        var tmdbId = ids.tmdb || params.id;
+        var traktId = ids.trakt;
         requestApi('GET', url).then(function (response) {
           var found = response.find(function (item) {
             var _item$movie3, _item$show3, _item$movie4, _item$show4;
-            return ((_item$movie3 = item.movie) === null || _item$movie3 === void 0 ? void 0 : _item$movie3.ids.tmdb) === params.id || ((_item$show3 = item.show) === null || _item$show3 === void 0 ? void 0 : _item$show3.ids.tmdb) === params.id || ids.trakt && (((_item$movie4 = item.movie) === null || _item$movie4 === void 0 ? void 0 : _item$movie4.ids.trakt) === ids.trakt || ((_item$show4 = item.show) === null || _item$show4 === void 0 ? void 0 : _item$show4.ids.trakt) === ids.trakt);
+            return tmdbId && (String((_item$movie3 = item.movie) === null || _item$movie3 === void 0 ? void 0 : _item$movie3.ids.tmdb) === String(tmdbId) || String((_item$show3 = item.show) === null || _item$show3 === void 0 ? void 0 : _item$show3.ids.tmdb) === String(tmdbId)) || traktId && (String((_item$movie4 = item.movie) === null || _item$movie4 === void 0 ? void 0 : _item$movie4.ids.trakt) === String(traktId) || String((_item$show4 = item.show) === null || _item$show4 === void 0 ? void 0 : _item$show4.ids.trakt) === String(traktId));
           });
           resolve(!!found);
         })["catch"](function (error) {
@@ -2842,7 +2846,18 @@
   }
   function createLineTitle(text) {
     var sizedIcon = TRAKT_ICON.replace('<svg ', "<svg style=\"width:100%; height:100%; display:block;\" ");
-    return "<span class=\"trakt-line-title\" style=\"".concat(LINE_TITLE_STYLE, "\"><span class=\"trakt-line-title__icon\" style=\"").concat(LINE_ICON_STYLE, "\">").concat(sizedIcon, "</span><span>").concat(text, "</span></span>");
+    var root = document.createElement('span');
+    root.className = 'trakt-line-title';
+    root.setAttribute('style', LINE_TITLE_STYLE);
+    var iconWrap = document.createElement('span');
+    iconWrap.className = 'trakt-line-title__icon';
+    iconWrap.setAttribute('style', LINE_ICON_STYLE);
+    iconWrap.innerHTML = sizedIcon;
+    var label = document.createElement('span');
+    label.textContent = text;
+    root.appendChild(iconWrap);
+    root.appendChild(label);
+    return root;
   }
 
   // Експортуємо всі іконки та утиліти
