@@ -2895,9 +2895,9 @@
     var params = normalizeCardParams(card);
 
     // Перевіряємо чи є в списку
-    api$1.inWatchlist(params, function (isAdded) {
+    api$1.inWatchlist(params).then(function (isAdded) {
       updateButtonStyle(button, textNode, isAdded);
-    }, function () {
+    })["catch"](function () {
       button.style.display = 'none';
     });
 
@@ -2905,23 +2905,23 @@
     button.on('hover:enter', function () {
       var isAdded = button.classList.contains('added');
       if (isAdded) {
-        api$1.removeFromWatchlist(params, function () {
+        api$1.removeFromWatchlist(params).then(function () {
           Lampa.Bell.push({
             text: Lampa.Lang.translate('trakt_watchlist_remove')
           });
           updateButtonStyle(button, textNode, false);
-        }, function () {
+        })["catch"](function () {
           return Lampa.Bell.push({
             text: 'Помилка при видаленні'
           });
         });
       } else {
-        api$1.addToWatchlist(params, function () {
+        api$1.addToWatchlist(params).then(function () {
           Lampa.Bell.push({
             text: Lampa.Lang.translate('trakt_watchlist_add')
           });
           updateButtonStyle(button, textNode, true);
-        }, function () {
+        })["catch"](function () {
           return Lampa.Bell.push({
             text: 'Помилка при додаванні'
           });
