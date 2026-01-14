@@ -1024,6 +1024,16 @@
       });
     });
   }
+  function resolveTraktIds() {
+    var _params$external_ids, _params$external_ids2;
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var rawIds = params.ids && Object.keys(params.ids).length ? _objectSpread2({}, params.ids) : {};
+    var tmdbId = params.id || params.tmdb || ((_params$external_ids = params.external_ids) === null || _params$external_ids === void 0 ? void 0 : _params$external_ids.tmdb_id);
+    var traktId = (_params$external_ids2 = params.external_ids) === null || _params$external_ids2 === void 0 ? void 0 : _params$external_ids2.trakt_id;
+    if (traktId && !rawIds.trakt) rawIds.trakt = traktId;
+    if (tmdbId && !rawIds.tmdb) rawIds.tmdb = tmdbId;
+    return rawIds;
+  }
 
   /* duplicate ensureHeaders removed */
 
@@ -1072,6 +1082,8 @@
       var unauthorized = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
       return requestApi('GET', url, {}, unauthorized);
     },
+    // Normalize ids for watchlist/history operations.
+    // Prefer params.ids when filled; fall back to tmdb_id/trakt_id when needed.
     recommendations: function recommendations() {
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var limit = options.limit || 36;
@@ -1415,17 +1427,14 @@
           movies: [],
           shows: []
         };
+        var ids = resolveTraktIds(params);
         if (params.method === 'movie') {
           data.movies.push({
-            ids: params.ids || {
-              tmdb: params.id
-            }
+            ids: ids
           });
         } else {
           data.shows.push({
-            ids: params.ids || {
-              tmdb: params.id
-            }
+            ids: ids
           });
         }
         requestApi('POST', '/sync/watchlist', data).then(function (response) {
@@ -1441,17 +1450,14 @@
           movies: [],
           shows: []
         };
+        var ids = resolveTraktIds(params);
         if (params.method === 'movie') {
           data.movies.push({
-            ids: params.ids || {
-              tmdb: params.id
-            }
+            ids: ids
           });
         } else {
           data.shows.push({
-            ids: params.ids || {
-              tmdb: params.id
-            }
+            ids: ids
           });
         }
         requestApi('POST', '/sync/watchlist/remove', data).then(function (response) {
@@ -1465,10 +1471,11 @@
       return new Promise(function (resolve, reject) {
         var type = params.method === 'movie' ? 'movies' : 'shows';
         var url = "/sync/watchlist/".concat(type, "?extended=full");
+        var ids = resolveTraktIds(params);
         requestApi('GET', url).then(function (response) {
           var found = response.find(function (item) {
             var _item$movie, _item$show, _item$movie2, _item$show2;
-            return ((_item$movie = item.movie) === null || _item$movie === void 0 ? void 0 : _item$movie.ids.tmdb) === params.id || ((_item$show = item.show) === null || _item$show === void 0 ? void 0 : _item$show.ids.tmdb) === params.id || params.ids && (((_item$movie2 = item.movie) === null || _item$movie2 === void 0 ? void 0 : _item$movie2.ids.trakt) === params.ids.trakt || ((_item$show2 = item.show) === null || _item$show2 === void 0 ? void 0 : _item$show2.ids.trakt) === params.ids.trakt);
+            return ((_item$movie = item.movie) === null || _item$movie === void 0 ? void 0 : _item$movie.ids.tmdb) === params.id || ((_item$show = item.show) === null || _item$show === void 0 ? void 0 : _item$show.ids.tmdb) === params.id || ids.trakt && (((_item$movie2 = item.movie) === null || _item$movie2 === void 0 ? void 0 : _item$movie2.ids.trakt) === ids.trakt || ((_item$show2 = item.show) === null || _item$show2 === void 0 ? void 0 : _item$show2.ids.trakt) === ids.trakt);
           });
           resolve(!!found);
         })["catch"](function (error) {
@@ -1480,10 +1487,11 @@
       return new Promise(function (resolve, reject) {
         var type = params.method === 'movie' ? 'movies' : 'shows';
         var url = "/sync/history/".concat(type, "?extended=full");
+        var ids = resolveTraktIds(params);
         requestApi('GET', url).then(function (response) {
           var found = response.find(function (item) {
             var _item$movie3, _item$show3, _item$movie4, _item$show4;
-            return ((_item$movie3 = item.movie) === null || _item$movie3 === void 0 ? void 0 : _item$movie3.ids.tmdb) === params.id || ((_item$show3 = item.show) === null || _item$show3 === void 0 ? void 0 : _item$show3.ids.tmdb) === params.id || params.ids && (((_item$movie4 = item.movie) === null || _item$movie4 === void 0 ? void 0 : _item$movie4.ids.trakt) === params.ids.trakt || ((_item$show4 = item.show) === null || _item$show4 === void 0 ? void 0 : _item$show4.ids.trakt) === params.ids.trakt);
+            return ((_item$movie3 = item.movie) === null || _item$movie3 === void 0 ? void 0 : _item$movie3.ids.tmdb) === params.id || ((_item$show3 = item.show) === null || _item$show3 === void 0 ? void 0 : _item$show3.ids.tmdb) === params.id || ids.trakt && (((_item$movie4 = item.movie) === null || _item$movie4 === void 0 ? void 0 : _item$movie4.ids.trakt) === ids.trakt || ((_item$show4 = item.show) === null || _item$show4 === void 0 ? void 0 : _item$show4.ids.trakt) === ids.trakt);
           });
           resolve(!!found);
         })["catch"](function (error) {
@@ -2849,17 +2857,19 @@
   };
 
   function normalizeCardParams(cardData) {
-    var source = (cardData === null || cardData === void 0 ? void 0 : cardData.movie) || (cardData === null || cardData === void 0 ? void 0 : cardData.card) || cardData || {};
+    var _cardData$movie, _cardData$data;
+    var source = (cardData === null || cardData === void 0 ? void 0 : cardData.movie) || (cardData === null || cardData === void 0 ? void 0 : cardData.card) || (cardData === null || cardData === void 0 ? void 0 : cardData.data) || cardData || {};
     var method = (cardData === null || cardData === void 0 ? void 0 : cardData.method) || source.method || source.card_type || (source.first_air_date || source.name ? 'tv' : 'movie');
-    var externalIds = (cardData === null || cardData === void 0 ? void 0 : cardData.external_ids) || {};
-    var ids = _objectSpread2({}, source.ids || (cardData === null || cardData === void 0 ? void 0 : cardData.ids) || {});
+    var externalIds = (cardData === null || cardData === void 0 ? void 0 : cardData.external_ids) || source.external_ids || {};
+    var ids = _objectSpread2(_objectSpread2({}, source.ids || {}), (cardData === null || cardData === void 0 ? void 0 : cardData.ids) || {});
+    var rawId = source.id || (cardData === null || cardData === void 0 ? void 0 : cardData.id) || (cardData === null || cardData === void 0 || (_cardData$movie = cardData.movie) === null || _cardData$movie === void 0 ? void 0 : _cardData$movie.id) || (cardData === null || cardData === void 0 || (_cardData$data = cardData.data) === null || _cardData$data === void 0 ? void 0 : _cardData$data.id) || externalIds.tmdb_id;
     if (!ids.tmdb && externalIds.tmdb_id) ids.tmdb = externalIds.tmdb_id;
     if (!ids.trakt && externalIds.trakt_id) ids.trakt = externalIds.trakt_id;
-    var id = source.id || (cardData === null || cardData === void 0 ? void 0 : cardData.id) || ids.tmdb;
+    if (!ids.tmdb && rawId) ids.tmdb = rawId;
     return _objectSpread2(_objectSpread2({}, source), {}, {
       method: method,
       ids: ids,
-      id: id
+      id: rawId || ids.tmdb
     });
   }
   function addWatchlistButton(card) {
@@ -3703,7 +3713,11 @@
     return Lampa.Storage.field('trakt_enable_logging');
   }
   function slog() {
-    if (logEnabled()) slog.apply(void 0, arguments);
+    var _console;
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+    if (logEnabled()) (_console = console).log.apply(_console, ['TraktTV'].concat(args));
   }
   function normalizeCardForCache(card) {
     if (!card) return null;
@@ -5680,7 +5694,8 @@
     var head = Lampa.Head.render ? Lampa.Head.render() : null;
     if (!head || !head.find) return;
     if (head.find('.trakt-head-action').length) return;
-    var button = Lampa.Head.addIcon("<span class=\"trakt-head-icon\">".concat(icons.TRAKT_ICON, "</span>"), openTraktSettings);
+    var iconSvg = icons.TRAKT_ICON.replace('<svg ', '<svg style="width:100%; height:100%; display:block;" ');
+    var button = Lampa.Head.addIcon("<span class=\"trakt-head-icon\">".concat(iconSvg, "</span>"), openTraktSettings);
     button.addClass('trakt-head-action');
     window.trakt_head_button = button;
     var scheduleUpdate = function scheduleUpdate() {
