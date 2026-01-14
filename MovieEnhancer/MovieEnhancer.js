@@ -124,12 +124,21 @@
       return null;
     }
     function getButtonId($button) {
-      var className = ($button.attr('class') || '').split(/\s+/);
-      var idClass = className.find(function (c) {
-        return c.startsWith('button--') && c !== 'button--priority';
-      }) || className.find(function (c) {
-        return c.startsWith('view--');
-      });
+      function findIdClass($el) {
+        var className = ($el.attr('class') || '').split(/\s+/);
+        return className.find(function (c) {
+          return c.startsWith('button--') && c !== 'button--priority';
+        }) || className.find(function (c) {
+          return c.startsWith('view--');
+        });
+      }
+      var idClass = findIdClass($button);
+      if (!idClass) {
+        $button.find('[class*="button--"], [class*="view--"]').each(function () {
+          var found = findIdClass($(this));
+          if (found && !idClass) idClass = found;
+        });
+      }
       if (idClass) return idClass;
       var dataId = $button.data('id') || $button.data('name') || $button.attr('data-name');
       if (dataId) return "data:".concat(dataId);
