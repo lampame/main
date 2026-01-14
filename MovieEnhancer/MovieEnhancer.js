@@ -180,7 +180,7 @@
       }
       return $(results);
     }
-    function scanButtons(fullContainer, detach) {
+    function scanButtons(fullContainer, detach, includePriority) {
       var targetContainer = fullContainer.find('.full-start-new__buttons');
       var extraContainer = fullContainer.find('.buttons--container');
       var items = [];
@@ -193,7 +193,8 @@
       function collect($buttons) {
         $buttons.each(function () {
           var $btn = $(this);
-          if ($btn.hasClass('button--play') || $btn.hasClass('button--priority')) return;
+          if ($btn.hasClass('button--play')) return;
+          if (!includePriority && $btn.hasClass('button--priority')) return;
           var baseId = getButtonId($btn);
           var id = baseId ? makeUniqueId(baseId, $btn) : null;
           if (!id || map[id]) return;
@@ -232,7 +233,7 @@
       ensureStyles();
       var priority = fullContainer.find('.full-start-new__buttons .button--priority').detach();
       fullContainer.find('.full-start-new__buttons .button--play').remove();
-      var _scanButtons = scanButtons(fullContainer, true),
+      var _scanButtons = scanButtons(fullContainer, true, false),
         items = _scanButtons.items,
         map = _scanButtons.map,
         targetContainer = _scanButtons.targetContainer;
@@ -253,7 +254,7 @@
     }
     function openEditor(fullContainer) {
       if (!fullContainer || !fullContainer.length) return;
-      var _scanButtons2 = scanButtons(fullContainer, false),
+      var _scanButtons2 = scanButtons(fullContainer, false, true),
         items = _scanButtons2.items,
         map = _scanButtons2.map;
       var order = normalizeOrder(readArray(ORDER_KEY), items);
