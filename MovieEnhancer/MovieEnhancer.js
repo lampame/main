@@ -3,10 +3,25 @@
 
     function main$8() {
       Lampa.Lang.add({
+        lme_title: {
+          ru: "Movie Enhancer",
+          en: "Movie Enhancer",
+          uk: "Movie Enhancer"
+        },
+        lme_wmquality_name: {
+          ru: "Качество через Watchmode",
+          en: "Quality by Watchmode",
+          uk: "Якість через Watchmode"
+        },
         lme_EngData_desc: {
           ru: "Добавляет английское название произведения, и заменяет описание если оно отсутсвует",
           en: "Adds the English title and replaces the description if it is missing",
           uk: "Додає англійську назву твору та замінює опис, якщо він відсутній"
+        },
+        lme_endata_name: {
+          ru: "Английские данные",
+          en: "English data",
+          uk: "Англійські дані"
         },
         lme_quality_desc: {
           ru: "Для источников кроме Cub, добавляет лейбл с качеством. Где это возможно",
@@ -18,35 +33,85 @@
           en: "The key must be obtained on the api.watchmode.com website",
           uk: "Ключ потрібно отримати на сайті api.watchmode.com"
         },
+        lme_averageRuntime_name: {
+          ru: "Длительность серии",
+          en: "Episode runtime",
+          uk: "Тривалість серії"
+        },
         lme_averageRuntime_desc: {
           ru: "Добавляет среднее время серии",
           en: "Adds average episode runtime",
           uk: "Додає середній час серії"
+        },
+        lme_streamingdiscovery_name: {
+          ru: "Рейтинги Streaming Discovery",
+          en: "Streaming Discovery ratings",
+          uk: "Рейтинги Streaming Discovery"
         },
         lme_switchsource_desc: {
           ru: "Добавляет переключение источников из шапки",
           en: "Adds source switcher",
           uk: "Додає перемикач джерел у шапці"
         },
+        lme_switchsource_name: {
+          ru: "Переключение источников",
+          en: "Source switch",
+          uk: "Перемикання джерел"
+        },
         lme_switchsource_modss_desc: {
           ru: "При наличии Modss добавляет источники Filmix и KinoPub",
           en: "If install Modss add Filmix and KinoPub",
           uk: "Якщо є Modss додає джерела Filmix та KinoPub"
+        },
+        lme_switchsource_modss_name: {
+          ru: "Добавить источник Modss",
+          en: "Add Modss source",
+          uk: "Додати джерело Modss"
         },
         lme_switchsource_lmenc_desc: {
           ru: "При наличии NewCategory добавляет источник TMDB Streaming",
           en: "If install Modss add TMDB Streaming",
           uk: "Якщо є Modss додає джерелo TMDB Streaming"
         },
+        lme_switchsource_lmenc_name: {
+          ru: "Добавить источник TMDBs",
+          en: "Add TMDBs source",
+          uk: "Додати джерело TMDBs"
+        },
+        lme_ratings_name: {
+          ru: "Показать дополнительные рейтинги",
+          en: "Show additional ratings",
+          uk: "Показати додаткові рейтинги"
+        },
         lme_showbutton_desc: {
           ru: "Выводит все кнопки действий в карточке",
           en: "Show all action button in card",
           uk: "Виводить усі кнопки дій у картці"
         },
+        lme_showbutton_name: {
+          ru: "Все кнопки в карточке",
+          en: "All buttons in card",
+          uk: "Усі кнопки в картці"
+        },
         lme_showbuttonwn_desc: {
           ru: "Показивать только иконки",
           en: "Show only icon",
           uk: "Відображати тільки іконки"
+        },
+        lme_showbuttonwn_name: {
+          ru: "Скрыть текст",
+          en: "Hide text",
+          uk: "Приховати текст"
+        },
+        lme_button_editor_name: {
+          ru: "Редактировать кнопки",
+          en: "Edit buttons",
+          uk: "Редагувати кнопки"
+        },
+        lme_button_editor_desc: {
+          ru: "Сортировка и скрытие кнопок карточки",
+          en: "Reorder and hide card buttons",
+          uk: "Сортування та приховування кнопок картки"
         },
         lme_ratings_desc: {
           ru: "Добавляет рейтинги от mdblist.com. Бесплатный ключ можно получить на сайте",
@@ -351,7 +416,7 @@
     function main$6() {
       Lampa.SettingsApi.addComponent({
         component: "lme",
-        name: 'Movie Enhancer',
+        name: Lampa.Lang.translate('lme_title'),
         icon: '<svg height="200px" width="200px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 431.661 431.661" xml:space="preserve" fill="#000000"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <path style="fill:#ffffff;" d="M180.355,213.668l40.079,40.085L42.526,431.661L2.446,391.576L180.355,213.668z M228.877,245.316 l-40.079-40.085l68.905-68.911l40.091,40.079L228.877,245.316z"></path> <polygon style="fill:#ffffff;" points="380.066,218.525 391.999,218.519 391.999,181.309 429.215,181.309 429.215,169.376 391.999,169.376 391.999,132.166 380.066,132.166 380.066,169.376 342.862,169.376 342.862,181.309 380.066,181.309 "></polygon> <polygon style="fill:#ffffff;" points="393.282,260.424 393.282,248.49 356.073,248.49 356.073,211.281 344.145,211.281 344.145,248.49 306.93,248.49 306.93,260.424 344.145,260.424 344.145,297.633 356.073,297.633 356.073,260.424 "></polygon> <polygon style="fill:#ffffff;" points="302.956,37.209 265.741,37.209 265.741,0 253.807,0 253.807,37.209 216.603,37.209 216.603,49.143 253.807,49.143 253.807,86.353 265.741,86.353 265.741,49.143 302.956,49.143 "></polygon> <polygon style="fill:#ffffff;" points="223.853,73.148 186.638,73.148 186.638,35.932 174.71,35.932 174.71,73.148 137.495,73.148 137.495,85.076 174.71,85.076 174.71,122.291 186.638,122.291 186.638,85.076 223.853,85.076 "></polygon> </g> </g></svg>'
       });
       //Quality Watchmode
@@ -364,7 +429,7 @@
           values: ''
         },
         field: {
-          name: 'Quality by Watchmode',
+          name: Lampa.Lang.translate('lme_wmquality_name'),
           description: Lampa.Lang.translate('lme_wmquality_desc')
         },
         onChange: function onChange(value) {
@@ -381,7 +446,7 @@
           "default": false
         },
         field: {
-          name: 'English data',
+          name: Lampa.Lang.translate('lme_endata_name'),
           description: Lampa.Lang.translate('lme_EngData_desc')
         },
         onChange: function onChange(value) {
@@ -397,7 +462,7 @@
           "default": false
         },
         field: {
-          name: 'Show time',
+          name: Lampa.Lang.translate('lme_averageRuntime_name'),
           description: Lampa.Lang.translate('lme_averageRuntime_desc')
         },
         onChange: function onChange(value) {
@@ -413,7 +478,7 @@
           "default": false
         },
         field: {
-          name: 'Streaming Discovery Ratings',
+          name: Lampa.Lang.translate('lme_streamingdiscovery_name'),
           description: Lampa.Lang.translate('lme_streamingdiscovery_desc')
         },
         onChange: function onChange(value) {
@@ -430,7 +495,7 @@
           values: ''
         },
         field: {
-          name: 'Show additional ratings',
+          name: Lampa.Lang.translate('lme_ratings_name'),
           description: Lampa.Lang.translate('lme_ratings_desc')
         },
         onChange: function onChange(value) {
@@ -446,7 +511,7 @@
           "default": false
         },
         field: {
-          name: 'All button in card',
+          name: Lampa.Lang.translate('lme_showbutton_name'),
           description: Lampa.Lang.translate('lme_showbutton_desc')
         },
         onChange: function onChange(value) {
@@ -462,7 +527,7 @@
             "default": false
           },
           field: {
-            name: 'Hide text',
+            name: Lampa.Lang.translate('lme_showbuttonwn_name'),
             description: Lampa.Lang.translate('lme_showbuttonwn_desc')
           },
           onChange: function onChange(value) {
@@ -476,8 +541,8 @@
             type: "button"
           },
           field: {
-            name: 'Edit buttons',
-            description: 'Reorder and hide card buttons'
+            name: Lampa.Lang.translate('lme_button_editor_name'),
+            description: Lampa.Lang.translate('lme_button_editor_desc')
           },
           onChange: function onChange() {
             showButton.openEditorFromSettings();
@@ -493,7 +558,7 @@
           "default": false
         },
         field: {
-          name: 'Source switch',
+          name: Lampa.Lang.translate('lme_switchsource_name'),
           description: Lampa.Lang.translate('lme_switchsource_desc')
         },
         onChange: function onChange(value) {
@@ -509,7 +574,7 @@
           "default": false
         },
         field: {
-          name: 'Add Modss source',
+          name: Lampa.Lang.translate('lme_switchsource_modss_name'),
           description: Lampa.Lang.translate('lme_switchsource_modss_desc')
         },
         onChange: function onChange(value) {
@@ -525,7 +590,7 @@
           "default": false
         },
         field: {
-          name: 'Add TMDBs source',
+          name: Lampa.Lang.translate('lme_switchsource_lmenc_name'),
           description: Lampa.Lang.translate('lme_switchsource_lmenc_desc')
         },
         onChange: function onChange(value) {
