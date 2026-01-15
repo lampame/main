@@ -58,6 +58,15 @@
     var i = _toPrimitive(t, "string");
     return "symbol" == typeof i ? i : i + "";
   }
+  function _typeof(o) {
+    "@babel/helpers - typeof";
+
+    return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
+      return typeof o;
+    } : function (o) {
+      return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
+    }, _typeof(o);
+  }
 
   var PROXY_URL = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
   var API_BASE = 'https://api.hikka.io/';
@@ -69,11 +78,6 @@
     },
     CHARACTERS: function CHARACTERS(slug) {
       return PROXY_URL + API_BASE + 'anime/' + slug + '/characters';
-    },
-    COMMENTS: function COMMENTS(slug) {
-      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
-      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 3;
-      return PROXY_URL + API_BASE + 'comments/anime/' + slug + '/list?page=' + page + '&size=' + size;
     },
     FRANCHISE: function FRANCHISE(slug) {
       return PROXY_URL + API_BASE + 'related/anime/' + slug + '/franchise';
@@ -243,6 +247,7 @@
       original_title: anime.title_en || anime.title_ja || anime.title_ua,
       // КЛЮЧОВЕ ПОЛЕ: original_name визначає тип картки (TV vs MOV)
       original_name: anime.media_type === 'movie' ? null : anime.title_en || anime.title_ja || anime.title_ua,
+      source: 'hikka',
       img: anime.image,
       poster: anime.image,
       // НЕ додаємо poster_path/backdrop_path - вони викликають TMDB prefix при створенні Card!
@@ -462,7 +467,7 @@
         status: filters.status || [],
         season: filters.season || [],
         rating: filters.rating || [],
-        years: [],
+        years: filters.years || [],
         genres: filters.genres || [],
         // Додаємо підтримку жанрів
         studios: filters.studios || [],
@@ -566,6 +571,10 @@
       }, function (err) {
         console.log('[Hikka] Error fetching genres:', err);
         error();
+      }, false, {
+        headers: getProxyHeaders({
+          'origin': 'origin'
+        })
       });
     },
     // Hikka Characters API: GET /anime/{slug}/characters
@@ -579,28 +588,6 @@
         success && success(data);
       }, function (err) {
         console.log('[Hikka] Error fetching characters:', err);
-        error && error(err);
-      }, false, {
-        headers: getProxyHeaders({
-          'Content-Type': 'application/json'
-        })
-      });
-    },
-    // Hikka Comments API: GET /comments/anime/{slug}/list?page={page}&size={size}
-    getComments: function getComments(slug) {
-      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
-      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 3;
-      var success = arguments.length > 3 ? arguments[3] : undefined;
-      var error = arguments.length > 4 ? arguments[4] : undefined;
-      if (!slug) {
-        if (error) error('No slug');
-        return;
-      }
-      var url = ENDPOINTS.COMMENTS(slug, page, size);
-      network.silent(url, function (data) {
-        success && success(data);
-      }, function (err) {
-        console.log('[Hikka] Error fetching comments:', err);
         error && error(err);
       }, false, {
         headers: getProxyHeaders({
@@ -678,6 +665,17 @@
         if (Lampa.Activity.active().activity !== this.component.activity) return;
         this.init();
         Lampa.Controller.toggle('content');
+      }
+    }, {
+      key: "refresh",
+      value: function refresh() {
+        if (!Lampa.Controller.own(this.component)) return;
+        Lampa.Controller.collectionSet(this.contentContainer, this.scroll.render(true));
+        var filterButtons = this.component.html.querySelectorAll('.simple-button--filter.selector');
+        filterButtons.forEach(function (button) {
+          Lampa.Controller.collectionAppend(button);
+        });
+        Lampa.Controller.collectionFocus(this.component.last || false, this.contentContainer, this.scroll.render(true));
       }
     }]);
   }();
@@ -947,6 +945,7 @@
       key: "showFilterSelect",
       value: function showFilterSelect(filterType, options, buttonElement) {
         var _this2 = this;
+        var controller = Lampa.Controller.enabled().name;
         Lampa.Select.show({
           title: 'Оберіть опцію',
           items: options,
@@ -959,6 +958,15 @@
             }
             _this2.updateButtonText(buttonElement, item.title);
             _this2.component.reload();
+            setTimeout(function () {
+              _this2.component.navigationManager && _this2.component.navigationManager.refresh();
+            }, 0);
+          },
+          onBack: function onBack() {
+            Lampa.Controller.toggle(controller);
+            setTimeout(function () {
+              _this2.component.navigationManager && _this2.component.navigationManager.refresh();
+            }, 0);
           }
         });
       }
@@ -974,13 +982,18 @@
     }, {
       key: "toggleOnlyTranslated",
       value: function toggleOnlyTranslated(buttonElement) {
+        var _this3 = this;
         this.filterManager.filters.only_translated = !this.filterManager.filters.only_translated;
         buttonElement.querySelector('span').textContent = this.filterManager.filters.only_translated ? 'З перекладом' : 'Переклад';
         this.component.reload();
+        setTimeout(function () {
+          _this3.component.navigationManager && _this3.component.navigationManager.refresh();
+        }, 0);
       }
     }, {
       key: "resetAllFilters",
       value: function resetAllFilters(filterBody) {
+        var _this4 = this;
         this.filterManager.reset();
 
         // Reset button texts
@@ -991,21 +1004,24 @@
         });
         Lampa.Noty.show('Фільтри скинуто');
         this.component.reload();
+        setTimeout(function () {
+          _this4.component.navigationManager && _this4.component.navigationManager.refresh();
+        }, 0);
       }
 
       // Genre Logic
     }, {
       key: "loadGenres",
       value: function loadGenres(callback) {
-        var _this3 = this;
+        var _this5 = this;
         if (this.genresCache) {
           callback(this.genresCache);
           return;
         }
         Api.getGenres(function (data) {
           if (data && data.list) {
-            _this3.genresCache = data.list;
-            callback(_this3.genresCache);
+            _this5.genresCache = data.list;
+            callback(_this5.genresCache);
           } else {
             console.error('[Hikka] No genres received');
             callback([]);
@@ -1028,14 +1044,15 @@
       }
     }, {
       key: "showGenresSelector",
-      value: function showGenresSelector(buttonElement) {
-        var _this4 = this;
+      value: function showGenresSelector(buttonElement, controllerName) {
+        var _this6 = this;
         this.loadGenres(function (genres) {
           if (genres.length === 0) {
             Lampa.Noty.show('Помилка завантаження жанрів');
             return;
           }
-          var grouped = _this4.groupGenresByType(genres);
+          var controller = controllerName || Lampa.Controller.enabled().name;
+          var grouped = _this6.groupGenresByType(genres);
           var typeItems = Object.keys(grouped).map(function (type) {
             return {
               title: GENRE_TYPE_MAP[type] || type,
@@ -1064,20 +1081,29 @@
                 items: genreItems,
                 onSelect: function onSelect(selectedGenre) {
                   if (selectedGenre.value) {
-                    _this4.filterManager.filters.genres = [selectedGenre.value];
+                    _this6.filterManager.filters.genres = [selectedGenre.value];
                     var shortGenreName = selectedGenre.title;
                     if (shortGenreName.length > 10) shortGenreName = shortGenreName.substring(0, 10) + '...';
                     buttonElement.querySelector('span').textContent = shortGenreName;
                   } else {
-                    _this4.filterManager.filters.genres = [];
+                    _this6.filterManager.filters.genres = [];
                     buttonElement.querySelector('span').textContent = 'Жанр';
                   }
-                  _this4.component.reload();
+                  _this6.component.reload();
+                  setTimeout(function () {
+                    _this6.component.navigationManager && _this6.component.navigationManager.refresh();
+                  }, 0);
                 },
                 onBack: function onBack() {
-                  _this4.showGenresSelector(buttonElement);
+                  _this6.showGenresSelector(buttonElement, controller);
                 }
               });
+            },
+            onBack: function onBack() {
+              Lampa.Controller.toggle(controller);
+              setTimeout(function () {
+                _this6.component.navigationManager && _this6.component.navigationManager.refresh();
+              }, 0);
             }
           });
         });
@@ -1241,6 +1267,10 @@
           });
           fragment.appendChild(render[0]);
           _this3.items.push(card);
+          if (!_this3.last) {
+            _this3.last = render[0];
+            _this3.active = 0;
+          }
 
           // PageView logic
           _this3.added++;
@@ -1255,6 +1285,13 @@
           Lampa.Layer.update(this.html);
           this.activity.toggle();
           this.start();
+          this.navigationManager.refresh();
+          setTimeout(function () {
+            if (Lampa.Activity.active().activity === _this3.activity) {
+              Lampa.Controller.toggle('content');
+              _this3.navigationManager.refresh();
+            }
+          }, 50);
         }
         this.updateNavigator();
       }
@@ -1263,7 +1300,7 @@
       value: function empty() {
         var empty = new Lampa.Empty();
         this.contentContainer.appendChild(empty.render(true));
-        this.start = empty.start;
+        this.start = empty.start.bind(empty);
         this.activity.toggle();
       }
     }, {
@@ -1293,7 +1330,13 @@
           Navigator.setCollection(this.items.slice(Math.max(0, this.active - PAGINATION.LIMIT_COLLECTION), this.active + PAGINATION.LIMIT_COLLECTION).map(function (c) {
             return c.render(true);
           }));
-          Navigator.focused(this.last);
+          if (this.last) {
+            Navigator.focused(this.last);
+          } else if (this.items.length) {
+            this.last = this.items[0].render(true);
+            this.active = 0;
+            Lampa.Controller.collectionFocus(this.last, this.contentContainer, this.scroll.render(true));
+          }
         }
         Lampa.Layer.visible(this.scroll.render(true));
       }
@@ -1355,6 +1398,157 @@
     }]);
   }();
 
+  var HikkaCharacter = /*#__PURE__*/function () {
+    function HikkaCharacter(object) {
+      _classCallCheck(this, HikkaCharacter);
+      this.object = object || {};
+      this.html = document.createElement('div');
+      this.body = document.createElement('div');
+      this.scroll = new Lampa.Scroll({
+        mask: true,
+        over: true
+      });
+      this.activity = null;
+    }
+    return _createClass(HikkaCharacter, [{
+      key: "create",
+      value: function create() {
+        var _this = this;
+        if (this.rendered) return this.html;
+        this.rendered = true;
+        if (!this.activity) {
+          this.activity = Lampa.Activity.active().activity;
+        }
+        this.activity.loader(true);
+        this.html.classList.add('layer--wheight', 'hikka-character');
+        var data = this.object.character_data || this.object;
+        var name = this.object.name || this.object.title || data.name_ua || data.name_en || data.name_ja || '—';
+        var role = this.object.role || this.object.character || data.character || data.role || '';
+        var img = this.object.img || this.object.image || data.image || '';
+        var description = this.object.description_ua || this.object.description_en || this.object.description_ja || data.description_ua || data.description_en || data.description_ja || data.description || data.about || '';
+        var content = document.createElement('div');
+        content.className = 'hikka-character__content';
+        if (img) {
+          var image = document.createElement('img');
+          image.className = 'hikka-character__image';
+          image.src = img;
+          image.alt = name;
+          content.appendChild(image);
+        }
+        var nameEl = document.createElement('div');
+        nameEl.className = 'hikka-character__name';
+        nameEl.textContent = name;
+        content.appendChild(nameEl);
+        if (role) {
+          var roleEl = document.createElement('div');
+          roleEl.className = 'hikka-character__role';
+          roleEl.textContent = role;
+          content.appendChild(roleEl);
+        }
+        var metaItems = [];
+        var gender = data.gender || data.sex;
+        var age = data.age || data.age_years;
+        var birthday = data.birthday || data.birth || data.birth_date;
+        if (gender) metaItems.push({
+          label: 'Стать',
+          value: gender
+        });
+        if (age) metaItems.push({
+          label: 'Вік',
+          value: String(age)
+        });
+        if (birthday) metaItems.push({
+          label: 'Народження',
+          value: String(birthday)
+        });
+        if (metaItems.length) {
+          var meta = document.createElement('div');
+          meta.className = 'hikka-character__meta';
+          metaItems.forEach(function (item) {
+            var row = document.createElement('div');
+            row.className = 'hikka-character__meta-row';
+            var label = document.createElement('span');
+            label.className = 'hikka-character__meta-label';
+            label.textContent = item.label;
+            var value = document.createElement('span');
+            value.className = 'hikka-character__meta-value';
+            value.textContent = item.value;
+            row.appendChild(label);
+            row.appendChild(value);
+            meta.appendChild(row);
+          });
+          content.appendChild(meta);
+        }
+        if (description) {
+          var descr = document.createElement('div');
+          descr.className = 'hikka-character__description';
+          descr.textContent = description;
+          content.appendChild(descr);
+        }
+        this.body.className = 'hikka-character__body';
+        this.body.appendChild(content);
+        this.scroll.onWheel = function (step) {
+          if (!Lampa.Controller.own(_this)) _this.start();
+          _this.scroll.wheel(step > 0 ? 150 : -150);
+        };
+        this.scroll.append(this.body);
+        this.html.appendChild(this.scroll.render(true));
+        if (img && Lampa.Background && typeof Lampa.Background.change === 'function') {
+          Lampa.Background.change(img);
+        }
+        this.activity.loader(false);
+        this.activity.toggle();
+        return this.html;
+      }
+    }, {
+      key: "render",
+      value: function render() {
+        return this.create();
+      }
+    }, {
+      key: "start",
+      value: function start() {
+        var _this2 = this;
+        var controller = {
+          link: this,
+          toggle: function toggle() {
+            Lampa.Controller.collectionSet(_this2.scroll.render(true));
+            Lampa.Controller.collectionFocus(_this2.last || false, _this2.scroll.render(true));
+          },
+          left: function left() {
+            Lampa.Controller.toggle('menu');
+          },
+          right: function right() {},
+          up: function up() {
+            if (_this2.scroll.position && _this2.scroll.position() === 0) Lampa.Controller.toggle('head');else _this2.scroll.wheel(-150);
+          },
+          down: function down() {
+            _this2.scroll.wheel(150);
+          },
+          back: function back() {
+            Lampa.Activity.backward();
+          }
+        };
+        Lampa.Controller.add('content', controller);
+        Lampa.Controller.toggle('content');
+      }
+    }, {
+      key: "pause",
+      value: function pause() {}
+    }, {
+      key: "stop",
+      value: function stop() {}
+    }, {
+      key: "destroy",
+      value: function destroy() {
+        this.rendered = false;
+        this.scroll.destroy();
+        this.html.remove();
+        this.body.remove();
+      }
+    }]);
+  }();
+
   function addMenuItem() {
     var button = Lampa.Menu.addButton('<svg><use xlink:href="#sprite-anime"></use></svg>', 'Hikka Anime', function () {
       Lampa.Activity.push({
@@ -1367,12 +1561,190 @@
     button.addClass('my_class');
   }
 
+  function toArray(value) {
+    if (Array.isArray(value)) return value;
+    if (value === undefined || value === null || value === '') return [];
+    return [value];
+  }
+  function buildFiltersFromParams(params) {
+    var filters = {
+      media_type: [],
+      status: [],
+      season: [],
+      rating: [],
+      years: [],
+      genres: [],
+      studios: [],
+      only_translated: false,
+      sort: ['score:desc']
+    };
+    if (!params) return filters;
+    if (params.filters && _typeof(params.filters) === 'object') {
+      var incoming = params.filters;
+      if (incoming.media_type !== undefined) filters.media_type = toArray(incoming.media_type);
+      if (incoming.status !== undefined) filters.status = toArray(incoming.status);
+      if (incoming.season !== undefined) filters.season = toArray(incoming.season);
+      if (incoming.rating !== undefined) filters.rating = toArray(incoming.rating);
+      if (incoming.years !== undefined) filters.years = toArray(incoming.years);
+      if (incoming.genres !== undefined) filters.genres = toArray(incoming.genres);
+      if (incoming.studios !== undefined) filters.studios = toArray(incoming.studios);
+      if (incoming.only_translated !== undefined) filters.only_translated = !!incoming.only_translated;
+      if (incoming.sort !== undefined) filters.sort = toArray(incoming.sort);
+    }
+    if (params.filter) {
+      if (typeof params.filter === 'string') {
+        try {
+          var parsed = JSON.parse(params.filter);
+          if (parsed && _typeof(parsed) === 'object') {
+            if (parsed.media_type !== undefined) filters.media_type = toArray(parsed.media_type);
+            if (parsed.status !== undefined) filters.status = toArray(parsed.status);
+            if (parsed.season !== undefined) filters.season = toArray(parsed.season);
+            if (parsed.rating !== undefined) filters.rating = toArray(parsed.rating);
+            if (parsed.years !== undefined) filters.years = toArray(parsed.years);
+            if (parsed.genres !== undefined) filters.genres = toArray(parsed.genres);
+            if (parsed.studios !== undefined) filters.studios = toArray(parsed.studios);
+            if (parsed.only_translated !== undefined) filters.only_translated = !!parsed.only_translated;
+            if (parsed.sort !== undefined) filters.sort = toArray(parsed.sort);
+          }
+        } catch (e) {
+          // ignore non-JSON filter strings
+        }
+      } else if (_typeof(params.filter) === 'object') {
+        var _parsed = params.filter;
+        if (_parsed.media_type !== undefined) filters.media_type = toArray(_parsed.media_type);
+        if (_parsed.status !== undefined) filters.status = toArray(_parsed.status);
+        if (_parsed.season !== undefined) filters.season = toArray(_parsed.season);
+        if (_parsed.rating !== undefined) filters.rating = toArray(_parsed.rating);
+        if (_parsed.years !== undefined) filters.years = toArray(_parsed.years);
+        if (_parsed.genres !== undefined) filters.genres = toArray(_parsed.genres);
+        if (_parsed.studios !== undefined) filters.studios = toArray(_parsed.studios);
+        if (_parsed.only_translated !== undefined) filters.only_translated = !!_parsed.only_translated;
+        if (_parsed.sort !== undefined) filters.sort = toArray(_parsed.sort);
+      }
+    }
+    if (params.media_type) filters.media_type = toArray(params.media_type);
+    if (params.status) filters.status = toArray(params.status);
+    if (params.season) filters.season = toArray(params.season);
+    if (params.rating) filters.rating = toArray(params.rating);
+    if (params.years) filters.years = toArray(params.years);
+    if (params.genres) filters.genres = toArray(params.genres);
+    if (params.studios) filters.studios = toArray(params.studios);
+    if (!filters.studios.length && params.companies) filters.studios = toArray(params.companies);
+    if (!filters.studios.length && params.company) filters.studios = toArray(params.company);
+    if (params.only_translated !== undefined) filters.only_translated = !!params.only_translated;
+    if (params.sort !== undefined) filters.sort = toArray(params.sort);
+    if (!filters.media_type.length && params.url) {
+      var allowedMedia = ['movie', 'tv', 'ova', 'ona', 'special', 'music'];
+      if (allowedMedia.indexOf(params.url) !== -1) filters.media_type = [params.url];
+    }
+    return filters;
+  }
+
   /**
    * Hikka Source Provider for Lampa Api.sources
    * Implements: full(params, oncomplite, onerror)
    * Returns local data to Full component to avoid any TMDB/CUB requests
    */
   var HikkaSourceProvider = {
+    /**
+     * Main page data for Lampa Main component
+     * Signature: main(params, oncomplite, onerror)
+     */
+    main: function main() {
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var buildRows = function buildRows(genres) {
+        var baseRows = [{
+          title: 'Hikka Anime',
+          url: '',
+          filters: {
+            sort: ['score:desc']
+          }
+        }, {
+          title: 'Фільми',
+          url: 'movie',
+          filters: {
+            media_type: ['movie'],
+            sort: ['score:desc']
+          }
+        }, {
+          title: 'ТВ серіали',
+          url: 'tv',
+          filters: {
+            media_type: ['tv'],
+            sort: ['score:desc']
+          }
+        }];
+        var list = Array.isArray(genres) ? genres.filter(function (g) {
+          return g && g.slug;
+        }) : [];
+        var mapRows = function mapRows(items, limit) {
+          return items.slice(0, limit).map(function (g) {
+            return {
+              title: g.name_ua || g.name_en || g.name || g.slug,
+              url: '',
+              filters: {
+                genres: [g.slug],
+                sort: ['score:desc']
+              }
+            };
+          });
+        };
+        var genreRows = mapRows(list.filter(function (g) {
+          return g.type === 'genre';
+        }), 3);
+        var themeRows = mapRows(list.filter(function (g) {
+          return g.type === 'theme';
+        }), 2);
+        var demographicRows = mapRows(list.filter(function (g) {
+          return g.type === 'demographic';
+        }), 2);
+        return baseRows.concat(genreRows, themeRows, demographicRows);
+      };
+      var loadRows = function loadRows(rows) {
+        var pending = rows.length;
+        var result = new Array(rows.length);
+        var done = function done() {
+          pending--;
+          if (pending <= 0) {
+            oncomplite && oncomplite(result.filter(Boolean));
+          }
+        };
+        rows.forEach(function (row, index) {
+          var filters = buildFiltersFromParams({
+            filters: row.filters,
+            url: row.url
+          });
+          Api.getAnimeListWithFilters(filters, 1, function (data) {
+            result[index] = {
+              title: row.title,
+              url: row.url,
+              source: 'hikka',
+              filter: JSON.stringify(row.filters),
+              filters: row.filters,
+              results: data && data.results || []
+            };
+            done();
+          }, function (err) {
+            console.log('[Hikka] main row error:', err);
+            result[index] = {
+              title: row.title,
+              url: row.url,
+              source: 'hikka',
+              filter: JSON.stringify(row.filters),
+              filters: row.filters,
+              results: []
+            };
+            done();
+          });
+        });
+      };
+      Api.getGenres(function (data) {
+        var list = Array.isArray(data && data.list) ? data.list : [];
+        loadRows(buildRows(list));
+      }, function () {
+        loadRows(buildRows([]));
+      });
+    },
     /**
      * Build Full data from Hikka details
      * @param {Object} params - object from Activity.push to Full (expects id=slug, method, source='hikka')
@@ -1416,12 +1788,11 @@
             simular: null,
             videos: null,
             reactions: null,
-            discuss: null,
-            comments: null
+            discuss: null
           };
 
-          // 2) Parallel fetch: persons (characters), first page of comments, and franchise collection
-          var pending = 3;
+          // 2) Parallel fetch: persons (characters) and franchise collection
+          var pending = 2;
           var done = function done() {
             pending--;
             if (pending <= 0) {
@@ -1439,10 +1810,41 @@
                 return {
                   id: ch.slug || 'ch_' + idx,
                   name: ch.name_ua || ch.name_en || ch.name_ja || '—',
+                  name_ua: ch.name_ua,
+                  name_en: ch.name_en,
+                  name_ja: ch.name_ja,
                   character: roleText,
                   // Використовуємо прямий URL як img, щоб обійти Api.img для TMDB
                   profile_path: null,
-                  img: ch.image || null
+                  img: ch.image || null,
+                  description_ua: ch.description_ua || ch.description || ch.about,
+                  description_en: ch.description_en,
+                  description_ja: ch.description_ja,
+                  source: 'hikka',
+                  params: {
+                    emit: {
+                      onEnter: function onEnter(html, element) {
+                        var name = element && (element.name || element.title) || 'Персонаж';
+                        Lampa.Activity.push({
+                          url: '',
+                          title: name,
+                          component: 'hikka_character',
+                          page: 1,
+                          source: 'hikka',
+                          name: element && element.name,
+                          name_ua: element && element.name_ua,
+                          name_en: element && element.name_en,
+                          name_ja: element && element.name_ja,
+                          character: element && element.character,
+                          img: element && element.img,
+                          description_ua: element && element.description_ua,
+                          description_en: element && element.description_en,
+                          description_ja: element && element.description_ja,
+                          character_data: ch
+                        });
+                      }
+                    }
+                  }
                 };
               });
               data.persons = {
@@ -1462,49 +1864,6 @@
             data.persons = {
               cast: [],
               crew: []
-            };
-            done();
-          });
-
-          // 2.b) Comments -> discuss (for Discuss component with lazy-load via discussGet)
-          var firstPage = params && params.page || 1;
-          var pageSize = 3;
-          Api.getComments(slug, firstPage, pageSize, function (resp) {
-            try {
-              var items = resp && (resp.list || resp.result || resp.comments || resp.items) || [];
-              var mapped = items.map(function (c, idx) {
-                var a = c.author || c.user || {};
-                return {
-                  id: c.id || c.slug || 'cm_' + idx,
-                  author: a.username || a.name_ua || a.name_en || a.name || c.author || 'Anonymous',
-                  text: c.text || c.content || c.comment || ''
-                };
-              });
-              var pagination = resp && (resp.pagination || resp.pager || {});
-              var total_pages = pagination.pages || resp.total_pages || 1;
-              var total = pagination.total || resp.total || mapped.length;
-
-              // Use 'discuss' object to integrate with Full Discuss component
-              data.discuss = {
-                result: mapped,
-                total: total,
-                total_pages: total_pages
-              };
-            } catch (e) {
-              console.log('[Hikka] SourceProvider: map comments error', e);
-              data.discuss = {
-                result: [],
-                total: 0,
-                total_pages: 1
-              };
-            }
-            done();
-          }, function (err) {
-            console.log('[Hikka] SourceProvider: comments error', err);
-            data.discuss = {
-              result: [],
-              total: 0,
-              total_pages: 1
             };
             done();
           });
@@ -1568,39 +1927,9 @@
      * params: { id|slug|object, page }
      */
     discussGet: function discussGet() {
-      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
       var onerror = arguments.length > 2 ? arguments[2] : undefined;
       try {
-        var page = params.page || 1;
-        // Try to resolve slug/id from different placements
-        var slug = params.id || params.slug || params.object && (params.object.id || params.object.movie && params.object.movie.id) || null;
-        if (!slug) {
-          if (onerror) onerror('Hikka discussGet: slug is empty');
-          return;
-        }
-        Api.getComments(slug, page, 3, function (resp) {
-          var items = resp && (resp.list || resp.result || resp.comments || resp.items) || [];
-          var mapped = items.map(function (c, idx) {
-            var a = c.author || c.user || {};
-            return {
-              id: c.id || c.slug || 'cm_' + idx,
-              author: a.username || a.name_ua || a.name_en || a.name || c.author || 'Anonymous',
-              text: c.text || c.content || c.comment || ''
-            };
-          });
-          var pagination = resp && (resp.pagination || resp.pager || {});
-          var total_pages = pagination.pages || resp.total_pages || 1;
-          var total = pagination.total || resp.total || mapped.length;
-          oncomplite && oncomplite({
-            result: mapped,
-            total: total,
-            total_pages: total_pages
-          });
-        }, function (err) {
-          console.log('[Hikka] discussGet error:', err);
-          if (onerror) onerror(err);
-        });
+        if (onerror) onerror('Hikka discussGet disabled');
       } catch (e) {
         console.log('[Hikka] discussGet exception:', e);
         if (onerror) onerror(e);
@@ -1622,15 +1951,8 @@
           if (onerror) onerror('Hikka category: genre id is empty');
           return;
         }
-        var filters = {
-          media_type: [],
-          status: [],
-          season: [],
-          rating: [],
-          genres: [genreId],
-          only_translated: false,
-          sort: ['score:desc']
-        };
+        var filters = buildFiltersFromParams(params);
+        filters.genres = toArray(genreId);
         Api.getAnimeListWithFilters(filters, page, function (data) {
           oncomplite && oncomplite(data);
         }, function (err) {
@@ -1658,16 +1980,8 @@
           if (onerror) onerror('Hikka company: studio id is empty');
           return;
         }
-        var filters = {
-          media_type: [],
-          status: [],
-          season: [],
-          rating: [],
-          genres: [],
-          studios: [studioId],
-          only_translated: false,
-          sort: ['score:desc']
-        };
+        var filters = buildFiltersFromParams(params);
+        filters.studios = toArray(studioId);
         Api.getAnimeListWithFilters(filters, page, function (data) {
           oncomplite && oncomplite(data);
         }, function (err) {
@@ -1678,10 +1992,115 @@
         console.log('[Hikka] company exception:', e);
         if (onerror) onerror(e);
       }
+    },
+    /**
+     * Full category list for component 'category_full'
+     * Signature: list(params, oncomplite, onerror)
+     */
+    list: function list() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      try {
+        var page = params.page || 1;
+        var filters = buildFiltersFromParams(params);
+        Api.getAnimeListWithFilters(filters, page, function (data) {
+          oncomplite && oncomplite(data);
+        }, function (err) {
+          console.log('[Hikka] list error:', err);
+          if (onerror) onerror(err);
+        });
+      } catch (e) {
+        console.log('[Hikka] list exception:', e);
+        if (onerror) onerror(e);
+      }
+    },
+    /**
+     * Catalog menu for Lampa menu "Catalog"
+     * Signature: menu(params, oncomplite)
+     */
+    menu: function menu() {
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      Api.getGenres(function (data) {
+        var list = Array.isArray(data && data.list) ? data.list : [];
+        var items = list.filter(function (g) {
+          return g && g.slug;
+        }).filter(function (g) {
+          return g.type === 'genre';
+        }).map(function (g) {
+          return {
+            title: g.name_ua || g.name_en || g.name || g.slug,
+            id: g.slug
+          };
+        });
+        oncomplite && oncomplite(items);
+      }, function () {
+        oncomplite && oncomplite([]);
+      });
+    },
+    /**
+     * Optional category menu presets for source=hikka
+     * Signature: menuCategory(params, oncomplite)
+     */
+    menuCategory: function menuCategory() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var lang = Lampa && Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate : function (v) {
+        return v;
+      };
+      var action = params.action || '';
+      var isMovie = action === 'movie';
+      var isTv = action === 'tv';
+      var currentYear = new Date().getFullYear();
+      var baseFilters = {};
+      if (isMovie) baseFilters.media_type = ['movie'];
+      if (isTv) baseFilters.media_type = ['tv'];
+      var items = [{
+        title: lang('title_popular'),
+        filter: JSON.stringify(_objectSpread2(_objectSpread2({}, baseFilters), {}, {
+          sort: ['score:desc']
+        }))
+      }, {
+        title: lang('title_new'),
+        filter: JSON.stringify(_objectSpread2(_objectSpread2({}, baseFilters), {}, {
+          sort: ['start_date:desc']
+        }))
+      }, {
+        title: lang('title_new_this_year'),
+        filter: JSON.stringify(_objectSpread2(_objectSpread2({}, baseFilters), {}, {
+          years: [String(currentYear)],
+          sort: ['start_date:desc']
+        }))
+      }, {
+        title: lang('title_in_top'),
+        filter: JSON.stringify(_objectSpread2(_objectSpread2({}, baseFilters), {}, {
+          sort: ['score:desc']
+        }))
+      }, {
+        title: lang('title_hight_voite'),
+        filter: JSON.stringify(_objectSpread2(_objectSpread2({}, baseFilters), {}, {
+          sort: ['score:desc']
+        }))
+      }];
+      oncomplite && oncomplite(items);
     }
   };
 
   function overrideFullChipsAndDiscuss() {
+    var tagsObserver = null;
+    function getSourceFromObject(obj) {
+      return obj && (obj.source || obj.card && obj.card.source || obj.movie && obj.movie.source);
+    }
+    function cleanupObservers() {
+      if (tagsObserver) {
+        tagsObserver.disconnect();
+        tagsObserver = null;
+      }
+    }
+    function setHikkaFullState(active) {
+      document.body.classList.toggle('hikka-full-active', active);
+    }
+
     // Хелпер для перев’язки чипів жанрів/студій на наш компонент
     function rebindChips(movie) {
       var tagsContainer = document.querySelector('.full-descr__tags');
@@ -1712,20 +2131,20 @@
             } : {
               studios: [matched.id]
             };
-            Lampa.Activity.push({
+            Lampa.Activity.push(_objectSpread2({
               url: '',
               title: name,
-              component: 'hikka_anime',
+              component: 'category_full',
               page: 1,
-              filters: filt
-            });
+              source: 'hikka'
+            }, filt));
             return false; // зупинити стандартну дію
           });
         }
       });
     }
     Lampa.Listener.follow('full', function (e) {
-      if (e.type === 'complite' && e.object && e.object.source === 'hikka') {
+      if (e.type === 'complite' && e.object && getSourceFromObject(e.object) === 'hikka') {
         // Прибрати лайки/футер у відгуках, кнопку "Ще" (More) та блок реакцій у шапці
         var cleanupHikkaFullUI = function cleanupHikkaFullUI() {
           try {
@@ -1735,12 +2154,19 @@
             });
 
             // "Ще" (More) блок, який тригерить CUB discuss fetch
-            var more = document.querySelector('.full-review-all');
-            if (more) more.remove();
+            document.querySelectorAll('.full-review-all').forEach(function (el) {
+              return el.remove();
+            });
 
             // Лайки у футері кожного відгуку
             document.querySelectorAll('.full-review__footer').forEach(function (el) {
               return el.remove();
+            });
+
+            // Приховати блок додавання коментаря, але не ламати навігацію
+            document.querySelectorAll('.full-review-add').forEach(function (el) {
+              el.classList.remove('selector');
+              el.classList.add('hide');
             });
           } catch (err) {
             console.log('[Hikka] Cleanup UI error:', err);
@@ -1782,8 +2208,8 @@
           var typeEl = document.querySelector('.card__type');
           if (typeEl) typeEl.textContent = label;
         }; // Первинна перев’язка чипів після complite + оновлення лічильника епізодів
-        // Позначаємо, що активний Full від Hikka для глобальних перехоплень
-        window.__hikka_full_active = true;
+        cleanupObservers();
+        setHikkaFullState(true);
         // Приховати форму додавання коментаря для джерела hikka
         try {
           var addReview = document.querySelector('.full-review-add.selector');
@@ -1808,10 +2234,10 @@
           var tagsContainer = document.querySelector('.full-descr__tags');
           var _movie = e.data && e.data.movie ? e.data.movie : null;
           if (tagsContainer) {
-            var observer = new MutationObserver(function () {
+            tagsObserver = new MutationObserver(function () {
               rebindChips(_movie);
             });
-            observer.observe(tagsContainer, {
+            tagsObserver.observe(tagsContainer, {
               childList: true,
               subtree: true
             });
@@ -1822,11 +2248,17 @@
         }
       }
     });
+    Lampa.Listener.follow('activity', function (e) {
+      if (e.type === 'destroy' && e.component === 'full' && getSourceFromObject(e.object) === 'hikka') {
+        cleanupObservers();
+        setHikkaFullState(false);
+      }
+    });
   }
 
   function init() {
     // Додаємо стилі для плагіну через шаблонну систему
-    Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card.hikka-hide-type .card__type{display:none !important;visibility:hidden !important;opacity:0 !important;position:absolute !important;left:-9999px !important;z-index:-1 !important}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-card.hikka-hide-type .card__type{display:none !important}.hikka-card .hikka-custom-translate-badge{position:absolute;bottom:8px;left:8px;background:-webkit-gradient(linear,left top,right top,from(#0057b7),to(#ffd700));background:-webkit-linear-gradient(left,#0057b7 0,#ffd700 100%);background:-o-linear-gradient(left,#0057b7 0,#ffd700 100%);background:linear-gradient(90deg,#0057b7 0,#ffd700 100%);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5);padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;text-transform:uppercase;z-index:10}.hikka-card .hikka-custom-type-badge{position:absolute;top:8px;left:8px;background:-webkit-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:-o-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:linear-gradient(135deg,#667eea 0,#764ba2 100%);color:white;padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;z-index:10}.hikka-card.card--tv .hikka-custom-type-badge{background-color:rgba(0,123,255,0.8) !important}.hikka-card.card--movie .hikka-custom-type-badge{background-color:rgba(220,53,69,0.8) !important}.hikka-card.card--ova .hikka-custom-type-badge,.hikka-card.card--ona .hikka-custom-type-badge,.hikka-card.card--special .hikka-custom-type-badge,.hikka-card.card--music .hikka-custom-type-badge{background-color:rgba(108,117,125,0.8) !important}\n        </style>\n    ");
+    Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card.hikka-hide-type .card__type{display:none !important;visibility:hidden !important;opacity:0 !important;position:absolute !important;left:-9999px !important;z-index:-1 !important}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-card.hikka-hide-type .card__type{display:none !important}.hikka-card .hikka-custom-translate-badge{position:absolute;bottom:8px;left:8px;background:-webkit-gradient(linear,left top,right top,from(#0057b7),to(#ffd700));background:-webkit-linear-gradient(left,#0057b7 0,#ffd700 100%);background:-o-linear-gradient(left,#0057b7 0,#ffd700 100%);background:linear-gradient(90deg,#0057b7 0,#ffd700 100%);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5);padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;text-transform:uppercase;z-index:10}.hikka-card .hikka-custom-type-badge{position:absolute;top:8px;left:8px;background:-webkit-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:-o-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:linear-gradient(135deg,#667eea 0,#764ba2 100%);color:white;padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;z-index:10}.hikka-card.card--tv .hikka-custom-type-badge{background-color:rgba(0,123,255,0.8) !important}.hikka-card.card--movie .hikka-custom-type-badge{background-color:rgba(220,53,69,0.8) !important}.hikka-card.card--ova .hikka-custom-type-badge,.hikka-card.card--ona .hikka-custom-type-badge,.hikka-card.card--special .hikka-custom-type-badge,.hikka-card.card--music .hikka-custom-type-badge{background-color:rgba(108,117,125,0.8) !important}.hikka-character{padding:2em 1.5em}.hikka-character__body{max-width:48em;margin:0 auto}.hikka-character__content{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.hikka-character__image{width:12em;height:12em;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%;-webkit-box-shadow:0 .6em 1.4em rgba(0,0,0,0.35);box-shadow:0 .6em 1.4em rgba(0,0,0,0.35)}.hikka-character__name{font-size:1.8em;font-weight:700;color:rgba(255,255,255,0.8)}.hikka-character__role{font-size:1.1em;color:rgba(255,255,255,0.6)}.hikka-character__meta{display:grid;gap:.4em;padding:.8em 1em;-webkit-border-radius:.8em;border-radius:.8em;background:rgba(255,255,255,0.06)}.hikka-character__meta-row{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:.95em}.hikka-character__meta-label{color:rgba(255,255,255,0.6)}.hikka-character__meta-value{color:rgba(255,255,255,0.8)}.hikka-character__description{max-width:40em;line-height:1.6;color:rgba(255,255,255,0.8)}.hikka-full-active .full-review-add,.hikka-full-active .full-review__footer,.hikka-full-active .full-review__like,.hikka-full-active .full-review__like-icon{display:none !important}\n        </style>\n    ");
     // Inject styles
     $('body').append(Lampa.Template.get('hikka_styles'));
 
@@ -1848,27 +2280,45 @@
 
     // Реєструємо компонент
     Lampa.Component.add('hikka_anime', Component);
+    Lampa.Component.add('hikka_character', HikkaCharacter);
 
     // Перевизначення поведінки чипів Full та приховування форми додавання коментаря
     overrideFullChipsAndDiscuss();
 
-    // Перехоплення переходів у category_full/company → перенаправлення у hikka_anime (для source=hikka)
+    // Перехоплення переходів у company → перенаправлення у category_full (для source=hikka)
     try {
       if (!Lampa.__hikkaPatchedPush) {
         Lampa.__hikkaPatchedPush = true;
         var __origPush = Lampa.Activity.push;
         Lampa.Activity.push = function (obj) {
           try {
-            if (obj && window.__hikka_full_active === true && (obj.component === 'category_full' || obj.component === 'category' || obj.component === 'company')) {
-              var filt = {};
-              if (obj.genres) filt.genres = Array.isArray(obj.genres) ? obj.genres : [obj.genres];
-              if (obj.id) filt.studios = [obj.id];
+            var source = obj && (obj.source || obj.card && obj.card.source || obj.movie && obj.movie.source);
+            if (obj && source === 'hikka' && obj.component === 'actor') {
+              var name = obj.name || obj.title || obj.character || 'Персонаж';
+              if (obj.name || obj.character || obj.img) {
+                return __origPush({
+                  url: '',
+                  title: name,
+                  component: 'hikka_character',
+                  page: 1,
+                  source: 'hikka',
+                  name: obj.name,
+                  character: obj.character || obj.role,
+                  img: obj.img
+                });
+              }
+              Lampa.Noty.show('Персонажі Hikka недоступні');
+              return;
+            }
+            if (obj && source === 'hikka' && obj.component === 'company') {
+              var studios = obj.id ? [obj.id] : [];
               return __origPush({
                 url: '',
-                title: obj.title || 'Hikka Anime',
-                component: 'hikka_anime',
+                title: obj.title || obj.name || 'Hikka Studio',
+                component: 'category_full',
                 page: 1,
-                filters: filt
+                source: 'hikka',
+                studios: studios
               });
             }
           } catch (err) {
