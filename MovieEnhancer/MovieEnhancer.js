@@ -602,7 +602,7 @@
       main: main$6
     };
 
-    var API_BASE = "https://sociable-necessary-road.anvil.app/_/api/wm";
+    var API_BASE = "https://wm.lampame.v6.rocks/wm";
     var STORAGE_KEY = "lme_wm_quality_map";
     function debounce(func, wait) {
       var timeout;
