@@ -5462,8 +5462,8 @@
     if (isRowEnabled(ROW_UPNEXT) && Array.isArray(sectionsState.upnext) && sectionsState.upnext.length) {
       sections.push({
         title: Lampa.Lang.translate('trakttv_upnext'),
-        imageShape: 'hdtv',
-        items: mapItems(sectionsState.upnext, 'hdtv')
+        imageShape: 'poster',
+        items: mapItems(sectionsState.upnext, 'poster')
       });
     }
     if (isRowEnabled(ROW_RECOMMENDATIONS) && Array.isArray(sectionsState.recommendations) && sectionsState.recommendations.length) {
