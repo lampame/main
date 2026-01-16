@@ -681,11 +681,17 @@
       var mediaType = (object === null || object === void 0 ? void 0 : object.media_type) || (object === null || object === void 0 || (_object$card2 = object.card) === null || _object$card2 === void 0 ? void 0 : _object$card2.media_type) || (object === null || object === void 0 || (_object$movie3 = object.movie) === null || _object$movie3 === void 0 ? void 0 : _object$movie3.media_type) || (object !== null && object !== void 0 && object.first_air_date || object !== null && object !== void 0 && object.number_of_seasons || object !== null && object !== void 0 && (_object$movie4 = object.movie) !== null && _object$movie4 !== void 0 && _object$movie4.first_air_date ? "tv" : "movie");
       return "".concat(mediaType, "-").concat(id);
     }
+    function isValidApiKey(apiKey) {
+      if (!apiKey) return false;
+      if (typeof apiKey !== "string") return true;
+      var normalized = apiKey.trim().toLowerCase();
+      return normalized !== "" && normalized !== "undefined" && normalized !== "null";
+    }
     function fetchBestQualityItem(object) {
       try {
         var tid = buildTid(object);
         var apiKey = Lampa.Storage.get("lme_wmquality");
-        if (!tid || !apiKey) return Promise.resolve(null);
+        if (!tid || !isValidApiKey(apiKey)) return Promise.resolve(null);
         var url = "".concat(API_BASE, "?tid=").concat(encodeURIComponent(tid), "&apiKey=").concat(encodeURIComponent(apiKey));
         return new Promise(function (resolve) {
           Lampa.Network.silent(url, function (response) {
