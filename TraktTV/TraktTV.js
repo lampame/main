@@ -2485,6 +2485,16 @@
         en: "Up Next",
         uk: "Дивитись далі"
       },
+      trakttv_topshelf: {
+        ru: "Top Shelf (Apple TV)",
+        en: "Top Shelf (Apple TV)",
+        uk: "Top Shelf (Apple TV)"
+      },
+      trakttv_topshelf_descr: {
+        ru: "Обновлять Top Shelf на Apple TV",
+        en: "Update Top Shelf on Apple TV",
+        uk: "Оновлювати Top Shelf на Apple TV"
+      },
       trakttv_scan_qr_code: {
         ru: "Отсканируйте QR-код",
         en: "Scan QR code",
@@ -3500,6 +3510,20 @@
         name: Lampa.Lang.translate('trakttv_show_tv_progress')
       }
     });
+    if (Lampa.Platform.is('apple_tv') === true) {
+      Lampa.SettingsApi.addParam({
+        component: 'trakt',
+        param: {
+          name: 'trakttv_topshelf',
+          type: 'trigger',
+          "default": false
+        },
+        field: {
+          name: Lampa.Lang.translate('trakttv_topshelf'),
+          description: Lampa.Lang.translate('trakttv_topshelf_descr')
+        }
+      });
+    }
 
     // Параметр для ввімкнення/вимкнення відстеження перегляду
     Lampa.SettingsApi.addParam({
@@ -5384,6 +5408,101 @@
     });
   }
 
+  var STORAGE_KEY = 'appletv_topshelf';
+  var SETTINGS_KEY = 'trakttv_topshelf';
+  var ROW_UPNEXT = 'content_rows_TraktUpNextRow';
+  var ROW_RECOMMENDATIONS = 'content_rows_TraktRecommendationsRow';
+  var MAX_ITEMS = 10;
+  var sectionsState = {
+    upnext: null,
+    recommendations: null
+  };
+  function isEnabled() {
+    if (!Lampa || !Lampa.Platform || !Lampa.Storage) return false;
+    return Lampa.Platform.is('apple_tv') === true && Lampa.Storage.field(SETTINGS_KEY);
+  }
+  function isRowEnabled(key) {
+    var value = Lampa.Storage.get(key, 'true');
+    return value === true || value === 'true';
+  }
+  function normalizeUrl(url) {
+    if (!url) return '';
+    if (String(url).startsWith('http')) return url;
+    return 'https://' + String(url).replace(/^\/+/, '');
+  }
+  function getItemTitle(item) {
+    return item.title || item.name || item.original_title || item.original_name || '';
+  }
+  function getItemMedia(item) {
+    var type = item.method || item.card_type || item.type;
+    return type === 'movie' ? 'movie' : 'tv';
+  }
+  function getItemImage(item, shape) {
+    if (shape === 'poster') return normalizeUrl(item.poster || item.image);
+    return normalizeUrl(item.image || item.poster);
+  }
+  function mapItems(items, shape) {
+    return items.slice(0, MAX_ITEMS).map(function (item) {
+      var id = item.id;
+      var title = getItemTitle(item);
+      var media = getItemMedia(item);
+      var imageURL = getItemImage(item, shape);
+      var source = item.source || 'tmdb';
+      if (!id || !title || !imageURL) return null;
+      return {
+        id: String(id),
+        title: title,
+        imageURL: imageURL,
+        deepLink: "lampa://topshelf?card=".concat(encodeURIComponent(id), "&media=").concat(encodeURIComponent(media), "&source=").concat(encodeURIComponent(source))
+      };
+    }).filter(Boolean);
+  }
+  function buildSections() {
+    var sections = [];
+    if (isRowEnabled(ROW_UPNEXT) && Array.isArray(sectionsState.upnext) && sectionsState.upnext.length) {
+      sections.push({
+        title: Lampa.Lang.translate('trakttv_upnext'),
+        imageShape: 'hdtv',
+        items: mapItems(sectionsState.upnext, 'hdtv')
+      });
+    }
+    if (isRowEnabled(ROW_RECOMMENDATIONS) && Array.isArray(sectionsState.recommendations) && sectionsState.recommendations.length) {
+      sections.push({
+        title: Lampa.Lang.translate('trakttv_recommendations'),
+        imageShape: 'poster',
+        items: mapItems(sectionsState.recommendations, 'poster')
+      });
+    }
+    return sections.filter(function (section) {
+      return section.items && section.items.length;
+    });
+  }
+  function writePayload() {
+    if (typeof localStorage === 'undefined') return;
+    var sections = buildSections();
+    if (!sections.length) return;
+    var payload = {
+      updatedAt: Math.floor(Date.now() / 1000),
+      sections: sections
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      if (typeof window !== 'undefined' && window.location && window.location.assign) {
+        window.location.assign('lampa://topshelfupdate');
+      }
+    } catch (error) {
+      if (Lampa.Storage.field('trakt_enable_logging')) {
+        console.error('TraktTV', 'TopShelf update failed:', error);
+      }
+    }
+  }
+  function updateTopshelf(section, items) {
+    if (!isEnabled()) return;
+    if (!sectionsState.hasOwnProperty(section)) return;
+    sectionsState[section] = Array.isArray(items) ? items : [];
+    writePayload();
+  }
+
   // Local safe resolver for Api
   var Api = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
 
@@ -5434,6 +5553,9 @@
 
             // Normalize data
             var normalizedResults = normalizeContentData(data.results);
+            if (screen === 'main') {
+              updateTopshelf('upnext', data.results);
+            }
             call({
               title: icons.createLineTitle(Lampa.Lang.translate('trakttv_upnext')),
               results: normalizedResults,
@@ -5482,6 +5604,9 @@
 
             // Normalize data
             var normalizedResults = normalizeContentData(data.results);
+            if (screen === 'main') {
+              updateTopshelf('recommendations', data.results);
+            }
             call({
               title: icons.createLineTitle(Lampa.Lang.translate('trakttv_recommendations')),
               results: normalizedResults,
