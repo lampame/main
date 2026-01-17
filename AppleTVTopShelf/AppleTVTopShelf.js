@@ -248,32 +248,7 @@
       hint.text(translate('appletv_topshelf_hint'));
       var list = $('<div class="appletv-topshelf-list"></div>');
       wrapper.append(list);
-      function renderList() {
-        list.empty();
-        payload.sections.forEach(function (section, index) {
-          var title = section && section.title ? String(section.title) : '';
-          var row = $('<div class="settings-param"></div>');
-          var name = $("<div class=\"settings-param__name\"></div>").text(title || '-');
-          var actions = $('<div class="settings-param__value"></div>');
-          var up = $('<div class="simple-button simple-button--inline selector appletv-topshelf-action"></div>').text(translate('appletv_topshelf_move_up')).attr('data-action', 'up').attr('data-index', index);
-          var down = $('<div class="simple-button simple-button--inline selector appletv-topshelf-action"></div>').text(translate('appletv_topshelf_move_down')).attr('data-action', 'down').attr('data-index', index);
-          if (index === 0) {
-            up.removeClass('selector').addClass('simple-button--invisible');
-          }
-          if (index === payload.sections.length - 1) {
-            down.removeClass('selector').addClass('simple-button--invisible');
-          }
-          actions.append(up, down);
-          row.append(name, actions);
-          list.append(row);
-        });
-      }
-      renderList();
-      list.on('hover:enter click', '.appletv-topshelf-action', function (event) {
-        var target = $(event.currentTarget);
-        var action = target.attr('data-action');
-        var index = parseInt(target.attr('data-index'), 10);
-        if (isNaN(index)) return;
+      function handleMove(action, index) {
         if (action === 'up') {
           var moved = moveSection(payload.sections, index, index - 1);
           payload.sections = moved;
@@ -285,7 +260,41 @@
           updatePayloadSections(payload, _moved);
           renderList();
         }
-      });
+      }
+      function renderList() {
+        list.empty();
+        payload.sections.forEach(function (section, index) {
+          var title = section && section.title ? String(section.title) : '';
+          var row = $('<div class="settings-param"></div>');
+          var name = $("<div class=\"settings-param__name\"></div>").text(title || '-');
+          var actions = $('<div class="settings-param__value"></div>');
+          var up = $('<div class="simple-button simple-button--inline selector appletv-topshelf-action"></div>').text(translate('appletv_topshelf_move_up')).attr('data-action', 'up').attr('data-index', index);
+          var down = $('<div class="simple-button simple-button--inline selector appletv-topshelf-action"></div>').text(translate('appletv_topshelf_move_down')).attr('data-action', 'down').attr('data-index', index);
+          if (index === 0) {
+            up.removeClass('selector').addClass('simple-button--invisible');
+          } else {
+            up.on('hover:enter click', function (event) {
+              event.preventDefault();
+              event.stopPropagation();
+              handleMove('up', index);
+            });
+          }
+          if (index === payload.sections.length - 1) {
+            down.removeClass('selector').addClass('simple-button--invisible');
+          } else {
+            down.on('hover:enter click', function (event) {
+              event.preventDefault();
+              event.stopPropagation();
+              handleMove('down', index);
+            });
+          }
+          actions.append(up, down);
+          row.append(name, actions);
+          list.append(row);
+        });
+      }
+      renderList();
+      list.off('hover:enter click');
       Lampa.Modal.open({
         title: translate('appletv_topshelf_title'),
         html: wrapper,
