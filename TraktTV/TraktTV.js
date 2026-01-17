@@ -5413,10 +5413,13 @@
   var ROW_UPNEXT = 'content_rows_TraktUpNextRow';
   var ROW_RECOMMENDATIONS = 'content_rows_TraktRecommendationsRow';
   var MAX_ITEMS = 10;
+  var BOOT_OVERRIDE_DELAY_MS = 11000;
   var sectionsState = {
     upnext: null,
     recommendations: null
   };
+  var bootTimestamp = Date.now();
+  var bootOverrideTimer = null;
   function isEnabled() {
     if (!Lampa || !Lampa.Platform || !Lampa.Storage) return false;
     return Lampa.Platform.is('apple_tv') === true && Lampa.Storage.field(SETTINGS_KEY);
@@ -5496,11 +5499,22 @@
       }
     }
   }
+  function scheduleBootOverride() {
+    if (bootOverrideTimer) return;
+    var elapsed = Date.now() - bootTimestamp;
+    var delay = BOOT_OVERRIDE_DELAY_MS - elapsed;
+    if (delay <= 0) return;
+    bootOverrideTimer = setTimeout(function () {
+      bootOverrideTimer = null;
+      writePayload();
+    }, delay);
+  }
   function updateTopshelf(section, items) {
     if (!isEnabled()) return;
     if (!sectionsState.hasOwnProperty(section)) return;
     sectionsState[section] = Array.isArray(items) ? items : [];
     writePayload();
+    scheduleBootOverride();
   }
 
   // Local safe resolver for Api
