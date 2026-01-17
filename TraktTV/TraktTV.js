@@ -5409,20 +5409,29 @@
   }
 
   var STORAGE_KEY = 'appletv_topshelf';
+  var CUSTOM_KEY = 'appletv_topshelf_custom';
   var SETTINGS_KEY = 'trakttv_topshelf';
   var ROW_UPNEXT = 'content_rows_TraktUpNextRow';
   var ROW_RECOMMENDATIONS = 'content_rows_TraktRecommendationsRow';
   var MAX_ITEMS = 10;
-  var BOOT_OVERRIDE_DELAY_MS = 11000;
   var sectionsState = {
     upnext: null,
     recommendations: null
   };
-  var bootTimestamp = Date.now();
-  var bootOverrideTimer = null;
+  var listenersBound = false;
   function isEnabled() {
     if (!Lampa || !Lampa.Platform || !Lampa.Storage) return false;
     return Lampa.Platform.is('apple_tv') === true && Lampa.Storage.field(SETTINGS_KEY);
+  }
+  function syncCustomFlag(enabled) {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      if (enabled) localStorage.setItem(CUSTOM_KEY, 'true');else localStorage.removeItem(CUSTOM_KEY);
+    } catch (error) {
+      if (Lampa.Storage.field('trakt_enable_logging')) {
+        console.error('TraktTV', 'TopShelf custom flag update failed:', error);
+      }
+    }
   }
   function isRowEnabled(key) {
     var value = Lampa.Storage.get(key, 'true');
@@ -5499,22 +5508,35 @@
       }
     }
   }
-  function scheduleBootOverride() {
-    if (bootOverrideTimer) return;
-    var elapsed = Date.now() - bootTimestamp;
-    var delay = BOOT_OVERRIDE_DELAY_MS - elapsed;
-    if (delay <= 0) return;
-    bootOverrideTimer = setTimeout(function () {
-      bootOverrideTimer = null;
+  function bindTopshelfListeners() {
+    if (listenersBound || typeof window === 'undefined') return;
+    listenersBound = true;
+    window.addEventListener('appletv:app-background', function () {
+      if (!isEnabled()) return;
       writePayload();
-    }, delay);
+    });
+    window.addEventListener('appletv:app-request-topshelf-update', function () {
+      if (!isEnabled()) return;
+      writePayload();
+    });
+    if (Lampa.Storage && Lampa.Storage.listener) {
+      Lampa.Storage.listener.follow('change', function (e) {
+        if (e && e.name === SETTINGS_KEY) {
+          syncCustomFlag(isEnabled());
+        }
+      });
+    }
   }
   function updateTopshelf(section, items) {
-    if (!isEnabled()) return;
+    if (!isEnabled()) {
+      syncCustomFlag(false);
+      return;
+    }
     if (!sectionsState.hasOwnProperty(section)) return;
     sectionsState[section] = Array.isArray(items) ? items : [];
+    syncCustomFlag(true);
+    bindTopshelfListeners();
     writePayload();
-    scheduleBootOverride();
   }
 
   // Local safe resolver for Api
