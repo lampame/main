@@ -2210,12 +2210,14 @@
         if (!json) return null;
         if (json.series) return normalizeSeries(json.series);
         if (json.structure) return normalizeSeries(json.structure);
+        var season_hint = extractSeasonHint(json.info);
         if (json.voices && !Array.isArray(json.voices) && _typeof(json.voices) == 'object') {
-          return normalizeStructureVoices(json.voices);
+          return normalizeStructureVoices(json.voices, season_hint);
         }
         if (json.voices && Array.isArray(json.voices) && json.voices.length && json.voices[0].seasons) {
           return {
-            voices: json.voices
+            voices: json.voices,
+            season_hint: season_hint
           };
         }
         if (json.seasons && Array.isArray(json.seasons)) {
@@ -2224,7 +2226,8 @@
               name: json.voice_name || json.voice || '',
               display_name: json.display_name || json.voice_name || json.voice || '',
               seasons: json.seasons
-            }]
+            }],
+            season_hint: season_hint
           };
         }
         if (json.episodes && Array.isArray(json.episodes)) {
@@ -2236,13 +2239,15 @@
                 title: 1,
                 episodes: json.episodes
               }]
-            }]
+            }],
+            season_hint: season_hint
           };
         }
         return null;
       }
-      function normalizeStructureVoices(voices_map) {
+      function normalizeStructureVoices(voices_map, season_hint) {
         var voices = [];
+        var apply_hint = season_hint && Object.keys(voices_map).length ? season_hint : null;
         Object.keys(voices_map).forEach(function (key) {
           var voice = voices_map[key];
           if (!voice) return;
@@ -2250,8 +2255,13 @@
           var seasons_map = voice.seasons || {};
           Object.keys(seasons_map).forEach(function (season_key) {
             var episodes = seasons_map[season_key] || [];
+            var display_title = season_key;
+            if (apply_hint && Object.keys(seasons_map).length === 1) {
+              display_title = String(apply_hint);
+            }
             seasons.push({
               title: season_key,
+              display_title: display_title,
               episodes: episodes
             });
           });
@@ -2268,7 +2278,8 @@
         });
         if (!voices.length) return null;
         return {
-          voices: voices
+          voices: voices,
+          season_hint: season_hint
         };
       }
       function filter() {
@@ -2284,7 +2295,8 @@
           var active_voice = voices[choice.voice] || voices[0];
           var seasons = active_voice && active_voice.seasons ? active_voice.seasons : [];
           filter_items.season = seasons.map(function (season, index) {
-            return normalizeTitle(season.title || season.name || season.season || index + 1);
+            var label = season.display_title || season.title || season.name || season.season || index + 1;
+            return normalizeTitle(label);
           });
         }
         if (choice.season >= filter_items.season.length) choice.season = 0;
@@ -2304,7 +2316,7 @@
           component.doesNotAnswer();
           return;
         }
-        var season_number = parseNumber(season.title, choice.season + 1);
+        var season_number = parseNumber(season.display_title || season.title, choice.season + 1);
         var voice_name = normalizeTitle(voice.display_name || voice.name || voice.title);
         var episode_title = Lampa.Lang.translate('torrent_serial_episode');
         var items = season.episodes.map(function (episode, index) {
@@ -2450,6 +2462,14 @@
           };
         }
         return null;
+      }
+      function extractSeasonHint(info) {
+        if (!info || !info.title) return null;
+        var title = String(info.title).toLowerCase();
+        var match = title.match(/(\\d+)\\s*(сезон|season)/i) || title.match(/(season|сезон)\\s*(\\d+)/i);
+        if (!match) return null;
+        var number = parseInt(match[1] || match[2]);
+        return isNaN(number) ? null : number;
       }
       function buildQualityMap(streams) {
         var qualitys = {};
