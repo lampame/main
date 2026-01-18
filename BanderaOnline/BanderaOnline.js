@@ -2062,6 +2062,16 @@
       }
     }
 
+    function _typeof(o) {
+      "@babel/helpers - typeof";
+
+      return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
+        return typeof o;
+      } : function (o) {
+        return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
+      }, _typeof(o);
+    }
+
     function mikai(component, _object) {
       var network = new Lampa.Reguest();
       var object = _object;
@@ -2199,11 +2209,20 @@
       function normalizeSeries(json) {
         if (!json) return null;
         if (json.series) return normalizeSeries(json.series);
-        if (json.voices && Array.isArray(json.voices)) return json;
+        if (json.structure) return normalizeSeries(json.structure);
+        if (json.voices && !Array.isArray(json.voices) && _typeof(json.voices) == 'object') {
+          return normalizeStructureVoices(json.voices);
+        }
+        if (json.voices && Array.isArray(json.voices) && json.voices.length && json.voices[0].seasons) {
+          return {
+            voices: json.voices
+          };
+        }
         if (json.seasons && Array.isArray(json.seasons)) {
           return {
             voices: [{
               name: json.voice_name || json.voice || '',
+              display_name: json.display_name || json.voice_name || json.voice || '',
               seasons: json.seasons
             }]
           };
@@ -2212,6 +2231,7 @@
           return {
             voices: [{
               name: json.voice_name || json.voice || '',
+              display_name: json.display_name || json.voice_name || json.voice || '',
               seasons: [{
                 title: 1,
                 episodes: json.episodes
@@ -2221,6 +2241,36 @@
         }
         return null;
       }
+      function normalizeStructureVoices(voices_map) {
+        var voices = [];
+        Object.keys(voices_map).forEach(function (key) {
+          var voice = voices_map[key];
+          if (!voice) return;
+          var seasons = [];
+          var seasons_map = voice.seasons || {};
+          Object.keys(seasons_map).forEach(function (season_key) {
+            var episodes = seasons_map[season_key] || [];
+            seasons.push({
+              title: season_key,
+              episodes: episodes
+            });
+          });
+          seasons.sort(function (a, b) {
+            return parseNumber(a.title, 0) - parseNumber(b.title, 0);
+          });
+          voices.push({
+            name: voice.name || key,
+            display_name: voice.display_name || key,
+            provider: voice.provider,
+            is_subs: voice.is_subs,
+            seasons: seasons
+          });
+        });
+        if (!voices.length) return null;
+        return {
+          voices: voices
+        };
+      }
       function filter() {
         filter_items = {
           season: [],
@@ -2229,7 +2279,7 @@
         var voices = series && series.voices ? series.voices : [];
         if (voices.length) {
           filter_items.voice = voices.map(function (voice) {
-            return normalizeTitle(voice.name || voice.title || voice.display_name);
+            return normalizeTitle(voice.display_name || voice.name || voice.title);
           });
           var active_voice = voices[choice.voice] || voices[0];
           var seasons = active_voice && active_voice.seasons ? active_voice.seasons : [];
@@ -2255,12 +2305,12 @@
           return;
         }
         var season_number = parseNumber(season.title, choice.season + 1);
-        var voice_name = normalizeTitle(voice.name || voice.title || voice.display_name);
+        var voice_name = normalizeTitle(voice.display_name || voice.name || voice.title);
         var episode_title = Lampa.Lang.translate('torrent_serial_episode');
         var items = season.episodes.map(function (episode, index) {
           var file = episode.url || episode.stream || episode.file || episode.href || episode.id || episode.hash;
           var title = episode.title || episode.name;
-          var number = parseNumber(episode.episode || episode.title || episode.name, index + 1);
+          var number = parseNumber(episode.number || episode.episode || episode.title || episode.name, index + 1);
           if (!title) {
             title = episode_title + ' ' + number;
           }
