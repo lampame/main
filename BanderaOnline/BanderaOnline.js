@@ -2219,7 +2219,8 @@
         if (!list.length) return [];
         var items = list.map(function (item, index) {
           var title = item.title || (info ? info.title : '') || '';
-          var number = extractSeasonNumber(title);
+          var season_value = item.season !== undefined && item.season !== null ? item.season : null;
+          var number = season_value !== null ? parseNumber(season_value, null) : extractSeasonNumber(title);
           var label = number ? Lampa.Lang.translate('torrent_serial_season') + ' ' + number : title;
           return {
             id: item.id,
