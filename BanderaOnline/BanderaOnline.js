@@ -2062,16 +2062,6 @@
       }
     }
 
-    function _typeof(o) {
-      "@babel/helpers - typeof";
-
-      return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
-        return typeof o;
-      } : function (o) {
-        return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
-      }, _typeof(o);
-    }
-
     function mikai(component, _object) {
       var network = new Lampa.Reguest();
       var object = _object;
@@ -2138,10 +2128,6 @@
         var date = movie.release_date || movie.first_air_date || movie.year || movie.start_date;
         return date ? (date + '').slice(0, 4) : '';
       }
-      function getApiRoot() {
-        var match = api_base.match(/^(.*)\/api\/v1\/?$/);
-        return match ? match[1] + '/api' : api_base;
-      }
       function search(title) {
         var url = api_base + '/search';
         var movie = object.movie || {};
@@ -2179,20 +2165,11 @@
         });
       }
       function loadSeries(id) {
-        var url = getApiRoot() + '/v1/mikai/series';
+        var url = api_base + '/mikai/series';
         url = addParam(url, 'id', id);
-        url = addParam(url, 'aggregate', 1);
         network.silent(url, function (json) {
           if (!json || !json.ok) {
             component.doesNotAnswer();
-            return;
-          }
-          if (isMovieFallback(json)) {
-            drawMovieStream(extractStreamInfo(json));
-            return;
-          }
-          if (json.stream || json.streams || json.url) {
-            drawMovieStream(extractStreamInfo(json));
             return;
           }
           series = normalizeSeries(json);
@@ -2209,78 +2186,59 @@
       function normalizeSeries(json) {
         if (!json) return null;
         if (json.series) return normalizeSeries(json.series);
-        if (json.structure) return normalizeSeries(json.structure);
-        var season_hint = extractSeasonHint(json.info);
-        if (json.voices && !Array.isArray(json.voices) && _typeof(json.voices) == 'object') {
-          return normalizeStructureVoices(json.voices, season_hint);
-        }
-        if (json.voices && Array.isArray(json.voices) && json.voices.length && json.voices[0].seasons) {
-          return {
-            voices: json.voices,
-            season_hint: season_hint
-          };
-        }
-        if (json.seasons && Array.isArray(json.seasons)) {
-          return {
-            voices: [{
-              name: json.voice_name || json.voice || '',
-              display_name: json.display_name || json.voice_name || json.voice || '',
-              seasons: json.seasons
-            }],
-            season_hint: season_hint
-          };
-        }
-        if (json.episodes && Array.isArray(json.episodes)) {
-          return {
-            voices: [{
-              name: json.voice_name || json.voice || '',
-              display_name: json.display_name || json.voice_name || json.voice || '',
-              seasons: [{
-                title: 1,
-                episodes: json.episodes
-              }]
-            }],
-            season_hint: season_hint
-          };
-        }
-        return null;
-      }
-      function normalizeStructureVoices(voices_map, season_hint) {
-        var voices = [];
-        var apply_hint = season_hint && Object.keys(voices_map).length ? season_hint : null;
-        Object.keys(voices_map).forEach(function (key) {
-          var voice = voices_map[key];
-          if (!voice) return;
-          var seasons = [];
-          var seasons_map = voice.seasons || {};
-          Object.keys(seasons_map).forEach(function (season_key) {
-            var episodes = seasons_map[season_key] || [];
-            var display_title = season_key;
-            if (apply_hint && Object.keys(seasons_map).length === 1) {
-              display_title = String(apply_hint);
-            }
-            seasons.push({
-              title: season_key,
-              display_title: display_title,
-              episodes: episodes
-            });
-          });
-          seasons.sort(function (a, b) {
-            return parseNumber(a.title, 0) - parseNumber(b.title, 0);
-          });
-          voices.push({
-            name: voice.name || key,
-            display_name: voice.display_name || key,
-            provider: voice.provider,
-            is_subs: voice.is_subs,
-            seasons: seasons
-          });
-        });
-        if (!voices.length) return null;
+        var info = json.info || {};
+        var voices = Array.isArray(json.voices) ? json.voices : [];
+        var related = normalizeRelated(json, info);
+        var seasons = buildSeasons(related, info);
         return {
+          info: info,
           voices: voices,
-          season_hint: season_hint
+          related: related,
+          seasons: seasons,
+          format: info.format
         };
+      }
+      function normalizeRelated(json, info) {
+        var related = Array.isArray(json.related) ? json.related.slice(0) : [];
+        var current = info && info.id ? {
+          id: info.id,
+          title: info.title,
+          year: info.year,
+          format: info.format
+        } : null;
+        if (current) {
+          var exists = related.some(function (item) {
+            return String(item.id) == String(current.id);
+          });
+          if (!exists) related.unshift(current);
+        }
+        return related.length ? related : current ? [current] : [];
+      }
+      function buildSeasons(related, info) {
+        var list = related && related.length ? related : [];
+        if (!list.length) return [];
+        var items = list.map(function (item, index) {
+          var title = item.title || (info ? info.title : '') || '';
+          var number = extractSeasonNumber(title);
+          var label = number ? Lampa.Lang.translate('torrent_serial_season') + ' ' + number : title;
+          return {
+            id: item.id,
+            title: title,
+            label: label,
+            number: number,
+            format: item.format || (info ? info.format : null),
+            index: index
+          };
+        });
+        var with_numbers = items.every(function (item) {
+          return item.number;
+        });
+        if (with_numbers) {
+          items.sort(function (a, b) {
+            return a.number - b.number;
+          });
+        }
+        return items;
       }
       function filter() {
         filter_items = {
@@ -2292,10 +2250,9 @@
           filter_items.voice = voices.map(function (voice) {
             return normalizeTitle(voice.display_name || voice.name || voice.title);
           });
-          var active_voice = voices[choice.voice] || voices[0];
-          var seasons = active_voice && active_voice.seasons ? active_voice.seasons : [];
+          var seasons = series && series.seasons ? series.seasons : [];
           filter_items.season = seasons.map(function (season, index) {
-            var label = season.display_title || season.title || season.name || season.season || index + 1;
+            var label = season.label || season.title || index + 1;
             return normalizeTitle(label);
           });
         }
@@ -2310,16 +2267,70 @@
           return component.doesNotAnswer();
         }
         var voice = series.voices[choice.voice] || series.voices[0];
-        var seasons = voice.seasons || [];
-        var season = seasons[choice.season];
-        if (!season || !season.episodes || !season.episodes.length) {
+        var seasons = series.seasons || [];
+        var season = seasons[choice.season] || seasons[0];
+        if (!season || !season.id) {
           component.doesNotAnswer();
           return;
         }
-        var season_number = parseNumber(season.display_title || season.title, choice.season + 1);
         var voice_name = normalizeTitle(voice.display_name || voice.name || voice.title);
+        var is_movie = isMovieFormat(season.format || series.format);
+        if (is_movie) {
+          loadMovieStream(season.id, voice_name);
+          return;
+        }
+        var season_number = season.number || parseNumber(season.title, choice.season + 1);
+        loadEpisodes(season.id, voice_name, season_number, function (episodes) {
+          if (!episodes.length) {
+            component.doesNotAnswer();
+            return;
+          }
+          drawEpisodes(episodes, season_number, voice_name);
+        });
+      }
+      function loadEpisodes(id, voice_name, season_number, call) {
+        var url = api_base + '/mikai/episodes';
+        url = addParam(url, 'id', id);
+        url = addParam(url, 'voice', voice_name);
+        url = addParam(url, 'season', season_number);
+        network.silent(url, function (json) {
+          var episodes = json && json.ok ? json.episodes || [] : [];
+          if (!episodes.length && season_number && season_number !== 1) {
+            var fallback = api_base + '/mikai/episodes';
+            fallback = addParam(fallback, 'id', id);
+            fallback = addParam(fallback, 'voice', voice_name);
+            fallback = addParam(fallback, 'season', 1);
+            network.silent(fallback, function (retry) {
+              var retry_episodes = retry && retry.ok ? retry.episodes || [] : [];
+              call(retry_episodes);
+            }, function () {
+              call([]);
+            });
+            return;
+          }
+          call(episodes);
+        }, function () {
+          call([]);
+        });
+      }
+      function loadMovieStream(id, voice_name) {
+        var url = api_base + '/mikai/movie';
+        url = addParam(url, 'id', id);
+        url = addParam(url, 'voice', voice_name);
+        network.silent(url, function (json) {
+          var stream = extractStreamInfo(json);
+          if (!stream || !stream.file) {
+            component.doesNotAnswer();
+            return;
+          }
+          drawMovieStream(stream);
+        }, function () {
+          component.doesNotAnswer();
+        });
+      }
+      function drawEpisodes(episodes, season_number, voice_name) {
         var episode_title = Lampa.Lang.translate('torrent_serial_episode');
-        var items = season.episodes.map(function (episode, index) {
+        var items = episodes.map(function (episode, index) {
           var file = episode.url || episode.stream || episode.file || episode.href || episode.id || episode.hash;
           var title = episode.title || episode.name;
           var number = parseNumber(episode.number || episode.episode || episode.title || episode.name, index + 1);
@@ -2463,10 +2474,10 @@
         }
         return null;
       }
-      function extractSeasonHint(info) {
-        if (!info || !info.title) return null;
-        var title = String(info.title).toLowerCase();
-        var match = title.match(/(\\d+)\\s*(сезон|season)/i) || title.match(/(season|сезон)\\s*(\\d+)/i);
+      function extractSeasonNumber(title) {
+        if (!title) return null;
+        var value = String(title);
+        var match = value.match(/(\\d+)\\s*(сезон|season)/i) || value.match(/(season|сезон)\\s*(\\d+)/i);
         if (!match) return null;
         var number = parseInt(match[1] || match[2]);
         return isNaN(number) ? null : number;
@@ -2492,8 +2503,9 @@
           label: keys.length ? keys[0] : ''
         };
       }
-      function isMovieFallback(json) {
-        return json && json.ok && (json.type == 'movie' || json.fallback == 'movie');
+      function isMovieFormat(format) {
+        if (!format) return false;
+        return String(format).toLowerCase() !== 'tv';
       }
       function normalizeTitle(value) {
         if (value === null || value === undefined) return '';
