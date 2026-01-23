@@ -3380,6 +3380,12 @@
         localStorage.removeItem('nc_anime');
         localStorage.removeItem('nc_cartoon');
       }
+      if (!Lampa.Storage.get('nc_migration_lmeCollections', 'false')) {
+        if (localStorage.getItem('nc_lmeCollections') !== null) {
+          localStorage.removeItem('nc_lmeCollections');
+        }
+        Lampa.Storage.set('nc_migration_lmeCollections', true, true);
+      }
       Lampa.Manifest.plugins = manifest;
       Lampa.Component.add('lmeNetworks', component$4);
       Lampa.Component.add('lmeNetworksBookmarks', component$3);
