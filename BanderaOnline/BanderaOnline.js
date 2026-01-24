@@ -507,6 +507,7 @@
         animeon: createV2('animeon'),
         starlight: createV2('starlight'),
         mikai: createV2('mikai'),
+        midnight: createV2('midnight'),
         uakino: createV2('uakino'),
         ashdibase: createV2('ashdibase')
       };
@@ -518,6 +519,7 @@
         animeon: 'AnimeON',
         starlight: 'StarLight',
         mikai: 'Mikai',
+        midnight: 'Midnight',
         uakino: 'UAKino',
         ashdibase: 'AshdiBase'
       };
@@ -564,20 +566,33 @@
       function buildFilterSources(movie) {
         var sources = getBaseSources();
         var include_anime = shouldIncludeAnimeSources(movie);
+        var include_midnight = shouldIncludeMidnightSource(movie);
         if (include_anime) {
           if (sources.indexOf('bambooua') === -1) sources.push('bambooua');
           if (sources.indexOf('animeon') === -1) sources.push('animeon');
+          if (sources.indexOf('mikai') === -1) sources.push('mikai');
         } else {
           sources = sources.filter(function (name) {
-            return name !== 'bambooua' && name !== 'animeon';
+            return name !== 'bambooua' && name !== 'animeon' && name !== 'mikai';
+          });
+        }
+        if (include_midnight) {
+          if (sources.indexOf('midnight') === -1) sources.push('midnight');
+        } else {
+          sources = sources.filter(function (name) {
+            return name !== 'midnight';
           });
         }
         sources = filterEnabledSources(sources);
         sources = applyUserSources(sources);
         if (!sources.length) {
-          sources = ['uatut', 'uaflix', 'kurwaborz', 'starlight', 'mikai', 'uakino', 'ashdibase'];
-          if (shouldIncludeAnimeSources(movie)) {
+          sources = ['uatut', 'uaflix', 'kurwaborz', 'starlight', 'uakino', 'ashdibase'];
+          if (include_anime) {
             sources.push('bambooua', 'animeon');
+            sources.push('mikai');
+          }
+          if (include_midnight) {
+            sources.push('midnight');
           }
         }
         return sources;
@@ -688,6 +703,10 @@
         var has_japanese_title = Lampa.Utils.containsJapanese ? Lampa.Utils.containsJapanese(title) : false;
         var is_anime = is_anime_lang && (has_anime_genre || has_japanese_title) || has_japanese_title;
         return !has_lang || is_anime || is_dorama_lang;
+      }
+      function shouldIncludeMidnightSource(movie) {
+        if (!movie) return false;
+        return movie.original_language == 'uk';
       }
       function getYear(movie) {
         var date = movie.release_date || movie.first_air_date || movie.year || movie.start_date;
@@ -1687,7 +1706,7 @@
       }
       var manifest = {
         type: 'video',
-        version: '2.6.0',
+        version: '2.6.5',
         name: '[Free] Bandera Online',
         //description: 'Плагин для просмотра онлайн сериалов и фильмов',
         component: 'bandera_online',
