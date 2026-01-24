@@ -19,6 +19,23 @@
           voice: 0,
           voice_name: ''
         };
+        var disabled_source_codes = {
+          NO_RESULTS: true,
+          NOT_FOUND: true,
+          CONTENT_REMOVED: true,
+          NO_PLAYER_DATA: true,
+          NO_STREAM_DATA: true,
+          NO_STREAMS: true,
+          NO_STREAM: true,
+          NO_MOVIE_STREAM: true,
+          NO_MOVIE_STREAMS: true,
+          NO_EPISODES: true,
+          NO_VOICES: true,
+          NO_SERIAL_STRUCTURE: true,
+          NO_ANIME_INFO: true,
+          NO_ANIME_STRUCTURE: true,
+          VOICE_NOT_FOUND: true
+        };
         this.searchByTitle = function (_object, title) {
           object = _object;
           search({
@@ -102,6 +119,27 @@
             }
           });
         }
+        function normalizeErrorCode(json) {
+          return json && (json.error_code || json.meta && json.meta.code) || '';
+        }
+        function extractErrorText(json) {
+          return json && (json.error || json.message || json.error_code) || '';
+        }
+        function handleSourceError(json) {
+          var code = normalizeErrorCode(json);
+          var text = extractErrorText(json) || code;
+          if (code && disabled_source_codes[code]) {
+            component.disableSource(sourceKey, code);
+            component.empty();
+            return;
+          }
+          if (text) component.pushError(text);
+          component.empty();
+        }
+        function handleStreamError(json) {
+          var text = extractErrorText(json);
+          if (text) component.pushError(text);
+        }
         function getYear(movie) {
           var date = movie.release_date || movie.first_air_date || movie.year || movie.start_date;
           return date ? (date + '').slice(0, 4) : '';
@@ -131,9 +169,18 @@
         function search(params) {
           var url = buildSearchUrl(params || {});
           network.silent(url, function (json) {
-            var items = json && json.ok ? json.items || [] : [];
+            if (!json || !json.ok) {
+              handleSourceError(json);
+              return;
+            }
+            if (json.meta && json.meta.code == 'NO_RESULTS') {
+              component.disableSource(sourceKey, json.meta.code);
+              component.empty();
+              return;
+            }
+            var items = json.items || [];
             if (!items.length) {
-              component.doesNotAnswer();
+              component.empty();
               return;
             }
             if (items.length > 1 && !object.clarification) {
@@ -165,7 +212,7 @@
             full: true
           }, function (json) {
             if (!json || !json.ok) {
-              component.doesNotAnswer();
+              handleSourceError(json);
               return;
             }
             if (json.type == 'series') {
@@ -261,7 +308,7 @@
                 var prepared = prepareStreams(streams);
                 var first = prepared.first;
                 if (!first) {
-                  component.doesNotAnswer();
+                  component.pushError(Lampa.Lang.translate('online_nolink'));
                   return;
                 }
                 Lampa.Player.play({
@@ -296,6 +343,8 @@
                   playlist.push(cell);
                 });
                 Lampa.Player.playlist(playlist);
+              }, function (errorText) {
+                component.pushError(errorText || Lampa.Lang.translate('online_nolink'));
               });
             }
           });
@@ -315,7 +364,7 @@
               getMovieStream(movie, function (prepared) {
                 var first = prepared.first;
                 if (!first) {
-                  component.doesNotAnswer();
+                  component.pushError(Lampa.Lang.translate('online_nolink'));
                   return;
                 }
                 Lampa.Player.play({
@@ -325,6 +374,8 @@
                   title: movie.title,
                   subtitles: first.subtitles
                 });
+              }, function (errorText) {
+                component.pushError(errorText || Lampa.Lang.translate('online_nolink'));
               });
             }
           });
@@ -356,7 +407,8 @@
             ref: ref
           }, function (json) {
             if (!json || !json.ok || !Array.isArray(json.streams)) {
-              if (fail) fail();
+              handleStreamError(json);
+              if (fail) fail(extractErrorText(json));
               return;
             }
             success(json.streams);
@@ -364,10 +416,12 @@
             if (fail) fail();
           });
         }
-        function getMovieStream(movie, success) {
+        function getMovieStream(movie, success, fail) {
           if (movie.stream_ref) {
             getStream(movie.stream_ref, function (streams) {
               success(prepareStreams(streams));
+            }, function (errorText) {
+              if (fail) fail(errorText);
             });
             return;
           }
@@ -383,6 +437,8 @@
             if (ref) {
               getStream(ref, function (streams) {
                 success(prepareStreams(streams));
+              }, function (errorText) {
+                if (fail) fail(errorText);
               });
               return;
             }
@@ -473,6 +529,7 @@
       var initialized;
       var balanser_timer;
       var images = [];
+      var disabled_sources = {};
       var filter_sources = buildFilterSources(object && object.movie);
       var available_sources = null;
       var sources_base = api_base;
@@ -484,6 +541,26 @@
         voice: Lampa.Lang.translate('torrent_parser_voice'),
         source: Lampa.Lang.translate('settings_rest_source')
       };
+      function isSourceDisabled(name) {
+        return !!disabled_sources[name];
+      }
+      function buildSourceSortItems() {
+        return filter_sources.map(function (key) {
+          var disabled = isSourceDisabled(key);
+          return {
+            title: balanser_titles[key] || key,
+            source: key,
+            selected: key == balanser,
+            ghost: disabled,
+            noenter: disabled
+          };
+        });
+      }
+      function updateSourceSort() {
+        if (!filter) return;
+        filter.set('sort', buildSourceSortItems());
+        filter.chosen('sort', [balanser_titles[balanser] || balanser]);
+      }
       function buildFilterSources(movie) {
         var sources = getBaseSources();
         var include_anime = shouldIncludeAnimeSources(movie);
@@ -660,6 +737,7 @@
         });
       };
       this.changeBalanser = function (balanser_name) {
+        if (isSourceDisabled(balanser_name)) return;
         var last_select_balanser = Lampa.Storage.cache('bandera_online_last_balanser', 3000, {});
         last_select_balanser[object.movie.id] = balanser_name;
         Lampa.Storage.set('bandera_online_last_balanser', last_select_balanser);
@@ -865,14 +943,23 @@
         if (filter_items.voice && filter_items.voice.length) add('voice', Lampa.Lang.translate('torrent_parser_voice'));
         if (filter_items.season && filter_items.season.length) add('season', Lampa.Lang.translate('torrent_serial_season'));
         filter.set('filter', select);
-        filter.set('sort', filter_sources.map(function (e) {
-          return {
-            title: balanser_titles[e] || e,
-            source: e,
-            selected: e == balanser
-          };
-        }));
+        filter.set('sort', buildSourceSortItems());
         this.selected(filter_items);
+      };
+      this.disableSource = function (source_name, reason) {
+        var key = mapSourceName(source_name);
+        if (!key) return;
+        if (!disabled_sources[key]) {
+          disabled_sources[key] = {
+            reason: reason || ''
+          };
+          updateSourceSort();
+        }
+      };
+      this.pushError = function (text) {
+        if (text) Lampa.Bell.push({
+          text: text
+        });
       };
 
       /**
@@ -1322,12 +1409,21 @@
           html.find('.timeout').text(tic);
           if (tic == 0) {
             clearInterval(balanser_timer);
-            var keys = Lampa.Arrays.getKeys(sources);
+            var keys = filter_sources.slice(0);
+            if (!keys.length) keys = Lampa.Arrays.getKeys(sources);
             var indx = keys.indexOf(balanser);
-            var next = keys[indx + 1];
-            if (!next) next = keys[0];
-            balanser = next;
-            if (Lampa.Activity.active().activity == _this5.activity) _this5.changeBalanser(balanser);
+            var next = null;
+            for (var i = 1; i <= keys.length; i++) {
+              var candidate = keys[(indx + i) % keys.length];
+              if (!isSourceDisabled(candidate)) {
+                next = candidate;
+                break;
+              }
+            }
+            if (next && next !== balanser) {
+              balanser = next;
+              if (Lampa.Activity.active().activity == _this5.activity) _this5.changeBalanser(balanser);
+            }
           }
         }, 1000);
       };
