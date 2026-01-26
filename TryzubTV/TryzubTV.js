@@ -220,6 +220,15 @@
     var i = _toPrimitive(t, "string");
     return "symbol" == typeof i ? i : i + "";
   }
+  function _typeof(o) {
+    "@babel/helpers - typeof";
+
+    return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
+      return typeof o;
+    } : function (o) {
+      return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
+    }, _typeof(o);
+  }
   function _unsupportedIterableToArray(r, a) {
     if (r) {
       if ("string" == typeof r) return _arrayLikeToArray(r, a);
@@ -228,7 +237,134 @@
     }
   }
 
-  var API_BASE = 'https://dyvy.tv/api/v1';
+  var API_BASE = 'https://tzbe.lampame.v6.rocks/v1';
+  function parseResponse(payload) {
+    if (!payload) return {};
+    if (typeof payload === 'string') {
+      try {
+        return JSON.parse(payload);
+      } catch (error) {
+        return {};
+      }
+    }
+    return payload;
+  }
+  function request$2(url) {
+    return new Promise(function (resolve, reject) {
+      Lampa.Network.silent(url, function (data) {
+        return resolve(parseResponse(data));
+      }, reject, false, {
+        dataType: 'text'
+      });
+    });
+  }
+  function fetchCatalog() {
+    return _fetchCatalog.apply(this, arguments);
+  }
+  function _fetchCatalog() {
+    _fetchCatalog = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+      var response;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            _context.p = 0;
+            _context.n = 1;
+            return request$2("".concat(API_BASE, "/catalog"));
+          case 1:
+            response = _context.v;
+            return _context.a(2, response && Array.isArray(response.lines) ? response.lines : []);
+          case 2:
+            _context.p = 2;
+            _context.v;
+            return _context.a(2, []);
+        }
+      }, _callee, null, [[0, 2]]);
+    }));
+    return _fetchCatalog.apply(this, arguments);
+  }
+  function fetchChannels(_x) {
+    return _fetchChannels.apply(this, arguments);
+  }
+  function _fetchChannels() {
+    _fetchChannels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(categoryKey) {
+      var url, response, items, title;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.n) {
+          case 0:
+            _context2.p = 0;
+            url = "".concat(API_BASE, "/channels?category_key=").concat(encodeURIComponent(categoryKey));
+            _context2.n = 1;
+            return request$2(url);
+          case 1:
+            response = _context2.v;
+            items = response && Array.isArray(response.items) ? response.items : [];
+            title = response && response.category_title ? response.category_title : '';
+            return _context2.a(2, {
+              categoryTitle: title,
+              items: items
+            });
+          case 2:
+            _context2.p = 2;
+            _context2.v;
+            return _context2.a(2, {
+              categoryTitle: '',
+              items: []
+            });
+        }
+      }, _callee2, null, [[0, 2]]);
+    }));
+    return _fetchChannels.apply(this, arguments);
+  }
+  function fetchStream(_x2, _x3) {
+    return _fetchStream.apply(this, arguments);
+  }
+  function _fetchStream() {
+    _fetchStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(provider, channelId) {
+      var url, response;
+      return _regenerator().w(function (_context3) {
+        while (1) switch (_context3.n) {
+          case 0:
+            url = "".concat(API_BASE, "/stream/").concat(encodeURIComponent(provider), "/").concat(encodeURIComponent(channelId));
+            _context3.n = 1;
+            return request$2(url);
+          case 1:
+            response = _context3.v;
+            return _context3.a(2, response && response.url ? response.url : '');
+        }
+      }, _callee3);
+    }));
+    return _fetchStream.apply(this, arguments);
+  }
+  function fetchEpg(_x4, _x5) {
+    return _fetchEpg.apply(this, arguments);
+  }
+  function _fetchEpg() {
+    _fetchEpg = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(provider, channelId) {
+      var url, response;
+      return _regenerator().w(function (_context4) {
+        while (1) switch (_context4.n) {
+          case 0:
+            url = "".concat(API_BASE, "/epg/").concat(encodeURIComponent(provider), "/").concat(encodeURIComponent(channelId));
+            _context4.n = 1;
+            return request$2(url);
+          case 1:
+            response = _context4.v;
+            return _context4.a(2, {
+              items: response && response.items ? response.items : [],
+              position: typeof response.position === 'number' ? response.position : 0
+            });
+        }
+      }, _callee4);
+    }));
+    return _fetchEpg.apply(this, arguments);
+  }
+  var Tzbe = {
+    fetchCatalog: fetchCatalog,
+    fetchChannels: fetchChannels,
+    fetchStream: fetchStream,
+    fetchEpg: fetchEpg
+  };
+
   var REPLAY_BASE$1 = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://a.maincast.tv/items';
   var REPLAY_LIMIT = 10;
   var QR_CARD_POSTER$1 = 'https://iili.io/fkdGkSj.png';
@@ -236,13 +372,12 @@
   var CATALOG_HIDE_KEY = 'tryzubtv_catalog_hidden';
   var SOURCE_TV = 'tv';
   var SOURCE_REPLAY = 'replay';
-  function request$2(url) {
+  var PROVIDER_DYVY = 'dyvy';
+  var PROVIDER_YOUTV = 'youtv';
+  function request$1(url) {
     return new Promise(function (resolve, reject) {
       Lampa.Network.silent(url, resolve, reject);
     });
-  }
-  function isFreeChannel(channel) {
-    return channel && channel.package_block == null;
   }
   function translateCategoryName$1(name) {
     var raw = name || '';
@@ -354,31 +489,62 @@
       }
     };
   }
-  function mapChannelToCard(channel, category) {
-    var logo = channel.icon_url || channel.icon_url_2 || '';
-    var poster = logo || channel.frame_url || channel.frame_url_origin || '';
-    var categorySlug = category ? category.slug : '';
-    var categoryTitle = translateCategoryName$1(category ? category.name : '');
-    var nowTitle = channel.epg_current && channel.epg_current.name ? channel.epg_current.name : '';
-    var fallbackTitle = channel.name || '';
+  function mapChannelToCard(channel, categoryKey, categoryTitle, view) {
+    if (!channel || _typeof(channel) !== 'object') return null;
+    var provider = channel.provider || PROVIDER_YOUTV;
+    var logo = channel.logo || '';
+    var banner = channel.banner || '';
+    var poster = logo || banner || '';
+    var cover = logo || banner || '';
+    var title = translateCategoryName$1(categoryTitle || '');
+    var styleName = view === 'category' ? 'default' : 'wide';
+    if (provider === PROVIDER_DYVY) {
+      var nowTitle = channel.epg_current && channel.epg_current.name ? channel.epg_current.name : '';
+      var fallbackTitle = channel.name || '';
+      return {
+        title: nowTitle || fallbackTitle,
+        poster: poster,
+        cover: cover,
+        img: logo || banner,
+        overview: channel.description || '',
+        tryzubtv_source: SOURCE_TV,
+        tryzubtv_provider: PROVIDER_DYVY,
+        tryzubtv_channel_id: channel.id || channel.slug || '',
+        tryzubtv_slug: channel.slug || '',
+        tryzubtv_link: channel.link || '',
+        tryzubtv_epg: channel.epg_current || null,
+        tryzubtv_type: channel.type || '',
+        tryzubtv_logo: logo || banner,
+        tryzubtv_now: channel.epg_current ? channel.epg_current.name : '',
+        tryzubtv_category_key: categoryKey || '',
+        tryzubtv_category_title: title,
+        params: {
+          style: {
+            name: styleName
+          }
+        }
+      };
+    }
+    if (provider !== PROVIDER_YOUTV) return null;
     return {
-      title: nowTitle || fallbackTitle,
+      title: channel.name || '',
       poster: poster,
-      cover: poster,
-      img: logo,
-      overview: channel.description || '',
+      cover: cover,
+      img: logo || banner,
+      overview: '',
       tryzubtv_source: SOURCE_TV,
+      tryzubtv_provider: PROVIDER_YOUTV,
+      tryzubtv_channel_id: channel.id || channel.slug || '',
       tryzubtv_slug: channel.slug || '',
       tryzubtv_link: channel.link || '',
       tryzubtv_epg: channel.epg_current || null,
-      tryzubtv_type: channel.type || '',
-      tryzubtv_logo: logo,
+      tryzubtv_logo: logo || banner,
       tryzubtv_now: channel.epg_current ? channel.epg_current.name : '',
-      tryzubtv_category: categorySlug,
-      tryzubtv_category_title: categoryTitle,
+      tryzubtv_category_key: categoryKey || '',
+      tryzubtv_category_title: title,
       params: {
         style: {
-          name: 'wide'
+          name: styleName
         }
       }
     };
@@ -418,56 +584,25 @@
       return null;
     }
   }
-  function fetchCategories() {
-    return _fetchCategories.apply(this, arguments);
+  function fetchReplayDisciplines() {
+    return _fetchReplayDisciplines.apply(this, arguments);
   }
-  function _fetchCategories() {
-    _fetchCategories = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-      var response;
+  function _fetchReplayDisciplines() {
+    _fetchReplayDisciplines = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+      var url, response;
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
+            url = "".concat(REPLAY_BASE$1, "/discipline?filter={\"category\":\"sport\"}&fields=name,id,icon");
             _context.n = 1;
-            return request$2("".concat(API_BASE, "/categories?is_main=1"));
+            return request$1(url);
           case 1:
             response = _context.v;
             return _context.a(2, response && response.data ? response.data : []);
         }
       }, _callee);
     }));
-    return _fetchCategories.apply(this, arguments);
-  }
-  function fetchReplayDisciplines() {
     return _fetchReplayDisciplines.apply(this, arguments);
-  }
-  function _fetchReplayDisciplines() {
-    _fetchReplayDisciplines = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-      var url, response;
-      return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
-          case 0:
-            url = "".concat(REPLAY_BASE$1, "/discipline?filter={\"category\":\"sport\"}&fields=name,id,icon");
-            _context2.n = 1;
-            return request$2(url);
-          case 1:
-            response = _context2.v;
-            return _context2.a(2, response && response.data ? response.data : []);
-        }
-      }, _callee2);
-    }));
-    return _fetchReplayDisciplines.apply(this, arguments);
-  }
-  function buildLineMetaTv(category) {
-    var rawTitle = category && category.name ? category.name : '';
-    var title = translateCategoryName$1(rawTitle);
-    var slug = category && category.slug ? category.slug : '';
-    return {
-      id: "".concat(SOURCE_TV, ":").concat(slug),
-      source: SOURCE_TV,
-      title: title,
-      rawTitle: rawTitle,
-      category_slug: slug
-    };
   }
   function buildLineMetaReplay(discipline) {
     var rawTitle = discipline && discipline.name ? discipline.name : '';
@@ -484,23 +619,31 @@
     return _fetchCatalogLines.apply(this, arguments);
   }
   function _fetchCatalogLines() {
-    _fetchCatalogLines = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-      var _yield$Promise$all, _yield$Promise$all2, categories, disciplines, tvLines, replayLines;
-      return _regenerator().w(function (_context3) {
-        while (1) switch (_context3.n) {
+    _fetchCatalogLines = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+      var _yield$Promise$all, _yield$Promise$all2, lines, disciplines, tvLines, replayLines;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.n) {
           case 0:
-            _context3.n = 1;
-            return Promise.all([fetchCategories(), fetchReplayDisciplines()]);
+            _context2.n = 1;
+            return Promise.all([Tzbe.fetchCatalog(), fetchReplayDisciplines()]);
           case 1:
-            _yield$Promise$all = _context3.v;
+            _yield$Promise$all = _context2.v;
             _yield$Promise$all2 = _slicedToArray(_yield$Promise$all, 2);
-            categories = _yield$Promise$all2[0];
+            lines = _yield$Promise$all2[0];
             disciplines = _yield$Promise$all2[1];
-            tvLines = (categories || []).map(buildLineMetaTv);
+            tvLines = (lines || []).map(function (line) {
+              return {
+                id: line.id || "".concat(SOURCE_TV, ":").concat(line.category_key || ''),
+                source: line.source || SOURCE_TV,
+                title: translateCategoryName$1(line.title),
+                rawTitle: line.title,
+                category_key: line.category_key
+              };
+            });
             replayLines = (disciplines || []).map(buildLineMetaReplay);
-            return _context3.a(2, tvLines.concat(replayLines));
+            return _context2.a(2, tvLines.concat(replayLines));
         }
-      }, _callee3);
+      }, _callee2);
     }));
     return _fetchCatalogLines.apply(this, arguments);
   }
@@ -511,15 +654,19 @@
       tryzubtv_line_index: index,
       tryzubtv_line_title: meta.title
     };
-    var params = _objectSpread2({}, baseParams);
+    var params = _objectSpread2(_objectSpread2({}, baseParams), {}, {
+      items: {
+        view: 6
+      }
+    });
     if (meta.source === SOURCE_TV) {
-      params.tryzubtv_category = meta.category_slug;
+      params.tryzubtv_category_key = meta.category_key;
       params.tryzubtv_category_title = meta.title;
       params.tryzubtv_category_raw = meta.rawTitle;
       params.more = {
         title: meta.title,
         component: 'tryzubtv_category',
-        category_slug: meta.category_slug
+        category_key: meta.category_key
       };
     } else {
       params.tryzubtv_replay_id = meta.discipline_id;
@@ -531,12 +678,12 @@
       };
     }
     if (LineModule) {
-      params.module = LineModule.toggle(LineModule.MASK.base, 'More');
+      params.module = LineModule.MASK.base;
     }
     return {
       title: meta.title,
       results: [],
-      total_pages: 2,
+      total_pages: 1,
       params: params
     };
   }
@@ -544,16 +691,16 @@
     return _loadMain.apply(this, arguments);
   }
   function _loadMain() {
-    _loadMain = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(oncomplete, onerror) {
+    _loadMain = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(oncomplete, onerror) {
       var linesMeta, ordered, hidden, isTvEnabled, isReplayEnabled, visible, LineModule, lines, _t;
-      return _regenerator().w(function (_context4) {
-        while (1) switch (_context4.n) {
+      return _regenerator().w(function (_context3) {
+        while (1) switch (_context3.n) {
           case 0:
-            _context4.p = 0;
-            _context4.n = 1;
+            _context3.p = 0;
+            _context3.n = 1;
             return fetchCatalogLines();
           case 1:
-            linesMeta = _context4.v;
+            linesMeta = _context3.v;
             ordered = sortCatalogLines(linesMeta);
             hidden = getCatalogHidden();
             isTvEnabled = Lampa.Storage.get('tryzubtv_source_tv', true);
@@ -569,17 +716,17 @@
               return buildLineShell(meta, LineModule, index);
             });
             oncomplete(lines);
-            _context4.n = 3;
+            _context3.n = 3;
             break;
           case 2:
-            _context4.p = 2;
-            _t = _context4.v;
+            _context3.p = 2;
+            _t = _context3.v;
             console.error('TryzubTV: loadMain failed', _t);
             onerror(_t);
           case 3:
-            return _context4.a(2);
+            return _context3.a(2);
         }
-      }, _callee4, null, [[0, 2]]);
+      }, _callee3, null, [[0, 2]]);
     }));
     return _loadMain.apply(this, arguments);
   }
@@ -587,51 +734,77 @@
     return _loadCategory$1.apply(this, arguments);
   }
   function _loadCategory$1() {
-    _loadCategory$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(categorySlug, categoryTitle, oncomplete, onerror) {
-      var url, response, channels, total, title, lineTitle, items, _t2;
-      return _regenerator().w(function (_context5) {
-        while (1) switch (_context5.n) {
+    _loadCategory$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(categorySlug, categoryTitle, oncomplete, onerror) {
+      var categoryKey, response, shortKey, title, channels, items, total, lineTitle, _t2, _t3;
+      return _regenerator().w(function (_context4) {
+        while (1) switch (_context4.n) {
           case 0:
-            _context5.p = 0;
-            url = "".concat(API_BASE, "/channels?category_slug=").concat(encodeURIComponent(categorySlug), "&limit=500");
-            _context5.n = 1;
-            return request$2(url);
+            _context4.p = 0;
+            categoryKey = categorySlug || '';
+            if (!categoryKey) {
+              _context4.n = 2;
+              break;
+            }
+            _context4.n = 1;
+            return Tzbe.fetchChannels(categoryKey);
           case 1:
-            response = _context5.v;
-            channels = response && response.data ? response.data : [];
-            total = response && response.meta && response.meta.total ? response.meta.total : channels.length;
-            title = translateCategoryName$1(categoryTitle || categorySlug || '');
-            lineTitle = total ? "".concat(title, " \xB7 ").concat(total) : title;
-            items = channels.filter(isFreeChannel).filter(function (channel) {
-              return channel && channel.link;
-            }).map(function (channel) {
-              return mapChannelToCard(channel, {
-                slug: categorySlug,
-                name: title
-              });
+            _t2 = _context4.v;
+            _context4.n = 3;
+            break;
+          case 2:
+            _t2 = {
+              items: [],
+              categoryTitle: ''
+            };
+          case 3:
+            response = _t2;
+            if (!((!response.items || !response.items.length) && categoryKey.includes(':'))) {
+              _context4.n = 5;
+              break;
+            }
+            shortKey = categoryKey.split(':').pop();
+            if (!shortKey) {
+              _context4.n = 5;
+              break;
+            }
+            _context4.n = 4;
+            return Tzbe.fetchChannels(shortKey);
+          case 4:
+            response = _context4.v;
+          case 5:
+            title = translateCategoryName$1(categoryTitle || response.categoryTitle || categoryKey || '');
+            channels = Array.isArray(response.items) ? response.items : [];
+            items = channels.map(function (channel) {
+              return mapChannelToCard(channel, categoryKey, title, 'category');
             }).filter(Boolean);
-            oncomplete([{
+            total = items.length;
+            lineTitle = total ? "".concat(title, " \xB7 ").concat(total) : title;
+            oncomplete({
               title: lineTitle,
               results: items,
               total_pages: 1,
               params: {
+                items: {
+                  mapping: 'grid',
+                  cols: 4
+                },
                 tryzubtv_source: SOURCE_TV,
-                tryzubtv_category: categorySlug || '',
+                tryzubtv_category_key: categoryKey || '',
                 tryzubtv_category_title: title,
                 tryzubtv_category_total: total
               }
-            }]);
-            _context5.n = 3;
+            });
+            _context4.n = 7;
             break;
-          case 2:
-            _context5.p = 2;
-            _t2 = _context5.v;
-            console.error('TryzubTV: loadCategory failed', _t2);
-            onerror(_t2);
-          case 3:
-            return _context5.a(2);
+          case 6:
+            _context4.p = 6;
+            _t3 = _context4.v;
+            console.error('TryzubTV: loadCategory failed', _t3);
+            onerror(_t3);
+          case 7:
+            return _context4.a(2);
         }
-      }, _callee5, null, [[0, 2]]);
+      }, _callee4, null, [[0, 6]]);
     }));
     return _loadCategory$1.apply(this, arguments);
   }
@@ -639,89 +812,83 @@
     return _loadLineItems.apply(this, arguments);
   }
   function _loadLineItems() {
-    _loadLineItems = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(lineData) {
-      var params, source, slug, url, response, channels, total, title, items, disciplineId, _url, _response, vods, mapped, hasMore, _items;
-      return _regenerator().w(function (_context6) {
-        while (1) switch (_context6.n) {
+    _loadLineItems = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(lineData) {
+      var params, source, categoryKey, response, title, channels, items, total, disciplineId, url, _response, vods, mapped, hasMore, _items;
+      return _regenerator().w(function (_context5) {
+        while (1) switch (_context5.n) {
           case 0:
             params = lineData && lineData.params || {};
             source = params.tryzubtv_source;
             if (!(source === SOURCE_TV)) {
-              _context6.n = 3;
+              _context5.n = 3;
               break;
             }
-            slug = params.tryzubtv_category;
-            if (slug) {
-              _context6.n = 1;
+            categoryKey = params.tryzubtv_category_key;
+            if (categoryKey) {
+              _context5.n = 1;
               break;
             }
-            return _context6.a(2, {
+            return _context5.a(2, {
               items: [],
               total: 0,
               total_pages: 1
             });
           case 1:
-            url = "".concat(API_BASE, "/channels?category_slug=").concat(encodeURIComponent(slug), "&limit=500");
-            _context6.n = 2;
-            return request$2(url);
+            _context5.n = 2;
+            return Tzbe.fetchChannels(categoryKey);
           case 2:
-            response = _context6.v;
-            channels = response && response.data ? response.data : [];
-            total = response && response.meta && response.meta.total ? response.meta.total : channels.length;
-            title = translateCategoryName$1(params.tryzubtv_category_raw || params.tryzubtv_category_title || '');
-            items = channels.filter(isFreeChannel).filter(function (channel) {
-              return channel && channel.link;
-            }).map(function (channel) {
-              return mapChannelToCard(channel, {
-                slug: slug,
-                name: title
-              });
+            response = _context5.v;
+            title = translateCategoryName$1(params.tryzubtv_category_raw || params.tryzubtv_category_title || response.categoryTitle || '');
+            channels = Array.isArray(response.items) ? response.items : [];
+            items = channels.map(function (channel) {
+              return mapChannelToCard(channel, categoryKey, title, 'line');
             }).filter(Boolean);
-            return _context6.a(2, {
+            total = items.length;
+            return _context5.a(2, {
               items: items,
               total: total,
               title: title
             });
           case 3:
             if (!(source === SOURCE_REPLAY)) {
-              _context6.n = 6;
+              _context5.n = 6;
               break;
             }
             disciplineId = params.tryzubtv_replay_id;
             if (disciplineId) {
-              _context6.n = 4;
+              _context5.n = 4;
               break;
             }
-            return _context6.a(2, {
+            return _context5.a(2, {
               items: [],
               total: 0,
               total_pages: 1
             });
           case 4:
-            _url = "".concat(REPLAY_BASE$1, "/vod?filter={\"discipline\":").concat(disciplineId, "}&sort=-date&limit=").concat(REPLAY_LIMIT + 1);
-            _context6.n = 5;
-            return request$2(_url);
+            url = "".concat(REPLAY_BASE$1, "/vod?filter={\"discipline\":").concat(disciplineId, "}&sort=-date&limit=").concat(REPLAY_LIMIT + 1);
+            _context5.n = 5;
+            return request$1(url);
           case 5:
-            _response = _context6.v;
+            _response = _context5.v;
             vods = (_response && _response.data ? _response.data : []).filter(function (vod) {
               return vod && vod.link && !vod.link.includes('youtube');
             });
             mapped = vods.map(mapReplayToCard).filter(Boolean);
             hasMore = mapped.length > REPLAY_LIMIT;
             _items = hasMore ? mapped.slice(0, REPLAY_LIMIT) : mapped;
-            return _context6.a(2, {
+            return _context5.a(2, {
               items: _items,
               total: null,
               total_pages: hasMore ? 2 : 1
             });
           case 6:
-            return _context6.a(2, {
+            return _context5.a(2, {
               items: [],
               total: 0,
               total_pages: 1
             });
         }
-      }, _callee6);
+      }, _callee5);
     }));
     return _loadLineItems.apply(this, arguments);
   }
@@ -729,32 +896,24 @@
     loadMain: loadMain,
     loadCategory: loadCategory$1,
     loadLineItems: loadLineItems,
-    fetchCategories: fetchCategories,
     fetchCatalogLines: fetchCatalogLines,
     sortCatalogLines: sortCatalogLines,
     getCatalogHidden: getCatalogHidden,
     getCatalogOrder: getCatalogOrder,
     buildQrCard: buildQrCard,
-    API_BASE: API_BASE,
     SOURCE_TV: SOURCE_TV,
-    SOURCE_REPLAY: SOURCE_REPLAY
+    SOURCE_REPLAY: SOURCE_REPLAY,
+    PROVIDER_DYVY: PROVIDER_DYVY,
+    PROVIDER_YOUTV: PROVIDER_YOUTV
   };
 
-  function request$1(url) {
-    return new Promise(function (resolve, reject) {
-      Lampa.Network.silent(url, resolve, reject);
-    });
-  }
-  function buildChannelEpgUrl(slug) {
-    return "".concat(Api$1.API_BASE, "/channels/").concat(encodeURIComponent(slug), "?expand=epg_items");
-  }
   function toPlaylistItems(items, fallbackTitle) {
     return (items || []).filter(function (item) {
-      return item && item.link;
+      return item && (item.link || item.url);
     }).map(function (item) {
       return {
         title: item.name || fallbackTitle || '',
-        url: item.link
+        url: item.link || item.url
       };
     });
   }
@@ -801,42 +960,167 @@
     });
     return idxByTime >= 0 ? idxByTime : 0;
   }
-  function fetchChannelEpg(slug) {
-    var url = buildChannelEpgUrl(slug);
-    return request$1(url).then(function (data) {
-      return data && data.data ? data.data : null;
-    });
+  var streamCache = new Map();
+  function getStreamCacheKey(provider, channelId) {
+    return "".concat(provider || '', ":").concat(channelId || '');
   }
-  function fetchCategoryChannels(_x) {
+  function resolveStream(_x, _x2) {
+    return _resolveStream.apply(this, arguments);
+  }
+  function _resolveStream() {
+    _resolveStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(provider, channelId) {
+      var cacheKey, cached, url;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.n) {
+          case 0:
+            cacheKey = getStreamCacheKey(provider, channelId);
+            cached = streamCache.get(cacheKey);
+            if (!(cached && cached.url)) {
+              _context2.n = 1;
+              break;
+            }
+            return _context2.a(2, cached.url);
+          case 1:
+            _context2.n = 2;
+            return Tzbe.fetchStream(provider, channelId);
+          case 2:
+            url = _context2.v;
+            streamCache.set(cacheKey, {
+              time: Date.now(),
+              url: url
+            });
+            return _context2.a(2, url);
+        }
+      }, _callee2);
+    }));
+    return _resolveStream.apply(this, arguments);
+  }
+  function prefetchStreams(_x3, _x4) {
+    return _prefetchStreams.apply(this, arguments);
+  }
+  function _prefetchStreams() {
+    _prefetchStreams = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(channels, limit) {
+      var queue, concurrency, index, worker, workers, i;
+      return _regenerator().w(function (_context4) {
+        while (1) switch (_context4.n) {
+          case 0:
+            queue = (channels || []).filter(function (channel) {
+              return channel && channel.id && !channel.url;
+            });
+            if (queue.length) {
+              _context4.n = 1;
+              break;
+            }
+            return _context4.a(2);
+          case 1:
+            concurrency = Math.max(1, limit || 4);
+            index = 0;
+            worker = /*#__PURE__*/function () {
+              var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+                var current, url, _t;
+                return _regenerator().w(function (_context3) {
+                  while (1) switch (_context3.n) {
+                    case 0:
+                      if (!(index < queue.length)) {
+                        _context3.n = 5;
+                        break;
+                      }
+                      current = queue[index];
+                      index += 1;
+                      _context3.p = 1;
+                      _context3.n = 2;
+                      return resolveStream(current.provider, current.id);
+                    case 2:
+                      url = _context3.v;
+                      if (url) current.url = url;
+                      _context3.n = 4;
+                      break;
+                    case 3:
+                      _context3.p = 3;
+                      _t = _context3.v;
+                      console.error('TryzubTV: stream prefetch failed', _t);
+                    case 4:
+                      _context3.n = 0;
+                      break;
+                    case 5:
+                      return _context3.a(2);
+                  }
+                }, _callee3, null, [[1, 3]]);
+              }));
+              return function worker() {
+                return _ref2.apply(this, arguments);
+              };
+            }();
+            workers = [];
+            for (i = 0; i < concurrency; i += 1) {
+              workers.push(worker());
+            }
+            _context4.n = 2;
+            return Promise.all(workers);
+          case 2:
+            return _context4.a(2);
+        }
+      }, _callee4);
+    }));
+    return _prefetchStreams.apply(this, arguments);
+  }
+  function fetchCategoryChannels(_x5) {
     return _fetchCategoryChannels.apply(this, arguments);
   }
   function _fetchCategoryChannels() {
-    _fetchCategoryChannels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(categorySlug) {
-      var url, response, channels;
-      return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+    _fetchCategoryChannels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(categoryKey) {
+      var response, items;
+      return _regenerator().w(function (_context5) {
+        while (1) switch (_context5.n) {
           case 0:
-            url = "".concat(Api$1.API_BASE, "/channels?category_slug=").concat(encodeURIComponent(categorySlug), "&limit=500");
-            _context.n = 1;
-            return request$1(url);
+            _context5.n = 1;
+            return Tzbe.fetchChannels(categoryKey);
           case 1:
-            response = _context.v;
-            channels = response && response.data ? response.data : [];
-            return _context.a(2, channels.filter(function (channel) {
-              return channel && channel.package_block == null && channel.link;
-            }).map(function (channel) {
-              return {
-                name: channel.name || '',
-                slug: channel.slug || '',
-                url: channel.link || '',
-                logo: channel.icon_url || channel.icon_url_2 || '',
-                epg_current: channel.epg_current || null
-              };
-            }));
+            response = _context5.v;
+            items = response.items || [];
+            return _context5.a(2, {
+              title: response.categoryTitle || '',
+              items: items.map(function (channel) {
+                var id = channel.id || channel.slug || '';
+                return {
+                  provider: channel.provider || Api$1.PROVIDER_DYVY,
+                  id: id,
+                  name: channel.name || '',
+                  slug: channel.slug || id,
+                  url: channel.link || '',
+                  logo: channel.logo || '',
+                  epg_current: channel.epg_current || null
+                };
+              })
+            });
         }
-      }, _callee);
+      }, _callee5);
     }));
     return _fetchCategoryChannels.apply(this, arguments);
+  }
+  function fetchChannelEpg(_x6, _x7) {
+    return _fetchChannelEpg.apply(this, arguments);
+  }
+  function _fetchChannelEpg() {
+    _fetchChannelEpg = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(provider, channelId) {
+      var response, items, position;
+      return _regenerator().w(function (_context6) {
+        while (1) switch (_context6.n) {
+          case 0:
+            _context6.n = 1;
+            return Tzbe.fetchEpg(provider, channelId);
+          case 1:
+            response = _context6.v;
+            items = response.items || [];
+            position = typeof response.position === 'number' ? response.position : getCurrentProgramIndex(items, null);
+            return _context6.a(2, {
+              items: items,
+              position: position
+            });
+        }
+      }, _callee6);
+    }));
+    return _fetchChannelEpg.apply(this, arguments);
   }
   function playIptvList(channels, startIndex, groupTitle) {
     var epgCache = {};
@@ -845,6 +1129,24 @@
       url: channels[startIndex].url,
       total: channels.length,
       position: startIndex,
+      onPlay: function onPlay(selected) {
+        if (!selected || selected.url || !selected.id) return;
+        var cacheKey = getStreamCacheKey(selected.provider, selected.id);
+        var cached = streamCache.get(cacheKey);
+        if (cached && cached.url) {
+          selected.url = cached.url;
+          return;
+        }
+        Lampa.Bell && Lampa.Bell.push({
+          text: Lampa.Lang.translate('tryzubtv_stream_loading'),
+          time: 1500
+        });
+        resolveStream(selected.provider, selected.id).then(function (url) {
+          if (url) selected.url = url;
+        })["catch"](function (error) {
+          console.error('TryzubTV: stream resolve failed', error);
+        });
+      },
       onGetChannel: function onGetChannel(position) {
         var channel = channels[position];
         if (!channel) return null;
@@ -855,10 +1157,21 @@
           logo: channel.logo,
           url: channel.url,
           slug: channel.slug,
-          epg_current: channel.epg_current
+          epg_current: channel.epg_current,
+          provider: channel.provider,
+          id: channel.id
         };
-        if (!selected.slug) return selected;
-        var cached = epgCache[selected.slug];
+        if (!selected.url && selected.id) {
+          var _cacheKey = getStreamCacheKey(selected.provider, selected.id);
+          var _cached = streamCache.get(_cacheKey);
+          if (_cached && _cached.url) {
+            selected.url = _cached.url;
+            channel.url = _cached.url;
+          }
+        }
+        if (!selected.id) return selected;
+        var cacheKey = getStreamCacheKey(selected.provider, selected.id);
+        var cached = epgCache[cacheKey];
         if (cached) {
           Lampa.Player.programReady({
             channel: selected,
@@ -867,11 +1180,10 @@
           });
           return selected;
         }
-        fetchChannelEpg(selected.slug).then(function (data) {
-          var items = data && data.epg_items ? data.epg_items : [];
-          var current = data && data.epg_current ? data.epg_current : null;
-          var position = getCurrentProgramIndex(items, current);
-          epgCache[selected.slug] = {
+        fetchChannelEpg(selected.provider, selected.id).then(function (data) {
+          var items = data.items || [];
+          var position = typeof data.position === 'number' ? data.position : getCurrentProgramIndex(items, null);
+          epgCache[cacheKey] = {
             items: items,
             position: position
           };
@@ -882,7 +1194,7 @@
           });
         })["catch"](function (error) {
           console.error('TryzubTV: channel epg load failed', error);
-          epgCache[selected.slug] = {
+          epgCache[cacheKey] = {
             items: [],
             position: 0
           };
@@ -895,11 +1207,12 @@
         return selected;
       },
       onGetProgram: function onGetProgram(selected, position, container) {
-        if (!selected || !selected.slug) {
+        if (!selected || !selected.id) {
           renderProgramList(container, [], 0);
           return;
         }
-        var cached = epgCache[selected.slug];
+        var cacheKey = getStreamCacheKey(selected.provider, selected.id);
+        var cached = epgCache[cacheKey];
         if (cached) {
           var hasCachedPosition = typeof cached.position === 'number' && cached.position > 0;
           var usePosition = typeof position === 'number' && position > 0 ? position : hasCachedPosition ? cached.position : 0;
@@ -909,21 +1222,26 @@
         renderProgramList(container, [], 0);
       },
       onPlaylistProgram: function onPlaylistProgram(selected, position) {
-        if (!selected || !selected.slug) return;
-        var cached = epgCache[selected.slug];
+        if (!selected || !selected.id) return;
+        var cacheKey = getStreamCacheKey(selected.provider, selected.id);
+        var cached = epgCache[cacheKey];
         if (cached) {
           Lampa.Player.playlist(toPlaylistItems(cached.items || [], selected.name));
           return;
         }
-        fetchChannelEpg(selected.slug).then(function (data) {
-          var items = data && data.epg_items ? data.epg_items : [];
-          var current = data && data.epg_current ? data.epg_current : null;
-          var position = getCurrentProgramIndex(items, current);
-          epgCache[selected.slug] = {
+        fetchChannelEpg(selected.provider, selected.id).then(function (data) {
+          var items = data.items || [];
+          var position = typeof data.position === 'number' ? data.position : getCurrentProgramIndex(items, null);
+          epgCache[cacheKey] = {
             items: items,
             position: position
           };
-          Lampa.Player.playlist(toPlaylistItems(items, selected.name));
+          var playlist = toPlaylistItems(items, selected.name);
+          if (!playlist.length) {
+            Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_epg_failed'));
+            return;
+          }
+          Lampa.Player.playlist(playlist);
         })["catch"](function (error) {
           console.error('TryzubTV: playlist load failed', error);
           Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_epg_failed'));
@@ -933,37 +1251,83 @@
     Lampa.Player.iptv(data);
   }
   function playChannel(cardData) {
-    if (!cardData || !cardData.tryzubtv_link) {
-      Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
-      return;
-    }
+    if (!cardData) return;
+    var provider = cardData.tryzubtv_provider || Api$1.PROVIDER_DYVY;
+    var channelId = cardData.tryzubtv_channel_id || cardData.tryzubtv_slug || '';
     var title = cardData.title || '';
     var logo = cardData.tryzubtv_logo || '';
-    cardData.tryzubtv_now || Lampa.Lang.translate('tryzubtv_now_empty');
-    var categorySlug = cardData.tryzubtv_category || '';
-    var categoryTitle = cardData.tryzubtv_category_title || cardData.tryzubtv_category || Lampa.Lang.translate('tryzubtv_title');
-    if (categorySlug) {
+    var categoryKey = cardData.tryzubtv_category_key || '';
+    var categoryTitle = cardData.tryzubtv_category_title || Lampa.Lang.translate('tryzubtv_title');
+    if (categoryKey) {
+      Lampa.Bell && Lampa.Bell.push({
+        text: Lampa.Lang.translate('tryzubtv_stream_loading'),
+        time: 1500
+      });
       Lampa.Loading.start();
-      fetchCategoryChannels(categorySlug).then(function (channels) {
-        Lampa.Loading.stop();
-        if (!channels.length) {
-          playIptvList([{
-            name: title,
-            slug: cardData.tryzubtv_slug || '',
-            url: cardData.tryzubtv_link,
-            logo: logo,
-            epg_current: cardData.tryzubtv_epg || null
-          }], 0, categoryTitle);
-          return;
-        }
-        var startIndex = Math.max(0, channels.findIndex(function (channel) {
-          return channel.slug === cardData.tryzubtv_slug;
+      fetchCategoryChannels(categoryKey).then(/*#__PURE__*/function () {
+        var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(payload) {
+          var channels, groupTitle, startIndex, startChannel, url;
+          return _regenerator().w(function (_context) {
+            while (1) switch (_context.n) {
+              case 0:
+                Lampa.Loading.stop();
+                channels = payload.items || [];
+                groupTitle = payload.title || categoryTitle;
+                if (channels.length) {
+                  _context.n = 1;
+                  break;
+                }
+                playIptvList([{
+                  provider: provider,
+                  id: channelId,
+                  name: title,
+                  slug: cardData.tryzubtv_slug || '',
+                  url: cardData.tryzubtv_link,
+                  logo: logo,
+                  epg_current: cardData.tryzubtv_epg || null
+                }], 0, groupTitle);
+                return _context.a(2);
+              case 1:
+                _context.n = 2;
+                return prefetchStreams(channels, 6);
+              case 2:
+                startIndex = channels.findIndex(function (channel) {
+                  return String(channel.id) === String(channelId);
+                });
+                if (startIndex < 0) startIndex = 0;
+                startChannel = channels[startIndex];
+                if (!(startChannel && !startChannel.url && startChannel.id)) {
+                  _context.n = 4;
+                  break;
+                }
+                _context.n = 3;
+                return resolveStream(startChannel.provider, startChannel.id);
+              case 3:
+                url = _context.v;
+                if (url) startChannel.url = url;
+              case 4:
+                if (!(!startChannel || !startChannel.url)) {
+                  _context.n = 5;
+                  break;
+                }
+                Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
+                return _context.a(2);
+              case 5:
+                playIptvList(channels, startIndex, groupTitle);
+              case 6:
+                return _context.a(2);
+            }
+          }, _callee);
         }));
-        playIptvList(channels, startIndex, categoryTitle);
-      })["catch"](function (error) {
+        return function (_x8) {
+          return _ref.apply(this, arguments);
+        };
+      }())["catch"](function (error) {
         Lampa.Loading.stop();
         console.error('TryzubTV: category channels load failed', error);
         playIptvList([{
+          provider: provider,
+          id: channelId,
           name: title,
           slug: cardData.tryzubtv_slug || '',
           url: cardData.tryzubtv_link,
@@ -971,24 +1335,45 @@
           epg_current: cardData.tryzubtv_epg || null
         }], 0, categoryTitle);
       });
-    } else {
-      playIptvList([{
-        name: title,
-        slug: cardData.tryzubtv_slug || '',
-        url: cardData.tryzubtv_link,
-        logo: logo,
-        epg_current: cardData.tryzubtv_epg || null
-      }], 0, categoryTitle);
+      return;
     }
-    if (!cardData.tryzubtv_slug) return;
-    fetchChannelEpg(cardData.tryzubtv_slug).then(function (data) {
-      var items = data && data.epg_items ? data.epg_items : [];
-      var playlist = toPlaylistItems(items, title);
-      if (playlist.length) Lampa.Player.playlist(playlist);
-    })["catch"](function (error) {
-      console.error('TryzubTV: epg list load failed', error);
-      Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_epg_failed'));
-    });
+    if (!cardData.tryzubtv_link && channelId) {
+      Lampa.Loading.start();
+      Lampa.Bell && Lampa.Bell.push({
+        text: Lampa.Lang.translate('tryzubtv_stream_loading'),
+        time: 1500
+      });
+      resolveStream(provider, channelId).then(function (url) {
+        Lampa.Loading.stop();
+        if (!url) {
+          Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
+          return;
+        }
+        playIptvList([{
+          provider: provider,
+          id: channelId,
+          name: title,
+          slug: cardData.tryzubtv_slug || '',
+          url: url,
+          logo: logo,
+          epg_current: cardData.tryzubtv_epg || null
+        }], 0, categoryTitle);
+      })["catch"](function (error) {
+        Lampa.Loading.stop();
+        console.error('TryzubTV: stream resolve failed', error);
+        Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
+      });
+      return;
+    }
+    playIptvList([{
+      provider: provider,
+      id: channelId,
+      name: title,
+      slug: cardData.tryzubtv_slug || '',
+      url: cardData.tryzubtv_link,
+      logo: logo,
+      epg_current: cardData.tryzubtv_epg || null
+    }], 0, categoryTitle);
   }
   var Player = {
     playChannel: playChannel
@@ -1167,9 +1552,19 @@
     Api$1.loadLineItems(lineData).then(function (payload) {
       var items = payload.items || [];
       var total = payload.total;
-      var totalPages = payload.total_pages || (items.length ? 2 : 1);
-      lineData.results = items;
+      var view = 6;
+      var totalCount = typeof total === 'number' ? total : items.length;
+      var hasMore = totalCount > view;
+      var totalPages = hasMore ? 2 : 1;
+      if (!items.length) {
+        lineItem.destroy();
+        return;
+      }
+      lineData.results = items.slice(0, view);
       lineData.total_pages = totalPages;
+      if (payload.title && lineData.params && lineData.params.tryzubtv_source === Api$1.SOURCE_TV) {
+        lineData.params.tryzubtv_category_title = payload.title;
+      }
       if (typeof total === 'number' && total > 0 && lineData.params && lineData.params.tryzubtv_source === Api$1.SOURCE_TV) {
         var title = lineData.params.tryzubtv_category_title || lineData.title;
         var newTitle = "".concat(title, " \xB7 ").concat(total);
@@ -1181,14 +1576,17 @@
         var donateEnabled = Lampa.Storage.get('tryzubtv_donate_card', true);
         if (donateEnabled) {
           lineData.results.unshift(Api$1.buildQrCard());
+          lineData.results = lineData.results.slice(0, view);
         }
         lineData.tryzubtv_qr_added = true;
       }
-      var view = lineItem.params && lineItem.params.items ? lineItem.params.items.view : 7;
       var initial = lineData.results.slice(0, view);
       initial.forEach(function (element) {
         lineItem.emit('createAndAppend', element);
       });
+      if (totalPages > 1) {
+        lineItem.emit('scroll');
+      }
     })["catch"](function (error) {
       console.error('TryzubTV: line load failed', error);
       lineData.tryzubtv_loaded = false;
@@ -1200,6 +1598,7 @@
       onCreate: function onCreate() {
         var _this = this;
         this.activity.render().addClass('tryzubtv-activity');
+        this.activity.render().addClass('tryzubtv-main');
         this.activity.loader(true);
         Api$1.loadMain(function (lines) {
           if (lines && lines.length) _this.build(lines);else _this.empty();
@@ -1237,12 +1636,12 @@
               });
               return;
             }
-            if (!more.category_slug) return;
+            if (!more.category_key) return;
             Lampa.Activity.push({
               url: '',
               title: more.title || lineData.title || Lampa.Lang.translate('tryzubtv_title'),
               component: 'tryzubtv_category',
-              category_slug: more.category_slug,
+              category_key: more.category_key,
               category_title: more.title || lineData.title || '',
               params: {
                 empty: {
@@ -1295,14 +1694,16 @@
       onCreate: function onCreate() {
         var _this = this;
         this.activity.render().addClass('tryzubtv-activity');
+        this.activity.render().addClass('tryzubtv-category');
+        this.activity.render().addClass('tryzubtv-category-tv');
         this.activity.loader(true);
-        if (!object.category_slug) {
+        if (!object.category_key) {
           this.activity.loader(false);
           this.empty();
           return;
         }
-        Api$1.loadCategory(object.category_slug, object.category_title, function (lines) {
-          if (lines && lines[0] && lines[0].results && lines[0].results.length) _this.build(lines);else _this.empty();
+        Api$1.loadCategory(object.category_key, object.category_title, function (line) {
+          if (line && line.results && line.results.length) _this.build(line);else _this.empty();
           _this.activity.loader(false);
         }, function () {
           _this.activity.loader(false);
@@ -1312,22 +1713,18 @@
       onBack: function onBack() {
         Lampa.Activity.backward();
       },
-      onInstance: function onInstance(lineItem, lineData) {
-        lineItem.use({
-          onInstance: function onInstance(cardItem, cardData) {
-            cardItem.use({
-              onCreate: function onCreate() {
-                if (this.html && this.html.classList) {
-                  this.html.classList.add('card--tryzubtv');
-                }
-              },
-              onEnter: function onEnter() {
-                Player.playChannel(cardData);
-              },
-              onMenu: function onMenu() {
-                return false;
-              }
-            });
+      onInstance: function onInstance(cardItem, cardData) {
+        cardItem.use({
+          onCreate: function onCreate() {
+            if (this.html && this.html.classList) {
+              this.html.classList.add('card--tryzubtv');
+            }
+          },
+          onEnter: function onEnter() {
+            Player.playChannel(cardData);
+          },
+          onMenu: function onMenu() {
+            return false;
           }
         });
       }
@@ -1360,6 +1757,10 @@
       tryzubtv_empty: {
         en: 'No channels available',
         uk: 'Немає доступних каналів'
+      },
+      tryzubtv_stream_loading: {
+        en: 'Loading channel...',
+        uk: 'Завантаження каналу...'
       },
       tryzubtv_settings_donate: {
         en: 'Donate',
@@ -1623,7 +2024,7 @@
         salo_vod_id: v,
         params: {
           style: {
-            name: 'wide'
+            name: 'default'
           }
         }
       };
@@ -1650,7 +2051,7 @@
               return vod && vod.link && !vod.link.includes('youtube');
             });
             items = vods.map(mapVodToCard).filter(Boolean);
-            oncomplete([{
+            oncomplete({
               title: '',
               results: items,
               total_pages: 1,
@@ -1658,7 +2059,7 @@
                 salopower: true,
                 disciplineId: disciplineId
               }
-            }]);
+            });
             _context.n = 3;
             break;
           case 2:
@@ -1682,85 +2083,89 @@
     comp.use({
       onCreate: function onCreate() {
         var _this = this;
+        if (this.activity && this.activity.render) {
+          this.activity.render().addClass('tryzubtv-activity');
+          this.activity.render().addClass('tryzubtv-category');
+          this.activity.render().addClass('tryzubtv-category-replay');
+        }
         this.activity.loader(true);
-        Api.loadCategory(object.disciplineId, function (lines) {
-          _this.build(lines);
+        Api.loadCategory(object.disciplineId, function (line) {
+          if (line && line.results && line.results.length) _this.build(line);else _this.empty();
           _this.activity.loader(false);
-        }, this.empty.bind(this));
+        }, function () {
+          _this.activity.loader(false);
+          _this.empty();
+        });
       },
-      onInstance: function onInstance(line_item, line_data) {
-        line_item.use({
-          onInstance: function onInstance(card_item, card_data) {
-            card_item.use({
-              onCreate: function onCreate() {
-                try {
-                  var cardElement = this.render ? this.render(true) : card_item.render ? card_item.render(true) : null;
-                  if (!cardElement) return;
-                  var $card = $(cardElement);
-                  var card_view = $card.find('.card__view');
-                  if (!card_view.length || !card_data) return;
-                  var title = card_data.title || '';
-                  var desc = card_data.salo_description || card_data.description || '';
-                  var date = card_data.salo_release_date || card_data.release_date || '';
-                  if (!title && !desc && !date) return;
-                  $card.addClass('card--salopower');
-                  var tpl = Lampa.Template.get('salopower_episode_card_data', {
-                    title: title,
-                    salo_description: desc,
-                    salo_release_date: date
-                  });
-                  card_view.append(tpl);
-                } catch (e) {
-                  console.error('TryzubTV: replay card overlay create error', e);
-                }
-              },
-              onEnter: function () {
-                var _onEnter = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-                  var socket, key, newLink, _t;
-                  return _regenerator().w(function (_context) {
-                    while (1) switch (_context.n) {
-                      case 0:
-                        if (!(!card_data || !card_data.salo_vod_id)) {
-                          _context.n = 1;
-                          break;
-                        }
-                        return _context.a(2);
-                      case 1:
-                        Lampa.Loading.start();
-                        _context.p = 2;
-                        socket = SocketManager.getInstance();
-                        _context.n = 3;
-                        return socket.connect();
-                      case 3:
-                        key = _context.v;
-                        newLink = "https://vod-maincast.cosmonova-broadcast.tv/".concat(card_data.salo_vod_id, "/master.m3u8?key=").concat(key);
-                        Lampa.Player.play({
-                          title: card_data.title,
-                          url: newLink
-                        });
-                        _context.n = 5;
-                        break;
-                      case 4:
-                        _context.p = 4;
-                        _t = _context.v;
-                        console.error('TryzubTV: Failed to start replay playback', _t);
-                        Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
-                      case 5:
-                        _context.p = 5;
-                        Lampa.Loading.stop();
-                        return _context.f(5);
-                      case 6:
-                        return _context.a(2);
+      onInstance: function onInstance(card_item, card_data) {
+        card_item.use({
+          onCreate: function onCreate() {
+            try {
+              var cardElement = this.render ? this.render(true) : card_item.render ? card_item.render(true) : null;
+              if (!cardElement) return;
+              var $card = $(cardElement);
+              var card_view = $card.find('.card__view');
+              if (!card_view.length || !card_data) return;
+              var title = card_data.title || '';
+              var desc = card_data.salo_description || card_data.description || '';
+              var date = card_data.salo_release_date || card_data.release_date || '';
+              if (!title && !desc && !date) return;
+              $card.addClass('card--salopower');
+              var tpl = Lampa.Template.get('salopower_episode_card_data', {
+                title: title,
+                salo_description: desc,
+                salo_release_date: date
+              });
+              card_view.append(tpl);
+            } catch (e) {
+              console.error('TryzubTV: replay card overlay create error', e);
+            }
+          },
+          onEnter: function () {
+            var _onEnter = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+              var socket, key, newLink, _t;
+              return _regenerator().w(function (_context) {
+                while (1) switch (_context.n) {
+                  case 0:
+                    if (!(!card_data || !card_data.salo_vod_id)) {
+                      _context.n = 1;
+                      break;
                     }
-                  }, _callee, null, [[2, 4, 5, 6]]);
-                }));
-                function onEnter() {
-                  return _onEnter.apply(this, arguments);
+                    return _context.a(2);
+                  case 1:
+                    Lampa.Loading.start();
+                    _context.p = 2;
+                    socket = SocketManager.getInstance();
+                    _context.n = 3;
+                    return socket.connect();
+                  case 3:
+                    key = _context.v;
+                    newLink = "https://vod-maincast.cosmonova-broadcast.tv/".concat(card_data.salo_vod_id, "/master.m3u8?key=").concat(key);
+                    Lampa.Player.play({
+                      title: card_data.title,
+                      url: newLink
+                    });
+                    _context.n = 5;
+                    break;
+                  case 4:
+                    _context.p = 4;
+                    _t = _context.v;
+                    console.error('TryzubTV: Failed to start replay playback', _t);
+                    Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
+                  case 5:
+                    _context.p = 5;
+                    Lampa.Loading.stop();
+                    return _context.f(5);
+                  case 6:
+                    return _context.a(2);
                 }
-                return onEnter;
-              }()
-            });
-          }
+              }, _callee, null, [[2, 4, 5, 6]]);
+            }));
+            function onEnter() {
+              return _onEnter.apply(this, arguments);
+            }
+            return onEnter;
+          }()
         });
       }
     });
@@ -1772,7 +2177,7 @@
     if (Lampa.Storage) Lampa.Storage.set('tryzubtv_merged', true);
     var manifest = {
       type: 'iptv',
-      version: '1.5.0',
+      version: '2.0.0',
       name: 'TryzubTV',
       description: 'Ukrainian TV channels',
       component: 'tryzubtv_main'
@@ -1784,7 +2189,7 @@
     lang();
     initSettings();
     var style = document.createElement('style');
-    style.textContent = "\n        .card--tryzubtv .card__img {\n            object-fit: contain;\n            object-position: center;\n            background: transparent;\n        }\n\n        .card--tryzubtv.card--wide {\n            width: 15em;\n        }\n\n        .card--tryzubtv .card__promo-title {\n            font-size: 1em;\n            line-height: 1.2;\n            max-height: 2.4em;\n            overflow: hidden;\n            display: -webkit-box;\n            -webkit-line-clamp: 2;\n            line-clamp: 2;\n            -webkit-box-orient: vertical;\n            text-overflow: ellipsis;\n        }\n\n        .card--tryzubtv .card__promo-text {\n            display: none;\n        }\n\n        .card--tryzubtv.card--wide .card__title {\n            display: none;\n        }\n\n        .card--tryzubtv .card__promo {\n            overflow: hidden;\n            padding: 2em 1em 1em 1em;\n        }\n\n        .tryzubtv-activity .items-line {\n            padding-bottom: 1em;\n        }\n\n        .card--wide.card--salopower .card__view {\n            position: relative;\n        }\n\n        .card--wide.card--salopower .card__body--salopower {\n            position: absolute;\n            left: 0;\n            top: 0;\n            width: 100%;\n            height: 100%;\n            display: flex;\n            flex-direction: column;\n            padding: 1.2em 1.5em;\n            background-image: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%);\n            pointer-events: none;\n        }\n\n        .card--wide.card--salopower .card__promo {\n            display: none;\n        }\n\n        .card--wide.card--salopower .card__body--salopower .card__title {\n            font-size: 1.6em;\n            font-weight: 700;\n        }\n\n        .card--wide.card--salopower .card__salopower-data {\n            margin-top: auto;\n            padding-top: 1em;\n        }\n\n        .card--salopower .card__description {\n            font-size: 1.3em;\n            color: rgba(255, 255, 255, 0.7);\n            -webkit-line-clamp: 2;\n            -webkit-box-orient: vertical;\n            display: -webkit-box;\n            overflow: hidden;\n            text-overflow: ellipsis;\n        }\n        .card--salopower .card__release-date {\n            font-size: 1.2em;\n            color: rgba(255, 255, 255, 0.5);\n            margin-top: 0.5em;\n        }\n        .account-modal-split__text {\n            margin-bottom: 0;\n        }\n        .account-modal-split__qr-text>a {\n            text-decoration: none;\n            color: #d8c39a;\n        }\n    ";
+    style.textContent = "\n        .card--tryzubtv .card__img {\n            object-fit: contain;\n            object-position: center;\n            background: transparent;\n        }\n\n        .tryzubtv-main .card--tryzubtv.card--wide {\n            width: 15em;\n        }\n\n        .tryzubtv-category .card--tryzubtv.card--wide {\n            width: auto;\n        }\n\n        .card--tryzubtv .card__promo-title {\n            font-size: 1em;\n            line-height: 1.2;\n            max-height: 2.4em;\n            overflow: hidden;\n            display: -webkit-box;\n            -webkit-line-clamp: 2;\n            line-clamp: 2;\n            -webkit-box-orient: vertical;\n            text-overflow: ellipsis;\n        }\n\n        .card--tryzubtv .card__promo-text {\n            display: none;\n        }\n\n        .card--tryzubtv.card--wide .card__title {\n            display: none;\n        }\n\n        .card--tryzubtv .card__promo {\n            overflow: hidden;\n            padding: 2em 1em 1em 1em;\n        }\n\n        .tryzubtv-category .card--tryzubtv .card__promo {\n            display: none;\n        }\n\n        .tryzubtv-category-tv .card--tryzubtv .card__view {\n            padding-bottom: 90%;\n            margin-bottom: 0.6em;\n        }\n\n        .tryzubtv-category-tv .card--tryzubtv .card__title {\n            font-size: 1.1em;\n            max-height: 2.4em;\n            -webkit-line-clamp: 2;\n            line-clamp: 2;\n        }\n\n        .tryzubtv-activity .items-line {\n            padding-bottom: 1em;\n        }\n\n        .card--wide.card--salopower .card__view {\n            position: relative;\n        }\n\n        .card--wide.card--salopower .card__body--salopower {\n            position: absolute;\n            left: 0;\n            top: 0;\n            width: 100%;\n            height: 100%;\n            display: flex;\n            flex-direction: column;\n            padding: 1.2em 1.5em;\n            background-image: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%);\n            pointer-events: none;\n        }\n\n        .card--wide.card--salopower .card__promo {\n            display: none;\n        }\n\n        .tryzubtv-category .card--salopower .card__body--salopower {\n            display: none;\n        }\n\n        .card--wide.card--salopower .card__body--salopower .card__title {\n            font-size: 1.6em;\n            font-weight: 700;\n        }\n\n        .card--wide.card--salopower .card__salopower-data {\n            margin-top: auto;\n            padding-top: 1em;\n        }\n\n        .card--salopower .card__description {\n            font-size: 1.3em;\n            color: rgba(255, 255, 255, 0.7);\n            -webkit-line-clamp: 2;\n            -webkit-box-orient: vertical;\n            display: -webkit-box;\n            overflow: hidden;\n            text-overflow: ellipsis;\n        }\n        .card--salopower .card__release-date {\n            font-size: 1.2em;\n            color: rgba(255, 255, 255, 0.5);\n            margin-top: 0.5em;\n        }\n        .account-modal-split__text {\n            margin-bottom: 0;\n        }\n        .account-modal-split__qr-text>a {\n            text-decoration: none;\n            color: #d8c39a;\n        }\n    ";
     document.head.appendChild(style);
     Lampa.Template.add('salopower_episode_card_data', "\n        <div class=\"card__body card__body--salopower\">\n            <div class=\"card__title\">{title}</div>\n            <div class=\"card__salopower-data\">\n                <div class=\"card__description\">{salo_description}</div>\n                <div class=\"card__release-date\">{salo_release_date}</div>\n            </div>\n        </div>\n    ");
     SocketManager.getInstance().listen();
