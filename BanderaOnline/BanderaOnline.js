@@ -1617,9 +1617,22 @@
     function openSourcesModal() {
       var wrapper = $('<div class="bandera-online-sources"></div>');
       var list = null;
+      var footer = null;
+      function buildFooter() {
+        var container = $('<div class="modal__footer"></div>');
+        var syncButton = $('<div class="modal__button selector"></div>');
+        var saveButton = $('<div class="modal__button selector"></div>');
+        syncButton.text(Lampa.Lang.translate('bandera_online_sources_sync'));
+        saveButton.text(Lampa.Lang.translate('bandera_online_sources_save'));
+        syncButton.on('hover:enter', sync);
+        saveButton.on('hover:enter', saveAndClose);
+        container.append(syncButton, saveButton);
+        return container;
+      }
       function render() {
         list = buildSourcesList();
-        wrapper.empty().append(list);
+        if (!footer) footer = buildFooter();
+        wrapper.empty().append(list).append(footer);
       }
       function sync() {
         var network = new Lampa.Reguest();
@@ -1646,14 +1659,6 @@
         html: wrapper,
         size: 'medium',
         scroll_to_center: true,
-        buttons_position: 'outside',
-        buttons: [{
-          name: Lampa.Lang.translate('bandera_online_sources_sync'),
-          onSelect: sync
-        }, {
-          name: Lampa.Lang.translate('bandera_online_sources_save'),
-          onSelect: saveAndClose
-        }],
         onBack: function onBack() {
           Lampa.Modal.close();
           Lampa.Controller.toggle('settings_component');
