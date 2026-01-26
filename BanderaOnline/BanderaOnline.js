@@ -1646,6 +1646,7 @@
         html: wrapper,
         size: 'medium',
         scroll_to_center: true,
+        buttons_position: 'outside',
         buttons: [{
           name: Lampa.Lang.translate('bandera_online_sources_sync'),
           onSelect: sync
