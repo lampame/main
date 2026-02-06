@@ -387,14 +387,35 @@
           if (Array.isArray(streams)) {
             streams.forEach(function (stream, index) {
               var label = stream.title || stream.quality || 'stream-' + (index + 1);
-              if (stream.url) qualitys[label] = stream.url;
-              if (!first && stream.url) first = stream;
+              var url = normalizeStreamUrl(stream && stream.url);
+              if (url) qualitys[label] = url;
+              if (!first && url) first = Object.assign({}, stream, {
+                url: url
+              });
             });
           }
           return {
             first: first,
             qualitys: qualitys
           };
+        }
+        function normalizeStreamUrl(url) {
+          if (!url) return url;
+          if (!shouldUseAshdiProxy(url)) return url;
+          return wrapAshdiProxy(url);
+        }
+        function shouldUseAshdiProxy(url) {
+          if (Lampa.Storage.get('player') !== 'inner') return false;
+          if (!Lampa.Storage.get('bandera_online_proxy_ashdi')) return false;
+          return isAshdiUrl(url);
+        }
+        function isAshdiUrl(url) {
+          return /(^|\/\/)([^\/]*\.)?ashdi\.vip(\/|$)/i.test(url || '');
+        }
+        function wrapAshdiProxy(url) {
+          var base = 'https://tut.im/proxy.php?url=';
+          if (url.indexOf(base) === 0) return url;
+          return base + encodeURIComponent(url);
         }
         function getStream(ref, success, fail) {
           var url = apiBase() + '/stream';
@@ -1699,6 +1720,18 @@
           openSourcesModal();
         }
       });
+      SettingsApi.addParam({
+        component: 'bandera_online',
+        param: {
+          name: 'bandera_online_proxy_ashdi',
+          type: 'trigger',
+          "default": false
+        },
+        field: {
+          name: Lampa.Lang.translate('bandera_online_proxy_ashdi'),
+          description: Lampa.Lang.translate('bandera_online_proxy_ashdi_descr')
+        }
+      });
     }
 
     function startPlugin() {
@@ -1924,6 +1957,18 @@
           uk: 'Не вдалося синхронізувати джерела',
           ua: 'Не вдалося синхронізувати джерела',
           en: 'Failed to sync sources'
+        },
+        bandera_online_proxy_ashdi: {
+          ru: 'Включить прокси Ashdi',
+          uk: 'Увімкнути проксі Ashdi',
+          ua: 'Увімкнути проксі Ashdi',
+          en: 'Enable Ashdi proxy'
+        },
+        bandera_online_proxy_ashdi_descr: {
+          ru: 'Только для источника AshdiBase и плеера "inner"',
+          uk: 'Тільки для джерела AshdiBase та плеєра "inner"',
+          ua: 'Тільки для джерела AshdiBase та плеєра "inner"',
+          en: 'Only for AshdiBase source and "inner" player'
         }
       });
       initSettings();
