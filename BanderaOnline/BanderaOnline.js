@@ -405,8 +405,9 @@
           return wrapAshdiProxy(url);
         }
         function shouldUseAshdiProxy(url) {
-          if (Lampa.Storage.get('player') !== 'inner') return false;
           if (!Lampa.Storage.get('bandera_online_proxy_ashdi')) return false;
+          var player = Lampa.Storage.get('player');
+          if (player && player !== 'inner') return false;
           return isAshdiUrl(url);
         }
         function isAshdiUrl(url) {
@@ -1965,9 +1966,9 @@
           en: 'Enable Ashdi proxy'
         },
         bandera_online_proxy_ashdi_descr: {
-          ru: 'Только для источника AshdiBase и плеера "inner"',
-          uk: 'Тільки для джерела AshdiBase та плеєра "inner"',
-          ua: 'Тільки для джерела AshdiBase та плеєра "inner"',
+          ru: 'Только для источника AshdiBase и плеера "внутренний"',
+          uk: 'Тільки для джерела AshdiBase та плеєра "внутрішній"',
+          ua: 'Тільки для джерела AshdiBase та плеєра "внутрішній"',
           en: 'Only for AshdiBase source and "inner" player'
         }
       });
