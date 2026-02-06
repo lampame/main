@@ -307,14 +307,16 @@
               getStream(item.ref, function (streams) {
                 var prepared = prepareStreams(streams);
                 var first = prepared.first;
-                if (!first) {
+                var qualitys = applyProxyToQualitys(prepared.qualitys);
+                var play_url = first ? normalizeStreamUrl(first.url) : '';
+                if (!first || !play_url) {
                   component.pushError(Lampa.Lang.translate('online_nolink'));
                   return;
                 }
                 Lampa.Player.play({
-                  url: first.url,
+                  url: play_url,
                   timeline: item.timeline,
-                  quality: prepared.qualitys,
+                  quality: qualitys,
                   title: item.title,
                   subtitles: first.subtitles
                 });
@@ -325,8 +327,8 @@
                       getStream(elem.ref, function (next_streams) {
                         var prepared_next = prepareStreams(next_streams);
                         var next_first = prepared_next.first;
-                        cell.url = next_first ? next_first.url : '';
-                        cell.quality = prepared_next.qualitys;
+                        cell.url = next_first ? normalizeStreamUrl(next_first.url) : '';
+                        cell.quality = applyProxyToQualitys(prepared_next.qualitys);
                         elem.mark();
                         call();
                       }, function () {
@@ -363,14 +365,16 @@
             onEnter: function onEnter(movie) {
               getMovieStream(movie, function (prepared) {
                 var first = prepared.first;
-                if (!first) {
+                var qualitys = applyProxyToQualitys(prepared.qualitys);
+                var play_url = first ? normalizeStreamUrl(first.url) : '';
+                if (!first || !play_url) {
                   component.pushError(Lampa.Lang.translate('online_nolink'));
                   return;
                 }
                 Lampa.Player.play({
-                  url: first.url,
+                  url: play_url,
                   timeline: movie.timeline,
-                  quality: prepared.qualitys,
+                  quality: qualitys,
                   title: movie.title,
                   subtitles: first.subtitles
                 });
@@ -403,6 +407,13 @@
           if (!url) return url;
           if (!shouldUseAshdiProxy(url)) return url;
           return wrapAshdiProxy(url);
+        }
+        function applyProxyToQualitys(qualitys) {
+          var result = {};
+          Object.keys(qualitys || {}).forEach(function (key) {
+            result[key] = normalizeStreamUrl(qualitys[key]);
+          });
+          return result;
         }
         function shouldUseAshdiProxy(url) {
           if (!Lampa.Storage.get('bandera_online_proxy_ashdi')) return false;
