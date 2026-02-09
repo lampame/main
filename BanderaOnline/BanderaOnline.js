@@ -680,7 +680,6 @@
       }
       function mapSourceName(name) {
         var key = normalizeSourceName(name);
-        if (key == 'midnight') return 'starlight';
         return key;
       }
       function getEnabledSources() {
@@ -1555,7 +1554,6 @@
     }
     function mapSourceName(name) {
       var key = normalizeSourceName(name);
-      if (key === 'midnight') return 'starlight';
       return key;
     }
     function extractSourceTitle(item) {
@@ -1997,7 +1995,7 @@
             Lampa.Component.add('bandera_online', component);
             Lampa.Activity.push({
               url: '',
-              title: "Спільнота t.me/mmssixxx",
+              title: "Спільнота - t.me/mmssixxx",
               component: 'bandera_online',
               search: e.data.movie.title,
               search_one: e.data.movie.title,
