@@ -1977,10 +1977,10 @@
           en: 'Enable Ashdi proxy'
         },
         bandera_online_proxy_ashdi_descr: {
-          ru: 'Только для источника AshdiBase и плеера "внутренний"',
-          uk: 'Тільки для джерела AshdiBase та плеєра "внутрішній"',
-          ua: 'Тільки для джерела AshdiBase та плеєра "внутрішній"',
-          en: 'Only for AshdiBase source and "inner" player'
+          ru: 'Только для источника Ashdi и плеера "внутренний"',
+          uk: 'Тільки для джерела Ashdi та плеєра "внутрішній"',
+          ua: 'Тільки для джерела Ashdi та плеєра "внутрішній"',
+          en: 'Only for Ashdi source and "inner" player'
         }
       });
       initSettings();
