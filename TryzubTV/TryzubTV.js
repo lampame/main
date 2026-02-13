@@ -237,8 +237,12 @@
     }
   }
 
-  var API_BASE = 'https://tzbe.lampame.v6.rocks/v1';
-  function parseResponse(payload) {
+  var API_BASE$1 = 'https://tzbe.lme.isroot.in/v1';
+  var CACHE_KEY = 'tryzubtv_tv_cache_v1';
+  var CACHE_TTL = 15 * 60 * 1000;
+  var CATALOG_CACHE_KEY = 'tryzubtv_catalog_cache_v1';
+  var CATALOG_TTL = 24 * 60 * 60 * 1000;
+  function parseResponse$1(payload) {
     if (!payload) return {};
     if (typeof payload === 'string') {
       try {
@@ -249,13 +253,206 @@
     }
     return payload;
   }
-  function request$2(url) {
-    return new Promise(function (resolve, reject) {
-      Lampa.Network.silent(url, function (data) {
-        return resolve(parseResponse(data));
-      }, reject, false, {
-        dataType: 'text'
+  function request$3(url) {
+    var run = function run(params) {
+      return new Promise(function (resolve, reject) {
+        Lampa.Network.silent(url, function (data) {
+          return resolve(parseResponse$1(data));
+        }, reject, false, params);
       });
+    };
+
+    // Some TV environments fail with forced text mode.
+    return run({
+      dataType: 'text'
+    })["catch"](function () {
+      return run();
+    });
+  }
+  function readCache(forceStale) {
+    if (!Lampa.Storage) return null;
+    var cached = Lampa.Storage.get(CACHE_KEY, null);
+    if (!cached || _typeof(cached) !== 'object') return null;
+    var time = typeof cached.time === 'number' ? cached.time : 0;
+    var items = Array.isArray(cached.items) ? cached.items : null;
+    if (!time || !items) return null;
+    if (!forceStale && Date.now() - time > CACHE_TTL) return null;
+    return items;
+  }
+  function writeCache(items) {
+    if (!Lampa.Storage) return;
+    Lampa.Storage.set(CACHE_KEY, {
+      time: Date.now(),
+      items: items
+    });
+  }
+  function fetchAllChannels(_x) {
+    return _fetchAllChannels.apply(this, arguments);
+  }
+  function _fetchAllChannels() {
+    _fetchAllChannels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(force) {
+      var cached, response, items, stale, _t;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            cached = !force ? readCache(false) : null;
+            if (!cached) {
+              _context.n = 1;
+              break;
+            }
+            return _context.a(2, cached);
+          case 1:
+            _context.p = 1;
+            _context.n = 2;
+            return request$3("".concat(API_BASE$1, "/channels"));
+          case 2:
+            response = _context.v;
+            items = response && Array.isArray(response.items) ? response.items : [];
+            writeCache(items);
+            return _context.a(2, items);
+          case 3:
+            _context.p = 3;
+            _t = _context.v;
+            stale = readCache(true);
+            if (!stale) {
+              _context.n = 4;
+              break;
+            }
+            return _context.a(2, stale);
+          case 4:
+            throw _t;
+          case 5:
+            return _context.a(2);
+        }
+      }, _callee, null, [[1, 3]]);
+    }));
+    return _fetchAllChannels.apply(this, arguments);
+  }
+  function fetchChannelsByCategory(_x2) {
+    return _fetchChannelsByCategory.apply(this, arguments);
+  }
+  function _fetchChannelsByCategory() {
+    _fetchChannelsByCategory = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(categoryKey) {
+      var url, response;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.n) {
+          case 0:
+            if (categoryKey) {
+              _context2.n = 1;
+              break;
+            }
+            return _context2.a(2, fetchAllChannels(false));
+          case 1:
+            url = "".concat(API_BASE$1, "/channels?category_key=").concat(encodeURIComponent(categoryKey));
+            _context2.n = 2;
+            return request$3(url);
+          case 2:
+            response = _context2.v;
+            return _context2.a(2, response && Array.isArray(response.items) ? response.items : []);
+        }
+      }, _callee2);
+    }));
+    return _fetchChannelsByCategory.apply(this, arguments);
+  }
+  function readCatalogCache(forceStale) {
+    if (!Lampa.Storage) return null;
+    var cached = Lampa.Storage.get(CATALOG_CACHE_KEY, null);
+    if (!cached || _typeof(cached) !== 'object') return null;
+    var time = typeof cached.time === 'number' ? cached.time : 0;
+    var lines = Array.isArray(cached.lines) ? cached.lines : null;
+    if (!time || !lines) return null;
+    if (!forceStale && Date.now() - time > CATALOG_TTL) return null;
+    return lines;
+  }
+  function writeCatalogCache(lines) {
+    if (!Lampa.Storage) return;
+    Lampa.Storage.set(CATALOG_CACHE_KEY, {
+      time: Date.now(),
+      lines: lines
+    });
+  }
+  function fetchCatalogLines$1(_x3) {
+    return _fetchCatalogLines$1.apply(this, arguments);
+  }
+  function _fetchCatalogLines$1() {
+    _fetchCatalogLines$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(force) {
+      var cached, response, lines, stale, _t2;
+      return _regenerator().w(function (_context3) {
+        while (1) switch (_context3.n) {
+          case 0:
+            cached = !force ? readCatalogCache(false) : null;
+            if (!cached) {
+              _context3.n = 1;
+              break;
+            }
+            return _context3.a(2, cached);
+          case 1:
+            _context3.p = 1;
+            _context3.n = 2;
+            return request$3("".concat(API_BASE$1, "/catalog"));
+          case 2:
+            response = _context3.v;
+            lines = response && Array.isArray(response.lines) ? response.lines : [];
+            writeCatalogCache(lines);
+            return _context3.a(2, lines);
+          case 3:
+            _context3.p = 3;
+            _t2 = _context3.v;
+            stale = readCatalogCache(true);
+            if (!stale) {
+              _context3.n = 4;
+              break;
+            }
+            return _context3.a(2, stale);
+          case 4:
+            throw _t2;
+          case 5:
+            return _context3.a(2);
+        }
+      }, _callee3, null, [[1, 3]]);
+    }));
+    return _fetchCatalogLines$1.apply(this, arguments);
+  }
+  var TvApi = {
+    fetchAllChannels: fetchAllChannels,
+    fetchChannelsByCategory: fetchChannelsByCategory,
+    fetchCatalogLines: fetchCatalogLines$1
+  };
+
+  var API_BASE = 'https://tzbe.lme.isroot.in/v1';
+  function parseResponse(payload) {
+    if (!payload) return {};
+    if (typeof payload === 'string') {
+      var text = payload.trim();
+
+      // Some backends may return stream URL as plain text.
+      if (text.indexOf('http://') === 0 || text.indexOf('https://') === 0) {
+        return {
+          url: text
+        };
+      }
+      try {
+        return JSON.parse(text);
+      } catch (error) {
+        return {};
+      }
+    }
+    return payload;
+  }
+  function request$2(url) {
+    var run = function run(params) {
+      return new Promise(function (resolve, reject) {
+        Lampa.Network.silent(url, function (data) {
+          return resolve(parseResponse(data));
+        }, reject, false, params);
+      });
+    };
+
+    // TV clients may fail with forced text mode; retry with default transport.
+    return run({
+      dataType: 'text'
+    })["catch"](function () {
+      return run();
     });
   }
   function fetchCatalog() {
@@ -324,12 +521,31 @@
       return _regenerator().w(function (_context3) {
         while (1) switch (_context3.n) {
           case 0:
-            url = "".concat(API_BASE, "/stream/").concat(encodeURIComponent(provider), "/").concat(encodeURIComponent(channelId));
+            // Stream URLs are short-lived; bypass any intermediate cache.
+            url = "".concat(API_BASE, "/stream/").concat(encodeURIComponent(provider), "/").concat(encodeURIComponent(channelId), "?_=").concat(Date.now());
             _context3.n = 1;
             return request$2(url);
           case 1:
             response = _context3.v;
-            return _context3.a(2, response && response.url ? response.url : '');
+            if (!(response && response.url)) {
+              _context3.n = 2;
+              break;
+            }
+            return _context3.a(2, response.url);
+          case 2:
+            if (!(response && response.raw && response.raw.p)) {
+              _context3.n = 3;
+              break;
+            }
+            return _context3.a(2, response.raw.p);
+          case 3:
+            if (!(typeof response === 'string' && (response.indexOf('http://') === 0 || response.indexOf('https://') === 0))) {
+              _context3.n = 4;
+              break;
+            }
+            return _context3.a(2, response);
+          case 4:
+            return _context3.a(2, '');
         }
       }, _callee3);
     }));
@@ -340,7 +556,7 @@
   }
   function _fetchEpg() {
     _fetchEpg = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(provider, channelId) {
-      var url, response;
+      var url, response, payload;
       return _regenerator().w(function (_context4) {
         while (1) switch (_context4.n) {
           case 0:
@@ -349,9 +565,10 @@
             return request$2(url);
           case 1:
             response = _context4.v;
+            payload = response && response.data && _typeof(response.data) === 'object' ? response.data : response;
             return _context4.a(2, {
-              items: response && response.items ? response.items : [],
-              position: typeof response.position === 'number' ? response.position : 0
+              items: payload && payload.items ? payload.items : [],
+              position: typeof (payload && payload.position) === 'number' ? payload.position : 0
             });
         }
       }, _callee4);
@@ -968,117 +1185,188 @@
     return _resolveStream.apply(this, arguments);
   }
   function _resolveStream() {
-    _resolveStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(provider, channelId) {
+    _resolveStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(provider, channelId) {
       var cacheKey, cached, url;
-      return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+      return _regenerator().w(function (_context3) {
+        while (1) switch (_context3.n) {
           case 0:
             cacheKey = getStreamCacheKey(provider, channelId);
             cached = streamCache.get(cacheKey);
             if (!(cached && cached.url)) {
-              _context2.n = 1;
+              _context3.n = 1;
               break;
             }
-            return _context2.a(2, cached.url);
+            return _context3.a(2, cached.url);
           case 1:
-            _context2.n = 2;
+            _context3.n = 2;
             return Tzbe.fetchStream(provider, channelId);
           case 2:
-            url = _context2.v;
+            url = _context3.v;
             streamCache.set(cacheKey, {
               time: Date.now(),
               url: url
             });
-            return _context2.a(2, url);
+            return _context3.a(2, url);
         }
-      }, _callee2);
+      }, _callee3);
     }));
     return _resolveStream.apply(this, arguments);
   }
-  function prefetchStreams(_x3, _x4) {
+  function resolveStreamFresh(_x3, _x4) {
+    return _resolveStreamFresh.apply(this, arguments);
+  }
+  function _resolveStreamFresh() {
+    _resolveStreamFresh = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(provider, channelId) {
+      var url, cacheKey;
+      return _regenerator().w(function (_context4) {
+        while (1) switch (_context4.n) {
+          case 0:
+            _context4.n = 1;
+            return Tzbe.fetchStream(provider, channelId);
+          case 1:
+            url = _context4.v;
+            cacheKey = getStreamCacheKey(provider, channelId);
+            if (url) streamCache.set(cacheKey, {
+              time: Date.now(),
+              url: url
+            });
+            return _context4.a(2, url);
+        }
+      }, _callee4);
+    }));
+    return _resolveStreamFresh.apply(this, arguments);
+  }
+  function ensurePlayableUrl(_x5) {
+    return _ensurePlayableUrl.apply(this, arguments);
+  }
+  function _ensurePlayableUrl() {
+    _ensurePlayableUrl = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(channel) {
+      var fallback, fresh, _t;
+      return _regenerator().w(function (_context5) {
+        while (1) switch (_context5.n) {
+          case 0:
+            if (channel) {
+              _context5.n = 1;
+              break;
+            }
+            return _context5.a(2, '');
+          case 1:
+            fallback = channel.url || '';
+            if (channel.id) {
+              _context5.n = 2;
+              break;
+            }
+            return _context5.a(2, fallback);
+          case 2:
+            _context5.p = 2;
+            _context5.n = 3;
+            return resolveStreamFresh(channel.provider, channel.id);
+          case 3:
+            fresh = _context5.v;
+            if (!fresh) {
+              _context5.n = 4;
+              break;
+            }
+            channel.url = fresh;
+            return _context5.a(2, fresh);
+          case 4:
+            _context5.n = 6;
+            break;
+          case 5:
+            _context5.p = 5;
+            _t = _context5.v;
+            console.error('TryzubTV: fresh stream resolve failed', _t);
+          case 6:
+            return _context5.a(2, fallback);
+        }
+      }, _callee5, null, [[2, 5]]);
+    }));
+    return _ensurePlayableUrl.apply(this, arguments);
+  }
+  function prefetchStreams(_x6, _x7) {
     return _prefetchStreams.apply(this, arguments);
   }
   function _prefetchStreams() {
-    _prefetchStreams = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(channels, limit) {
+    _prefetchStreams = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(channels, limit) {
       var queue, concurrency, index, worker, workers, i;
-      return _regenerator().w(function (_context4) {
-        while (1) switch (_context4.n) {
+      return _regenerator().w(function (_context7) {
+        while (1) switch (_context7.n) {
           case 0:
             queue = (channels || []).filter(function (channel) {
               return channel && channel.id && !channel.url;
             });
             if (queue.length) {
-              _context4.n = 1;
+              _context7.n = 1;
               break;
             }
-            return _context4.a(2);
+            return _context7.a(2);
           case 1:
             concurrency = Math.max(1, limit || 4);
             index = 0;
             worker = /*#__PURE__*/function () {
-              var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-                var current, url, _t;
-                return _regenerator().w(function (_context3) {
-                  while (1) switch (_context3.n) {
+              var _ref3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
+                var current, url, _t2;
+                return _regenerator().w(function (_context6) {
+                  while (1) switch (_context6.n) {
                     case 0:
                       if (!(index < queue.length)) {
-                        _context3.n = 5;
+                        _context6.n = 5;
                         break;
                       }
                       current = queue[index];
                       index += 1;
-                      _context3.p = 1;
-                      _context3.n = 2;
+                      _context6.p = 1;
+                      _context6.n = 2;
                       return resolveStream(current.provider, current.id);
                     case 2:
-                      url = _context3.v;
+                      url = _context6.v;
                       if (url) current.url = url;
-                      _context3.n = 4;
+                      _context6.n = 4;
                       break;
                     case 3:
-                      _context3.p = 3;
-                      _t = _context3.v;
-                      console.error('TryzubTV: stream prefetch failed', _t);
+                      _context6.p = 3;
+                      _t2 = _context6.v;
+                      console.error('TryzubTV: stream prefetch failed', _t2);
                     case 4:
-                      _context3.n = 0;
+                      _context6.n = 0;
                       break;
                     case 5:
-                      return _context3.a(2);
+                      return _context6.a(2);
                   }
-                }, _callee3, null, [[1, 3]]);
+                }, _callee6, null, [[1, 3]]);
               }));
               return function worker() {
-                return _ref2.apply(this, arguments);
+                return _ref3.apply(this, arguments);
               };
             }();
             workers = [];
             for (i = 0; i < concurrency; i += 1) {
               workers.push(worker());
             }
-            _context4.n = 2;
+            _context7.n = 2;
             return Promise.all(workers);
           case 2:
-            return _context4.a(2);
+            return _context7.a(2);
         }
-      }, _callee4);
+      }, _callee7);
     }));
     return _prefetchStreams.apply(this, arguments);
   }
-  function fetchCategoryChannels(_x5) {
+  function fetchCategoryChannels(_x8) {
     return _fetchCategoryChannels.apply(this, arguments);
   }
   function _fetchCategoryChannels() {
-    _fetchCategoryChannels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(categoryKey) {
+    _fetchCategoryChannels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8(categoryKey) {
       var response, items;
-      return _regenerator().w(function (_context5) {
-        while (1) switch (_context5.n) {
+      return _regenerator().w(function (_context8) {
+        while (1) switch (_context8.n) {
           case 0:
-            _context5.n = 1;
+            _context8.n = 1;
             return Tzbe.fetchChannels(categoryKey);
           case 1:
-            response = _context5.v;
+            response = _context8.v;
             items = response.items || [];
-            return _context5.a(2, {
+            return _context8.a(2, {
               title: response.categoryTitle || '',
               items: items.map(function (channel) {
                 var id = channel.id || channel.slug || '';
@@ -1094,33 +1382,193 @@
               })
             });
         }
-      }, _callee5);
+      }, _callee8);
     }));
     return _fetchCategoryChannels.apply(this, arguments);
   }
-  function fetchChannelEpg(_x6, _x7) {
+  function fetchChannelEpg(_x9, _x0) {
     return _fetchChannelEpg.apply(this, arguments);
   }
   function _fetchChannelEpg() {
-    _fetchChannelEpg = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(provider, channelId) {
+    _fetchChannelEpg = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9(provider, channelId) {
       var response, items, position;
-      return _regenerator().w(function (_context6) {
-        while (1) switch (_context6.n) {
+      return _regenerator().w(function (_context9) {
+        while (1) switch (_context9.n) {
           case 0:
-            _context6.n = 1;
+            _context9.n = 1;
             return Tzbe.fetchEpg(provider, channelId);
           case 1:
-            response = _context6.v;
+            response = _context9.v;
             items = response.items || [];
             position = typeof response.position === 'number' ? response.position : getCurrentProgramIndex(items, null);
-            return _context6.a(2, {
+            return _context9.a(2, {
               items: items,
               position: position
             });
         }
-      }, _callee6);
+      }, _callee9);
     }));
     return _fetchChannelEpg.apply(this, arguments);
+  }
+  function buildSingleChannel(cardData, provider, channelId, title, logo) {
+    return {
+      provider: provider,
+      id: channelId,
+      name: title,
+      slug: cardData.tryzubtv_slug || channelId || '',
+      url: cardData.tryzubtv_link || '',
+      logo: logo,
+      epg_current: cardData.tryzubtv_epg || null
+    };
+  }
+  function normalizeIndex(value, total) {
+    var index = typeof value === 'number' ? value : 0;
+    if (index < 0) index = 0;
+    if (index >= total) index = 0;
+    return index;
+  }
+  function resolveStartIndex(list, startIndex, startRef) {
+    var start = normalizeIndex(startIndex, list.length);
+    if (!startRef || !list.length) return start;
+    var targetId = startRef.id || startRef.slug || startRef.channelId || '';
+    if (!targetId) return start;
+    var targetProvider = startRef.provider || '';
+    var matched = list.findIndex(function (channel) {
+      if (String(channel.id || '') !== String(targetId)) return false;
+      if (targetProvider && String(channel.provider || '') !== String(targetProvider)) return false;
+      return true;
+    });
+    return matched >= 0 ? matched : start;
+  }
+  function ensureChannelUrl(_x1) {
+    return _ensureChannelUrl.apply(this, arguments);
+  }
+  function _ensureChannelUrl() {
+    _ensureChannelUrl = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0(channel) {
+      var cacheKey, cached, playable;
+      return _regenerator().w(function (_context0) {
+        while (1) switch (_context0.n) {
+          case 0:
+            if (channel) {
+              _context0.n = 1;
+              break;
+            }
+            return _context0.a(2, '');
+          case 1:
+            if (channel.url) {
+              channel.url = String(channel.url).trim();
+            }
+            if (!channel.url) {
+              _context0.n = 2;
+              break;
+            }
+            return _context0.a(2, channel.url);
+          case 2:
+            if (channel.id) {
+              _context0.n = 3;
+              break;
+            }
+            return _context0.a(2, '');
+          case 3:
+            cacheKey = getStreamCacheKey(channel.provider, channel.id);
+            cached = streamCache.get(cacheKey);
+            if (!(cached && cached.url)) {
+              _context0.n = 4;
+              break;
+            }
+            channel.url = cached.url;
+            return _context0.a(2, cached.url);
+          case 4:
+            _context0.n = 5;
+            return ensurePlayableUrl(channel);
+          case 5:
+            playable = _context0.v;
+            channel.url = playable || '';
+            return _context0.a(2, channel.url);
+        }
+      }, _callee0);
+    }));
+    return _ensureChannelUrl.apply(this, arguments);
+  }
+  function resolvePlayableStartIndex(_x10, _x11) {
+    return _resolvePlayableStartIndex.apply(this, arguments);
+  }
+  function _resolvePlayableStartIndex() {
+    _resolvePlayableStartIndex = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1(list, preferred) {
+      var probeIndexes, total, start, maxProbe, step, next, prev, i, index, channel, playableUrl;
+      return _regenerator().w(function (_context1) {
+        while (1) switch (_context1.n) {
+          case 0:
+            if (list.length) {
+              _context1.n = 1;
+              break;
+            }
+            return _context1.a(2, -1);
+          case 1:
+            probeIndexes = [];
+            total = list.length;
+            start = normalizeIndex(preferred, total);
+            maxProbe = Math.min(total, 12);
+            probeIndexes.push(start);
+            step = 1;
+          case 2:
+            if (!(probeIndexes.length < maxProbe)) {
+              _context1.n = 5;
+              break;
+            }
+            next = start + step;
+            prev = start - step;
+            if (next < total) probeIndexes.push(next);
+            if (!(probeIndexes.length >= maxProbe)) {
+              _context1.n = 3;
+              break;
+            }
+            return _context1.a(3, 5);
+          case 3:
+            if (prev >= 0) probeIndexes.push(prev);
+            if (!(next >= total && prev < 0)) {
+              _context1.n = 4;
+              break;
+            }
+            return _context1.a(3, 5);
+          case 4:
+            step += 1;
+            _context1.n = 2;
+            break;
+          case 5:
+            i = 0;
+          case 6:
+            if (!(i < probeIndexes.length)) {
+              _context1.n = 10;
+              break;
+            }
+            index = probeIndexes[i];
+            channel = list[index];
+            if (channel) {
+              _context1.n = 7;
+              break;
+            }
+            return _context1.a(3, 9);
+          case 7:
+            _context1.n = 8;
+            return ensureChannelUrl(channel);
+          case 8:
+            playableUrl = _context1.v;
+            if (!playableUrl) {
+              _context1.n = 9;
+              break;
+            }
+            return _context1.a(2, index);
+          case 9:
+            i += 1;
+            _context1.n = 6;
+            break;
+          case 10:
+            return _context1.a(2, -1);
+        }
+      }, _callee1);
+    }));
+    return _resolvePlayableStartIndex.apply(this, arguments);
   }
   function playIptvList(channels, startIndex, groupTitle) {
     var epgCache = {};
@@ -1130,18 +1578,12 @@
       total: channels.length,
       position: startIndex,
       onPlay: function onPlay(selected) {
-        if (!selected || selected.url || !selected.id) return;
-        var cacheKey = getStreamCacheKey(selected.provider, selected.id);
-        var cached = streamCache.get(cacheKey);
-        if (cached && cached.url) {
-          selected.url = cached.url;
-          return;
-        }
+        if (!selected || !selected.id || selected.url) return;
         Lampa.Bell && Lampa.Bell.push({
           text: Lampa.Lang.translate('tryzubtv_stream_loading'),
           time: 1500
         });
-        resolveStream(selected.provider, selected.id).then(function (url) {
+        resolveStreamFresh(selected.provider, selected.id).then(function (url) {
           if (url) selected.url = url;
         })["catch"](function (error) {
           console.error('TryzubTV: stream resolve failed', error);
@@ -1250,6 +1692,82 @@
     };
     Lampa.Player.iptv(data);
   }
+  function playChannelList(_x12, _x13, _x14, _x15) {
+    return _playChannelList.apply(this, arguments);
+  }
+  function _playChannelList() {
+    _playChannelList = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10(channels, startIndex, groupTitle, startRef) {
+      var list, startByRef, playableStart, startChannel, _t3;
+      return _regenerator().w(function (_context10) {
+        while (1) switch (_context10.n) {
+          case 0:
+            list = (channels || []).map(function (channel) {
+              var provider = channel.provider || Api$1.PROVIDER_DYVY;
+              var id = channel.id || channel.slug || '';
+              return {
+                provider: provider,
+                id: id,
+                name: channel.name || channel.title || '',
+                slug: channel.slug || id,
+                url: String(channel.url || channel.link || '').trim(),
+                logo: channel.logo || '',
+                epg_current: channel.epg_current || null
+              };
+            }).filter(function (channel) {
+              return channel.id || channel.url;
+            });
+            if (list.length) {
+              _context10.n = 1;
+              break;
+            }
+            return _context10.a(2, false);
+          case 1:
+            startByRef = resolveStartIndex(list, startIndex, startRef);
+            Lampa.Bell && Lampa.Bell.push({
+              text: Lampa.Lang.translate('tryzubtv_stream_loading'),
+              time: 1500
+            });
+            Lampa.Loading.start();
+            _context10.p = 2;
+            _context10.n = 3;
+            return resolvePlayableStartIndex(list, startByRef);
+          case 3:
+            playableStart = _context10.v;
+            if (!(playableStart < 0)) {
+              _context10.n = 4;
+              break;
+            }
+            Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
+            return _context10.a(2, false);
+          case 4:
+            startChannel = list[playableStart];
+            if (!(!startChannel || !startChannel.url)) {
+              _context10.n = 5;
+              break;
+            }
+            Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
+            return _context10.a(2, false);
+          case 5:
+            prefetchStreams(list.slice(0, 12), 4)["catch"](function () {});
+            playIptvList(list, playableStart, groupTitle);
+            return _context10.a(2, true);
+          case 6:
+            _context10.p = 6;
+            _t3 = _context10.v;
+            console.error('TryzubTV: channel list play failed', _t3);
+            Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
+            return _context10.a(2, false);
+          case 7:
+            _context10.p = 7;
+            Lampa.Loading.stop();
+            return _context10.f(7);
+          case 8:
+            return _context10.a(2);
+        }
+      }, _callee10, null, [[2, 6, 7, 8]]);
+    }));
+    return _playChannelList.apply(this, arguments);
+  }
   function playChannel(cardData) {
     if (!cardData) return;
     var provider = cardData.tryzubtv_provider || Api$1.PROVIDER_DYVY;
@@ -1258,94 +1776,16 @@
     var logo = cardData.tryzubtv_logo || '';
     var categoryKey = cardData.tryzubtv_category_key || '';
     var categoryTitle = cardData.tryzubtv_category_title || Lampa.Lang.translate('tryzubtv_title');
-    if (categoryKey) {
-      Lampa.Bell && Lampa.Bell.push({
-        text: Lampa.Lang.translate('tryzubtv_stream_loading'),
-        time: 1500
-      });
-      Lampa.Loading.start();
-      fetchCategoryChannels(categoryKey).then(/*#__PURE__*/function () {
-        var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(payload) {
-          var channels, groupTitle, startIndex, startChannel, url;
-          return _regenerator().w(function (_context) {
-            while (1) switch (_context.n) {
-              case 0:
-                Lampa.Loading.stop();
-                channels = payload.items || [];
-                groupTitle = payload.title || categoryTitle;
-                if (channels.length) {
-                  _context.n = 1;
-                  break;
-                }
-                playIptvList([{
-                  provider: provider,
-                  id: channelId,
-                  name: title,
-                  slug: cardData.tryzubtv_slug || '',
-                  url: cardData.tryzubtv_link,
-                  logo: logo,
-                  epg_current: cardData.tryzubtv_epg || null
-                }], 0, groupTitle);
-                return _context.a(2);
-              case 1:
-                _context.n = 2;
-                return prefetchStreams(channels, 6);
-              case 2:
-                startIndex = channels.findIndex(function (channel) {
-                  return String(channel.id) === String(channelId);
-                });
-                if (startIndex < 0) startIndex = 0;
-                startChannel = channels[startIndex];
-                if (!(startChannel && !startChannel.url && startChannel.id)) {
-                  _context.n = 4;
-                  break;
-                }
-                _context.n = 3;
-                return resolveStream(startChannel.provider, startChannel.id);
-              case 3:
-                url = _context.v;
-                if (url) startChannel.url = url;
-              case 4:
-                if (!(!startChannel || !startChannel.url)) {
-                  _context.n = 5;
-                  break;
-                }
-                Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
-                return _context.a(2);
-              case 5:
-                playIptvList(channels, startIndex, groupTitle);
-              case 6:
-                return _context.a(2);
-            }
-          }, _callee);
-        }));
-        return function (_x8) {
-          return _ref.apply(this, arguments);
-        };
-      }())["catch"](function (error) {
-        Lampa.Loading.stop();
-        console.error('TryzubTV: category channels load failed', error);
-        playIptvList([{
-          provider: provider,
-          id: channelId,
-          name: title,
-          slug: cardData.tryzubtv_slug || '',
-          url: cardData.tryzubtv_link,
-          logo: logo,
-          epg_current: cardData.tryzubtv_epg || null
-        }], 0, categoryTitle);
-      });
-      return;
-    }
-    if (!cardData.tryzubtv_link && channelId) {
+    if (channelId) {
       Lampa.Loading.start();
       Lampa.Bell && Lampa.Bell.push({
         text: Lampa.Lang.translate('tryzubtv_stream_loading'),
         time: 1500
       });
-      resolveStream(provider, channelId).then(function (url) {
+      resolveStreamFresh(provider, channelId).then(function (url) {
         Lampa.Loading.stop();
-        if (!url) {
+        var playableUrl = url || cardData.tryzubtv_link || '';
+        if (!playableUrl) {
           Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
           return;
         }
@@ -1354,7 +1794,7 @@
           id: channelId,
           name: title,
           slug: cardData.tryzubtv_slug || '',
-          url: url,
+          url: playableUrl,
           logo: logo,
           epg_current: cardData.tryzubtv_epg || null
         }], 0, categoryTitle);
@@ -1363,6 +1803,76 @@
         console.error('TryzubTV: stream resolve failed', error);
         Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
       });
+      return;
+    }
+    if (categoryKey) {
+      Lampa.Bell && Lampa.Bell.push({
+        text: Lampa.Lang.translate('tryzubtv_stream_loading'),
+        time: 1500
+      });
+      Lampa.Loading.start();
+      fetchCategoryChannels(categoryKey).then(/*#__PURE__*/function () {
+        var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(payload) {
+          var channels, groupTitle, startIndex;
+          return _regenerator().w(function (_context) {
+            while (1) switch (_context.n) {
+              case 0:
+                Lampa.Loading.stop();
+                channels = payload.items || [];
+                groupTitle = payload.title || categoryTitle;
+                if (channels.length) {
+                  _context.n = 2;
+                  break;
+                }
+                _context.n = 1;
+                return playChannelList([buildSingleChannel(cardData, provider, channelId, title, logo)], 0, groupTitle, {
+                  provider: provider,
+                  id: channelId
+                });
+              case 1:
+                return _context.a(2);
+              case 2:
+                _context.n = 3;
+                return prefetchStreams(channels, 6);
+              case 3:
+                startIndex = channels.findIndex(function (channel) {
+                  return String(channel.id) === String(channelId);
+                });
+                if (startIndex < 0) startIndex = 0;
+                _context.n = 4;
+                return playChannelList(channels, startIndex, groupTitle, {
+                  provider: provider,
+                  id: channelId
+                });
+              case 4:
+                return _context.a(2);
+            }
+          }, _callee);
+        }));
+        return function (_x16) {
+          return _ref.apply(this, arguments);
+        };
+      }())["catch"](/*#__PURE__*/function () {
+        var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(error) {
+          return _regenerator().w(function (_context2) {
+            while (1) switch (_context2.n) {
+              case 0:
+                Lampa.Loading.stop();
+                console.error('TryzubTV: category channels load failed', error);
+                _context2.n = 1;
+                return playChannelList([buildSingleChannel(cardData, provider, channelId, title, logo)], 0, categoryTitle, {
+                  provider: provider,
+                  id: channelId
+                });
+              case 1:
+                return _context2.a(2);
+            }
+          }, _callee2);
+        }));
+        return function (_x17) {
+          return _ref2.apply(this, arguments);
+        };
+      }());
       return;
     }
     playIptvList([{
@@ -1376,8 +1886,693 @@
     }], 0, categoryTitle);
   }
   var Player = {
-    playChannel: playChannel
+    playChannel: playChannel,
+    playChannelList: playChannelList
   };
+
+  var FAVORITES_KEY = 'tryzubtv_favorites_v1';
+  function normalizeKey(provider, channelId) {
+    var safeProvider = provider ? String(provider) : '';
+    var safeId = channelId ? String(channelId) : '';
+    return "".concat(safeProvider, ":").concat(safeId);
+  }
+  function readList() {
+    var stored = Lampa.Storage ? Lampa.Storage.get(FAVORITES_KEY, []) : [];
+    if (Array.isArray(stored)) return stored.slice();
+    if (typeof stored === 'string') {
+      try {
+        var parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return stored.split(',').map(function (item) {
+          return item.trim();
+        }).filter(Boolean);
+      }
+    }
+    return [];
+  }
+  function writeList(list) {
+    if (!Lampa.Storage) return;
+    Lampa.Storage.set(FAVORITES_KEY, list);
+  }
+  function isFavorite(provider, channelId) {
+    var key = normalizeKey(provider, channelId);
+    if (!key) return false;
+    var list = readList();
+    return list.indexOf(key) !== -1;
+  }
+  function addFavorite(provider, channelId) {
+    var key = normalizeKey(provider, channelId);
+    if (!key) return false;
+    var list = readList();
+    if (list.indexOf(key) === -1) {
+      list.unshift(key);
+      writeList(list);
+    }
+    return true;
+  }
+  function removeFavorite(provider, channelId) {
+    var key = normalizeKey(provider, channelId);
+    if (!key) return false;
+    var list = readList();
+    var next = list.filter(function (item) {
+      return item !== key;
+    });
+    writeList(next);
+    return true;
+  }
+  function toggleFavorite(provider, channelId) {
+    var key = normalizeKey(provider, channelId);
+    if (!key) return {
+      added: false,
+      key: ''
+    };
+    var list = readList();
+    var exists = list.indexOf(key) !== -1;
+    if (exists) {
+      writeList(list.filter(function (item) {
+        return item !== key;
+      }));
+      return {
+        added: false,
+        key: key
+      };
+    }
+    list.unshift(key);
+    writeList(list);
+    return {
+      added: true,
+      key: key
+    };
+  }
+  function listFavorites() {
+    return readList();
+  }
+  var Favorites = {
+    normalizeKey: normalizeKey,
+    isFavorite: isFavorite,
+    addFavorite: addFavorite,
+    removeFavorite: removeFavorite,
+    toggleFavorite: toggleFavorite,
+    listFavorites: listFavorites
+  };
+
+  function normalizeText(value) {
+    return String(value || '').toLowerCase();
+  }
+  function capitalize(value) {
+    var text = String(value || '');
+    if (!text) return '';
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+  function channelKey(channel) {
+    var provider = channel.provider || channel.tryzubtv_provider || 'youtv';
+    var id = channel.id || channel.slug || channel.tryzubtv_channel_id || '';
+    return Favorites.normalizeKey(provider, id);
+  }
+  function buildSearchIndex(channel) {
+    var chunks = [];
+    chunks.push(channel.name || '');
+    chunks.push(channel.slug || '');
+    if (Array.isArray(channel.categories)) chunks.push(channel.categories.join(' '));
+    if (Array.isArray(channel.categories_raw)) chunks.push(channel.categories_raw.join(' '));
+    return normalizeText(chunks.join(' '));
+  }
+  function mapChannelCard(channel) {
+    var context = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var provider = channel.provider || 'youtv';
+    var id = channel.id || channel.slug || '';
+    var logo = channel.logo || channel.banner || '';
+    var categoryLabel = channel._categoryLabel || '';
+    return {
+      title: channel.name || '',
+      poster: logo,
+      cover: logo,
+      img: logo,
+      overview: '',
+      tryzubtv_provider: provider,
+      tryzubtv_channel_id: id,
+      tryzubtv_slug: channel.slug || id,
+      tryzubtv_link: channel.link || '',
+      tryzubtv_logo: logo,
+      tryzubtv_categories: channel.categories || [],
+      tryzubtv_category_label: categoryLabel,
+      tryzubtv_category_key: context.categoryKey || '',
+      tryzubtv_category_title: context.categoryTitle || '',
+      params: {
+        style: {
+          name: 'default'
+        }
+      }
+    };
+  }
+  function component$5() {
+    var object = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var activity;
+    var html;
+    var header;
+    var searchButton;
+    var filterAll;
+    var categoryButton;
+    var body;
+    var scroll;
+    var items = [];
+    var filtered = [];
+    var cards = [];
+    var last;
+    var headLast;
+    var searchQuery = '';
+    var showFavorites = false;
+    var categoryKey = '';
+    var categoryMap = {};
+    var totalCount = 0;
+    var playLock = false;
+    var playLockTimer = null;
+    function setLoading(state) {
+      if (activity) activity.loader(state);
+    }
+    function updateSearchLabel() {
+      var placeholder = Lampa.Lang.translate('tryzubtv_search_placeholder');
+      var text = searchQuery ? searchQuery : placeholder;
+      searchButton.toggleClass('filled', Boolean(searchQuery));
+      searchButton.find('div').text(text);
+    }
+    function updateFilterButtons() {
+      var allLabel = "".concat(Lampa.Lang.translate('tryzubtv_all'), " \xB7 ").concat(totalCount);
+      filterAll.find('div').text(allLabel);
+      filterAll.toggleClass('active', !showFavorites && !categoryKey);
+      if (categoryButton) categoryButton.toggleClass('hide', showFavorites);
+    }
+    function filterChannels() {
+      var base = showFavorites ? items.filter(function (channel) {
+        return Favorites.isFavorite(channel.provider, channel.id || channel.slug);
+      }) : items;
+      if (categoryKey) {
+        base = base.filter(function (channel) {
+          return Array.isArray(channel.categories) && channel.categories.indexOf(categoryKey) !== -1;
+        });
+      }
+      if (!searchQuery) return base;
+      var query = normalizeText(searchQuery);
+      return base.filter(function (channel) {
+        return channel._searchIndex && channel._searchIndex.indexOf(query) !== -1;
+      });
+    }
+    function clearCards() {
+      cards.forEach(function (card) {
+        return card.destroy();
+      });
+      cards = [];
+      body.empty();
+      last = null;
+    }
+    function lockPlay() {
+      var ms = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 800;
+      playLock = true;
+      if (playLockTimer) clearTimeout(playLockTimer);
+      playLockTimer = setTimeout(function () {
+        playLock = false;
+        playLockTimer = null;
+      }, ms);
+    }
+    function renderEmpty(message) {
+      var empty = $("<div class=\"tryzubtv-tv__empty\">".concat(message, "</div>"));
+      body.append(empty);
+    }
+    function renderLogoBackground(render) {
+      var img = render.querySelector('.card__img');
+      if (!img) return;
+      var canSampleImage = function canSampleImage() {
+        var src = img.currentSrc || img.src || '';
+        if (!src) return false;
+        if (src.indexOf('data:') === 0 || src.indexOf('blob:') === 0) return true;
+        try {
+          var link = document.createElement('a');
+          link.href = src;
+          var origin = "".concat(link.protocol, "//").concat(link.host);
+          return origin === window.location.origin;
+        } catch (error) {
+          return false;
+        }
+      };
+      var apply = function apply() {
+        if (!canSampleImage()) {
+          fallback();
+          return;
+        }
+        try {
+          var canvas = document.createElement('canvas');
+          var ctx = canvas.getContext('2d');
+          var size = 24;
+          canvas.width = size;
+          canvas.height = size;
+          ctx.drawImage(img, 0, 0, size, size);
+          var data = ctx.getImageData(0, 0, size, size).data;
+          var r = 0;
+          var g = 0;
+          var b = 0;
+          var count = 0;
+          for (var i = 0; i < data.length; i += 4) {
+            var alpha = data[i + 3];
+            if (alpha < 20) continue;
+            r += data[i];
+            g += data[i + 1];
+            b += data[i + 2];
+            count += 1;
+          }
+          if (!count) return;
+          r = Math.round(r / count);
+          g = Math.round(g / count);
+          b = Math.round(b / count);
+          var luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+          var bg = {
+            r: r,
+            g: g,
+            b: b
+          };
+          if (luminance < 60) {
+            bg = {
+              r: 78,
+              g: 78,
+              b: 78
+            };
+          } else if (luminance > 200) {
+            bg = {
+              r: 28,
+              g: 28,
+              b: 28
+            };
+          } else {
+            var mix = 0.45;
+            var base = 22;
+            bg = {
+              r: Math.round(r * mix + base * (1 - mix)),
+              g: Math.round(g * mix + base * (1 - mix)),
+              b: Math.round(b * mix + base * (1 - mix))
+            };
+          }
+          var dark = {
+            r: Math.max(14, Math.round(bg.r * 0.8)),
+            g: Math.max(14, Math.round(bg.g * 0.8)),
+            b: Math.max(14, Math.round(bg.b * 0.8))
+          };
+          render.style.setProperty('--tryzubtv-logo-bg', "rgb(".concat(bg.r, ", ").concat(bg.g, ", ").concat(bg.b, ")"));
+          render.style.setProperty('--tryzubtv-logo-bg-dark', "rgb(".concat(dark.r, ", ").concat(dark.g, ", ").concat(dark.b, ")"));
+        } catch (error) {}
+      };
+      var fallback = function fallback() {
+        render.style.setProperty('--tryzubtv-logo-bg', 'rgb(54, 54, 54)');
+        render.style.setProperty('--tryzubtv-logo-bg-dark', 'rgb(38, 38, 38)');
+      };
+      if (img.complete) apply();else img.addEventListener('load', apply, {
+        once: true
+      });
+      img.addEventListener('error', fallback, {
+        once: true
+      });
+    }
+    function renderCards(list) {
+      clearCards();
+      filtered = list;
+      if (!list.length) {
+        var emptyText = showFavorites ? Lampa.Lang.translate('tryzubtv_favorites_empty') : searchQuery ? Lampa.Lang.translate('tryzubtv_search_empty') : Lampa.Lang.translate('tryzubtv_empty');
+        renderEmpty(emptyText);
+        Lampa.Layer.visible(scroll.render(true));
+        return;
+      }
+      var fragment = document.createDocumentFragment();
+      list.forEach(function (channel, index) {
+        var data = mapChannelCard(channel);
+        var card = Lampa.Maker.make('Card', data);
+        card.create();
+        var render = card.render(true);
+        render.classList.add('card--tryzubtv');
+        render.classList.add('card--tryzubtv-tv');
+        renderLogoBackground(render);
+        if (data.tryzubtv_category_label) {
+          var label = document.createElement('div');
+          label.classList.add('tryzubtv-tv__category');
+          label.textContent = data.tryzubtv_category_label;
+          render.appendChild(label);
+        }
+        $(render).on('hover:focus', function () {
+          last = render;
+          scroll.update(render, false);
+        });
+        $(render).on('hover:enter', function () {
+          playFromList(index);
+        });
+        $(render).on('hover:long', function (event) {
+          if (event && event.stopPropagation) event.stopPropagation();
+          if (event && event.preventDefault) event.preventDefault();
+          toggleFavorite(channel);
+          return false;
+        });
+        render.addEventListener('contextmenu', function (event) {
+          if (event && event.preventDefault) event.preventDefault();
+        });
+        fragment.appendChild(render);
+        cards.push(card);
+      });
+      body.append(fragment);
+      if (cards.length) last = cards[0].render(true);
+      Lampa.Layer.visible(scroll.render(true));
+      if (Lampa.Controller.enabled().name === 'content') {
+        Lampa.Controller.collectionSet(body);
+        Lampa.Controller.collectionFocus(last || false, body);
+      }
+    }
+    function getCategoryTitleByKey(key) {
+      if (!key) return '';
+      var isUkrainian = Lampa.Storage ? Lampa.Storage.get('language', 'ru') === 'uk' : false;
+      if (isUkrainian && categoryMap[key]) return categoryMap[key];
+      return categoryMap[key] || capitalize(key);
+    }
+    function applyFilters() {
+      var list = filterChannels();
+      renderCards(list);
+    }
+    function setSearch(query) {
+      searchQuery = String(query || '').trim();
+      updateSearchLabel();
+      applyFilters();
+    }
+    function openSearch() {
+      Lampa.Controller.add('settings_component', {
+        toggle: function toggle() {
+          Lampa.Controller.toggle('tryzubtv_tv_head');
+        },
+        back: function back() {
+          Lampa.Controller.toggle('tryzubtv_tv_head');
+        }
+      });
+      Lampa.Input.edit({
+        title: Lampa.Lang.translate('tryzubtv_search_placeholder'),
+        value: searchQuery,
+        free: true,
+        nosave: true,
+        align: 'center'
+      }, function (value) {
+        setSearch(value);
+        Lampa.Controller.toggle('tryzubtv_tv_head');
+      });
+    }
+    function toggleFavorite(channel) {
+      var result = Favorites.toggleFavorite(channel.provider, channel.id || channel.slug);
+      Lampa.Noty.show(result.added ? Lampa.Lang.translate('tryzubtv_favorite_added') : Lampa.Lang.translate('tryzubtv_favorite_removed'));
+      if (showFavorites) {
+        applyFilters();
+      }
+    }
+    function loadChannels() {
+      return _loadChannels.apply(this, arguments);
+    }
+    function _loadChannels() {
+      _loadChannels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+        var _yield$Promise$allSet, _yield$Promise$allSet2, listState, catalogState, list, catalog, isUkrainian, _t;
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
+            case 0:
+              setLoading(true);
+              _context.p = 1;
+              _context.n = 2;
+              return Promise.allSettled([TvApi.fetchAllChannels(false), TvApi.fetchCatalogLines(false)]);
+            case 2:
+              _yield$Promise$allSet = _context.v;
+              _yield$Promise$allSet2 = _slicedToArray(_yield$Promise$allSet, 2);
+              listState = _yield$Promise$allSet2[0];
+              catalogState = _yield$Promise$allSet2[1];
+              list = listState.status === 'fulfilled' ? listState.value : [];
+              catalog = catalogState.status === 'fulfilled' ? catalogState.value : [];
+              if (listState.status === 'rejected') {
+                console.error('TryzubTV: tv channels request failed', listState.reason);
+              }
+              if (catalogState.status === 'rejected') {
+                console.error('TryzubTV: tv catalog request failed', catalogState.reason);
+              }
+              categoryMap = {};
+              (catalog || []).forEach(function (line) {
+                if (line && line.source === 'tv' && line.category_key) {
+                  categoryMap[line.category_key] = line.title || line.category_key;
+                }
+              });
+              isUkrainian = Lampa.Storage ? Lampa.Storage.get('language', 'ru') === 'uk' : false;
+              items = list.map(function (channel) {
+                var provider = channel.provider || 'youtv';
+                var id = channel.id || channel.slug || '';
+                var primaryKey = Array.isArray(channel.categories) && channel.categories.length ? channel.categories[0] : '';
+                var categoryLabel = primaryKey ? isUkrainian && categoryMap[primaryKey] ? categoryMap[primaryKey] : capitalize(primaryKey) : '';
+                var normalized = _objectSpread2(_objectSpread2({}, channel), {}, {
+                  provider: provider,
+                  id: id,
+                  _key: channelKey(channel),
+                  _searchIndex: buildSearchIndex(channel),
+                  _categoryLabel: categoryLabel
+                });
+                return normalized;
+              });
+              totalCount = items.length;
+              updateFilterButtons();
+              applyFilters();
+              _context.n = 4;
+              break;
+            case 3:
+              _context.p = 3;
+              _t = _context.v;
+              console.error('TryzubTV: tv channels load failed', _t);
+              renderCards([]);
+            case 4:
+              _context.p = 4;
+              setLoading(false);
+              return _context.f(4);
+            case 5:
+              return _context.a(2);
+          }
+        }, _callee, null, [[1, 3, 4, 5]]);
+      }));
+      return _loadChannels.apply(this, arguments);
+    }
+    function playFromList(_x) {
+      return _playFromList.apply(this, arguments);
+    }
+    function _playFromList() {
+      _playFromList = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(index) {
+        var channel, fallbackCard, _t2;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.n) {
+            case 0:
+              if (!playLock) {
+                _context2.n = 1;
+                break;
+              }
+              return _context2.a(2);
+            case 1:
+              if (!(Lampa.Player && typeof Lampa.Player.opened === 'function' && Lampa.Player.opened())) {
+                _context2.n = 2;
+                break;
+              }
+              return _context2.a(2);
+            case 2:
+              lockPlay(2500);
+              if (filtered.length) {
+                _context2.n = 3;
+                break;
+              }
+              return _context2.a(2);
+            case 3:
+              channel = filtered[index];
+              if (channel) {
+                _context2.n = 4;
+                break;
+              }
+              return _context2.a(2);
+            case 4:
+              _context2.p = 4;
+              Player.playChannel(mapChannelCard(channel));
+              return _context2.a(2);
+            case 5:
+              _context2.p = 5;
+              _t2 = _context2.v;
+              console.error('TryzubTV: play failed', _t2);
+              fallbackCard = mapChannelCard(channel, {
+                categoryKey: categoryKey,
+                categoryTitle: getCategoryTitleByKey(categoryKey)
+              });
+              Player.playChannel(fallbackCard);
+            case 6:
+              return _context2.a(2);
+          }
+        }, _callee2, null, [[4, 5]]);
+      }));
+      return _playFromList.apply(this, arguments);
+    }
+    function openCategoryFilter() {
+      var restoreHeaderFocus = function restoreHeaderFocus() {
+        headLast = categoryButton ? categoryButton[0] : headLast;
+        setTimeout(function () {
+          Lampa.Controller.toggle('tryzubtv_tv_head');
+
+          // Select closes asynchronously; force focus again after close animation.
+          setTimeout(function () {
+            Lampa.Controller.collectionSet(header);
+            Lampa.Controller.collectionFocus(headLast || searchButton[0], header);
+          }, 60);
+        }, 0);
+      };
+      var isUkrainian = Lampa.Storage ? Lampa.Storage.get('language', 'ru') === 'uk' : false;
+      var items = [];
+      items.push({
+        title: Lampa.Lang.translate('tryzubtv_all_categories'),
+        key: '',
+        selected: !categoryKey
+      });
+      Object.keys(categoryMap).forEach(function (key) {
+        var title = isUkrainian && categoryMap[key] ? categoryMap[key] : capitalize(key);
+        items.push({
+          title: title,
+          key: key,
+          selected: key === categoryKey
+        });
+      });
+      Lampa.Select.show({
+        title: Lampa.Lang.translate('tryzubtv_filter_category'),
+        items: items,
+        onSelect: function onSelect(item) {
+          categoryKey = item.key || '';
+          categoryButton.find('div').text(categoryKey ? item.title : Lampa.Lang.translate('tryzubtv_filter_category'));
+          applyFilters();
+          restoreHeaderFocus();
+        },
+        onBack: function onBack() {
+          restoreHeaderFocus();
+        }
+      });
+    }
+    function createHeader() {
+      header = $('<div class="tryzubtv-tv__header"></div>');
+      searchButton = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector tryzubtv-tv__search\">" + "<div>".concat(Lampa.Lang.translate('tryzubtv_search_placeholder'), "</div>") + "</div>");
+      searchButton.on('hover:enter', openSearch);
+      searchButton.on('hover:focus', function () {
+        headLast = searchButton[0];
+      });
+      var filters = $('<div class="tryzubtv-tv__filters"></div>');
+      filterAll = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector\">" + "<div>".concat(Lampa.Lang.translate('tryzubtv_all'), "</div>") + "</div>");
+      categoryButton = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector\">" + "<div>".concat(Lampa.Lang.translate('tryzubtv_filter_category'), "</div>") + "</div>");
+      filterAll.on('hover:enter', function () {
+        showFavorites = false;
+        categoryKey = '';
+        searchQuery = '';
+        if (categoryButton) categoryButton.find('div').text(Lampa.Lang.translate('tryzubtv_filter_category'));
+        updateSearchLabel();
+        updateFilterButtons();
+        applyFilters();
+      });
+      categoryButton.on('hover:enter', function () {
+        openCategoryFilter();
+      });
+      filterAll.on('hover:focus', function () {
+        headLast = filterAll[0];
+      });
+      categoryButton.on('hover:focus', function () {
+        headLast = categoryButton[0];
+      });
+      searchButton.on('hover:focus', function () {
+        headLast = searchButton[0];
+      });
+
+      // Favorites filter is temporarily hidden from UI.
+      filters.append(filterAll, categoryButton, searchButton);
+      header.append(filters);
+    }
+    function ensureControllers() {
+      Lampa.Controller.add('tryzubtv_tv_head', {
+        toggle: function toggle() {
+          Lampa.Controller.collectionSet(header);
+          Lampa.Controller.collectionFocus(headLast || searchButton[0], header);
+        },
+        right: function right() {
+          Navigator.move('right');
+        },
+        left: function left() {
+          if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+        },
+        down: function down() {
+          Lampa.Controller.toggle('content');
+        },
+        up: function up() {
+          if (object.onHead) object.onHead();else Lampa.Controller.toggle('head');
+        },
+        back: function back() {
+          Lampa.Activity.backward();
+        }
+      });
+    }
+    function bindScroll() {
+      scroll.onScroll = function () {
+        Lampa.Layer.visible(scroll.render(true));
+      };
+    }
+    return {
+      create: function create() {
+        activity = this.activity;
+        html = $('<div class="tryzubtv-tv"></div>');
+        body = $('<div class="tryzubtv-tv__body mapping--grid cols--4"></div>');
+        scroll = new Lampa.Scroll({
+          mask: true,
+          over: true,
+          step: 250,
+          end_ratio: 2
+        });
+        createHeader();
+        updateSearchLabel();
+        updateFilterButtons();
+        scroll.append(body);
+        html.append(header, scroll.render());
+        scroll.minus(header);
+        bindScroll();
+        ensureControllers();
+        loadChannels();
+        return this.render();
+      },
+      render: function render(js) {
+        return js ? html[0] : html;
+      },
+      start: function start() {
+        Lampa.Controller.add('content', {
+          link: this,
+          toggle: function toggle() {
+            Lampa.Controller.collectionSet(body);
+            Lampa.Controller.collectionFocus(last || false, body);
+          },
+          left: function left() {
+            if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+          },
+          right: function right() {
+            Navigator.move('right');
+          },
+          up: function up() {
+            if (Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('tryzubtv_tv_head');
+          },
+          down: function down() {
+            if (Navigator.canmove('down')) Navigator.move('down');
+          },
+          back: function back() {
+            Lampa.Activity.backward();
+          }
+        });
+        Lampa.Controller.toggle('content');
+      },
+      pause: function pause() {},
+      destroy: function destroy() {
+        clearCards();
+        if (playLockTimer) clearTimeout(playLockTimer);
+        playLockTimer = null;
+        playLock = false;
+        if (scroll) scroll.destroy();
+        if (html) html.remove();
+      }
+    };
+  }
 
   var QR_URL = 'https://lampame.donatik.me';
   var QR_TEXT = "<a href=\"".concat(QR_URL, "\">\u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F</a>");
@@ -1478,6 +2673,357 @@
       }
     };
   }();
+
+  function appendReplayOverlay$1(cardItem, cardData) {
+    try {
+      var cardElement = cardItem.render ? cardItem.render(true) : null;
+      if (!cardElement) return;
+      var $card = $(cardElement);
+      var card_view = $card.find('.card__view');
+      if (!card_view.length || !cardData) return;
+      var title = cardData.title || '';
+      var desc = cardData.salo_description || cardData.description || '';
+      var date = cardData.salo_release_date || cardData.release_date || '';
+      if (!title && !desc && !date) return;
+      $card.addClass('card--salopower');
+      var tpl = Lampa.Template.get('salopower_episode_card_data', {
+        title: title,
+        salo_description: desc,
+        salo_release_date: date
+      });
+      card_view.append(tpl);
+    } catch (e) {
+      console.error('TryzubTV: replay card overlay error', e);
+    }
+  }
+  function playReplay$1(_x) {
+    return _playReplay$1.apply(this, arguments);
+  }
+  function _playReplay$1() {
+    _playReplay$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(cardData) {
+      var socket, key, newLink, _t;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            if (!(!cardData || !cardData.salo_vod_id)) {
+              _context.n = 1;
+              break;
+            }
+            return _context.a(2);
+          case 1:
+            Lampa.Loading.start();
+            _context.p = 2;
+            socket = SocketManager.getInstance();
+            _context.n = 3;
+            return socket.connect();
+          case 3:
+            key = _context.v;
+            newLink = "https://vod-maincast.cosmonova-broadcast.tv/".concat(cardData.salo_vod_id, "/master.m3u8?key=").concat(key);
+            Lampa.Player.play({
+              title: cardData.title,
+              url: newLink
+            });
+            _context.n = 5;
+            break;
+          case 4:
+            _context.p = 4;
+            _t = _context.v;
+            console.error('TryzubTV: replay playback failed', _t);
+            Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
+          case 5:
+            _context.p = 5;
+            Lampa.Loading.stop();
+            return _context.f(5);
+          case 6:
+            return _context.a(2);
+        }
+      }, _callee, null, [[2, 4, 5, 6]]);
+    }));
+    return _playReplay$1.apply(this, arguments);
+  }
+  function loadLineContent$1(lineItem, lineData) {
+    if (!lineItem || !lineData || lineData.tryzubtv_loaded) return;
+    lineData.tryzubtv_loaded = true;
+    Api$1.loadLineItems(lineData).then(function (payload) {
+      var items = payload.items || [];
+      var total = payload.total;
+      var view = 6;
+      var totalCount = typeof total === 'number' ? total : items.length;
+      var hasMore = totalCount > view;
+      var totalPages = hasMore ? 2 : 1;
+      if (!items.length) {
+        lineItem.destroy();
+        return;
+      }
+      lineData.results = items.slice(0, view);
+      lineData.total_pages = totalPages;
+      var initial = lineData.results.slice(0, view);
+      initial.forEach(function (element) {
+        lineItem.emit('createAndAppend', element);
+      });
+      if (totalPages > 1) {
+        lineItem.emit('scroll');
+      }
+    })["catch"](function (error) {
+      console.error('TryzubTV: replay line load failed', error);
+      lineData.tryzubtv_loaded = false;
+    });
+  }
+  function component$4() {
+    var object = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var comp = Lampa.Maker.make('Main', object);
+    var mainInstance;
+    comp.use({
+      onCreate: function onCreate() {
+        var _this = this;
+        this.activity.render().addClass('tryzubtv-activity');
+        this.activity.render().addClass('tryzubtv-replay');
+        mainInstance = this;
+        this.activity.loader(true);
+        Api$1.loadMain(function (lines) {
+          var replayLines = (lines || []).filter(function (line) {
+            return line && line.params && line.params.tryzubtv_source === Api$1.SOURCE_REPLAY;
+          });
+          if (replayLines && replayLines.length) _this.build(replayLines);else _this.empty();
+          _this.activity.loader(false);
+        }, function () {
+          _this.activity.loader(false);
+          _this.empty();
+        });
+      },
+      onBack: function onBack() {
+        Lampa.Activity.backward();
+      },
+      onUp: function onUp() {
+        this.active -= 1;
+        if (this.active < 0) {
+          this.active = 0;
+          if (object.onHead && typeof object.onHead === 'function') object.onHead();else Lampa.Controller.toggle('head');
+        } else if (this.items && this.items[this.active]) {
+          this.items[this.active].toggle();
+        }
+      },
+      onController: function onController(controller) {
+        if (object.onHead && typeof object.onHead === 'function') {
+          controller.up = function () {
+            var atTop = Boolean(mainInstance && mainInstance.scroll && typeof mainInstance.scroll.position === 'function' && mainInstance.scroll.position() <= 0);
+            if (atTop) {
+              object.onHead();
+              return;
+            }
+            if (Navigator.canmove('up')) Navigator.move('up');else object.onHead();
+          };
+        }
+      },
+      onInstance: function onInstance(lineItem, lineData) {
+        var params = lineData.params || {};
+        var lineIndex = typeof params.tryzubtv_line_index === 'number' ? params.tryzubtv_line_index : 0;
+        var forceVisible = lineIndex < 4;
+        lineData.tryzubtv_force_visible = forceVisible;
+        lineItem.use({
+          onVisible: function onVisible() {
+            loadLineContent$1(lineItem, lineData);
+          },
+          onPush: function onPush(item) {
+            if (lineData.tryzubtv_force_visible && item && typeof item.visible === 'function') {
+              item.visible();
+            }
+          },
+          onMore: function onMore() {
+            var more = params.more || {};
+            if (more.component === 'salopower_category' && more.disciplineId) {
+              Lampa.Activity.push({
+                url: '',
+                title: more.title || lineData.title || Lampa.Lang.translate('tryzubtv_title'),
+                component: 'salopower_category',
+                disciplineId: more.disciplineId
+              });
+              return;
+            }
+            if (!more.category_key) return;
+            Lampa.Activity.push({
+              url: '',
+              title: more.title || lineData.title || Lampa.Lang.translate('tryzubtv_title'),
+              component: 'tryzubtv_category',
+              category_key: more.category_key,
+              category_title: more.title || lineData.title || '',
+              params: {
+                empty: {
+                  title: more.title || Lampa.Lang.translate('tryzubtv_title'),
+                  descr: Lampa.Lang.translate('tryzubtv_empty')
+                }
+              }
+            });
+          },
+          onInstance: function onInstance(cardItem, cardData) {
+            cardItem.use({
+              onCreate: function onCreate() {
+                if (this.html && this.html.classList) {
+                  this.html.classList.add('card--tryzubtv');
+                }
+                if (cardData && cardData.salo_vod_id) {
+                  appendReplayOverlay$1(cardItem, cardData);
+                }
+              },
+              onEnter: function onEnter() {
+                if (cardData && cardData.tryzubtv_action === 'qr_modal') {
+                  openQrModal();
+                  return;
+                }
+                if (cardData && cardData.salo_vod_id) {
+                  playReplay$1(cardData);
+                  return;
+                }
+                Player.playChannel(cardData);
+              },
+              onMenu: function onMenu() {
+                return false;
+              }
+            });
+          }
+        });
+        if (forceVisible) {
+          setTimeout(function () {
+            loadLineContent$1(lineItem, lineData);
+          }, 0);
+        }
+      }
+    });
+    return comp;
+  }
+
+  function component$3() {
+    var activity;
+    var html;
+    var navigation;
+    var body;
+    var views = {};
+    var activeTab = 'tv';
+    function buildTabs() {
+      navigation = $('<div class="tryzubtv-hub__tabs"></div>');
+      var tabs = [{
+        id: 'tv',
+        title: Lampa.Lang.translate('tryzubtv_tab_tv')
+      }, {
+        id: 'replay',
+        title: Lampa.Lang.translate('tryzubtv_tab_replay')
+      }];
+      tabs.forEach(function (tab, index) {
+        var button = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector tryzubtv-hub__tab\">" + "<div>".concat(tab.title, "</div>") + "</div>");
+        if (tab.id === activeTab) button.addClass('active');
+        button.on('hover:enter', function () {
+          switchTab(tab.id);
+        });
+        navigation.append(button);
+      });
+    }
+    function updateTabs() {
+      navigation.find('.tryzubtv-hub__tab').removeClass('active');
+      var index = activeTab === 'tv' ? 0 : 1;
+      navigation.find('.tryzubtv-hub__tab').eq(index).addClass('active');
+    }
+    function getView(tabId) {
+      if (views[tabId]) return views[tabId];
+      var onHead = function onHead() {
+        Lampa.Controller.toggle('tryzubtv_tabs');
+      };
+      var view = tabId === 'tv' ? component$5({
+        onHead: onHead
+      }) : component$4({
+        onHead: onHead
+      });
+      view.activity = activity;
+      view.create();
+      var render = view.render(true);
+      render.classList.add('tryzubtv-hub__view');
+      render.classList.add("tryzubtv-hub__view--".concat(tabId));
+      body.append(render);
+      views[tabId] = view;
+      return view;
+    }
+    function hideView(view) {
+      if (!view) return;
+      var render = view.render(true);
+      render.classList.add('hide');
+      if (view.pause) view.pause();
+    }
+    function showView(view) {
+      if (!view) return;
+      var render = view.render(true);
+      render.classList.remove('hide');
+      if (view.start) view.start();
+    }
+    function switchTab(tabId) {
+      if (tabId === activeTab) {
+        Lampa.Controller.toggle('content');
+        return;
+      }
+      var current = views[activeTab];
+      hideView(current);
+      activeTab = tabId;
+      updateTabs();
+      var next = getView(tabId);
+      showView(next);
+    }
+    function ensureTabsController() {
+      Lampa.Controller.add('tryzubtv_tabs', {
+        toggle: function toggle() {
+          Lampa.Controller.collectionSet(navigation);
+          var index = activeTab === 'tv' ? 0 : 1;
+          var button = navigation.find('.tryzubtv-hub__tab').eq(index)[0];
+          Lampa.Controller.collectionFocus(button, navigation);
+        },
+        right: function right() {
+          Navigator.move('right');
+        },
+        left: function left() {
+          if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+        },
+        down: function down() {
+          Lampa.Controller.toggle('content');
+        },
+        up: function up() {
+          Lampa.Controller.toggle('head');
+        },
+        back: function back() {
+          Lampa.Activity.backward();
+        }
+      });
+    }
+    return {
+      create: function create() {
+        activity = this.activity;
+        activity.render().addClass('tryzubtv-activity');
+        activity.render().addClass('tryzubtv-hub-activity');
+        html = $('<div class="tryzubtv-hub"></div>');
+        body = $('<div class="tryzubtv-hub__body"></div>');
+        buildTabs();
+        html.append(navigation, body);
+        ensureTabsController();
+        var initial = getView(activeTab);
+        showView(initial);
+        return this.render();
+      },
+      render: function render() {
+        return html;
+      },
+      start: function start() {
+        var current = getView(activeTab);
+        if (current && current.start) current.start();
+      },
+      pause: function pause() {
+        var current = views[activeTab];
+        if (current && current.pause) current.pause();
+      },
+      destroy: function destroy() {
+        Object.values(views).forEach(function (view) {
+          if (view && view.destroy) view.destroy();
+        });
+        if (html) html.remove();
+        views = {};
+      }
+    };
+  }
 
   function appendReplayOverlay(cardItem, cardData) {
     try {
@@ -1777,6 +3323,50 @@
       tryzubtv_settings_source_replay: {
         en: 'Sports replays',
         uk: 'Спортивні реплеї'
+      },
+      tryzubtv_tab_tv: {
+        en: 'TV Channels',
+        uk: 'ТБ Канали'
+      },
+      tryzubtv_tab_replay: {
+        en: 'Replays',
+        uk: 'Реплеї'
+      },
+      tryzubtv_search_placeholder: {
+        en: 'Search channel',
+        uk: 'Пошук каналу'
+      },
+      tryzubtv_all: {
+        en: 'All',
+        uk: 'Всі'
+      },
+      tryzubtv_favorites: {
+        en: 'Favorites',
+        uk: 'Вибране'
+      },
+      tryzubtv_filter_category: {
+        en: 'Category',
+        uk: 'Категорія'
+      },
+      tryzubtv_all_categories: {
+        en: 'All categories',
+        uk: 'Всі категорії'
+      },
+      tryzubtv_favorites_empty: {
+        en: 'No favorite channels yet',
+        uk: 'Немає вибраних каналів'
+      },
+      tryzubtv_search_empty: {
+        en: 'Nothing found',
+        uk: 'Нічого не знайдено'
+      },
+      tryzubtv_favorite_added: {
+        en: 'Added to favorites',
+        uk: 'Додано у вибране'
+      },
+      tryzubtv_favorite_removed: {
+        en: 'Removed from favorites',
+        uk: 'Видалено з вибраного'
       },
       tryzubtv_settings_donate_card: {
         en: 'Donate card',
@@ -2177,17 +3767,20 @@
     if (Lampa.Storage) Lampa.Storage.set('tryzubtv_merged', true);
     var manifest = {
       type: 'iptv',
-      version: '2.0.0',
+      version: '2.1.0',
       name: 'TryzubTV',
       description: 'Ukrainian TV channels',
-      component: 'tryzubtv_main'
+      component: 'tryzubtv_hub'
     };
     Lampa.Manifest.plugins = manifest;
+    Lampa.Component.add('tryzubtv_hub', component$3);
     Lampa.Component.add('tryzubtv_main', component$2);
     Lampa.Component.add('tryzubtv_category', component$1);
     Lampa.Component.add('salopower_category', component);
     lang();
     initSettings();
+    Lampa.Template.add('tryzubtv_style', "\n        <style>\n            .tryzubtv-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.tryzubtv-hub,.tryzubtv-tv{--tryzubtv-btn-bg:linear-gradient(180deg,rgba(34,34,34,0.82),rgba(20,20,20,0.78));--tryzubtv-btn-border:rgba(255,255,255,0.08);--tryzubtv-btn-text:rgba(255,255,255,0.92);--tryzubtv-btn-active-bg:linear-gradient(180deg,rgba(255,255,255,0.34),rgba(255,255,255,0.24));--tryzubtv-btn-active-border:rgba(255,255,255,0.28);--tryzubtv-btn-focus-bg:linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,248,248,0.94))}.tryzubtv-hub__tabs{margin:.8em 0 .2em;padding:0 1.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;width:100%}.tryzubtv-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 12em;-ms-flex:1 1 12em;flex:1 1 12em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;min-width:10em}.tryzubtv-hub__tab.active>div{color:rgba(255,255,255,0.95)}.tryzubtv-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;min-height:0}.tryzubtv-hub__view.hide{display:none}.tryzubtv-hub__view{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.tryzubtv-tv{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.tryzubtv-tv__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em;padding:.8em 1.5em .2em}.tryzubtv-tv__search{min-width:18em;max-width:28em}.tryzubtv-tv__search>div{display:block;width:100%;margin-left:0;padding:0;background:transparent;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.tryzubtv-tv__search.filled>div{color:rgba(255,255,255,0.95)}.tryzubtv-tv__filters{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;width:100%}.tryzubtv-tv__filters .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:9em}.tryzubtv-tv__search{-webkit-box-flex:2;-webkit-flex:2 1 16em;-ms-flex:2 1 16em;flex:2 1 16em}.tryzubtv-hub .simple-button,.tryzubtv-tv .simple-button{height:3.2em;font-size:1.25em;padding:.45em 1.2em;-webkit-border-radius:.95em;border-radius:.95em;border:1px solid var(--tryzubtv-btn-border);background:var(--tryzubtv-btn-bg);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03),0 .35em .9em rgba(0,0,0,0.32);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03),0 .35em .9em rgba(0,0,0,0.32);color:var(--tryzubtv-btn-text);-webkit-transition:background-color .18s ease,border-color .18s ease,color .18s ease,-webkit-box-shadow .18s ease,-webkit-transform .18s ease;transition:background-color .18s ease,border-color .18s ease,color .18s ease,-webkit-box-shadow .18s ease,-webkit-transform .18s ease;-o-transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease,transform .18s ease;transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease,transform .18s ease;transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease,transform .18s ease,-webkit-box-shadow .18s ease,-webkit-transform .18s ease}.tryzubtv-hub .simple-button--invisible:not(.focus),.tryzubtv-tv .simple-button--invisible:not(.focus){background:var(--tryzubtv-btn-bg)}.tryzubtv-hub .simple-button--filter>div,.tryzubtv-tv .simple-button--filter>div{margin-left:0;padding:0;background:transparent;font-size:.88em;font-weight:600;letter-spacing:.01em;line-height:1.2;color:inherit;text-align:center}.tryzubtv-hub .simple-button.active,.tryzubtv-tv .simple-button.active,.tryzubtv-tv .tryzubtv-tv__search.filled{background:var(--tryzubtv-btn-active-bg);border-color:var(--tryzubtv-btn-active-border);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06),0 .45em 1.1em rgba(0,0,0,0.35);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06),0 .45em 1.1em rgba(0,0,0,0.35);color:rgba(255,255,255,0.95)}.tryzubtv-hub .simple-button.focus,.tryzubtv-tv .simple-button.focus{background:var(--tryzubtv-btn-focus-bg);border-color:rgba(255,255,255,0.92);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.4),0 .6em 1.35em rgba(0,0,0,0.35);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.4),0 .6em 1.35em rgba(0,0,0,0.35);color:rgba(5,18,40,0.98);-webkit-transform:translateY(-0.04em);-ms-transform:translateY(-0.04em);transform:translateY(-0.04em)}.tryzubtv-hub .simple-button.focus>div,.tryzubtv-tv .simple-button.focus>div{color:rgba(5,18,40,0.98)}.tryzubtv-hub__tab.active,.tryzubtv-tv__filters .simple-button.active,.tryzubtv-tv__search.filled{-webkit-transform:translateY(-0.02em);-ms-transform:translateY(-0.02em);transform:translateY(-0.02em)}.tryzubtv-tv__body{padding:.6em 1.5em 1.5em}.tryzubtv-tv__category{margin-top:.4em;font-size:1em;color:rgba(255,255,255,0.6)}.tryzubtv-tv .card--tryzubtv-tv .card__title,.tryzubtv-tv .card--tryzubtv-tv .card__age{display:none}.tryzubtv-tv__empty{padding:2em 0;color:rgba(255,255,255,0.6);font-size:1.2em}.tryzubtv-tv .scroll{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1}.tryzubtv-tv .scroll__content{min-height:100%}.tryzubtv-tv .card--tryzubtv-tv .card__view{position:relative;padding-bottom:60%;-webkit-border-radius:1em;border-radius:1em;overflow:visible;background:-webkit-gradient(linear,left top,left bottom,from(var(--tryzubtv-logo-bg,#343434)),to(var(--tryzubtv-logo-bg-dark,#262626)));background:-webkit-linear-gradient(top,var(--tryzubtv-logo-bg,#343434),var(--tryzubtv-logo-bg-dark,#262626));background:-o-linear-gradient(top,var(--tryzubtv-logo-bg,#343434),var(--tryzubtv-logo-bg-dark,#262626));background:linear-gradient(180deg,var(--tryzubtv-logo-bg,#343434),var(--tryzubtv-logo-bg-dark,#262626));-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04)}.tryzubtv-tv .card--tryzubtv-tv .card__img{background-color:transparent;-webkit-border-radius:1em;border-radius:1em;overflow:hidden}.tryzubtv-tv .card--tryzubtv-tv.focus .card__view::after,.tryzubtv-tv .card--tryzubtv-tv.hover .card__view::after{z-index:2;border-width:.26em}@media screen and (max-width:1024px){.tryzubtv-tv__header{padding:.6em 1em .2em}.tryzubtv-tv__search{min-width:12em;max-width:100%;-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto}}@media screen and (max-width:720px){.tryzubtv-tv__header{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:stretch;-webkit-align-items:stretch;-ms-flex-align:stretch;align-items:stretch}.tryzubtv-tv__filters{-webkit-box-pack:start;-webkit-justify-content:flex-start;-ms-flex-pack:start;justify-content:flex-start}}\n        </style>\n    ");
+    $('body').append(Lampa.Template.get('tryzubtv_style', {}, true));
     var style = document.createElement('style');
     style.textContent = "\n        .card--tryzubtv .card__img {\n            object-fit: contain;\n            object-position: center;\n            background: transparent;\n        }\n\n        .tryzubtv-main .card--tryzubtv.card--wide {\n            width: 15em;\n        }\n\n        .tryzubtv-category .card--tryzubtv.card--wide {\n            width: auto;\n        }\n\n        .card--tryzubtv .card__promo-title {\n            font-size: 1em;\n            line-height: 1.2;\n            max-height: 2.4em;\n            overflow: hidden;\n            display: -webkit-box;\n            -webkit-line-clamp: 2;\n            line-clamp: 2;\n            -webkit-box-orient: vertical;\n            text-overflow: ellipsis;\n        }\n\n        .card--tryzubtv .card__promo-text {\n            display: none;\n        }\n\n        .card--tryzubtv.card--wide .card__title {\n            display: none;\n        }\n\n        .card--tryzubtv .card__promo {\n            overflow: hidden;\n            padding: 2em 1em 1em 1em;\n        }\n\n        .tryzubtv-category .card--tryzubtv .card__promo {\n            display: none;\n        }\n\n        .tryzubtv-category-tv .card--tryzubtv .card__view {\n            padding-bottom: 90%;\n            margin-bottom: 0.6em;\n        }\n\n        .tryzubtv-category-tv .card--tryzubtv .card__title {\n            font-size: 1.1em;\n            max-height: 2.4em;\n            -webkit-line-clamp: 2;\n            line-clamp: 2;\n        }\n\n        .tryzubtv-activity .items-line {\n            padding-bottom: 1em;\n        }\n\n        .card--wide.card--salopower .card__view {\n            position: relative;\n        }\n\n        .card--wide.card--salopower .card__body--salopower {\n            position: absolute;\n            left: 0;\n            top: 0;\n            width: 100%;\n            height: 100%;\n            display: flex;\n            flex-direction: column;\n            padding: 1.2em 1.5em;\n            background-image: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%);\n            pointer-events: none;\n        }\n\n        .card--wide.card--salopower .card__promo {\n            display: none;\n        }\n\n        .tryzubtv-category .card--salopower .card__body--salopower {\n            display: none;\n        }\n\n        .card--wide.card--salopower .card__body--salopower .card__title {\n            font-size: 1.6em;\n            font-weight: 700;\n        }\n\n        .card--wide.card--salopower .card__salopower-data {\n            margin-top: auto;\n            padding-top: 1em;\n        }\n\n        .card--salopower .card__description {\n            font-size: 1.3em;\n            color: rgba(255, 255, 255, 0.7);\n            -webkit-line-clamp: 2;\n            -webkit-box-orient: vertical;\n            display: -webkit-box;\n            overflow: hidden;\n            text-overflow: ellipsis;\n        }\n        .card--salopower .card__release-date {\n            font-size: 1.2em;\n            color: rgba(255, 255, 255, 0.5);\n            margin-top: 0.5em;\n        }\n        .account-modal-split__text {\n            margin-bottom: 0;\n        }\n        .account-modal-split__qr-text>a {\n            text-decoration: none;\n            color: #d8c39a;\n        }\n    ";
     document.head.appendChild(style);
@@ -2199,7 +3792,7 @@
         Lampa.Activity.push({
           url: '',
           title: Lampa.Lang.translate('tryzubtv_title') + " | Спільнота t.me/mmssixxx",
-          component: 'tryzubtv_main',
+          component: 'tryzubtv_hub',
           page: 1,
           params: {
             empty: {
