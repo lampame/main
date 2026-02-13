@@ -596,7 +596,7 @@
       Lampa.Network.silent(url, resolve, reject);
     });
   }
-  function translateCategoryName$1(name) {
+  function translateCategoryName(name) {
     var raw = name || '';
     if (!raw) return '';
     var key = "tryzubtv_category_".concat(raw);
@@ -713,7 +713,7 @@
     var banner = channel.banner || '';
     var poster = logo || banner || '';
     var cover = logo || banner || '';
-    var title = translateCategoryName$1(categoryTitle || '');
+    var title = translateCategoryName(categoryTitle || '');
     var styleName = view === 'category' ? 'default' : 'wide';
     if (provider === PROVIDER_DYVY) {
       var nowTitle = channel.epg_current && channel.epg_current.name ? channel.epg_current.name : '';
@@ -823,7 +823,7 @@
   }
   function buildLineMetaReplay(discipline) {
     var rawTitle = discipline && discipline.name ? discipline.name : '';
-    var title = translateCategoryName$1(rawTitle);
+    var title = translateCategoryName(rawTitle);
     return {
       id: "".concat(SOURCE_REPLAY, ":").concat(discipline.id),
       source: SOURCE_REPLAY,
@@ -852,7 +852,7 @@
               return {
                 id: line.id || "".concat(SOURCE_TV, ":").concat(line.category_key || ''),
                 source: line.source || SOURCE_TV,
-                title: translateCategoryName$1(line.title),
+                title: translateCategoryName(line.title),
                 rawTitle: line.title,
                 category_key: line.category_key
               };
@@ -989,7 +989,7 @@
           case 4:
             response = _context4.v;
           case 5:
-            title = translateCategoryName$1(categoryTitle || response.categoryTitle || categoryKey || '');
+            title = translateCategoryName(categoryTitle || response.categoryTitle || categoryKey || '');
             channels = Array.isArray(response.items) ? response.items : [];
             items = channels.map(function (channel) {
               return mapChannelToCard(channel, categoryKey, title, 'category');
@@ -1055,7 +1055,7 @@
             return Tzbe.fetchChannels(categoryKey);
           case 2:
             response = _context5.v;
-            title = translateCategoryName$1(params.tryzubtv_category_raw || params.tryzubtv_category_title || response.categoryTitle || '');
+            title = translateCategoryName(params.tryzubtv_category_raw || params.tryzubtv_category_title || response.categoryTitle || '');
             channels = Array.isArray(response.items) ? response.items : [];
             items = channels.map(function (channel) {
               return mapChannelToCard(channel, categoryKey, title, 'line');
@@ -3419,169 +3419,6 @@
     });
   }
 
-  var ORDER_KEY = 'tryzubtv_catalog_order';
-  var HIDE_KEY = 'tryzubtv_catalog_hidden';
-  function translateCategoryName(name) {
-    var raw = name || '';
-    if (!raw) return '';
-    var key = "tryzubtv_category_".concat(raw);
-    var translated = Lampa.Lang ? Lampa.Lang.translate(key) : key;
-    return translated === key ? raw : translated;
-  }
-  function saveList(list) {
-    var order = [];
-    var hidden = [];
-    list.find('.menu-edit-list__item').each(function () {
-      var item = $(this);
-      var lineId = item.data('lineId');
-      if (lineId) order.push(lineId);
-      if (item.hasClass('hidden')) hidden.push(lineId);
-    });
-    Lampa.Storage.set(ORDER_KEY, order);
-    Lampa.Storage.set(HIDE_KEY, hidden);
-  }
-  function openCatalogEditor() {
-    Lampa.Loading.start();
-    Api$1.fetchCatalogLines().then(function (lines) {
-      var storedHidden = Api$1.getCatalogHidden();
-      var ordered = Api$1.sortCatalogLines(lines);
-      var list = $('<div class="menu-edit-list"></div>');
-      ordered.forEach(function (line) {
-        var title = translateCategoryName(line.title || line.rawTitle || line.id);
-        var item = $("<div class=\"menu-edit-list__item\">\n                    <div class=\"menu-edit-list__icon\"></div>\n                    <div class=\"menu-edit-list__title\">".concat(title, "</div>\n                    <div class=\"menu-edit-list__move move-up selector\">\n                        <svg width=\"22\" height=\"14\" viewBox=\"0 0 22 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                            <path d=\"M2 12L11 3L20 12\" stroke=\"currentColor\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n                        </svg>\n                    </div>\n                    <div class=\"menu-edit-list__move move-down selector\">\n                        <svg width=\"22\" height=\"14\" viewBox=\"0 0 22 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                            <path d=\"M2 2L11 11L20 2\" stroke=\"currentColor\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n                        </svg>\n                    </div>\n                    <div class=\"menu-edit-list__toggle toggle selector\">\n                        <svg width=\"26\" height=\"26\" viewBox=\"0 0 26 26\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                            <rect x=\"1.89111\" y=\"1.78369\" width=\"21.793\" height=\"21.793\" rx=\"3.5\" stroke=\"currentColor\" stroke-width=\"3\"/>\n                            <path d=\"M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588\" stroke=\"currentColor\" stroke-width=\"3\" class=\"dot\" opacity=\"0\" stroke-linecap=\"round\"/>\n                        </svg>\n                    </div>\n                </div>"));
-        item.data('lineId', line.id);
-        item.find('.move-up').on('hover:enter', function () {
-          var prev = item.prev();
-          if (prev.length) item.insertBefore(prev);
-        });
-        item.find('.move-down').on('hover:enter', function () {
-          var next = item.next();
-          if (next.length) item.insertAfter(next);
-        });
-        var isHidden = storedHidden.indexOf(line.id) !== -1;
-        if (isHidden) item.addClass('hidden');
-        item.find('.toggle').on('hover:enter', function () {
-          item.toggleClass('hidden');
-          item.find('.dot').attr('opacity', item.hasClass('hidden') ? 0 : 1);
-        }).find('.dot').attr('opacity', isHidden ? 0 : 1);
-        list.append(item);
-      });
-      Lampa.Modal.open({
-        title: Lampa.Lang.translate('tryzubtv_settings_catalog'),
-        html: list,
-        size: 'small',
-        scroll_to_center: true,
-        select: list.find('.selector').first(),
-        onBack: function onBack() {
-          saveList(list);
-          Lampa.Modal.close();
-          Lampa.Controller.toggle('settings_component');
-        }
-      });
-      setTimeout(function () {
-        Lampa.Modal.toggle(list.find('.selector').first());
-      }, 0);
-    })["catch"](function (error) {
-      console.error('TryzubTV: catalog editor load failed', error);
-      Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_empty'));
-    })["finally"](function () {
-      Lampa.Loading.stop();
-    });
-  }
-
-  var SOURCE_TV_KEY = 'tryzubtv_source_tv';
-  var SOURCE_REPLAY_KEY = 'tryzubtv_source_replay';
-  var DONATE_CARD_KEY = 'tryzubtv_donate_card';
-  function ensureAtLeastOne(enabledKey) {
-    var tvEnabled = Lampa.Storage.get(SOURCE_TV_KEY, true);
-    var replayEnabled = Lampa.Storage.get(SOURCE_REPLAY_KEY, true);
-    if (!tvEnabled && !replayEnabled) {
-      Lampa.Storage.set(enabledKey, true);
-      Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_settings_source_required'));
-    }
-    Lampa.Settings.update();
-  }
-  function initSettings() {
-    var SettingsApi = Lampa.SettingsApi || Lampa.Settings;
-    if (!SettingsApi || !SettingsApi.addComponent) return;
-    SettingsApi.addComponent({
-      component: 'tryzubtv',
-      name: Lampa.Lang.translate('tryzubtv_title'),
-      icon: "<svg viewBox=\"0 0 32 32\" enable-background=\"new 0 0 32 32\" version=\"1.1\" xml:space=\"preserve\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" fill=\"#ffffff\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <g id=\"_x36_0\"></g> <g id=\"_x35_9\"></g> <g id=\"_x35_8\"></g> <g id=\"_x35_7\"></g> <g id=\"_x35_6\"></g> <g id=\"_x35_5\"></g> <g id=\"_x35_4\"></g> <g id=\"_x35_3\"></g> <g id=\"_x35_2\"></g> <g id=\"_x35_1\"></g> <g id=\"_x35_0\"></g> <g id=\"_x34_9\"></g> <g id=\"_x34_8\"></g> <g id=\"_x34_7\"></g> <g id=\"_x34_6\"></g> <g id=\"_x34_5\"></g> <g id=\"_x34_4\"></g> <g id=\"_x34_3\"></g> <g id=\"_x34_2\"></g> <g id=\"_x34_1\"></g> <g id=\"_x34_0\"></g> <g id=\"_x33_9\"></g> <g id=\"_x33_8\"></g> <g id=\"_x33_7\"></g> <g id=\"_x33_6\"></g> <g id=\"_x33_5\"></g> <g id=\"_x33_4\"></g> <g id=\"_x33_3\"></g> <g id=\"_x33_2\"></g> <g id=\"_x33_1\"></g> <g id=\"_x33_0\"></g> <g id=\"_x32_9\"></g> <g id=\"_x32_8\"></g> <g id=\"_x32_7\"></g> <g id=\"_x32_6\"></g> <g id=\"_x32_5\"></g> <g id=\"_x32_4_1_\"></g> <g id=\"_x32_3\"></g> <g id=\"_x32_2\"></g> <g id=\"_x32_1\"></g> <g id=\"_x32_0\"></g> <g id=\"_x31_9\"></g> <g id=\"_x31_8\"></g> <g id=\"_x31_7\"></g> <g id=\"_x31_6\"></g> <g id=\"_x31_5\"></g> <g id=\"_x31_4\"></g> <g id=\"_x31_3\"></g> <g id=\"_x31_2\"> <path d=\"M30.1181641,15l0.7763672-1.5527344c0.1357422-0.2714844,0.140625-0.5893555,0.0141602-0.8652344 c-0.1269531-0.2753906-0.3720703-0.4785156-0.6660156-0.5522461L27,11.2192383V11c0-0.5522461-0.4477539-1-1-1h-2.5859375 L22,8.5859375V7c0-0.3081055-0.1420898-0.5986328-0.3847656-0.7880859 c-0.2431641-0.1899414-0.5605469-0.2583008-0.8579102-0.1821289l-4,1 c-0.2412109,0.0605469-0.4511719,0.2084961-0.5893555,0.4155273l-1.0439453,1.5664063l-0.2294922-0.4589844 c-0.144043-0.2875977-0.4169922-0.4882813-0.734375-0.5400391c-0.3144531-0.0488281-0.6401367,0.0537109-0.8671875,0.2802734 l-0.5336914,0.5336914L8.371582,7.0712891C8.152832,6.9838867,7.909668,6.9770508,7.6835938,7.0512695l-3,1 C4.159668,8.2260742,3.8764648,8.7924805,4.0512695,9.3164063l0.7255859,2.1772461l-1.2241211,0.6118164 C3.2138672,12.2749023,3,12.6210938,3,13v1.3818359l-1.4472656,0.7236328 c-0.4941406,0.2470703-0.6943359,0.8476563-0.4472656,1.3417969l1,2C2.2749023,18.7861328,2.6210938,19,3,19h4 c0.2651367,0,0.5195313-0.1054688,0.7070313-0.2929688l0.8330078-0.8330078l2.1899414-0.7299805L13.5859375,20 l-1.2929688,1.2929688c-0.0761719,0.0756836-0.1391602,0.1635742-0.1875,0.2597656l-1,2 c-0.1923828,0.3852539-0.1166992,0.8500977,0.1875,1.1542969l1,1C12.4804688,25.8945313,12.7348633,26,13,26h1 c0.2651367,0,0.5195313-0.1054688,0.7070313-0.2929688L16,24.4140625l0.2929688,0.2929688 c0.2270508,0.2265625,0.5483398,0.3286133,0.8671875,0.2802734c0.3173828-0.0517578,0.590332-0.2524414,0.734375-0.5400391 L18,24.2358398V25c0,0.3789063,0.2138672,0.7250977,0.5527344,0.8945313L20,26.6181641V27 c0,0.3466797,0.1796875,0.668457,0.4741211,0.8505859C20.6347656,27.949707,20.8173828,28,21,28 c0.152832,0,0.3061523-0.0351563,0.4472656-0.1054688l4-2c0.1933594-0.0966797,0.3505859-0.2539063,0.4472656-0.4472656l1-2 c0.1923828-0.3852539,0.1166992-0.8500977-0.1875-1.1542969c-0.3032227-0.3037109-0.7685547-0.3793945-1.1542969-0.1875 l-1.1054688,0.5527344l-0.1386719-0.2773438l4.2060547-2.5234375c0.1630859-0.0976563,0.2949219-0.2402344,0.3798828-0.4101563 L29.6181641,18H30c0.3466797,0,0.668457-0.1796875,0.8505859-0.4741211 c0.1821289-0.2949219,0.1987305-0.6630859,0.0439453-0.9731445L30.1181641,15z M28.1054688,14.5527344 c-0.140625,0.2817383-0.140625,0.612793,0,0.8945313l0.3554688,0.7104492 c-0.1494141,0.0957031-0.2729492,0.2304688-0.3554688,0.3950195l-0.8696289,1.7397461l-4.7504883,2.8500977 c-0.4477539,0.2685547-0.6132813,0.8374023-0.3798828,1.3046875l1,2c0.0537109,0.1074219,0.1240234,0.2006836,0.206543,0.2788086 l-1.4697266,0.7348633c-0.0957031-0.1494141-0.2304688-0.2729492-0.3950195-0.3554688L20,24.3818359v-0.1459961 l0.8945313-1.7885742c0.1547852-0.3100586,0.1381836-0.6782227-0.0439453-0.9731445C20.668457,21.1796875,20.3466797,21,20,21h-2 c-0.3789063,0-0.7250977,0.2138672-0.8945313,0.5527344l-0.3793945,0.7592773l-0.019043-0.019043 c-0.390625-0.390625-1.0234375-0.390625-1.4140625,0L13.5859375,24h-0.171875l-0.1972656-0.1972656l0.6049805-1.2104492 l1.8852539-1.8852539c0.390625-0.390625,0.390625-1.0234375,0-1.4140625l-4-4 c-0.2680664-0.269043-0.6640625-0.3623047-1.0234375-0.2416992l-3,1c-0.1469727,0.0493164-0.2807617,0.1318359-0.390625,0.2416992 L6.5859375,17H3.6181641l-0.2763672-0.5527344l1.1054688-0.5527344C4.7861328,15.7250977,5,15.3789063,5,15v-1.3818359 l1.4472656-0.7236328c0.4448242-0.2226563,0.6586914-0.7387695,0.5014648-1.2109375L6.2651367,9.6323242L7.96875,9.0644531 l4.659668,1.8642578c0.3720703,0.1479492,0.7963867,0.0620117,1.0786133-0.2216797l0.019043-0.019043l0.3793945,0.7592773 c0.159668,0.3188477,0.4765625,0.5288086,0.8325195,0.5507813c0.3510742,0.0263672,0.6962891-0.1469727,0.894043-0.4433594 l1.7856445-2.6782227L20,8.2807617V9c0,0.2651367,0.1054688,0.5195313,0.2929688,0.7070313l2,2 C22.4804688,11.8945313,22.7348633,12,23,12h2c0,0.4589844,0.3125,0.8588867,0.7573242,0.9702148l2.7905273,0.6977539 L28.1054688,14.5527344z\" fill=\"#ffffff\"></path> </g> <g id=\"_x31_1\"></g> <g id=\"_x31_0\"></g> <g id=\"_x39_\"></g> <g id=\"_x38_\"></g> <g id=\"_x37_\"></g> <g id=\"_x36_\"></g> <g id=\"_x35_\"></g> <g id=\"_x34_\"></g> <g id=\"_x33_\"></g> <g id=\"_x32_\"></g> <g id=\"_x31_\"></g> <g id=\"topic\"></g> <g id=\"Guides\"></g> </g></svg>"
-    });
-    SettingsApi.addParam({
-      component: 'tryzubtv',
-      param: {
-        name: 'tryzubtv_donate',
-        type: 'button'
-      },
-      field: {
-        name: Lampa.Lang.translate('tryzubtv_settings_donate')
-      },
-      onChange: function onChange() {
-        openQrModal();
-      }
-    });
-    SettingsApi.addParam({
-      component: 'tryzubtv',
-      param: {
-        name: DONATE_CARD_KEY,
-        type: 'trigger',
-        "default": true
-      },
-      field: {
-        name: Lampa.Lang.translate('tryzubtv_settings_donate_card')
-      },
-      onChange: function onChange() {
-        var enabled = Lampa.Storage.get(DONATE_CARD_KEY, true);
-        if (!enabled) {
-          Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_settings_donate_sad'));
-        }
-      }
-    });
-    SettingsApi.addParam({
-      component: 'tryzubtv',
-      param: {
-        name: SOURCE_TV_KEY,
-        type: 'trigger',
-        "default": true
-      },
-      field: {
-        name: Lampa.Lang.translate('tryzubtv_settings_source_tv')
-      },
-      onChange: function onChange() {
-        ensureAtLeastOne(SOURCE_TV_KEY);
-      }
-    });
-    SettingsApi.addParam({
-      component: 'tryzubtv',
-      param: {
-        name: SOURCE_REPLAY_KEY,
-        type: 'trigger',
-        "default": true
-      },
-      field: {
-        name: Lampa.Lang.translate('tryzubtv_settings_source_replay')
-      },
-      onChange: function onChange() {
-        ensureAtLeastOne(SOURCE_REPLAY_KEY);
-      }
-    });
-    SettingsApi.addParam({
-      component: 'tryzubtv',
-      param: {
-        name: 'tryzubtv_catalog',
-        type: 'button'
-      },
-      field: {
-        name: Lampa.Lang.translate('tryzubtv_settings_catalog')
-      },
-      onChange: function onChange() {
-        openCatalogEditor();
-      }
-    });
-  }
-
   var REPLAY_BASE = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/https://a.maincast.tv/items';
   function request(url) {
     return new Promise(function (resolve, reject) {
@@ -3778,7 +3615,8 @@
     Lampa.Component.add('tryzubtv_category', component$1);
     Lampa.Component.add('salopower_category', component);
     lang();
-    initSettings();
+    //initSettings()
+
     Lampa.Template.add('tryzubtv_style', "\n        <style>\n            .tryzubtv-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.tryzubtv-hub,.tryzubtv-tv{--tryzubtv-btn-bg:linear-gradient(180deg,rgba(34,34,34,0.82),rgba(20,20,20,0.78));--tryzubtv-btn-border:rgba(255,255,255,0.08);--tryzubtv-btn-text:rgba(255,255,255,0.92);--tryzubtv-btn-active-bg:linear-gradient(180deg,rgba(255,255,255,0.34),rgba(255,255,255,0.24));--tryzubtv-btn-active-border:rgba(255,255,255,0.28);--tryzubtv-btn-focus-bg:linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,248,248,0.94))}.tryzubtv-hub__tabs{margin:.8em 0 .2em;padding:0 1.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;width:100%}.tryzubtv-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 12em;-ms-flex:1 1 12em;flex:1 1 12em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;min-width:10em}.tryzubtv-hub__tab.active>div{color:rgba(255,255,255,0.95)}.tryzubtv-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;min-height:0}.tryzubtv-hub__view.hide{display:none}.tryzubtv-hub__view{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.tryzubtv-tv{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.tryzubtv-tv__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em;padding:.8em 1.5em .2em}.tryzubtv-tv__search{min-width:18em;max-width:28em}.tryzubtv-tv__search>div{display:block;width:100%;margin-left:0;padding:0;background:transparent;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.tryzubtv-tv__search.filled>div{color:rgba(255,255,255,0.95)}.tryzubtv-tv__filters{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;width:100%}.tryzubtv-tv__filters .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:9em}.tryzubtv-tv__search{-webkit-box-flex:2;-webkit-flex:2 1 16em;-ms-flex:2 1 16em;flex:2 1 16em}.tryzubtv-hub .simple-button,.tryzubtv-tv .simple-button{height:3.2em;font-size:1.25em;padding:.45em 1.2em;-webkit-border-radius:.95em;border-radius:.95em;border:1px solid var(--tryzubtv-btn-border);background:var(--tryzubtv-btn-bg);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03),0 .35em .9em rgba(0,0,0,0.32);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03),0 .35em .9em rgba(0,0,0,0.32);color:var(--tryzubtv-btn-text);-webkit-transition:background-color .18s ease,border-color .18s ease,color .18s ease,-webkit-box-shadow .18s ease,-webkit-transform .18s ease;transition:background-color .18s ease,border-color .18s ease,color .18s ease,-webkit-box-shadow .18s ease,-webkit-transform .18s ease;-o-transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease,transform .18s ease;transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease,transform .18s ease;transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease,transform .18s ease,-webkit-box-shadow .18s ease,-webkit-transform .18s ease}.tryzubtv-hub .simple-button--invisible:not(.focus),.tryzubtv-tv .simple-button--invisible:not(.focus){background:var(--tryzubtv-btn-bg)}.tryzubtv-hub .simple-button--filter>div,.tryzubtv-tv .simple-button--filter>div{margin-left:0;padding:0;background:transparent;font-size:.88em;font-weight:600;letter-spacing:.01em;line-height:1.2;color:inherit;text-align:center}.tryzubtv-hub .simple-button.active,.tryzubtv-tv .simple-button.active,.tryzubtv-tv .tryzubtv-tv__search.filled{background:var(--tryzubtv-btn-active-bg);border-color:var(--tryzubtv-btn-active-border);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06),0 .45em 1.1em rgba(0,0,0,0.35);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06),0 .45em 1.1em rgba(0,0,0,0.35);color:rgba(255,255,255,0.95)}.tryzubtv-hub .simple-button.focus,.tryzubtv-tv .simple-button.focus{background:var(--tryzubtv-btn-focus-bg);border-color:rgba(255,255,255,0.92);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.4),0 .6em 1.35em rgba(0,0,0,0.35);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.4),0 .6em 1.35em rgba(0,0,0,0.35);color:rgba(5,18,40,0.98);-webkit-transform:translateY(-0.04em);-ms-transform:translateY(-0.04em);transform:translateY(-0.04em)}.tryzubtv-hub .simple-button.focus>div,.tryzubtv-tv .simple-button.focus>div{color:rgba(5,18,40,0.98)}.tryzubtv-hub__tab.active,.tryzubtv-tv__filters .simple-button.active,.tryzubtv-tv__search.filled{-webkit-transform:translateY(-0.02em);-ms-transform:translateY(-0.02em);transform:translateY(-0.02em)}.tryzubtv-tv__body{padding:.6em 1.5em 1.5em}.tryzubtv-tv__category{margin-top:.4em;font-size:1em;color:rgba(255,255,255,0.6)}.tryzubtv-tv .card--tryzubtv-tv .card__title,.tryzubtv-tv .card--tryzubtv-tv .card__age{display:none}.tryzubtv-tv__empty{padding:2em 0;color:rgba(255,255,255,0.6);font-size:1.2em}.tryzubtv-tv .scroll{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1}.tryzubtv-tv .scroll__content{min-height:100%}.tryzubtv-tv .card--tryzubtv-tv .card__view{position:relative;padding-bottom:60%;-webkit-border-radius:1em;border-radius:1em;overflow:visible;background:-webkit-gradient(linear,left top,left bottom,from(var(--tryzubtv-logo-bg,#343434)),to(var(--tryzubtv-logo-bg-dark,#262626)));background:-webkit-linear-gradient(top,var(--tryzubtv-logo-bg,#343434),var(--tryzubtv-logo-bg-dark,#262626));background:-o-linear-gradient(top,var(--tryzubtv-logo-bg,#343434),var(--tryzubtv-logo-bg-dark,#262626));background:linear-gradient(180deg,var(--tryzubtv-logo-bg,#343434),var(--tryzubtv-logo-bg-dark,#262626));-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04)}.tryzubtv-tv .card--tryzubtv-tv .card__img{background-color:transparent;-webkit-border-radius:1em;border-radius:1em;overflow:hidden}.tryzubtv-tv .card--tryzubtv-tv.focus .card__view::after,.tryzubtv-tv .card--tryzubtv-tv.hover .card__view::after{z-index:2;border-width:.26em}@media screen and (max-width:1024px){.tryzubtv-tv__header{padding:.6em 1em .2em}.tryzubtv-tv__search{min-width:12em;max-width:100%;-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto}}@media screen and (max-width:720px){.tryzubtv-tv__header{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:stretch;-webkit-align-items:stretch;-ms-flex-align:stretch;align-items:stretch}.tryzubtv-tv__filters{-webkit-box-pack:start;-webkit-justify-content:flex-start;-ms-flex-pack:start;justify-content:flex-start}}\n        </style>\n    ");
     $('body').append(Lampa.Template.get('tryzubtv_style', {}, true));
     var style = document.createElement('style');
