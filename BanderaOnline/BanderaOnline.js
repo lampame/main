@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    var api_base = 'https://banderabackend.lampame.v6.rocks/api/v2';
+    var api_base = 'https://banderabackend.lme.isroot.in/api/v2';
 
     function createV2(sourceKey) {
       return function v2(component, _object) {
