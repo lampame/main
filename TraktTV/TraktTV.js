@@ -730,14 +730,14 @@
   }
   function _refreshTokens() {
     _refreshTokens = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-      var _ref8,
+      var _ref12,
         redirect_uri,
         refresh_token,
         _args = arguments;
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
-            _ref8 = _args.length > 0 && _args[0] !== undefined ? _args[0] : {}, redirect_uri = _ref8.redirect_uri;
+            _ref12 = _args.length > 0 && _args[0] !== undefined ? _args[0] : {}, redirect_uri = _ref12.redirect_uri;
             refresh_token = Lampa.Storage.get('trakt_refresh_token');
             if (refresh_token) {
               _context.n = 1;
@@ -916,7 +916,7 @@
         type: method,
         dataType: 'json'
       };
-      var postData = method === 'POST' ? JSON.stringify(params) : null;
+      var postData = method === 'POST' || method === 'PUT' ? JSON.stringify(params) : null;
       if (logging) {
         try {
           console.log('TraktTV', 'request', method, url);
@@ -972,22 +972,26 @@
     }
     return headers;
   }
-  function formatTraktResults(items) {
+  function formatTraktResults() {
+    var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
     return {
-      results: items.map(function (item) {
+      results: (Array.isArray(items) ? items : []).map(function (item) {
         var media = item.movie || item.show;
+        if (!media || !media.ids) return null;
         return {
           component: 'full',
-          id: media.ids.tmdb,
+          id: media.ids.tmdb || media.ids.trakt,
+          ids: media.ids,
           title: media.title,
           original_title: media.title,
-          release_date: media.year + '',
+          release_date: media.year ? String(media.year) : '',
           vote_average: media.rating || 0,
           poster: getImageUrl(media, 'poster'),
           image: getImageUrl(media, 'fanart'),
-          method: item.movie ? 'movie' : 'tv'
+          method: item.movie ? 'movie' : 'tv',
+          card_type: item.movie ? 'movie' : 'tv'
         };
-      })
+      }).filter(Boolean)
     };
   }
 
@@ -1025,53 +1029,170 @@
     });
   }
   function resolveTraktIds() {
-    var _params$external_ids, _params$external_ids2;
+    var _params$external_ids, _params$external_ids2, _params$external_ids3;
     var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var rawIds = params.ids && Object.keys(params.ids).length ? _objectSpread2({}, params.ids) : {};
     var tmdbId = params.id || params.tmdb || ((_params$external_ids = params.external_ids) === null || _params$external_ids === void 0 ? void 0 : _params$external_ids.tmdb_id);
     var traktId = (_params$external_ids2 = params.external_ids) === null || _params$external_ids2 === void 0 ? void 0 : _params$external_ids2.trakt_id;
+    var imdbId = ((_params$external_ids3 = params.external_ids) === null || _params$external_ids3 === void 0 ? void 0 : _params$external_ids3.imdb_id) || params.imdb;
     if (traktId && !rawIds.trakt) rawIds.trakt = traktId;
     if (tmdbId && !rawIds.tmdb) rawIds.tmdb = tmdbId;
+    if (imdbId && !rawIds.imdb) rawIds.imdb = imdbId;
     return rawIds;
+  }
+  function normalizeMediaType() {
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var method = (params.method || params.type || '').toString().toLowerCase();
+    return method === 'movie' ? 'movie' : 'show';
+  }
+  function buildSyncPayload() {
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var ids = resolveTraktIds(params);
+    if (!ids || !Object.keys(ids).length) {
+      throw new Error('TraktTV media ids are missing');
+    }
+    return normalizeMediaType(params) === 'movie' ? {
+      movies: [{
+        ids: ids
+      }],
+      shows: []
+    } : {
+      movies: [],
+      shows: [{
+        ids: ids
+      }]
+    };
+  }
+  function sameAnyId() {
+    var left = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var right = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    if (!left || !right) return false;
+    var keys = ['trakt', 'tmdb', 'imdb'];
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (left[key] && right[key] && String(left[key]) === String(right[key])) {
+        return true;
+      }
+    }
+    return false;
+  }
+  function extractMediaFromSyncItem() {
+    var item = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    if (item.movie) return {
+      media: item.movie,
+      type: 'movie'
+    };
+    if (item.show) return {
+      media: item.show,
+      type: 'show'
+    };
+    return {
+      media: null,
+      type: null
+    };
+  }
+  function normalizeListCardData(item) {
+    var _ref2 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+      _ref2$likedListIds = _ref2.likedListIds,
+      likedListIds = _ref2$likedListIds === void 0 ? [] : _ref2$likedListIds,
+      _ref2$wide = _ref2.wide,
+      wide = _ref2$wide === void 0 ? false : _ref2$wide,
+      _ref2$canManage = _ref2.canManage,
+      canManage = _ref2$canManage === void 0 ? false : _ref2$canManage;
+    var list = item && item.list ? item.list : item;
+    if (!list) return null;
+    var ids = list.ids || {};
+    var listId = ids.trakt || list.id;
+    if (!listId) return null;
+    var likedIds = Array.isArray(likedListIds) ? likedListIds : [];
+    var rawTitle = list.name || list.title || '';
+    var title = rawTitle.replace(/^\s*\[\d+\]\s*/, '').trim();
+    var description = list.description || '';
+    var poster = getImageUrl(list, 'poster') || textToImage(title || rawTitle || 'List');
+    var image = getImageUrl(list, 'fanart');
+    var cardTitle = wide ? '' : title;
+    var card = {
+      component: 'trakt_list',
+      id: listId,
+      list_id: listId,
+      ids: ids,
+      slug: ids.slug || list.slug || '',
+      title: cardTitle,
+      list_title: title,
+      original_title: cardTitle,
+      description: description,
+      overview: description,
+      poster: poster,
+      image: image,
+      cover: image || poster,
+      method: 'list',
+      item_count: list.item_count || 0,
+      privacy: list.privacy || '',
+      display_numbers: !!list.display_numbers,
+      allow_comments: !!list.allow_comments,
+      updated_at: list.updated_at || list.updated || '',
+      can_manage: !!canManage,
+      is_liked: likedIds.includes(listId)
+    };
+    if (wide) {
+      card.params = {
+        style: {
+          name: 'wide'
+        }
+      };
+    }
+    return card;
+  }
+  function formatListCards(items) {
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var results = (Array.isArray(items) ? items : []).map(function (item) {
+      return normalizeListCardData(item, options);
+    }).filter(Boolean);
+    return {
+      results: results
+    };
+  }
+  function sanitizeListPayload() {
+    var payload = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var normalized = {};
+    var name = (payload.name || payload.title || '').toString().trim();
+    var description = (payload.description || '').toString().trim();
+    var privacy = (payload.privacy || '').toString().trim();
+    if (name) normalized.name = name;
+    if (description) normalized.description = description;
+    if (privacy) normalized.privacy = privacy;
+    if (typeof payload.display_numbers === 'boolean') normalized.display_numbers = payload.display_numbers;
+    if (typeof payload.allow_comments === 'boolean') normalized.allow_comments = payload.allow_comments;
+    if (typeof payload.sort_by === 'string' && payload.sort_by) normalized.sort_by = payload.sort_by;
+    if (typeof payload.sort_how === 'string' && payload.sort_how) normalized.sort_how = payload.sort_how;
+    return normalized;
+  }
+  function makePaginationMeta(items, page, limit) {
+    var count = Array.isArray(items) ? items.length : 0;
+    var total = (page - 1) * limit + count;
+    var total_pages = count === limit ? page + 1 : page;
+    return {
+      total: total,
+      total_pages: total_pages,
+      page: page
+    };
+  }
+  function withNoCache(url) {
+    var separator = url.indexOf('?') >= 0 ? '&' : '?';
+    return "".concat(url).concat(separator, "_=").concat(Date.now());
   }
 
   /* duplicate ensureHeaders removed */
 
   var api$1 = {
     addToHistory: addToHistory$1,
-    // Переміщені функції на початок об'єкта
     formatListsResults: function formatListsResults(items) {
       var likedListIds = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       try {
-        var results = items.map(function (item) {
-          if (!item) return null;
-          var list = item && item.list ? item.list : item;
-          if (!list || !list.ids || !list.ids.trakt) {
-            if (Lampa.Storage.field('trakt_enable_logging')) {
-              console.warn('TraktTV', 'Invalid list item received', item);
-            }
-            return null;
-          }
-          var isLiked = likedListIds.includes(list.ids.trakt);
-          var result = {
-            component: 'trakt_list',
-            id: list.ids.trakt,
-            title: list.name || '',
-            original_title: list.name || '',
-            description: list.description || '',
-            poster: getImageUrl(list, 'poster') || textToImage("[".concat(list.item_count || 0, "] ").concat(list.name || '')),
-            image: getImageUrl(list, 'fanart'),
-            method: 'list',
-            item_count: list.item_count || 0,
-            is_liked: isLiked
-          };
-          return result;
-        }).filter(function (item) {
-          return item !== null;
-        });
-        return {
-          results: results
-        };
+        return formatListCards(items, _objectSpread2({
+          likedListIds: likedListIds
+        }, options));
       } catch (error) {
         return {
           results: []
@@ -1094,10 +1215,10 @@
 
         var moviesRequest = requestApi('GET', "/recommendations/movies?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=".concat(fetchLimit));
         var showsRequest = requestApi('GET', "/recommendations/shows?extended=images&ignore_collected=true&ignore_watchlisted=true&limit=".concat(fetchLimit));
-        Promise.all([moviesRequest, showsRequest]).then(function (_ref2) {
-          var _ref3 = _slicedToArray(_ref2, 2),
-            moviesResponse = _ref3[0],
-            showsResponse = _ref3[1];
+        Promise.all([moviesRequest, showsRequest]).then(function (_ref3) {
+          var _ref4 = _slicedToArray(_ref3, 2),
+            moviesResponse = _ref4[0],
+            showsResponse = _ref4[1];
           var formattedMovies = moviesResponse.map(function (movie) {
             return {
               component: 'full',
@@ -1134,9 +1255,9 @@
           // Перемішування результатів
           for (var i = combinedResults.length - 1; i > 0; i--) {
             var j = Math.floor(Math.random() * (i + 1));
-            var _ref4 = [combinedResults[j], combinedResults[i]];
-            combinedResults[i] = _ref4[0];
-            combinedResults[j] = _ref4[1];
+            var _ref5 = [combinedResults[j], combinedResults[i]];
+            combinedResults[i] = _ref5[0];
+            combinedResults[j] = _ref5[1];
           }
 
           // Calculate total pages
@@ -1339,11 +1460,11 @@
        * params: { redirect_uri, state?, signup?, prompt? }
        */
       startStandardOAuth: function startStandardOAuth() {
-        var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-          redirect_uri = _ref5.redirect_uri,
-          state = _ref5.state,
-          signup = _ref5.signup,
-          prompt = _ref5.prompt;
+        var _ref6 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+          redirect_uri = _ref6.redirect_uri,
+          state = _ref6.state,
+          signup = _ref6.signup,
+          prompt = _ref6.prompt;
         var base = 'https://trakt.tv/oauth/authorize';
         var qs = new URLSearchParams({
           client_id: CLIENT_ID,
@@ -1360,9 +1481,9 @@
        * Body: { code, client_id, client_secret, redirect_uri, grant_type: 'authorization_code' }
        * unauthorized = true
        */
-      exchangeCode: function exchangeCode(_ref6) {
-        var code = _ref6.code,
-          redirect_uri = _ref6.redirect_uri;
+      exchangeCode: function exchangeCode(_ref7) {
+        var code = _ref7.code,
+          redirect_uri = _ref7.redirect_uri;
         return requestApi('POST', '/oauth/token', {
           code: code,
           client_id: CLIENT_ID,
@@ -1387,8 +1508,8 @@
        * Revoke token best-effort
        * unauthorized = true
        */
-      revoke: function revoke(_ref7) {
-        var token = _ref7.token;
+      revoke: function revoke(_ref8) {
+        var token = _ref8.token;
         return requestApi('POST', '/oauth/revoke', {
           token: token,
           client_id: CLIENT_ID,
@@ -1422,181 +1543,190 @@
       }
     },
     addToWatchlist: function addToWatchlist(params) {
-      return new Promise(function (resolve, reject) {
-        var data = {
-          movies: [],
-          shows: []
-        };
-        var ids = resolveTraktIds(params);
-        if (params.method === 'movie') {
-          data.movies.push({
-            ids: ids
-          });
-        } else {
-          data.shows.push({
-            ids: ids
-          });
-        }
-        requestApi('POST', '/sync/watchlist', data).then(function (response) {
-          resolve(response);
-        })["catch"](function (error) {
-          reject(error);
-        });
-      });
+      return requestApi('POST', '/sync/watchlist', buildSyncPayload(params));
     },
     removeFromWatchlist: function removeFromWatchlist(params) {
-      return new Promise(function (resolve, reject) {
-        var data = {
-          movies: [],
-          shows: []
-        };
-        var ids = resolveTraktIds(params);
-        if (params.method === 'movie') {
-          data.movies.push({
-            ids: ids
-          });
-        } else {
-          data.shows.push({
-            ids: ids
-          });
-        }
-        requestApi('POST', '/sync/watchlist/remove', data).then(function (response) {
-          resolve(response);
-        })["catch"](function (error) {
-          reject(error);
-        });
-      });
+      return requestApi('POST', '/sync/watchlist/remove', buildSyncPayload(params));
     },
     inWatchlist: function inWatchlist(params) {
-      return new Promise(function (resolve, reject) {
-        var type = params.method === 'movie' ? 'movies' : 'shows';
-        var url = "/sync/watchlist/".concat(type, "?extended=full");
-        var ids = resolveTraktIds(params);
-        var tmdbId = ids.tmdb || params.id;
-        var traktId = ids.trakt;
-        requestApi('GET', url).then(function (response) {
-          var found = response.find(function (item) {
-            var _item$movie, _item$show, _item$movie2, _item$show2;
-            return tmdbId && (String((_item$movie = item.movie) === null || _item$movie === void 0 ? void 0 : _item$movie.ids.tmdb) === String(tmdbId) || String((_item$show = item.show) === null || _item$show === void 0 ? void 0 : _item$show.ids.tmdb) === String(tmdbId)) || traktId && (String((_item$movie2 = item.movie) === null || _item$movie2 === void 0 ? void 0 : _item$movie2.ids.trakt) === String(traktId) || String((_item$show2 = item.show) === null || _item$show2 === void 0 ? void 0 : _item$show2.ids.trakt) === String(traktId));
-          });
-          resolve(!!found);
-        })["catch"](function (error) {
-          reject(error);
+      var type = normalizeMediaType(params) === 'movie' ? 'movies' : 'shows';
+      var ids = resolveTraktIds(params);
+      return requestApi('GET', "/sync/watchlist/".concat(type, "?extended=full")).then(function (response) {
+        var found = (Array.isArray(response) ? response : []).find(function (item) {
+          var entity = extractMediaFromSyncItem(item);
+          return entity.media && sameAnyId(entity.media.ids || {}, ids);
         });
+        return !!found;
       });
     },
     inHistory: function inHistory(params) {
-      return new Promise(function (resolve, reject) {
-        var type = params.method === 'movie' ? 'movies' : 'shows';
-        var url = "/sync/history/".concat(type, "?extended=full");
-        var ids = resolveTraktIds(params);
-        var tmdbId = ids.tmdb || params.id;
-        var traktId = ids.trakt;
-        requestApi('GET', url).then(function (response) {
-          var found = response.find(function (item) {
-            var _item$movie3, _item$show3, _item$movie4, _item$show4;
-            return tmdbId && (String((_item$movie3 = item.movie) === null || _item$movie3 === void 0 ? void 0 : _item$movie3.ids.tmdb) === String(tmdbId) || String((_item$show3 = item.show) === null || _item$show3 === void 0 ? void 0 : _item$show3.ids.tmdb) === String(tmdbId)) || traktId && (String((_item$movie4 = item.movie) === null || _item$movie4 === void 0 ? void 0 : _item$movie4.ids.trakt) === String(traktId) || String((_item$show4 = item.show) === null || _item$show4 === void 0 ? void 0 : _item$show4.ids.trakt) === String(traktId));
-          });
-          resolve(!!found);
-        })["catch"](function (error) {
-          reject(error);
+      var type = normalizeMediaType(params) === 'movie' ? 'movies' : 'shows';
+      var ids = resolveTraktIds(params);
+      return requestApi('GET', "/sync/history/".concat(type, "?extended=full")).then(function (response) {
+        var found = (Array.isArray(response) ? response : []).find(function (item) {
+          var entity = extractMediaFromSyncItem(item);
+          return entity.media && sameAnyId(entity.media.ids || {}, ids);
         });
+        return !!found;
       });
     },
-    // Новий метод для отримання списків, які користувач лайкнув
-    likesLists: function likesLists(params) {
+    // liked lists (read-only)
+    likesLists: function likesLists() {
       var _this = this;
-      return new Promise(function (resolve, reject) {
-        var page = params.page || 1;
-        var limit = params.limit || 36;
-        requestApi('GET', "/users/me/likes/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images")).then(function (response) {
-          // Calculate total items and pages
-          var total = response.length;
-          var total_pages = Math.max(1, Math.ceil(total / limit));
-
-          // Apply pagination
-          var offset = (page - 1) * limit;
-          response.slice(offset, offset + limit);
-          var formattedData = _this.formatListsResults(response, response.map(function (item) {
-            return item.list.ids.trakt;
-          })); // Передаємо сирий масив response та ID лайкнутих списків
-          formattedData.total = total;
-          formattedData.total_pages = total_pages;
-          formattedData.page = page;
-          resolve(formattedData);
-        })["catch"](function (error) {
-          reject(error);
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var page = params.page || 1;
+      var limit = params.limit || 36;
+      return requestApi('GET', withNoCache("/users/me/likes/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images"))).then(function (response) {
+        var raw = Array.isArray(response) ? response : [];
+        var likedListIds = raw.map(function (item) {
+          var _item$list;
+          return item === null || item === void 0 || (_item$list = item.list) === null || _item$list === void 0 || (_item$list = _item$list.ids) === null || _item$list === void 0 ? void 0 : _item$list.trakt;
+        }).filter(Boolean);
+        var formatted = _this.formatListsResults(raw, likedListIds, {
+          wide: false,
+          canManage: false
         });
+        var pageMeta = makePaginationMeta(raw, page, limit);
+        formatted.total = pageMeta.total;
+        formatted.total_pages = pageMeta.total_pages;
+        formatted.page = page;
+        return formatted;
       });
     },
-    lists: function lists(params) {
+    // alias for backward compatibility
+    lists: function lists() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      return this.likesLists(params);
+    },
+    // personal lists (CRUD enabled)
+    myLists: function myLists() {
       var _this2 = this;
-      return new Promise(function (resolve, reject) {
-        var page = params.page || 1;
-        var limit = params.limit || 36;
-        requestApi('GET', "/users/me/likes/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images")).then(function (response) {
-          // Calculate total items and pages
-          var total = response.length;
-          var total_pages = Math.max(1, Math.ceil(total / limit));
-
-          // Apply pagination
-          var offset = (page - 1) * limit;
-          response.slice(offset, offset + limit);
-          var formattedData = _this2.formatListsResults(response, response.map(function (item) {
-            return item.list.ids.trakt;
-          })); // Передаємо сирий масив response та ID лайкнутих списків
-          formattedData.total = total;
-          formattedData.total_pages = total_pages;
-          formattedData.page = page;
-          resolve(formattedData);
-        })["catch"](function (error) {
-          reject(error);
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var page = params.page || 1;
+      var limit = params.limit || 36;
+      return requestApi('GET', withNoCache("/users/me/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images"))).then(function (response) {
+        var raw = Array.isArray(response) ? response : [];
+        var formatted = _this2.formatListsResults(raw, [], {
+          wide: true,
+          canManage: true
+        });
+        var pageMeta = makePaginationMeta(raw, page, limit);
+        formatted.total = pageMeta.total;
+        formatted.total_pages = pageMeta.total_pages;
+        formatted.page = page;
+        return formatted;
+      });
+    },
+    myList: function myList() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var listId = params.listId || params.id;
+      if (!listId) return Promise.reject(new Error('List ID is missing'));
+      return requestApi('GET', withNoCache("/users/me/lists/".concat(encodeURIComponent(listId), "?extended=images"))).then(function (response) {
+        return normalizeListCardData(response, {
+          wide: true,
+          canManage: true
         });
       });
     },
-    // Метод для отримання вмісту конкретного листа за його ID
-    // Використовує endpoint: https://api.trakt.tv/lists/{id}/items
-    // params: { list_id: string, page: number, limit: number }
-    list: function list(params) {
-      return new Promise(function (resolve, reject) {
-        // Отримуємо ID листа з параметрів
-        var listId = params.id; // Використовуємо params.id, оскільки baseComponent передає id
-
-        // Перевіряємо наявність ID
-        if (!listId) {
-          reject(new Error('List ID is missing'));
-          return;
-        }
-
-        // Створюємо URL для запиту
-        // За специфікацією, type не передаємо
-        var page = params.page || 1;
-        var limit = params.limit || 36;
-        var url = "/lists/".concat(listId, "/items?extended=images&page=").concat(page, "&limit=").concat(limit);
-        requestApi('GET', url).then(function (response) {
-          // Припускаємо, що відповідь має структуру, схожу на watchlist
-          // Масив об'єктів, де кожен об'єкт містить movie або show
-          // Потрібно форматувати ці дані для відображення в Lampa
-
-          // Форматуємо результати
-          var formattedData = formatTraktResults(response);
-
-          // Додаємо інформацію про пагінацію
-          // Оскільки API може не повертати заголовки пагінації,
-          // ми припускаємо, що якщо кількість елементів дорівнює ліміту,
-          // можливо є ще сторінки. Це не ідеально, але краще ніж нічого.
-          // Для точного визначення пагінації потрібно аналізувати заголовки відповіді.
-          // requestApi повертає лише тіло відповіді, тому заголовки недоступні.
-          // Тимчасово встановлюємо total_pages = page + 1, якщо отримали повну сторінку.
-          var total_items = Array.isArray(response) ? response.length : 0;
-          var total_pages = total_items === limit ? page + 1 : page;
-          formattedData.total = total_items;
-          formattedData.total_pages = total_pages;
-          formattedData.page = page;
-          resolve(formattedData);
-        })["catch"](function (error) {
-          reject(error);
+    createList: function createList() {
+      var payload = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var body = sanitizeListPayload(payload);
+      if (!body.name) return Promise.reject(new Error('List name is missing'));
+      if (!body.privacy) body.privacy = 'private';
+      return requestApi('POST', '/users/me/lists', body);
+    },
+    updateList: function updateList() {
+      var _ref9 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref9.listId,
+        payload = _ref9.payload;
+      if (!listId) return Promise.reject(new Error('List ID is missing'));
+      var body = sanitizeListPayload(payload);
+      if (!body.name) return Promise.reject(new Error('List name is missing'));
+      return requestApi('PUT', "/users/me/lists/".concat(encodeURIComponent(listId)), body);
+    },
+    deleteList: function deleteList() {
+      var _ref0 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref0.listId;
+      if (!listId) return Promise.reject(new Error('List ID is missing'));
+      return requestApi('DELETE', "/users/me/lists/".concat(encodeURIComponent(listId)));
+    },
+    addToList: function addToList() {
+      var _ref1 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref1.listId,
+        item = _ref1.item;
+      if (!listId) return Promise.reject(new Error('List ID is missing'));
+      return requestApi('POST', "/users/me/lists/".concat(encodeURIComponent(listId), "/items"), buildSyncPayload(item || {}));
+    },
+    removeFromList: function removeFromList() {
+      var _ref10 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref10.listId,
+        item = _ref10.item;
+      if (!listId) return Promise.reject(new Error('List ID is missing'));
+      return requestApi('POST', "/users/me/lists/".concat(encodeURIComponent(listId), "/items/remove"), buildSyncPayload(item || {}));
+    },
+    myListItems: function myListItems() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var listId = params.listId || params.id;
+      var page = params.page || 1;
+      var limit = params.limit || 36;
+      if (!listId) return Promise.reject(new Error('List ID is missing'));
+      var url = withNoCache("/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=images&page=").concat(page, "&limit=").concat(limit));
+      return requestApi('GET', url).then(function (response) {
+        var raw = Array.isArray(response) ? response : [];
+        var formatted = formatTraktResults(raw);
+        var pageMeta = makePaginationMeta(raw, page, limit);
+        formatted.total = pageMeta.total;
+        formatted.total_pages = pageMeta.total_pages;
+        formatted.page = page;
+        return formatted;
+      });
+    },
+    inList: function inList() {
+      var _ref11 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref11.listId,
+        item = _ref11.item,
+        _ref11$limit = _ref11.limit,
+        limit = _ref11$limit === void 0 ? 100 : _ref11$limit,
+        _ref11$maxPages = _ref11.maxPages,
+        maxPages = _ref11$maxPages === void 0 ? 10 : _ref11$maxPages;
+      if (!listId) return Promise.reject(new Error('List ID is missing'));
+      var ids = resolveTraktIds(item || {});
+      if (!Object.keys(ids).length) return Promise.resolve(false);
+      var page = 1;
+      var _checkPage = function checkPage() {
+        var url = withNoCache("/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=images&page=").concat(page, "&limit=").concat(limit));
+        return requestApi('GET', url).then(function (response) {
+          var raw = Array.isArray(response) ? response : [];
+          var found = raw.some(function (entry) {
+            var entity = extractMediaFromSyncItem(entry);
+            return entity.media && sameAnyId(entity.media.ids || {}, ids);
+          });
+          if (found) return true;
+          if (!raw.length || raw.length < limit || page >= maxPages) return false;
+          page += 1;
+          return _checkPage();
         });
+      };
+      return _checkPage();
+    },
+    // public list detail (liked/shared)
+    list: function list() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var listId = params.id || params.list_id || params.listId;
+      var page = params.page || 1;
+      var limit = params.limit || 36;
+      if (!listId) {
+        return Promise.reject(new Error('List ID is missing'));
+      }
+      var url = withNoCache("/lists/".concat(encodeURIComponent(listId), "/items?extended=images&page=").concat(page, "&limit=").concat(limit));
+      return requestApi('GET', url).then(function (response) {
+        var raw = Array.isArray(response) ? response : [];
+        var formatted = formatTraktResults(raw);
+        var pageMeta = makePaginationMeta(raw, page, limit);
+        formatted.total = pageMeta.total;
+        formatted.total_pages = pageMeta.total_pages;
+        formatted.page = page;
+        return formatted;
       });
     },
     // Новий метод для отримання списків, пов'язаних з медіа (фільмом або серіалом)
@@ -1669,9 +1799,9 @@
         onCreate: function onCreate() {
           var _this = this;
           var params = _objectSpread2({}, object);
-          if (type === 'list' && object.id) {
+          if ((type === 'list' || type === 'myListItems') && object.id) {
             params.id = object.id;
-          } else if (type === 'list' && object.list_id) {
+          } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
             params.id = object.list_id;
           }
           params.limit = 36;
@@ -1703,9 +1833,9 @@
             waitload = true;
             object.page++;
             var params = _objectSpread2({}, object);
-            if (type === 'list' && object.id) {
+            if ((type === 'list' || type === 'myListItems') && object.id) {
               params.id = object.id;
-            } else if (type === 'list' && object.list_id) {
+            } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
               params.id = object.list_id;
             }
             params.limit = 36;
@@ -1735,6 +1865,11 @@
             onlyMenu: false,
             onlyEnter: function onlyEnter() {
               Lampa.Activity.push(this.data);
+            },
+            onLong: function onLong() {
+              if (type === 'myListItems' && object && object.can_manage && object.id) {
+                openMyListItemActions(object, element);
+              }
             }
           });
         }
@@ -1745,9 +1880,9 @@
       comp.create = function () {
         var _this3 = this;
         var params = _objectSpread2({}, object);
-        if (type === 'list' && object.id) {
+        if ((type === 'list' || type === 'myListItems') && object.id) {
           params.id = object.id;
-        } else if (type === 'list' && object.list_id) {
+        } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
           params.id = object.list_id;
         }
         params.limit = 36;
@@ -1778,9 +1913,9 @@
           waitload = true;
           object.page++;
           var params = _objectSpread2({}, object);
-          if (type === 'list' && object.id) {
+          if ((type === 'list' || type === 'myListItems') && object.id) {
             params.id = object.id;
-          } else if (type === 'list' && object.list_id) {
+          } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
             params.id = object.list_id;
           }
           params.limit = 36;
@@ -1799,11 +1934,13 @@
           });
         }
       };
-      comp.cardRender = function (object, element, card) {
+      comp.cardRender = function (_, element, card) {
         if (element.method === 'tv' || element.type === 'show') {
           card.render().addClass('card--tv').append('<div class="card__type">' + Lampa.Lang.translate('trakttv_card_type_tv') + '</div>');
         }
-        card.onMenu = false;
+        card.onMenu = type === 'myListItems' && object && object.can_manage && object.id ? function () {
+          return openMyListItemActions(object, element);
+        } : false;
         card.onEnter = function () {
           Lampa.Activity.push(card.data);
         };
@@ -1959,27 +2096,332 @@
     }
     return comp;
   }
-  function watchlist$1(object) {
-    // Встановлюємо початкову сторінку, якщо не вказано
-    if (!object.page) object.page = 1;
-    return new baseComponent(object, 'watchlist');
+  function t$1(key) {
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+    try {
+      var translated = Lampa.Lang.translate(key);
+      return translated || fallback || key;
+    } catch (e) {
+      return fallback || key;
+    }
   }
-  function upnext(object) {
-    // Встановлюємо початкову сторінку, якщо не вказано
-    if (!object.page) object.page = 1;
-    return new baseComponent(object, 'upnext');
+  function notify$1(text) {
+    Lampa.Bell.push({
+      text: text
+    });
   }
-  function recommendations(object) {
-    // Встановлюємо початкову сторінку, якщо не вказано
-    if (!object.page) object.page = 1;
-    return new baseRecommendations(object);
+  function getListName() {
+    var element = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    return (element.list_title || element.title || element.name || '').trim();
   }
-  function lists(object) {
+  function restoreContentController() {
+    setTimeout(function () {
+      if (Lampa && Lampa.Controller) Lampa.Controller.toggle('content');
+    }, 0);
+  }
+  function formatNamedListTitle(name, itemCount) {
+    var safeName = (name || '').trim();
+    var hasCount = typeof itemCount === 'number' && itemCount >= 0;
+    if (safeName && hasCount) return "".concat(safeName, " (").concat(itemCount, ")");
+    if (safeName) return safeName;
+    return t$1('trakt_list_detail', 'List Content');
+  }
+  function refreshActivity(object, component) {
+    if (!Lampa || !Lampa.Activity || typeof Lampa.Activity.replace !== 'function') return;
+    var next = _objectSpread2(_objectSpread2({}, object), {}, {
+      component: component || object.component,
+      page: 1,
+      refresh: Date.now()
+    });
+    Lampa.Activity.replace(next);
+  }
+  function refreshMyListsAfterCreate(activityObject, createdList) {
+    var listId = createdList && createdList.ids ? createdList.ids.trakt || createdList.id : createdList && createdList.id;
+    var maxAttempts = 8;
+    var delayMs = 900;
+    if (!Api$2 || !listId) {
+      refreshActivity(activityObject, 'trakt_my_lists');
+      return;
+    }
+    var _attempt = function attempt(index) {
+      Api$2.myLists({
+        page: 1,
+        limit: 100
+      }).then(function (data) {
+        var results = data && Array.isArray(data.results) ? data.results : [];
+        var found = results.some(function (item) {
+          return String(item.id) === String(listId);
+        });
+        if (found || index >= maxAttempts) {
+          refreshActivity(activityObject, 'trakt_my_lists');
+          return;
+        }
+        setTimeout(function () {
+          return _attempt(index + 1);
+        }, delayMs);
+      })["catch"](function () {
+        if (index >= maxAttempts) {
+          refreshActivity(activityObject, 'trakt_my_lists');
+          return;
+        }
+        setTimeout(function () {
+          return _attempt(index + 1);
+        }, delayMs);
+      });
+    };
+    _attempt(1);
+  }
+  function refreshMyListsAfterDelete(activityObject, deletedListId) {
+    var listId = deletedListId;
+    var maxAttempts = 8;
+    var delayMs = 900;
+    if (!Api$2 || !listId) {
+      refreshActivity(activityObject, 'trakt_my_lists');
+      return;
+    }
+    var _attempt2 = function attempt(index) {
+      Api$2.myLists({
+        page: 1,
+        limit: 100
+      }).then(function (data) {
+        var results = data && Array.isArray(data.results) ? data.results : [];
+        var stillExists = results.some(function (item) {
+          return String(item.id) === String(listId);
+        });
+        if (!stillExists || index >= maxAttempts) {
+          refreshActivity(activityObject, 'trakt_my_lists');
+          return;
+        }
+        setTimeout(function () {
+          return _attempt2(index + 1);
+        }, delayMs);
+      })["catch"](function () {
+        if (index >= maxAttempts) {
+          refreshActivity(activityObject, 'trakt_my_lists');
+          return;
+        }
+        setTimeout(function () {
+          return _attempt2(index + 1);
+        }, delayMs);
+      });
+    };
+    _attempt2(1);
+  }
+  function showApiError(error) {
+    var fallbackKey = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'trakt_list_action_error';
+    var status = error && error.status;
+    var message = t$1(fallbackKey, 'Trakt request failed');
+    if (status === 420) message = t$1('trakt_list_limit_reached', 'List limit reached');else if (status === 409) message = t$1('trakt_list_conflict', 'Conflict while updating list');else if (status === 401 || status === 403) message = t$1('trakttvAuthMissed', 'Not logged');
+    notify$1(message);
+    if (Lampa.Storage.field('trakt_enable_logging')) {
+      console.error('TraktTV', 'List API error', status, error);
+    }
+  }
+  function buildCreateListCard() {
+    return {
+      id: '__trakt_create_list__',
+      title: t$1('trakt_list_create_short', 'Create'),
+      description: '',
+      overview: '',
+      method: 'list',
+      can_manage: true,
+      is_create_action: true,
+      cover: './img/img_load.svg',
+      poster: './img/img_load.svg',
+      params: {
+        style: {
+          name: 'wide'
+        }
+      }
+    };
+  }
+  function withCreateListAction(data, page) {
+    if (page !== 1) return data;
+    var normalized = data && _typeof(data) === 'object' && Array.isArray(data.results) ? _objectSpread2(_objectSpread2({}, data), {}, {
+      results: data.results.slice()
+    }) : {
+      results: []
+    };
+    normalized.results.unshift(buildCreateListCard());
+    return normalized;
+  }
+  function openListDetail(element) {
+    var componentName = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'trakt_list_detail';
+    var listName = getListName(element);
+    Lampa.Activity.push({
+      url: '',
+      title: formatNamedListTitle(listName, element.item_count),
+      component: componentName,
+      id: element.id,
+      list_id: element.id,
+      name: listName,
+      description: element.description,
+      privacy: element.privacy,
+      can_manage: !!element.can_manage,
+      page: 1,
+      source: 'tmdb'
+    });
+  }
+  function openListEditor(list, onSubmit) {
+    var source = list || {};
+    var defaultName = source.list_title || source.title || source.name || '';
+    var defaultDescription = source.description || '';
+    var defaultPrivacy = source.privacy || 'private';
+    Lampa.Input.edit({
+      title: t$1('trakt_list_name_input', 'List name'),
+      value: defaultName,
+      free: true,
+      nosave: true,
+      nomic: true
+    }, function (nameValue) {
+      restoreContentController();
+      var name = (nameValue || '').trim();
+      if (!name) {
+        notify$1(t$1('trakt_list_name_required', 'List name is required'));
+        return;
+      }
+      onSubmit({
+        name: name,
+        description: defaultDescription,
+        privacy: defaultPrivacy,
+        display_numbers: !!source.display_numbers,
+        allow_comments: !!source.allow_comments
+      });
+    });
+  }
+  function createMyList(activityObject) {
+    if (!Api$2) return;
+    openListEditor({}, function (payload) {
+      Api$2.createList(payload).then(function (createdList) {
+        notify$1(t$1('trakt_list_created', 'List created'));
+        refreshMyListsAfterCreate(activityObject, createdList);
+      })["catch"](function (error) {
+        return showApiError(error, 'trakt_list_create_error');
+      });
+    });
+  }
+  function editMyList(activityObject, element) {
+    if (!Api$2 || !element || !element.id) return;
+    openListEditor(element, function (payload) {
+      Api$2.updateList({
+        listId: element.id,
+        payload: payload
+      }).then(function () {
+        notify$1(t$1('trakt_list_updated', 'List updated'));
+        refreshActivity(activityObject, 'trakt_my_lists');
+      })["catch"](function (error) {
+        return showApiError(error, 'trakt_list_edit_error');
+      });
+    });
+  }
+  function deleteMyList(activityObject, element) {
+    if (!Api$2 || !element || !element.id) return;
+    Lampa.Select.show({
+      title: t$1('trakt_list_confirm_delete', 'Delete this list?'),
+      items: [{
+        title: t$1('trakt_list_delete_confirm_action', 'Delete'),
+        confirm: true
+      }, {
+        title: t$1('cancel', 'Cancel')
+      }],
+      onSelect: function onSelect(item) {
+        if (!item.confirm) {
+          Lampa.Controller.toggle('content');
+          return;
+        }
+        Api$2.deleteList({
+          listId: element.id
+        }).then(function () {
+          notify$1(t$1('trakt_list_deleted', 'List deleted'));
+          refreshMyListsAfterDelete(activityObject, element.id);
+        })["catch"](function (error) {
+          return showApiError(error, 'trakt_list_delete_error');
+        });
+      },
+      onBack: function onBack() {
+        Lampa.Controller.toggle('content');
+      }
+    });
+  }
+  function openMyListActions(activityObject, element) {
+    if (!element) return;
+    if (element.is_create_action) {
+      createMyList(activityObject);
+      return;
+    }
+    Lampa.Select.show({
+      title: t$1('title_action', 'Action'),
+      items: [{
+        title: t$1('trakt_list_open', 'Open list'),
+        action: 'open'
+      }, {
+        title: t$1('trakt_list_edit', 'Edit list'),
+        action: 'edit'
+      }, {
+        title: t$1('trakt_list_delete', 'Delete list'),
+        action: 'delete'
+      }],
+      onSelect: function onSelect(item) {
+        if (item.action === 'open') openListDetail(element, 'trakt_my_list_detail');
+        if (item.action === 'edit') editMyList(activityObject, element);
+        if (item.action === 'delete') deleteMyList(activityObject, element);
+      },
+      onBack: function onBack() {
+        Lampa.Controller.toggle('content');
+      }
+    });
+  }
+  function openMyListItemActions(object, element) {
+    if (!Api$2 || !object || !object.id || !element) return;
+    Lampa.Select.show({
+      title: t$1('title_action', 'Action'),
+      items: [{
+        title: t$1('trakt_remove_from_list', 'Remove from this list'),
+        action: 'remove'
+      }],
+      onSelect: function onSelect(item) {
+        if (item.action !== 'remove') return;
+        Api$2.removeFromList({
+          listId: object.id,
+          item: element
+        }).then(function () {
+          notify$1(t$1('trakt_item_removed_from_list', 'Item removed from list'));
+          refreshActivity(object, 'trakt_my_list_detail');
+        })["catch"](function (error) {
+          return showApiError(error, 'trakt_remove_from_list_error');
+        });
+      },
+      onBack: function onBack() {
+        Lampa.Controller.toggle('content');
+      }
+    });
+  }
+  function renderWideListCard(card, element) {
+    var root = card.render();
+    root.addClass('trakt-list-wide-card');
+    var promo = root.find('.card__promo');
+    if (element.is_create_action) {
+      root.addClass('trakt-list-wide-card--create');
+      return;
+    }
+    if (promo.length) {
+      // For list cards without real posters use only generated cover text.
+      promo.remove();
+    }
+  }
+  function listCatalog(object, apiMethod) {
+    var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    var config = _objectSpread2({
+      detailComponent: 'trakt_list_detail',
+      manage: false,
+      addCreateAction: false
+    }, options);
     var comp;
     var total_pages = 0;
     var waitload = false;
-
-    // Use modular system for Lampa 3.0+, fallback to old system for compatibility
+    var withActions = function withActions(data, page) {
+      return config.addCreateAction ? withCreateListAction(data, page) : data;
+    };
     if (isLampa3 && Lampa.Maker) {
       comp = Lampa.Maker.make('Category', object);
       comp.use({
@@ -1988,20 +2430,15 @@
           var params = _objectSpread2({}, object);
           params.limit = 36;
           params.page = params.page || 1;
-          if (!Api$2) {
-            var _Lampa7;
-            if ((_Lampa7 = Lampa) !== null && _Lampa7 !== void 0 && (_Lampa7 = _Lampa7.Storage) !== null && _Lampa7 !== void 0 && _Lampa7.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+          if (!Api$2 || !Api$2[apiMethod]) {
             this.empty();
             return;
           }
-          Api$2.likesLists(params).then(function (data) {
-            if (data.total_pages) {
-              total_pages = data.total_pages;
-            }
-            _this9.build(data);
-          })["catch"](function (error) {
-            console.error('TraktTV', 'Likes Lists API response:', error);
-            _this9.empty();
+          Api$2[apiMethod](params).then(function (data) {
+            total_pages = data && data.total_pages ? data.total_pages : 0;
+            _this9.build(withActions(data, params.page));
+          })["catch"](function () {
+            return _this9.empty();
           });
         },
         onNext: function onNext(resolve, reject) {
@@ -2015,13 +2452,13 @@
             object.page++;
             var params = _objectSpread2({}, object);
             params.limit = 36;
-            if (!Api$2) {
+            if (!Api$2 || !Api$2[apiMethod]) {
               waitload = false;
               reject.call(this);
               return;
             }
-            Api$2.likesLists(params).then(function (data) {
-              resolve.call(_this0, data);
+            Api$2[apiMethod](params).then(function (data) {
+              resolve.call(_this0, withActions(data, params.page));
               waitload = false;
             })["catch"](function () {
               waitload = false;
@@ -2032,49 +2469,36 @@
           }
         },
         onInstance: function onInstance(card, element) {
-          card.render().find('.card__title').remove();
-          var itemCountText = element.item_count ? "[".concat(element.item_count, "] ") : '';
-          card.render().find('.card__view').append("<div class=\"card__title\">".concat(itemCountText).concat(element.title, "</div>"));
+          renderWideListCard(card, element);
           card.use({
             onlyMenu: false,
             onlyEnter: function onlyEnter() {
-              Lampa.Activity.push({
-                url: '',
-                title: Lampa.Lang.translate('trakt_list_title_named').replace('{name}', element.title),
-                component: 'trakt_list_detail',
-                id: element.id,
-                name: element.title,
-                description: element.description,
-                source: 'tmdb'
-              });
+              if (element.is_create_action) {
+                createMyList(object);
+                return;
+              }
+              openListDetail(element, config.detailComponent);
+            },
+            onLong: function onLong() {
+              if (config.manage) openMyListActions(object, element);
             }
           });
         }
       });
     } else {
-      // Backward compatibility for Lampa < 3.0
       comp = new Lampa.InteractionCategory(object);
       comp.create = function () {
         var _this1 = this;
         var params = _objectSpread2({}, object);
         params.limit = 36;
         params.page = params.page || 1;
-        if (!Api$2) {
-          var _Lampa8;
-          if ((_Lampa8 = Lampa) !== null && _Lampa8 !== void 0 && (_Lampa8 = _Lampa8.Storage) !== null && _Lampa8 !== void 0 && _Lampa8.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
-          return;
-        }
-        Api$2.likesLists(params).then(function (data) {
-          if (data.total_pages) {
-            total_pages = data.total_pages;
-          }
-          _this1.build(data);
-          if (_this1.activity.scroll) {
-            _this1.activity.scroll.onEnd = _this1.next.bind(_this1);
-          }
-        })["catch"](function (error) {
-          console.error('TraktTV', 'Likes Lists API response:', error);
-          _this1.empty();
+        if (!Api$2 || !Api$2[apiMethod]) return;
+        Api$2[apiMethod](params).then(function (data) {
+          total_pages = data && data.total_pages ? data.total_pages : 0;
+          _this1.build(withActions(data, params.page));
+          if (_this1.activity.scroll) _this1.activity.scroll.onEnd = _this1.next.bind(_this1);
+        })["catch"](function () {
+          return _this1.empty();
         });
       };
       comp.next = function () {
@@ -2085,53 +2509,78 @@
           object.page++;
           var params = _objectSpread2({}, object);
           params.limit = 36;
-          if (!Api$2) {
-            var _Lampa9;
-            if ((_Lampa9 = Lampa) !== null && _Lampa9 !== void 0 && (_Lampa9 = _Lampa9.Storage) !== null && _Lampa9 !== void 0 && _Lampa9.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
-            return;
-          }
-          Api$2.likesLists(params).then(function (data) {
-            _this10.append(data);
+          if (!Api$2 || !Api$2[apiMethod]) return;
+          Api$2[apiMethod](params).then(function (data) {
+            _this10.append(withActions(data, params.page));
             waitload = false;
           })["catch"](function () {
             waitload = false;
           });
         }
       };
-      comp.cardRender = function (object, element, card) {
-        card.render().find('.card__title').remove();
-        var itemCountText = element.item_count ? "[".concat(element.item_count, "] ") : '';
-        card.render().find('.card__view').append("<div class=\"card__title\">".concat(itemCountText).concat(element.title, "</div>"));
-        card.onMenu = false;
+      comp.cardRender = function (_, element, card) {
+        renderWideListCard(card, element);
         card.onEnter = function () {
-          Lampa.Activity.push({
-            url: '',
-            title: Lampa.Lang.translate('trakt_list_title_named').replace('{name}', element.title),
-            component: 'trakt_list_detail',
-            id: element.id,
-            name: element.title,
-            description: element.description,
-            source: 'tmdb'
-          });
+          if (element.is_create_action) {
+            createMyList(object);
+            return;
+          }
+          openListDetail(element, config.detailComponent);
         };
+        card.onMenu = config.manage ? function () {
+          return openMyListActions(object, element);
+        } : false;
       };
     }
     return comp;
+  }
+  function watchlist$1(object) {
+    if (!object.page) object.page = 1;
+    return new baseComponent(object, 'watchlist');
+  }
+  function upnext(object) {
+    if (!object.page) object.page = 1;
+    return new baseComponent(object, 'upnext');
+  }
+  function recommendations(object) {
+    if (!object.page) object.page = 1;
+    return new baseRecommendations(object);
+  }
+  function liked_lists(object) {
+    if (!object.page) object.page = 1;
+    return listCatalog(object, 'likesLists', {
+      detailComponent: 'trakt_list_detail',
+      manage: false,
+      addCreateAction: false
+    });
+  }
+  function lists(object) {
+    return liked_lists(object);
+  }
+  function my_lists(object) {
+    if (!object.page) object.page = 1;
+    return listCatalog(object, 'myLists', {
+      detailComponent: 'trakt_my_list_detail',
+      manage: true,
+      addCreateAction: true
+    });
   }
   function list_detail(object) {
     if (!object.page) object.page = 1;
     return new baseComponent(object, 'list');
   }
+  function my_list_detail(object) {
+    if (!object.page) object.page = 1;
+    object.can_manage = true;
+    return new baseComponent(object, 'myListItems');
+  }
   function trakt_list_detail(object) {
     if (!object.page) object.page = 1;
-
-    // Створюємо новий об'єкт, який гарантовано матиме 'id'
-    var paramsForBaseComponent = {
-      id: object.id,
-      // Використовуємо object.id, який приходить з Lampa.Activity.push
+    var paramsForBaseComponent = _objectSpread2(_objectSpread2({}, object), {}, {
+      id: object.id || object.list_id,
       page: object.page,
-      limit: object.limit // Передаємо limit, якщо він є в object
-    };
+      limit: object.limit
+    });
     return new baseComponent(paramsForBaseComponent, 'list');
   }
   var Catalog = {
@@ -2139,7 +2588,10 @@
     upnext: upnext,
     recommendations: recommendations,
     lists: lists,
+    liked_lists: liked_lists,
+    my_lists: my_lists,
     list_detail: list_detail,
+    my_list_detail: my_list_detail,
     trakt_list_detail: trakt_list_detail
   };
 
@@ -2365,6 +2817,16 @@
         en: "List Content",
         uk: "Вміст списку"
       },
+      trakt_my_lists: {
+        ru: "Мои списки",
+        en: "My Lists",
+        uk: "Мої списки"
+      },
+      trakt_liked_lists: {
+        ru: "Понравившиеся списки",
+        en: "Liked Lists",
+        uk: "Вподобані списки"
+      },
       trakt_no_lists: {
         ru: "Нет списков",
         en: "No lists",
@@ -2374,6 +2836,181 @@
         ru: "Элементы списка",
         en: "List Items",
         uk: "Елементи списку"
+      },
+      trakt_list_items_short: {
+        ru: "элем.",
+        en: "items",
+        uk: "елем."
+      },
+      trakt_list_open: {
+        ru: "Открыть список",
+        en: "Open list",
+        uk: "Відкрити список"
+      },
+      trakt_list_create: {
+        ru: "Создать список",
+        en: "Create list",
+        uk: "Створити список"
+      },
+      trakt_list_create_short: {
+        ru: "Создать",
+        en: "Create",
+        uk: "Створити"
+      },
+      trakt_list_create_hint: {
+        ru: "Создайте новый список Trakt",
+        en: "Create a new Trakt list",
+        uk: "Створіть новий список Trakt"
+      },
+      trakt_list_name_input: {
+        ru: "Название списка",
+        en: "List name",
+        uk: "Назва списку"
+      },
+      trakt_list_description_input: {
+        ru: "Описание списка",
+        en: "List description",
+        uk: "Опис списку"
+      },
+      trakt_list_name_required: {
+        ru: "Укажите название списка",
+        en: "List name is required",
+        uk: "Вкажіть назву списку"
+      },
+      trakt_list_privacy: {
+        ru: "Приватность списка",
+        en: "List privacy",
+        uk: "Приватність списку"
+      },
+      trakt_list_privacy_private: {
+        ru: "Приватный",
+        en: "Private",
+        uk: "Приватний"
+      },
+      trakt_list_privacy_friends: {
+        ru: "Для друзей",
+        en: "Friends",
+        uk: "Для друзів"
+      },
+      trakt_list_privacy_public: {
+        ru: "Публичный",
+        en: "Public",
+        uk: "Публічний"
+      },
+      trakt_list_created: {
+        ru: "Список создан",
+        en: "List created",
+        uk: "Список створено"
+      },
+      trakt_list_create_error: {
+        ru: "Ошибка создания списка",
+        en: "Failed to create list",
+        uk: "Помилка створення списку"
+      },
+      trakt_list_edit: {
+        ru: "Редактировать список",
+        en: "Edit list",
+        uk: "Редагувати список"
+      },
+      trakt_list_updated: {
+        ru: "Список обновлен",
+        en: "List updated",
+        uk: "Список оновлено"
+      },
+      trakt_list_edit_error: {
+        ru: "Ошибка обновления списка",
+        en: "Failed to update list",
+        uk: "Помилка оновлення списку"
+      },
+      trakt_list_delete: {
+        ru: "Удалить список",
+        en: "Delete list",
+        uk: "Видалити список"
+      },
+      trakt_list_confirm_delete: {
+        ru: "Удалить этот список?",
+        en: "Delete this list?",
+        uk: "Видалити цей список?"
+      },
+      trakt_list_delete_confirm_action: {
+        ru: "Удалить",
+        en: "Delete",
+        uk: "Видалити"
+      },
+      trakt_list_deleted: {
+        ru: "Список удален",
+        en: "List deleted",
+        uk: "Список видалено"
+      },
+      trakt_list_delete_error: {
+        ru: "Ошибка удаления списка",
+        en: "Failed to delete list",
+        uk: "Помилка видалення списку"
+      },
+      trakt_add_to_list_action: {
+        ru: "Добавить в список",
+        en: "Add to list",
+        uk: "Додати до списку"
+      },
+      trakt_remove_from_list_action: {
+        ru: "Удалить из списка",
+        en: "Remove from list",
+        uk: "Прибрати зі списку"
+      },
+      trakt_remove_from_list: {
+        ru: "Удалить из этого списка",
+        en: "Remove from this list",
+        uk: "Прибрати з цього списку"
+      },
+      trakt_item_added_to_list: {
+        ru: "Элемент добавлен в список",
+        en: "Item added to list",
+        uk: "Елемент додано до списку"
+      },
+      trakt_item_removed_from_list: {
+        ru: "Элемент удален из списка",
+        en: "Item removed from list",
+        uk: "Елемент прибрано зі списку"
+      },
+      trakt_remove_from_list_error: {
+        ru: "Ошибка удаления элемента из списка",
+        en: "Failed to remove item from list",
+        uk: "Помилка видалення елемента зі списку"
+      },
+      trakt_list_action_error: {
+        ru: "Ошибка операции со списком",
+        en: "List action failed",
+        uk: "Помилка операції зі списком"
+      },
+      trakt_list_limit_reached: {
+        ru: "Достигнут лимит списков Trakt",
+        en: "Trakt lists limit reached",
+        uk: "Досягнуто ліміт списків Trakt"
+      },
+      trakt_list_conflict: {
+        ru: "Элемент уже есть в списке",
+        en: "Item is already in this list",
+        uk: "Елемент уже є у цьому списку"
+      },
+      trakt_lists_button: {
+        ru: "Списки",
+        en: "Manage lists",
+        uk: "Списки"
+      },
+      trakt_lists_button_in_watchlist: {
+        ru: "В watchlist",
+        en: "In watchlist",
+        uk: "У watchlist"
+      },
+      trakt_manage_lists_title: {
+        ru: "Управление списками",
+        en: "Manage lists",
+        uk: "Керування списками"
+      },
+      trakt_watchlist_action_error: {
+        ru: "Ошибка операции с watchlist",
+        en: "Watchlist action failed",
+        uk: "Помилка операції з watchlist"
       },
       trakttv_user_info: {
         ru: "Пользователь Trakt.TV",
@@ -2881,6 +3518,20 @@
     createLineTitle: createLineTitle
   };
 
+  function t(key) {
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+    try {
+      var translated = Lampa.Lang.translate(key);
+      return translated || fallback || key;
+    } catch (e) {
+      return fallback || key;
+    }
+  }
+  function notify(text) {
+    Lampa.Bell.push({
+      text: text
+    });
+  }
   function normalizeCardParams(cardData) {
     var _cardData$movie, _cardData$data;
     var source = (cardData === null || cardData === void 0 ? void 0 : cardData.movie) || (cardData === null || cardData === void 0 ? void 0 : cardData.card) || (cardData === null || cardData === void 0 ? void 0 : cardData.data) || cardData || {};
@@ -2890,6 +3541,7 @@
     var rawId = source.id || (cardData === null || cardData === void 0 ? void 0 : cardData.id) || (cardData === null || cardData === void 0 || (_cardData$movie = cardData.movie) === null || _cardData$movie === void 0 ? void 0 : _cardData$movie.id) || (cardData === null || cardData === void 0 || (_cardData$data = cardData.data) === null || _cardData$data === void 0 ? void 0 : _cardData$data.id) || externalIds.tmdb_id;
     if (!ids.tmdb && externalIds.tmdb_id) ids.tmdb = externalIds.tmdb_id;
     if (!ids.trakt && externalIds.trakt_id) ids.trakt = externalIds.trakt_id;
+    if (!ids.imdb && externalIds.imdb_id) ids.imdb = externalIds.imdb_id;
     if (!ids.tmdb && rawId) ids.tmdb = rawId;
     return _objectSpread2(_objectSpread2({}, source), {}, {
       method: method,
@@ -2897,59 +3549,140 @@
       id: rawId || ids.tmdb
     });
   }
-  function addWatchlistButton(card) {
-    var button = document.createElement('div');
-    button.className = 'full-start__button selector watchlist-button';
-    button.innerHTML = "\n        ".concat(icons.WATCHLIST_ICON, "\n        <span>").concat(Lampa.Lang.translate('trakt_watchlist_button'), "</span>\n    ");
-    var textNode = button.querySelector('span');
-    var params = normalizeCardParams(card);
-
-    // Перевіряємо чи є в списку
-    api$1.inWatchlist(params).then(function (isAdded) {
-      updateButtonStyle(button, textNode, isAdded);
-    })["catch"](function () {
-      button.style.display = 'none';
-    });
-
-    // Додаємо обробник кліку
-    button.on('hover:enter', function () {
-      var isAdded = button.classList.contains('added');
-      if (isAdded) {
-        api$1.removeFromWatchlist(params).then(function () {
-          Lampa.Bell.push({
-            text: Lampa.Lang.translate('trakt_watchlist_remove')
-          });
-          updateButtonStyle(button, textNode, false);
-        })["catch"](function () {
-          return Lampa.Bell.push({
-            text: 'Помилка при видаленні'
-          });
+  function loadMyListsMembership(params, lists) {
+    var safeLists = Array.isArray(lists) ? lists : [];
+    var checks = safeLists.map(function (list) {
+      return api$1.inList({
+        listId: list.id,
+        item: params,
+        limit: 100,
+        maxPages: 5
+      }).then(function (inList) {
+        return _objectSpread2(_objectSpread2({}, list), {}, {
+          inList: !!inList
         });
-      } else {
-        api$1.addToWatchlist(params).then(function () {
-          Lampa.Bell.push({
-            text: Lampa.Lang.translate('trakt_watchlist_add')
-          });
-          updateButtonStyle(button, textNode, true);
-        })["catch"](function () {
-          return Lampa.Bell.push({
-            text: 'Помилка при додаванні'
-          });
+      })["catch"](function () {
+        return _objectSpread2(_objectSpread2({}, list), {}, {
+          inList: false
         });
-      }
+      });
     });
-    return button;
+    return Promise.all(checks);
+  }
+  function buildManagerItems(watchlistState, lists) {
+    var items = [];
+    items.push({
+      title: watchlistState ? t('trakt_watchlist_remove', 'Remove from watchlist') : t('trakt_watchlist_add', 'Add to watchlist'),
+      target: 'watchlist',
+      inList: !!watchlistState
+    });
+    (lists || []).forEach(function (list) {
+      var listName = (list.list_title || list.title || '').trim();
+      if (!listName) return;
+      var actionTitle = list.inList ? t('trakt_remove_from_list_action', 'Remove from list') : t('trakt_add_to_list_action', 'Add to list');
+      items.push({
+        title: "".concat(listName, " \xB7 ").concat(actionTitle),
+        target: 'list',
+        listId: list.id,
+        listTitle: listName,
+        inList: !!list.inList
+      });
+    });
+    return items;
   }
   function updateButtonStyle(button, textNode, isAdded) {
     if (isAdded) {
       button.classList.add('added');
       button.style.color = '#37ff54';
-      if (textNode) textNode.textContent = Lampa.Lang.translate('trakt_watchlist_remove');
+      if (textNode) textNode.textContent = t('trakt_lists_button_in_watchlist', 'In watchlist');
     } else {
       button.classList.remove('added');
       button.style.color = '';
-      if (textNode) textNode.textContent = Lampa.Lang.translate('trakt_watchlist_button');
+      if (textNode) textNode.textContent = t('trakt_lists_button', 'Manage lists');
     }
+  }
+  function refreshButtonState(button, textNode, params) {
+    api$1.inWatchlist(params).then(function (isAdded) {
+      return updateButtonStyle(button, textNode, !!isAdded);
+    })["catch"](function () {
+      return updateButtonStyle(button, textNode, false);
+    });
+  }
+  function handleSelectAction(item, params, onDone) {
+    if (item.target === 'watchlist') {
+      var request = item.inList ? api$1.removeFromWatchlist(params) : api$1.addToWatchlist(params);
+      request.then(function () {
+        notify(item.inList ? t('trakt_watchlist_remove', 'Removed from watchlist') : t('trakt_watchlist_add', 'Added to watchlist'));
+        if (onDone) onDone();
+      })["catch"](function () {
+        return notify(t('trakt_watchlist_action_error', 'Watchlist action failed'));
+      });
+      return;
+    }
+    if (item.target === 'list' && item.listId) {
+      var _request = item.inList ? api$1.removeFromList({
+        listId: item.listId,
+        item: params
+      }) : api$1.addToList({
+        listId: item.listId,
+        item: params
+      });
+      _request.then(function () {
+        notify(item.inList ? t('trakt_item_removed_from_list', 'Item removed from list') : t('trakt_item_added_to_list', 'Item added to list'));
+        if (onDone) onDone();
+      })["catch"](function (error) {
+        if (error && error.status === 409) {
+          notify(t('trakt_list_conflict', 'Item is already in this list'));
+          return;
+        }
+        notify(t('trakt_list_action_error', 'List action failed'));
+      });
+    }
+  }
+  function openListManager(params, button, textNode) {
+    Promise.all([api$1.inWatchlist(params)["catch"](function () {
+      return false;
+    }), api$1.myLists({
+      page: 1,
+      limit: 100
+    })["catch"](function () {
+      return {
+        results: []
+      };
+    })]).then(function (_ref) {
+      var _ref2 = _slicedToArray(_ref, 2),
+        watchlistState = _ref2[0],
+        myListsResponse = _ref2[1];
+      var lists = myListsResponse && Array.isArray(myListsResponse.results) ? myListsResponse.results : [];
+      loadMyListsMembership(params, lists).then(function (withMembership) {
+        Lampa.Select.show({
+          title: t('trakt_manage_lists_title', 'Manage lists'),
+          items: buildManagerItems(!!watchlistState, withMembership),
+          onSelect: function onSelect(item) {
+            handleSelectAction(item, params, function () {
+              return refreshButtonState(button, textNode, params);
+            });
+          },
+          onBack: function onBack() {
+            Lampa.Controller.toggle('content');
+          }
+        });
+      });
+    })["catch"](function () {
+      notify(t('trakt_list_action_error', 'List action failed'));
+    });
+  }
+  function addWatchlistButton(card) {
+    var button = document.createElement('div');
+    button.className = 'full-start__button selector watchlist-button trakt-list-manager-button';
+    button.innerHTML = "\n        ".concat(icons.WATCHLIST_ICON, "\n        <span>").concat(t('trakt_lists_button', 'Manage lists'), "</span>\n    ");
+    var textNode = button.querySelector('span');
+    var params = normalizeCardParams(card);
+    refreshButtonState(button, textNode, params);
+    button.on('hover:enter', function () {
+      openListManager(params, button, textNode);
+    });
+    return button;
   }
   var watchlist = {
     addWatchlistButton: addWatchlistButton
@@ -3182,6 +3915,8 @@
     var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">Watchlist</div>\n    </li>"));
     var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">Up Next</div>\n    </li>"));
     var timetable = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n    </div>\n    <div class=\"menu__text\">Calendar</div>\n    </li>"));
+    var myLists = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(Lampa.Lang.translate('trakt_my_lists'), "</div>\n    </li>"));
+    var likedLists = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(Lampa.Lang.translate('trakt_liked_lists'), "</div>\n    </li>"));
     timetable.on('hover:enter', function () {
       Lampa.Activity.push({
         url: '',
@@ -3206,6 +3941,22 @@
         page: 1
       });
     });
+    myLists.on('hover:enter', function () {
+      Lampa.Activity.push({
+        url: '',
+        title: Lampa.Lang.translate('trakt_my_lists'),
+        component: 'trakt_my_lists',
+        page: 1
+      });
+    });
+    likedLists.on('hover:enter', function () {
+      Lampa.Activity.push({
+        url: '',
+        title: Lampa.Lang.translate('trakt_liked_lists'),
+        component: 'trakt_lists',
+        page: 1
+      });
+    });
 
     // Combine menu items
     var items = [{
@@ -3223,11 +3974,31 @@
       toggleOption: 'trakttv_show_recommendations'
     }];
 
-    // Додаємо новий пункт меню для списків користувача
+    // Додаємо пункти меню для списків Trakt
     items.push({
-      title: 'Liked Lists',
+      title: Lampa.Lang.translate('trakt_my_lists'),
+      component: 'trakt_my_lists'
+    });
+    items.push({
+      title: Lampa.Lang.translate('trakt_liked_lists'),
       component: 'trakt_lists'
     });
+    var menuList = $('.menu .menu__list').eq(0);
+    var sideMenuMap = {
+      trakt_watchlist: watchlist,
+      trakt_upnext: upnext,
+      trakt_timetable_all: timetable,
+      trakt_my_lists: myLists,
+      trakt_lists: likedLists
+    };
+    function syncSideMenuItem(key) {
+      var menuItem = sideMenuMap[key];
+      if (!menuItem) return;
+      var shouldShow = Lampa.Storage.get(key) === true;
+      var alreadyAdded = menuItem.parent().length > 0;
+      if (shouldShow && !alreadyAdded) menuList.append(menuItem);
+      if (!shouldShow && alreadyAdded) menuItem.remove();
+    }
     var combineButton = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">TraktTV</div>\n    </li>"));
     combineButton.on('hover:enter', function () {
       Lampa.Select.show({
@@ -3260,24 +4031,19 @@
             });
             Lampa.Storage.set(toggleKey, true);
           }
+          syncSideMenuItem(toggleKey);
         },
         onBack: function onBack() {
           Lampa.Controller.toggle('menu');
         }
       });
     });
-    var menuList = $('.menu .menu__list').eq(0);
     menuList.append(combineButton);
 
     // Перевіряємо кожен елемент локального сховища і додаємо відповідні пункти меню
     items.forEach(function (item) {
       var key = item.component;
-      if (Lampa.Storage.get(key) === true) {
-        // Якщо значення true, додаємо пункт меню
-        if (key === 'trakt_watchlist') menuList.append(watchlist);
-        if (key === 'trakt_upnext') menuList.append(upnext);
-        if (key === 'trakt_timetable_all') menuList.append(timetable);
-      }
+      syncSideMenuItem(key);
     });
   }
 
@@ -5174,6 +5940,7 @@
           var selectItems = formattedMediaLists.map(function (list) {
             return {
               title: list.title,
+              item_count: list.item_count,
               id: list.id,
               component: 'trakt_list_detail',
               // Вказуємо компонент
@@ -5192,9 +5959,10 @@
             title: Lampa.Lang.translate('trakttv_related_lists'),
             items: selectItems,
             onSelect: function onSelect(a) {
+              var listTitle = typeof a.item_count === 'number' ? "".concat(a.title, " (").concat(a.item_count, ")") : a.title;
               Lampa.Activity.push({
                 url: '',
-                title: a.title,
+                title: listTitle,
                 component: a.component,
                 list_id: a.list_id,
                 page: a.page
@@ -5241,8 +6009,11 @@
       if (!e.object || !e.object.activity || typeof e.object.activity.render !== 'function') {
         return;
       }
-      var button = watchlist.addWatchlistButton(e.data);
-      e.object.activity.render().find('.full-start-new__buttons').append(button);
+      var buttonsContainer = e.object.activity.render().find('.full-start-new__buttons');
+      if (buttonsContainer.find('.trakt-list-manager-button').length === 0) {
+        var button = watchlist.addWatchlistButton(e.data);
+        buttonsContainer.append(button);
+      }
 
       // Видалено кнопку TraktHistory.addHistoryButton згідно з завданням
       // const historyButton = TraktHistory.addHistoryButton(e.data);
@@ -5819,7 +6590,7 @@
     } catch (e) {/* noop */}
 
     // Додаємо стилі
-    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}</style>");
+    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     // Фонове оновлення токена при старті
@@ -5856,7 +6627,9 @@
     Lampa.Component.add('trakt_timetable_all', TraktTimetableAll);
     Lampa.Component.add('trakttv_recommendations', Catalog.recommendations);
     Lampa.Component.add('trakt_list_detail', Catalog.list_detail);
+    Lampa.Component.add('trakt_my_list_detail', Catalog.my_list_detail);
     Lampa.Component.add('trakt_lists', Catalog.lists);
+    Lampa.Component.add('trakt_my_lists', Catalog.my_lists);
 
     // Додаємо переклади
     Main();
