@@ -416,7 +416,6 @@
           return result;
         }
         function shouldUseAshdiProxy(url) {
-          if (!Lampa.Storage.get('bandera_online_proxy_ashdi')) return false;
           var player = Lampa.Storage.get('player');
           if (player && player !== 'inner') return false;
           return isAshdiUrl(url);
@@ -1730,18 +1729,6 @@
           openSourcesModal();
         }
       });
-      SettingsApi.addParam({
-        component: 'bandera_online',
-        param: {
-          name: 'bandera_online_proxy_ashdi',
-          type: 'trigger',
-          "default": false
-        },
-        field: {
-          name: Lampa.Lang.translate('bandera_online_proxy_ashdi'),
-          description: Lampa.Lang.translate('bandera_online_proxy_ashdi_descr')
-        }
-      });
     }
 
     function startPlugin() {
@@ -1967,18 +1954,6 @@
           uk: 'Не вдалося синхронізувати джерела',
           ua: 'Не вдалося синхронізувати джерела',
           en: 'Failed to sync sources'
-        },
-        bandera_online_proxy_ashdi: {
-          ru: 'Включить прокси Ashdi',
-          uk: 'Увімкнути проксі Ashdi',
-          ua: 'Увімкнути проксі Ashdi',
-          en: 'Enable Ashdi proxy'
-        },
-        bandera_online_proxy_ashdi_descr: {
-          ru: 'Только для источника Ashdi и плеера "внутренний"',
-          uk: 'Тільки для джерела Ashdi та плеєра "внутрішній"',
-          ua: 'Тільки для джерела Ashdi та плеєра "внутрішній"',
-          en: 'Only for Ashdi source and "inner" player'
         }
       });
       initSettings();
