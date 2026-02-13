@@ -2033,6 +2033,7 @@
     var header;
     var searchButton;
     var filterAll;
+    var filterFavorites;
     var categoryButton;
     var body;
     var scroll;
@@ -2059,8 +2060,14 @@
     }
     function updateFilterButtons() {
       var allLabel = "".concat(Lampa.Lang.translate('tryzubtv_all'), " \xB7 ").concat(totalCount);
+      var favoritesCount = items.filter(function (channel) {
+        return Favorites.isFavorite(channel.provider, channel.id || channel.slug);
+      }).length;
+      var favoritesLabel = "".concat(Lampa.Lang.translate('tryzubtv_favorites'), " \xB7 ").concat(favoritesCount);
       filterAll.find('div').text(allLabel);
-      filterAll.toggleClass('active', !showFavorites && !categoryKey);
+      if (filterFavorites) filterFavorites.find('div').text(favoritesLabel);
+      filterAll.toggleClass('active', !showFavorites && !categoryKey && !searchQuery);
+      if (filterFavorites) filterFavorites.toggleClass('active', showFavorites);
       if (categoryButton) categoryButton.toggleClass('hide', showFavorites);
     }
     function filterChannels() {
@@ -2204,7 +2211,9 @@
       list.forEach(function (channel, index) {
         var data = mapChannelCard(channel);
         var card = Lampa.Maker.make('Card', data);
+        card.onMenu = null;
         card.create();
+        card.onMenu = null;
         var render = card.render(true);
         render.classList.add('card--tryzubtv');
         render.classList.add('card--tryzubtv-tv');
@@ -2222,12 +2231,12 @@
         $(render).on('hover:enter', function () {
           playFromList(index);
         });
-        $(render).on('hover:long', function (event) {
+        render.addEventListener('hover:long', function (event) {
+          if (event && event.stopImmediatePropagation) event.stopImmediatePropagation();
           if (event && event.stopPropagation) event.stopPropagation();
           if (event && event.preventDefault) event.preventDefault();
           toggleFavorite(channel);
-          return false;
-        });
+        }, true);
         render.addEventListener('contextmenu', function (event) {
           if (event && event.preventDefault) event.preventDefault();
         });
@@ -2457,6 +2466,7 @@
       });
       var filters = $('<div class="tryzubtv-tv__filters"></div>');
       filterAll = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector\">" + "<div>".concat(Lampa.Lang.translate('tryzubtv_all'), "</div>") + "</div>");
+      filterFavorites = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector\">" + "<div>".concat(Lampa.Lang.translate('tryzubtv_favorites'), "</div>") + "</div>");
       categoryButton = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector\">" + "<div>".concat(Lampa.Lang.translate('tryzubtv_filter_category'), "</div>") + "</div>");
       filterAll.on('hover:enter', function () {
         showFavorites = false;
@@ -2467,11 +2477,21 @@
         updateFilterButtons();
         applyFilters();
       });
+      filterFavorites.on('hover:enter', function () {
+        showFavorites = true;
+        categoryKey = '';
+        if (categoryButton) categoryButton.find('div').text(Lampa.Lang.translate('tryzubtv_filter_category'));
+        updateFilterButtons();
+        applyFilters();
+      });
       categoryButton.on('hover:enter', function () {
         openCategoryFilter();
       });
       filterAll.on('hover:focus', function () {
         headLast = filterAll[0];
+      });
+      filterFavorites.on('hover:focus', function () {
+        headLast = filterFavorites[0];
       });
       categoryButton.on('hover:focus', function () {
         headLast = categoryButton[0];
@@ -2479,9 +2499,7 @@
       searchButton.on('hover:focus', function () {
         headLast = searchButton[0];
       });
-
-      // Favorites filter is temporarily hidden from UI.
-      filters.append(filterAll, categoryButton, searchButton);
+      filters.append(filterAll, filterFavorites, categoryButton, searchButton);
       header.append(filters);
     }
     function ensureControllers() {
@@ -3342,7 +3360,7 @@
       },
       tryzubtv_favorites: {
         en: 'Favorites',
-        uk: 'Вибране'
+        uk: 'Обране'
       },
       tryzubtv_filter_category: {
         en: 'Category',
@@ -3362,11 +3380,11 @@
       },
       tryzubtv_favorite_added: {
         en: 'Added to favorites',
-        uk: 'Додано у вибране'
+        uk: 'Додано у обране'
       },
       tryzubtv_favorite_removed: {
         en: 'Removed from favorites',
-        uk: 'Видалено з вибраного'
+        uk: 'Видалено з обраного'
       },
       tryzubtv_settings_donate_card: {
         en: 'Donate card',
