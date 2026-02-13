@@ -3737,7 +3737,8 @@
     });
   }
   function getTTL() {
-    var def = 120;
+    // 6h default to prevent duplicate finishes from periodic timeline saves in long sessions.
+    var def = 60 * 60 * 6;
     var v = Lampa.Storage.field('trakt_completion_ttl');
     var num = parseInt(v !== undefined ? v : def);
     return isNaN(num) ? def : num;
@@ -4158,6 +4159,8 @@
   var intentTimers = new Map(); // key -> timeout id
   function markFinishIntent(key) {
     var token = Lampa.Storage.get('trakt_token');
+    var ttl = getTTL();
+    var now = nowSec();
 
     // DEBUG: Log intent marking
     if (Lampa.Storage.field('trakt_enable_logging')) {
@@ -4168,9 +4171,19 @@
         timestamp: new Date().toISOString()
       });
     }
-    completionCache.get(key);
+    var rec = completionCache.get(key);
+    var isFresh = rec && now - rec.ts <= ttl;
+
+    // Do not downgrade terminal states to intent inside TTL window.
+    if (isFresh && (rec.status === 'finished' || rec.status === 'finishing')) {
+      slog('markFinishIntent skipped (terminal state preserved)', key, rec);
+      return {
+        skipped: true,
+        reason: rec.status
+      };
+    }
     var next = {
-      ts: nowSec(),
+      ts: now,
       token: token,
       status: 'intent'
     };
@@ -4181,15 +4194,21 @@
     var wait = getDebounceMs();
     if (intentTimers.has(key)) clearTimeout(intentTimers.get(key));
     var t = setTimeout(function () {
-      // keep latest ts fresh
-      completionCache.set(key, _objectSpread2(_objectSpread2({}, completionCache.get(key)), {}, {
-        ts: nowSec()
-      }));
-      persistSessionCache();
-      slog('markFinishIntent debounced persisted', key);
+      var cur = completionCache.get(key);
+      // keep latest ts fresh only for intent state
+      if (cur && cur.status === 'intent') {
+        completionCache.set(key, _objectSpread2(_objectSpread2({}, cur), {}, {
+          ts: nowSec()
+        }));
+        persistSessionCache();
+        slog('markFinishIntent debounced persisted', key);
+      }
     }, wait);
     intentTimers.set(key, t);
     slog('markFinishIntent', key, next);
+    return {
+      ok: true
+    };
   }
 
   /**
@@ -4470,7 +4489,7 @@
     return 'movie';
   }
   var isAddingShowToWatching = false;
-  var isInitialized = false;
+  var isInitialized$1 = false;
 
   /**
    * Модуль для відстеження перегляду в Trakt.TV
@@ -4487,11 +4506,11 @@
      * Ініціалізує обробники подій відстеження перегляду
      */
     init: function init() {
-      if (isInitialized) {
+      if (isInitialized$1) {
         slog('watching.init called while already initialized, skipping');
         return;
       }
-      isInitialized = true;
+      isInitialized$1 = true;
 
       // Restore cache from session
       loadSessionCache();
@@ -4844,6 +4863,14 @@
      */
     rememberHashMeta: setHashMeta,
     /**
+     * Публічний доступ до єдиного генератора completion key
+     */
+    getCompletionKey: getCompletionKey,
+    /**
+     * Публічний доступ до визначення типу контенту
+     */
+    getContentType: getContentType$1,
+    /**
      * Єдиний шлях відправити фінальний запит з ідемпотентністю
      */
     finish: finish,
@@ -4896,6 +4923,8 @@
     }
   };
 
+  var isInitialized = false;
+
   /**
    * Модуль для обробки подій плагіна
    */
@@ -4905,6 +4934,14 @@
      */
     init: function init() {
       var _this = this;
+      if (isInitialized) {
+        if (Lampa.Storage.field('trakt_enable_logging')) {
+          console.log('TraktTV', 'events.init called while already initialized, skipping');
+        }
+        return;
+      }
+      isInitialized = true;
+
       // Следим за готовностью приложения
       if (window.appready) this.onAppReady();else {
         Lampa.Listener.follow('app', function (e) {
@@ -4940,11 +4977,6 @@
               if (!media.episode_number && meta.episode) media.episode_number = meta.episode;
               if (!media.ids && meta.ids) media.ids = meta.ids;
             }
-            var minProgress = parseInt(Lampa.Storage.field('trakt_min_progress') || config.minProgress);
-            var view = lastTimeline.hash && Lampa.Timeline && Lampa.Timeline.view ? Lampa.Timeline.view(lastTimeline.hash) : null;
-            var percent = view && typeof view.percent === 'number' ? view.percent : parseFloat(view && view.percent || 0);
-            var watchedByPercent = (isNaN(percent) ? 0 : percent) >= minProgress;
-            var watchedByTime = view && view.time && view.duration ? view.time / view.duration * 100 >= minProgress : false;
 
             // DEBUG: Log media object and hash source
             if (Lampa.Storage.field('trakt_enable_logging')) {
@@ -4956,50 +4988,7 @@
                 currentMediaHash: media.hash
               });
             }
-            var key = watching && watching.markFinishIntent ? function () {
-              // watching.getCompletionKey is internal; build key via mark intent flow
-              // markFinishIntent only needs key. We will compute the key the same way as finish() does.
-              // To avoid duplicating logic, call watching.markFinishIntent with computed key from finish path:
-              // We cannot import util directly, so replicate minimal key: prefer ids if exist.
-              var ids = media.ids || {};
-              var isShow = !!(media.episode_run_time || media.first_air_date || media.created_by || media.number_of_seasons || media.number_of_episodes);
-
-              // DEBUG: Log content type detection
-              if (Lampa.Storage.field('trakt_enable_logging')) {
-                console.log('TraktTV', 'DEBUG - Event route content type detection:', {
-                  isShow: isShow,
-                  episode_run_time: media.episode_run_time,
-                  first_air_date: media.first_air_date,
-                  created_by: media.created_by,
-                  number_of_seasons: media.number_of_seasons,
-                  number_of_episodes: media.number_of_episodes
-                });
-              }
-              var generatedKey;
-              if (!isShow) {
-                if (ids.trakt) generatedKey = "movie:trakt:".concat(ids.trakt);else if (media.id) generatedKey = "movie:tmdb:".concat(media.id);else if (media.hash) generatedKey = "movie:hash:".concat(media.hash);
-              } else {
-                var showTrakt = ids && ids.trakt || media.show && media.show.ids && media.show.ids.trakt;
-                var s = media.season_number || media.season || media.seasonNumber;
-                var e = media.episode_number || media.episode || media.episodeNumber;
-                if (showTrakt && s && e) generatedKey = "episode:trakt:".concat(showTrakt, ":S").concat(s, ":E").concat(e);else if (media.id && s && e) generatedKey = "episode:tmdb:".concat(media.id, ":S").concat(s, ":E").concat(e);else if (media.hash) generatedKey = "episode:hash:".concat(media.hash);
-              }
-
-              // DEBUG: Log generated key
-              if (Lampa.Storage.field('trakt_enable_logging')) {
-                console.log('TraktTV', 'DEBUG - Event route key generation:', {
-                  generatedKey: generatedKey,
-                  mediaIds: ids,
-                  mediaId: media.id,
-                  mediaHash: media.hash
-                });
-              }
-              if (!generatedKey) {
-                var title = media.original_title || media.original_name || media.title || 'unknown';
-                generatedKey = "unknown:".concat(Lampa.Utils.hash(title));
-              }
-              return generatedKey;
-            }() : null;
+            var key = watching && typeof watching.getCompletionKey === 'function' ? watching.getCompletionKey(media) : null;
             if (key && watching && typeof watching.markFinishIntent === 'function') {
               // DEBUG: Log intent marking
               if (Lampa.Storage.field('trakt_enable_logging')) {
@@ -5014,12 +5003,39 @@
                 console.log('TraktTV', 'Finish intent marked from event', evt && evt.type, key);
               }
             }
-            if ((watchedByPercent || watchedByTime) && watching && typeof watching.finish === 'function') {
-              watching.finish(media)["catch"](function (e) {
+
+            // Primary finish route is timeline update.
+            // Fallback to direct finish only when "ended" happened without known timeline hash.
+            var shouldFallbackFinish = !!(evt && evt.type === 'ended' && !lastTimeline.hash);
+            if (shouldFallbackFinish && watching && typeof watching.finish === 'function') {
+              var contentType = watching && typeof watching.getContentType === 'function' ? watching.getContentType(media) : 'movie';
+              var season = media.season_number || media.season || media.seasonNumber;
+              var episode = media.episode_number || media.episode || media.episodeNumber;
+              var canFinishSafely = contentType === 'movie' || season && episode || media.hash;
+              if (canFinishSafely) {
                 if (Lampa.Storage.field('trakt_enable_logging')) {
-                  console.log('TraktTV', 'Finish error from event route', e);
+                  console.log('TraktTV', 'Fallback finish from event route', {
+                    eventType: evt && evt.type,
+                    contentType: contentType,
+                    hasHash: !!media.hash,
+                    season: season,
+                    episode: episode
+                  });
                 }
-              });
+                watching.finish(media)["catch"](function (e) {
+                  if (Lampa.Storage.field('trakt_enable_logging')) {
+                    console.log('TraktTV', 'Finish error from event route', e);
+                  }
+                });
+              } else if (Lampa.Storage.field('trakt_enable_logging')) {
+                console.log('TraktTV', 'Skip fallback finish from event route: insufficient episode context', {
+                  eventType: evt && evt.type,
+                  contentType: contentType,
+                  hasHash: !!media.hash,
+                  season: season,
+                  episode: episode
+                });
+              }
             }
           } catch (e) {
             // swallow
