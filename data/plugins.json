@@ -1,0 +1,136 @@
+{
+  "plugins": [
+    {
+      "id": "infuse-save",
+      "title": "Infuse Saver",
+      "short_uk": "Імпорт елементів у Infuse через меню картки.",
+      "short_en": "Import items into Infuse from the card menu.",
+      "short_ru": "Импорт элементов в Infuse через меню карточки.",
+      "desc_uk": "Додає інтеграцію з Infuse. Дозволяє передавати контент у бібліотеку Infuse прямо з картки в Lampa.",
+      "desc_en": "Adds Infuse integration. Lets you send content to your Infuse library directly from a card in Lampa.",
+      "desc_ru": "Добавляет интеграцию с Infuse. Позволяет отправлять контент в библиотеку Infuse прямо из карточки в Lampa.",
+      "file": "infuseSave.js",
+      "langs": ["en", "uk", "ru"]
+    },
+    {
+      "id": "new-category",
+      "title": "Category",
+      "short_uk": "Створення власних категорій у каталозі.",
+      "short_en": "Create custom categories in the catalog.",
+      "short_ru": "Создание собственных категорий в каталоге.",
+      "desc_uk": "Додає можливість створювати та використовувати власні категорії для зручнішої навігації.",
+      "desc_en": "Adds the ability to create and use custom categories for easier navigation.",
+      "desc_ru": "Добавляет возможность создавать и использовать собственные категории для более удобной навигации.",
+      "file": "newcategory.js",
+      "langs": ["en", "uk", "ru"]
+    },
+    {
+      "id": "concert-search",
+      "title": "Concert Torrent Search",
+      "short_uk": "Пошук концертних релізів через торент-провайдери.",
+      "short_en": "Search concert releases via torrent providers.",
+      "short_ru": "Поиск концертных релизов через торрент-провайдеры.",
+      "desc_uk": "Окремий пошук концертного контенту, що допомагає швидко знаходити релізи у підтримуваних джерелах.",
+      "desc_en": "Dedicated search for concert content to quickly find releases in supported sources.",
+      "desc_ru": "Отдельный поиск концертного контента, который помогает быстро находить релизы в поддерживаемых источниках.",
+      "file": "cts.js",
+      "langs": ["en", "uk", "ru"]
+    },
+    {
+      "id": "movie-enhancer",
+      "title": "Movie Enhancer",
+      "short_uk": "Покращення інтерфейсу та картки фільму/серіалу.",
+      "short_en": "Enhancements for UI and movie/series cards.",
+      "short_ru": "Улучшения интерфейса и карточки фильма/сериала.",
+      "desc_uk": "Комплексний плагін з візуальними та функціональними покращеннями карток, блоків і навігації у Lampa.",
+      "desc_en": "A comprehensive plugin with visual and functional improvements for cards, blocks, and navigation in Lampa.",
+      "desc_ru": "Комплексный плагин с визуальными и функциональными улучшениями карточек, блоков и навигации в Lampa.",
+      "file": "lme.js",
+      "langs": ["en", "uk", "ru"]
+    },
+    {
+      "id": "torrent-manager",
+      "title": "Torrent downloader",
+      "short_uk": "Менеджер завантаження торрентів у межах Lampa.",
+      "short_en": "Torrent download manager inside Lampa.",
+      "short_ru": "Менеджер загрузки торрентов внутри Lampa.",
+      "desc_uk": "Керує завантаженням торрентів і спрощує роботу з релізами без виходу з Lampa.",
+      "desc_en": "Manages torrent downloads and simplifies release handling without leaving Lampa.",
+      "desc_ru": "Управляет загрузкой торрентов и упрощает работу с релизами без выхода из Lampa.",
+      "file": "torrentmanager.js",
+      "langs": ["en", "uk", "ru"]
+    },
+    {
+      "id": "trakt-tv",
+      "title": "TraktTV",
+      "short_uk": "Синхронізація історії перегляду і трекінгу з Trakt.",
+      "short_en": "Sync watch history and tracking with Trakt.",
+      "short_ru": "Синхронизация истории просмотров и трекинга с Trakt.",
+      "desc_uk": "Інтеграція з Trakt для синхронізації статусів перегляду, прогресу та супутніх даних.",
+      "desc_en": "Trakt integration to sync watch statuses, progress, and related data.",
+      "desc_ru": "Интеграция с Trakt для синхронизации статусов просмотра, прогресса и связанных данных.",
+      "file": "trakttv.js",
+      "langs": ["en", "uk", "ru"]
+    },
+    {
+      "id": "tracks",
+      "title": "Tracks",
+      "short_uk": "Робота з аудіодоріжками в картці контенту.",
+      "short_en": "Audio track tools in content cards.",
+      "short_ru": "Инструменты работы с аудиодорожками в карточке контента.",
+      "desc_uk": "Розширює роботу з доріжками і допомагає швидше обирати потрібні варіанти у релізах.",
+      "desc_en": "Extends track handling and helps choose the required variants faster in releases.",
+      "desc_ru": "Расширяет работу с дорожками и помогает быстрее выбирать нужные варианты в релизах.",
+      "file": "tracks.js",
+      "langs": ["en", "uk", "ru"]
+    },
+    {
+      "id": "hikka-anime",
+      "title": "Hikka Anime",
+      "short_uk": "Інтеграція аніме-каталогу Hikka.",
+      "short_en": "Hikka anime catalog integration.",
+      "short_ru": "Интеграция аниме-каталога Hikka.",
+      "desc_uk": "Плагін для української аудиторії з доступом до релевантного аніме-контенту через Hikka.",
+      "desc_en": "Plugin for Ukrainian audience with access to relevant anime content through Hikka.",
+      "desc_ru": "Плагин для украинской аудитории с доступом к релевантному аниме-контенту через Hikka.",
+      "file": "hikka.js",
+      "langs": ["uk"]
+    },
+    {
+      "id": "jacred-proxy",
+      "title": "Jacred Proxy",
+      "short_uk": "Проксі-доступ до Jacred для українського сценарію використання.",
+      "short_en": "Proxy access to Jacred for Ukrainian usage flow.",
+      "short_ru": "Прокси-доступ к Jacred для украинского сценария использования.",
+      "desc_uk": "Спеціалізований плагін для українських користувачів, який адаптує роботу з Jacred через проксі-механіку.",
+      "desc_en": "Specialized plugin for Ukrainian users that adapts Jacred usage through proxy mechanics.",
+      "desc_ru": "Специализированный плагин для украинских пользователей, который адаптирует работу с Jacred через прокси-механику.",
+      "file": "td.js",
+      "langs": ["uk"]
+    },
+    {
+      "id": "tryzub-tv",
+      "title": "TryzubTV",
+      "short_uk": "Україномовний ТВ-контент у Lampa.",
+      "short_en": "Ukrainian TV content in Lampa.",
+      "short_ru": "Украиноязычный ТВ-контент в Lampa.",
+      "desc_uk": "Спеціалізований плагін з підбіркою контенту для українських користувачів.",
+      "desc_en": "Specialized plugin with curated content for Ukrainian users.",
+      "desc_ru": "Специализированный плагин с подборкой контента для украинских пользователей.",
+      "file": "ttv.js",
+      "langs": ["uk"]
+    },
+    {
+      "id": "bandera-online",
+      "title": "Bandera 2.0",
+      "short_uk": "Специфічний плагін для українського контенту.",
+      "short_en": "Specific plugin for Ukrainian-focused content.",
+      "short_ru": "Специфический плагин для украинского контента.",
+      "desc_uk": "Нішевий плагін, релевантний насамперед для української аудиторії.",
+      "desc_en": "Niche plugin relevant primarily for Ukrainian audience.",
+      "desc_ru": "Нишевый плагин, релевантный в первую очередь для украинской аудитории.",
+      "file": "bo.js",
+      "langs": ["uk"]
+    }
+  ]
+}

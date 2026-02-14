@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>LampaME Plugins</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+
+<body>
+  <div class="bg"></div>
+
+  <header class="header">
+    <div class="container header__inner">
+      <div class="brand">
+        <img class="brand__logo"
+          src="https://avatars.githubusercontent.com/u/153383259?s=400&u=05c09c71f832b7f564628833b60fc810c4649d65&v=4"
+          alt="LampaME" />
+        <div class="brand__text">
+          <div class="brand__title">LampaME Plugins</div>
+          <div class="brand__subtitle" id="subtitle">
+            Lampa plugins catalog • quick search • easy copy
+          </div>
+        </div>
+      </div>
+
+      <div class="header__actions">
+        <a id="donate" class="btn btn--ghost" href="https://t.me/tribute/app?startapp=d5WS" target="_blank"
+          rel="noopener" aria-label="Voluntary donation to support (opens in a new tab)">Voluntary donation to
+          support</a>
+
+        <button id="howto" class="btn" type="button">How to install</button>
+
+        <div class="lang" role="group" aria-label="Language">
+          <button class="lang__btn is-active" data-lang="en" type="button">ENG</button>
+          <button class="lang__btn" data-lang="uk" type="button">UKR</button>
+          <button class="lang__btn" data-lang="ru" type="button">RUS</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="toolbar">
+      <div class="search">
+        <div class="search__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 21l-4.3-4.3" />
+            <circle cx="11" cy="11" r="7" />
+          </svg>
+        </div>
+
+        <input id="q" class="search__input" type="search" placeholder="Search plugin by name or description…"
+          autocomplete="off" />
+
+        <button id="clear" class="search__clear is-hidden" type="button" aria-label="Clear">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="toolbar__right">
+        <div class="pill" title="Number of plugins">
+          <div class="pill__label" id="countLabel">Plugins</div>
+          <div class="pill__value" id="countValue">—</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div id="grid" class="grid"></div>
+
+      <div id="empty" class="empty is-hidden">
+        <div class="empty__title" id="emptyTitle">Nothing found</div>
+        <div class="empty__hint" id="emptyHint">Try another query.</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- How-to modal -->
+  <div id="howtoModal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
+    <div class="modal__backdrop" data-close="howto"></div>
+
+    <div class="modal__card">
+      <div class="modal__head">
+        <div class="modal__title" id="howtoTitle">How to install</div>
+
+        <button class="modal__close" type="button" aria-label="Close" data-close="howto">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal__body">
+        <ol class="steps" id="howtoSteps"></ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- Details modal -->
+  <div id="detailsModal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="detailsTitle">
+    <div class="modal__backdrop" data-close="details"></div>
+
+    <div class="modal__card">
+      <div class="modal__head">
+        <div class="modal__title" id="detailsTitle">—</div>
+
+        <button class="modal__close" type="button" aria-label="Close" data-close="details">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal__body">
+        <div class="details__desc" id="detailsDesc"></div>
+
+        <div class="details__urlrow">
+          <div class="url" id="detailsUrl" title=""></div>
+
+          <div class="details__actions">
+            <button class="copy" id="detailsCopy" type="button">Copy</button>
+
+            <a class="dl dl--details" id="detailsDl" href="#" target="_blank" rel="noopener" aria-label="Завантажити">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 3v10" />
+                <path d="M8 11l4 4 4-4" />
+                <path d="M4 21h16" />
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <div class="gallery is-hidden" id="detailsGallery"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image lightbox modal -->
+  <div id="imgModal" class="modal is-hidden" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <div class="modal__backdrop" data-close="img"></div>
+
+    <div class="modal__card imgmodal__card" role="document">
+      <div class="imgbar">
+        <div class="imgbar__left">
+          <div class="imgbar__title" id="imgTitle">—</div>
+        </div>
+
+        <div class="imgbar__right">
+          <div class="imgbar__count" id="imgCount">1/1</div>
+
+          <a class="imgbar__link" id="imgOpen" href="#" target="_blank" rel="noopener">Відкрити</a>
+
+          <button class="modal__close imgbar__close" type="button" aria-label="Close" data-close="img">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="imgstage">
+        <button class="navbtn navbtn--left" type="button" aria-label="Previous" id="imgPrev">‹</button>
+        <img id="imgView" class="imgmodal__img" alt="" />
+        <button class="navbtn navbtn--right" type="button" aria-label="Next" id="imgNext">›</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/app.js"></script>
+</body>
+
+</html>
