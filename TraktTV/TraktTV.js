@@ -1524,7 +1524,9 @@
                 poster: getImageUrl(item.show, 'poster'),
                 image: getImageUrl(item.show, 'fanart'),
                 method: 'tv',
-                release_quality: "".concat(watchedEpisodes, "/").concat(item.show.aired_episodes),
+                trakt_upnext_watched: watchedEpisodes,
+                trakt_upnext_total: item.show.aired_episodes,
+                trakt_upnext_progress: "".concat(watchedEpisodes, "/").concat(item.show.aired_episodes),
                 status: item.show.status,
                 last_aired: (lastEpisode === null || lastEpisode === void 0 ? void 0 : lastEpisode.first_aired) || null
               };
@@ -1550,7 +1552,9 @@
                 poster: getImageUrl(item.show, 'poster'),
                 image: getImageUrl(item.show, 'fanart'),
                 method: 'tv',
-                release_quality: "".concat(watchedEpisodes, "/").concat(item.show.aired_episodes),
+                trakt_upnext_watched: watchedEpisodes,
+                trakt_upnext_total: item.show.aired_episodes,
+                trakt_upnext_progress: "".concat(watchedEpisodes, "/").concat(item.show.aired_episodes),
                 status: item.show.status,
                 last_aired: null
               };
@@ -1940,6 +1944,62 @@
 
   // Version check for Lampa 3.0+ modular system
   var isLampa3 = window.Lampa && window.Lampa.Manifest && window.Lampa.Manifest.app_digital >= 300;
+  function resolveUpnextProgress$1() {
+    var element = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var watched = Number(element.trakt_upnext_watched);
+    var total = Number(element.trakt_upnext_total);
+    var text = (element.trakt_upnext_progress || '').toString().trim();
+    var safeWatched = Number.isFinite(watched) ? watched : 0;
+    var safeTotal = Number.isFinite(total) ? total : 0;
+    if (!text && safeTotal > 0) {
+      text = "".concat(safeWatched, "/").concat(safeTotal);
+    }
+    if ((!safeWatched || !safeTotal) && text.indexOf('/') > -1) {
+      var parts = text.split('/');
+      var parsedWatched = Number(parts[0]);
+      var parsedTotal = Number(parts[1]);
+      if (Number.isFinite(parsedWatched) && parsedWatched >= 0) safeWatched = parsedWatched;
+      if (Number.isFinite(parsedTotal) && parsedTotal > 0) safeTotal = parsedTotal;
+    }
+    if (!text) return null;
+    var percent = safeTotal > 0 ? Math.max(0, Math.min(100, Math.round(safeWatched / safeTotal * 100))) : null;
+    return {
+      text: text,
+      percent: percent
+    };
+  }
+  function renderUpnextCardProgress(card, element) {
+    var progress = resolveUpnextProgress$1(element || {});
+    if (!progress) return;
+    var cardNode = card && typeof card.render === 'function' ? card.render(true) : null;
+    var cardView = cardNode && cardNode.querySelector ? cardNode.querySelector('.card__view') : null;
+    if (!cardView) return;
+    var badge = cardView.querySelector('.trakt-upnext-progress');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'trakt-upnext-progress';
+      cardView.appendChild(badge);
+    }
+    badge.textContent = progress.text;
+    if (progress.percent !== null) {
+      badge.style.setProperty('--trakt-upnext-progress', "".concat(progress.percent, "%"));
+    } else {
+      badge.style.removeProperty('--trakt-upnext-progress');
+    }
+  }
+  function renderTvTypeBadge(card, element) {
+    if (!element || element.method !== 'tv' && element.type !== 'show') return;
+    var cardNode = card && typeof card.render === 'function' ? card.render(true) : null;
+    var cardView = cardNode && cardNode.querySelector ? cardNode.querySelector('.card__view') : null;
+    if (!cardNode || !cardView) return;
+    cardNode.classList.add('card--tv');
+    if (!cardView.querySelector('.card__type')) {
+      var type = document.createElement('div');
+      type.className = 'card__type';
+      type.textContent = Lampa.Lang.translate('trakttv_card_type_tv');
+      cardView.appendChild(type);
+    }
+  }
   function baseComponent(object, type) {
     var comp;
     var total_pages = 0;
@@ -2011,9 +2071,14 @@
           }
         },
         onInstance: function onInstance(card, element) {
-          if (element.method === 'tv' || element.type === 'show') {
-            card.render().addClass('card--tv').append('<div class="card__type">' + Lampa.Lang.translate('trakttv_card_type_tv') + '</div>');
-          }
+          card.use({
+            onCreate: function onCreate() {
+              renderTvTypeBadge(this, element);
+              if (type === 'upnext') {
+                renderUpnextCardProgress(this, element);
+              }
+            }
+          });
           card.use({
             onlyMenu: false,
             onlyEnter: function onlyEnter() {
@@ -2088,8 +2153,9 @@
         }
       };
       comp.cardRender = function (_, element, card) {
-        if (element.method === 'tv' || element.type === 'show') {
-          card.render().addClass('card--tv').append('<div class="card__type">' + Lampa.Lang.translate('trakttv_card_type_tv') + '</div>');
+        renderTvTypeBadge(card, element);
+        if (type === 'upnext') {
+          renderUpnextCardProgress(card, element);
         }
         card.onMenu = type === 'myListItems' && object && object.can_manage && object.id ? function () {
           return openMyListItemActions(object, element);
@@ -2954,6 +3020,11 @@
         ru: "Показывать рекомендации TraktTV на главной",
         en: "Show TraktTV recommendations on main page",
         uk: "Показувати рекомендації TraktTV на головній сторінці"
+      },
+      trakt_progress_section: {
+        ru: "Настройки прогресса",
+        en: "Progress settings",
+        uk: "Налаштування прогресу"
       },
       trakttv_show_tv_progress: {
         ru: "Показывать прогресс просмотра сериалов",
@@ -5166,20 +5237,20 @@
         startBookmarksExportFlow();
       }
     });
-
-    // Параметр для відображення рекомендацій на головній
-    // Lampa.SettingsApi.addParam({
-    //     component: 'trakt',
-    //     param: {
-    //         name: 'trakttv_show_on_main',
-    //         type: 'trigger',
-    //         default: true
-    //     },
-    //     field: {
-    //         name: Lampa.Lang.translate('trakttv_show_recommendations'),
-    //         description: Lampa.Lang.translate('trakttv_show_recommendations')
-    //     }
-    // });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_progress_section',
+        type: 'static'
+      },
+      field: {
+        name: ''
+      },
+      onRender: function onRender(item) {
+        item.empty();
+        item.append("<div class=\"settings-param__name\"><b>".concat(t('trakt_progress_section', 'Progress configuration'), "</b></div>"));
+      }
+    });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -6879,6 +6950,55 @@
   };
 
   var isInitialized = false;
+  function resolveUpnextProgress() {
+    var data = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var watched = Number(data.trakt_upnext_watched);
+    var total = Number(data.trakt_upnext_total);
+    var text = (data.trakt_upnext_progress || '').toString().trim();
+    var safeWatched = Number.isFinite(watched) ? watched : 0;
+    var safeTotal = Number.isFinite(total) ? total : 0;
+    if (!text && safeTotal > 0) {
+      text = "".concat(safeWatched, "/").concat(safeTotal);
+    }
+    if ((!safeWatched || !safeTotal) && text.indexOf('/') > -1) {
+      var parts = text.split('/');
+      var parsedWatched = Number(parts[0]);
+      var parsedTotal = Number(parts[1]);
+      if (Number.isFinite(parsedWatched) && parsedWatched >= 0) safeWatched = parsedWatched;
+      if (Number.isFinite(parsedTotal) && parsedTotal > 0) safeTotal = parsedTotal;
+    }
+    if (!text) return null;
+    var percent = safeTotal > 0 ? Math.max(0, Math.min(100, Math.round(safeWatched / safeTotal * 100))) : null;
+    return {
+      text: text,
+      percent: percent
+    };
+  }
+  function renderUpnextProgressBadge(cardInstance) {
+    if (!cardInstance || !cardInstance.data || !cardInstance.render) return;
+    var progress = resolveUpnextProgress(cardInstance.data);
+    if (!progress) return;
+    var cardNode = cardInstance.render(true);
+    var cardView = cardNode && cardNode.querySelector ? cardNode.querySelector('.card__view') : null;
+    if (!cardView) return;
+    var badge = cardView.querySelector('.trakt-upnext-progress');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'trakt-upnext-progress';
+      cardView.appendChild(badge);
+    }
+    badge.textContent = progress.text;
+    if (progress.percent !== null) {
+      badge.style.setProperty('--trakt-upnext-progress', "".concat(progress.percent, "%"));
+    } else {
+      badge.style.removeProperty('--trakt-upnext-progress');
+    }
+  }
+  function decorateUpnextLine(event) {
+    if (!event || !event.data || event.data.trakt_row !== 'upnext') return;
+    if (!Array.isArray(event.items)) return;
+    event.items.forEach(renderUpnextProgressBadge);
+  }
 
   /**
    * Модуль для обробки подій плагіна
@@ -6908,6 +7028,12 @@
       Lampa.Listener.follow('full', function (e) {
         if (e.type === 'complite' && Lampa.Storage.get('trakt_token')) {
           _this.onFullCardReady(e);
+        }
+      });
+      Lampa.Listener.follow('line', function (e) {
+        if (!e || !e.type) return;
+        if (e.type === 'append' || e.type === 'visible' || e.type === 'toggle') {
+          decorateUpnextLine(e);
         }
       });
 
@@ -7570,6 +7696,7 @@
             }
             call({
               title: icons.createLineTitle(Lampa.Lang.translate('trakttv_upnext')),
+              trakt_row: 'upnext',
               results: normalizedResults,
               onMore: function onMore() {
                 Lampa.Activity.push({
@@ -7787,7 +7914,7 @@
     } catch (e) {/* noop */}
 
     // Додаємо стилі
-    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{text-align:center;padding:0 1.2em 1.2em}.trakt-device-auth__qr-container{margin:0 auto 1.2em;width:min(100%,22em)}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin-top:.2em}.trakt-device-auth__code strong{letter-spacing:.08em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__qr-container{width:min(100%,18.5em)}}</style>");
+    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-upnext-progress{position:absolute;top:.45em;right:.45em;z-index:3;min-width:3.2em;text-align:center;font-size:.95em;font-weight:700;line-height:1.1;color:#fff;background:rgba(0,0,0,0.7);-webkit-border-radius:.45em;border-radius:.45em;padding:.28em .5em .42em;pointer-events:none}.trakt-upnext-progress::after{content:'';position:absolute;left:.35em;right:.35em;bottom:.16em;height:.14em;-webkit-border-radius:.2em;border-radius:.2em;background:rgba(255,255,255,0.22)}.trakt-upnext-progress::before{content:'';position:absolute;left:.35em;bottom:.16em;height:.14em;width:var(--trakt-upnext-progress,0);max-width:-webkit-calc(100% - 0.7em);max-width:calc(100% - 0.7em);-webkit-border-radius:.2em;border-radius:.2em;background:#ffe216}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{text-align:center;padding:0 1.2em 1.2em}.trakt-device-auth__qr-container{margin:0 auto 1.2em;width:min(100%,22em)}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin-top:.2em}.trakt-device-auth__code strong{letter-spacing:.08em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__qr-container{width:min(100%,18.5em)}}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     // Фонова валідація токена при старті (єдиний шлях auth lifecycle).
