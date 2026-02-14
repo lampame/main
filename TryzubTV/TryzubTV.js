@@ -2925,11 +2925,19 @@
       }, {
         id: 'replay',
         title: Lampa.Lang.translate('tryzubtv_tab_replay')
+      }, {
+        id: 'thanks',
+        title: Lampa.Lang.translate('tryzubtv_tab_thanks'),
+        action: 'modal'
       }];
-      tabs.forEach(function (tab, index) {
-        var button = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector tryzubtv-hub__tab\">" + "<div>".concat(tab.title, "</div>") + "</div>");
-        if (tab.id === activeTab) button.addClass('active');
+      tabs.forEach(function (tab) {
+        var button = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector tryzubtv-hub__tab\" data-tab=\"".concat(tab.id, "\">") + "<div>".concat(tab.title, "</div>") + "</div>");
+        if (!tab.action && tab.id === activeTab) button.addClass('active');
         button.on('hover:enter', function () {
+          if (tab.action === 'modal') {
+            openQrModal();
+            return;
+          }
           switchTab(tab.id);
         });
         navigation.append(button);
@@ -2937,8 +2945,8 @@
     }
     function updateTabs() {
       navigation.find('.tryzubtv-hub__tab').removeClass('active');
-      var index = activeTab === 'tv' ? 0 : 1;
-      navigation.find('.tryzubtv-hub__tab').eq(index).addClass('active');
+      var activeButton = navigation.find(".tryzubtv-hub__tab[data-tab=\"".concat(activeTab, "\"]"));
+      if (activeButton.length) activeButton.addClass('active');
     }
     function getView(tabId) {
       if (views[tabId]) return views[tabId];
@@ -2987,8 +2995,8 @@
       Lampa.Controller.add('tryzubtv_tabs', {
         toggle: function toggle() {
           Lampa.Controller.collectionSet(navigation);
-          var index = activeTab === 'tv' ? 0 : 1;
-          var button = navigation.find('.tryzubtv-hub__tab').eq(index)[0];
+          var byTab = navigation.find(".tryzubtv-hub__tab[data-tab=\"".concat(activeTab, "\"]"))[0];
+          var button = byTab || navigation.find('.tryzubtv-hub__tab')[0];
           Lampa.Controller.collectionFocus(button, navigation);
         },
         right: function right() {
@@ -3349,6 +3357,10 @@
       tryzubtv_tab_replay: {
         en: 'Replays',
         uk: 'Реплеї'
+      },
+      tryzubtv_tab_thanks: {
+        en: 'Thanks',
+        uk: 'Подяка'
       },
       tryzubtv_search_placeholder: {
         en: 'Search channel',
