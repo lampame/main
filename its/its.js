@@ -64,6 +64,11 @@
           ru: 'Отключено',
           en: 'Disabled',
           uk: 'Вимкнено'
+        },
+        its_normalize_names: {
+          ru: 'Нормализовать имена',
+          en: 'Normalize names',
+          uk: 'Нормалізувати імена'
         }
       });
     }
@@ -83,6 +88,38 @@
     function escapeHtml(value) {
       return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
+    var FileNameNormalizer = {
+      generateFilename: function generateFilename(item, movie, index) {
+        var tmdbId = movie ? movie.id : '';
+        var seasonNum = parseInt(item.season !== undefined ? item.season : item.season_number);
+        var episodeNum = parseInt(item.episode !== undefined ? item.episode : item.episode_number);
+        var filename = '';
+        if (movie && tmdbId) {
+          if (!isNaN(episodeNum) && episodeNum > 0 && !isNaN(seasonNum) && seasonNum >= 0) {
+            var title = movie.original_name || movie.original_title || movie.name || movie.title;
+            var s = seasonNum < 10 ? '0' + seasonNum : seasonNum;
+            var e = episodeNum < 10 ? '0' + episodeNum : episodeNum;
+            filename = title + ' S' + s + 'E' + e + ' {tmdb-' + tmdbId + '}';
+          } else {
+            var rawName = String(item.title || item.path_human || item.path || '').replace(/\.[a-z0-9]{1,6}$/i, '');
+            if (movie.first_air_date || movie.name) {
+              filename = '{tmdb-' + tmdbId + '} ' + (rawName || movie.original_name || movie.name);
+            } else {
+              var _title = movie.original_title || movie.title || movie.original_name || movie.name;
+              var year = String(movie.release_date || '').split('-')[0];
+              filename = _title + (year ? ' (' + year + ')' : '') + ' {tmdb-' + tmdbId + '}';
+            }
+          }
+        } else {
+          var meta = getFileMeta(item.originalUrl || item.url);
+          filename = meta.name || 'link_' + (index + 1);
+        }
+        return filename;
+      },
+      normalizeItem: function normalizeItem(item, movie, index) {
+        return this.generateFilename(item, movie, index);
+      }
+    };
     function getFileMeta(url) {
       var segment = '';
       try {
@@ -126,17 +163,40 @@
     function createMenuTitle(label) {
       return "<div class=\"infuseSaver\">".concat(INFUSE_LOGO, "<span>").concat(label, "</span></div>");
     }
-    function createEditableLinks(items) {
+    function createEditableLinks(items, movie) {
+      var isTvShow = movie && (movie.first_air_date || movie.name || movie.number_of_seasons);
+      var hasMovieId = movie && movie.id;
       return (items || []).map(function (item, index) {
         var sourceUrl = sanitizeUrl(item.url);
         var meta = getFileMeta(sourceUrl);
+        var editedName = meta.name;
+
+        // Попередня чистка: для фільмів з TMDB ID одразу ставимо нормалізовану назву.
+        if (!isTvShow && hasMovieId) {
+          var normalized = FileNameNormalizer.normalizeItem({
+            originalUrl: sourceUrl,
+            url: sourceUrl,
+            title: meta.name,
+            season: item.season,
+            season_number: item.season_number,
+            episode: item.episode,
+            episode_number: item.episode_number
+          }, movie, index);
+          if (normalized) {
+            editedName = normalized;
+          }
+        }
         return {
           id: index,
           index: index + 1,
           originalUrl: sourceUrl,
-          editedName: meta.name,
+          editedName: editedName,
           extension: meta.extension,
-          enabled: true
+          enabled: true,
+          season: item.season,
+          season_number: item.season_number,
+          episode: item.episode,
+          episode_number: item.episode_number
         };
       });
     }
@@ -163,8 +223,8 @@
         onDone();
         return;
       }
-      var modal = Lampa.Modal.render();
-      modal.addClass('its-links-editor-modal--hidden');
+      var layer = $('.its-links-layer');
+      layer.addClass('its-links-layer--hidden');
       Lampa.Input.edit({
         title: tr('its_file_name_title'),
         value: item.editedName,
@@ -176,7 +236,7 @@
         if (nextValue) {
           item.editedName = nextValue;
         }
-        modal.removeClass('its-links-editor-modal--hidden');
+        layer.removeClass('its-links-layer--hidden');
         onDone();
       });
     }
@@ -184,7 +244,7 @@
       var selectedCount = state.links.filter(function (item) {
         return item.enabled;
       }).length;
-      var html = $("\n        <div class=\"its-links-editor\">\n            <div class=\"its-links-editor__toolbar\">\n                <div class=\"its-links-editor__button selector\" data-action=\"save\">".concat(tr('its_save_changes'), " (").concat(selectedCount, ")</div>\n                <div class=\"its-links-editor__button selector\" data-action=\"disable-all\">").concat(tr('its_disable_all'), "</div>\n            </div>\n            <div class=\"its-links-editor__list\"></div>\n        </div>\n    "));
+      var html = $("\n        <div class=\"its-links-editor\">\n            <div class=\"its-links-editor__toolbar\">\n                <div class=\"its-links-editor__button selector\" data-action=\"save\">".concat(tr('its_save_changes'), " (").concat(selectedCount, ")</div>\n                <div class=\"its-links-editor__button selector\" data-action=\"normalize\">").concat(tr('its_normalize_names'), "</div>\n                <div class=\"its-links-editor__button selector\" data-action=\"disable-all\">").concat(tr('its_disable_all'), "</div>\n            </div>\n            <div class=\"its-links-editor__list\"></div>\n        </div>\n    "));
       var list = html.find('.its-links-editor__list');
       state.links.forEach(function (item) {
         var stateText = item.enabled ? tr('its_state_enabled') : tr('its_state_disabled');
@@ -193,6 +253,7 @@
         list.append(row);
       });
       html.find('[data-action="save"]').on('hover:enter', actions.save);
+      html.find('[data-action="normalize"]').on('hover:enter', actions.normalize);
       html.find('[data-action="disable-all"]').on('hover:enter', actions.disableAll);
       html.find('[data-action="toggle"]').on('hover:enter', function () {
         var id = Number($(this).attr('data-id'));
@@ -206,18 +267,25 @@
     }
     function openLinksEditor(config) {
       var state = {
-        links: createEditableLinks(config.items)
+        links: createEditableLinks(config.items, config.movie),
+        movie: config.movie || null
       };
-      var enabledController = Lampa.Controller.enabled().name;
-      var opened = false;
+      var returnController = Lampa.Controller.enabled().name;
+      var controllerName = 'its_links_editor';
+      var layer = null;
       var close = function close() {
-        Lampa.Modal.close();
-        Lampa.Controller.toggle(enabledController);
+        if (layer) {
+          layer.remove();
+          layer = null;
+        }
+        Lampa.Controller.toggle(returnController);
       };
       var focusSelectorById = function focusSelectorById(targetId) {
         setTimeout(function () {
-          var modal = Lampa.Modal.render();
-          var scope = modal.find('.scroll').first();
+          if (!layer) {
+            return;
+          }
+          var scope = layer;
           var target = scope.find('.selector').first();
           if (typeof targetId === 'number') {
             var rowButton = scope.find(".its-links-editor__action[data-id=\"".concat(targetId, "\"][data-action=\"edit\"]")).first();
@@ -229,8 +297,33 @@
             Lampa.Controller.collectionSet(scope);
             Lampa.Controller.collectionFocus(target[0], scope);
             target.trigger('hover:focus');
+            Lampa.Controller.toggle(controllerName);
           }
         }, 0);
+      };
+      var ensureController = function ensureController() {
+        Lampa.Controller.add(controllerName, {
+          toggle: function toggle() {
+            if (!layer) {
+              return;
+            }
+            Lampa.Controller.collectionSet(layer);
+            Lampa.Controller.collectionFocus(layer.find('.selector').first()[0], layer);
+          },
+          up: function up() {
+            Navigator.move('up');
+          },
+          down: function down() {
+            Navigator.move('down');
+          },
+          left: function left() {
+            Navigator.move('left');
+          },
+          right: function right() {
+            Navigator.move('right');
+          },
+          back: close
+        });
       };
       var _render = function render() {
         var html = buildLinksEditorHtml(state, {
@@ -242,6 +335,23 @@
             }
             close();
             config.onSave(links);
+          },
+          normalize: function normalize() {
+            state.links.forEach(function (item, index) {
+              var normalized = FileNameNormalizer.normalizeItem({
+                originalUrl: item.originalUrl,
+                url: item.originalUrl,
+                title: item.editedName,
+                season: item.season,
+                season_number: item.season_number,
+                episode: item.episode,
+                episode_number: item.episode_number
+              }, state.movie, index);
+              if (normalized) {
+                item.editedName = normalized;
+              }
+            });
+            _render();
           },
           disableAll: function disableAll() {
             state.links.forEach(function (item) {
@@ -272,19 +382,15 @@
             });
           }
         });
-        if (!opened) {
-          opened = true;
-          Lampa.Modal.open({
-            title: tr('its_modal_title'),
-            html: html,
-            size: 'medium',
-            scroll_to_center: true,
-            select: html.find('.selector').first()[0],
-            onBack: close
-          });
+        if (!layer) {
+          ensureController();
+          layer = $("\n                <div class=\"its-links-layer\">\n                    <div class=\"its-links-layer__panel\">\n                        <div class=\"its-links-layer__title\">".concat(escapeHtml(tr('its_modal_title')), "</div>\n                        <div class=\"its-links-layer__body\"></div>\n                    </div>\n                </div>\n            "));
+          $('body').append(layer);
+          layer.find('.its-links-layer__body').append(html);
+          Lampa.Controller.toggle(controllerName);
           focusSelectorById();
         } else {
-          Lampa.Modal.update(html);
+          layer.find('.its-links-layer__body').empty().append(html);
           focusSelectorById();
         }
       };
@@ -304,12 +410,14 @@
         return;
       }
       var isAppleTv = Lampa.Platform.is('apple_tv') === true;
+      var movie = data.params ? data.params.movie : null;
       data.menu.push({
         title: createMenuTitle(tr('its_save_all')),
         onSelect: function onSelect() {
           setTimeout(function () {
             openLinksEditor({
               items: links,
+              movie: movie,
               onSave: function onSave(preparedLinks) {
                 if (isAppleTv) {
                   var playlist = encodeURIComponent(JSON.stringify(preparedLinks));
@@ -351,7 +459,7 @@
         description: 'Some tweaks for Apple TV',
         component: 'its'
       };
-      Lampa.Template.add('its_style', "\n        <style>\n            .infuseSaver{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.6em}.infuseSaverLogo{width:24px;height:24px;-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto}.its-links-editor{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1.2em}.its-links-editor-modal--hidden{opacity:0;pointer-events:none}body.keyboard-input--visible .settings-input{z-index:120}.its-links-editor__toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8em}.its-links-editor__button,.its-links-editor__action{background:rgba(255,255,255,0.08);-webkit-border-radius:.6em;border-radius:.6em;border:1px solid rgba(255,255,255,0.18);padding:.7em 1em;font-size:1.1em;line-height:1.2}.its-links-editor .selector.focus{border-color:#ffd27a;-webkit-box-shadow:inset 0 0 0 1px rgba(255,210,122,0.65),0 0 0 2px rgba(255,210,122,0.28);box-shadow:inset 0 0 0 1px rgba(255,210,122,0.65),0 0 0 2px rgba(255,210,122,0.28);background:rgba(255,255,255,0.18)}.its-links-editor__list{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.7em}.its-links-editor__item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);-webkit-border-radius:.8em;border-radius:.8em;padding:.85em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.7em}.its-links-editor__item.is-disabled{opacity:.62}.its-links-editor__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:1.05em}.its-links-editor__state{color:rgba(255,255,255,0.72)}.its-links-editor__state--enabled{color:#67d67a}.its-links-editor__state--disabled{color:#f0c35a}.its-links-editor__filename{font-size:1.15em;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.its-links-editor__ext{opacity:.65}.its-links-editor__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.6em}.its-links-editor__action{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;text-align:center}@media(max-width:900px){.its-links-editor__toolbar,.its-links-editor__actions{grid-template-columns:1fr;display:grid}}\n        </style>\n    ");
+      Lampa.Template.add('its_style', "\n        <style>\n            .infuseSaver{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.6em}.infuseSaverLogo{width:24px;height:24px;-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto}.its-links-editor{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1.2em}.its-links-layer{position:fixed;inset:0;z-index:65;background:rgba(0,0,0,0.5);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:2em}.its-links-layer__panel{width:min(1100px,100%);max-height:88vh;overflow:auto;background:#232425;-webkit-border-radius:1.2em;border-radius:1.2em;padding:1.2em}.its-links-layer__title{font-size:2.1em;margin-bottom:.7em}.its-links-layer--hidden{opacity:0;pointer-events:none}body.keyboard-input--visible .settings-input{z-index:120}.its-links-editor__toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8em}.its-links-editor__button,.its-links-editor__action{background:rgba(255,255,255,0.08);-webkit-border-radius:.6em;border-radius:.6em;border:1px solid rgba(255,255,255,0.18);padding:.7em 1em;font-size:1.1em;line-height:1.2}.its-links-editor .selector.focus{border-color:#ffd27a;-webkit-box-shadow:inset 0 0 0 1px rgba(255,210,122,0.65),0 0 0 2px rgba(255,210,122,0.28);box-shadow:inset 0 0 0 1px rgba(255,210,122,0.65),0 0 0 2px rgba(255,210,122,0.28);background:rgba(255,255,255,0.18)}.its-links-editor__list{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.7em}.its-links-editor__item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);-webkit-border-radius:.8em;border-radius:.8em;padding:.85em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.7em}.its-links-editor__item.is-disabled{opacity:.62}.its-links-editor__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:1.05em}.its-links-editor__state{color:rgba(255,255,255,0.72)}.its-links-editor__state--enabled{color:#67d67a}.its-links-editor__state--disabled{color:#f0c35a}.its-links-editor__filename{font-size:1.15em;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.its-links-editor__ext{opacity:.65}.its-links-editor__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.6em}.its-links-editor__action{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;text-align:center}@media(max-width:900px){.its-links-editor__toolbar,.its-links-editor__actions{grid-template-columns:1fr;display:grid}}\n        </style>\n    ");
       $('body').append(Lampa.Template.get('its_style', {}, true));
       if (window.appready) {
         add();
