@@ -1787,7 +1787,7 @@
       }
       var manifest = {
         type: 'video',
-        version: '2.6.5',
+        version: '2.7.0',
         name: '[Free] Bandera Online',
         //description: 'Плагин для просмотра онлайн сериалов и фильмов',
         component: 'bandera_online',
