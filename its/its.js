@@ -6,14 +6,19 @@
     function registerTranslations() {
       Lampa.Lang.add({
         its_save_single: {
-          ru: 'Save to Infuse',
-          en: 'Save to Infuse',
-          uk: 'Save to Infuse'
+          ru: 'Сохранить',
+          en: 'Save',
+          uk: 'Зберегти'
         },
         its_save_all: {
-          ru: 'Save all to Infuse',
-          en: 'Save all to Infuse',
-          uk: 'Save all to Infuse'
+          ru: 'Сохранить все',
+          en: 'Save all',
+          uk: 'Зберегти все'
+        },
+        its_save_all_edit: {
+          ru: 'Редактировать и сохранить все',
+          en: 'Edit & Save all',
+          uk: 'Редагувати та зберегти все'
         },
         its_modal_title: {
           ru: 'Редактирование передачи серий',
@@ -404,6 +409,15 @@
         }
       });
     }
+    function sendPreparedLinks(preparedLinks, isAppleTv) {
+      if (isAppleTv) {
+        var playlist = encodeURIComponent(JSON.stringify(preparedLinks));
+        window.location.assign('lampa://saveAllToInfuse?playlist=' + playlist);
+        return;
+      }
+      var payload = buildShortcutsPayload(preparedLinks);
+      window.location.assign('shortcuts://run-shortcut?name=Infuse import links&input=text&text=' + payload);
+    }
     function addBulkSaveAction(data) {
       var links = data.items || [];
       if (!links.length) {
@@ -414,18 +428,23 @@
       data.menu.push({
         title: createMenuTitle(tr('its_save_all')),
         onSelect: function onSelect() {
+          var preparedLinks = links.map(function (item) {
+            return {
+              url: sanitizeUrl(item.url)
+            };
+          });
+          sendPreparedLinks(preparedLinks, isAppleTv);
+        }
+      });
+      data.menu.push({
+        title: createMenuTitle(tr('its_save_all_edit')),
+        onSelect: function onSelect() {
           setTimeout(function () {
             openLinksEditor({
               items: links,
               movie: movie,
               onSave: function onSave(preparedLinks) {
-                if (isAppleTv) {
-                  var playlist = encodeURIComponent(JSON.stringify(preparedLinks));
-                  window.location.assign('lampa://saveAllToInfuse?playlist=' + playlist);
-                  return;
-                }
-                var payload = buildShortcutsPayload(preparedLinks);
-                window.location.assign('shortcuts://run-shortcut?name=Infuse import links&input=text&text=' + payload);
+                sendPreparedLinks(preparedLinks, isAppleTv);
               }
             });
           }, 0);
