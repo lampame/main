@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    var api_base = 'https://banderabackend.lme.isroot.in/api/v2';
+    var api_base = 'https://bbe.lme.isroot.in/api/v2';
 
     function createV2(sourceKey) {
       return function v2(component, _object) {
@@ -23,6 +23,9 @@
           NO_RESULTS: true,
           NOT_FOUND: true,
           CONTENT_REMOVED: true,
+          MISSING_IMDB_OR_TMDB: true,
+          INVALID_TMDB_ID: true,
+          INVALID_SERIAL: true,
           NO_PLAYER_DATA: true,
           NO_STREAM_DATA: true,
           NO_STREAMS: true,
@@ -67,8 +70,10 @@
             title: first.title || first.name || object.movie.title || object.movie.name,
             original_title: first.orig_title || first.original_title || first.nameEn || object.movie.original_title || object.movie.original_name,
             imdb_id: first.imdb_id,
+            tmdb_id: first.tmdb_id,
             kinopoisk_id: first.kp_id || first.kinopoisk_id || first.filmId,
-            year: getYear(object.movie || {})
+            year: getYear(object.movie || {}),
+            serial: typeof first.serial != 'undefined' ? first.serial : getSerial(object.movie || {})
           });
         };
         this.extendChoice = function (saved) {
@@ -144,6 +149,16 @@
           var date = movie.release_date || movie.first_air_date || movie.year || movie.start_date;
           return date ? (date + '').slice(0, 4) : '';
         }
+        function getTmdbId(movie) {
+          if (!movie) return '';
+          if (movie.tmdb_id) return movie.tmdb_id;
+          if (typeof movie.id == 'number' || typeof movie.id == 'string' && /^\d+$/.test(movie.id)) return movie.id;
+          return '';
+        }
+        function getSerial(movie) {
+          if (!movie) return '';
+          return movie.name ? 1 : 0;
+        }
         function normalizeVoiceName(voice) {
           return voice.display_name || voice.displayName || voice.name || voice.id || '';
         }
@@ -161,8 +176,10 @@
           url = addParam(url, 'title', params.title || movie.title || movie.name);
           url = addParam(url, 'original_title', params.original_title || movie.original_title || movie.original_name);
           url = addParam(url, 'imdb_id', params.imdb_id || movie.imdb_id);
+          url = addParam(url, 'tmdb_id', params.tmdb_id || getTmdbId(movie));
           url = addParam(url, 'kinopoisk_id', params.kinopoisk_id || movie.kinopoisk_id);
           url = addParam(url, 'year', params.year || getYear(movie));
+          if (sourceKey == 'makhno') url = addParam(url, 'serial', typeof params.serial != 'undefined' ? params.serial : getSerial(movie));
           if (movie.name) url = addParam(url, 'type', 'series');else url = addParam(url, 'type', 'movie');
           return url;
         }
@@ -186,12 +203,14 @@
             if (items.length > 1 && !object.clarification) {
               component.similars(items.map(function (item) {
                 return {
-                  id: item.ref && (item.ref.id || item.ref.href || item.ref.url) || item.title,
+                  id: item.ref && (item.ref.id || item.ref.href || item.ref.url || item.ref.play) || item.title,
                   title: item.title || item.name,
                   orig_title: item.title_en || item.original_title,
                   year: item.year,
                   imdb_id: item.imdb_id,
+                  tmdb_id: item.tmdb_id,
                   kinopoisk_id: item.kinopoisk_id,
+                  serial: item.serial,
                   ref: item.ref
                 };
               }));
@@ -378,6 +397,7 @@
                   title: movie.title,
                   subtitles: first.subtitles
                 });
+                Lampa.Player.playlist([]);
               }, function (errorText) {
                 component.pushError(errorText || Lampa.Lang.translate('online_nolink'));
               });
@@ -535,6 +555,7 @@
         uatut: createV2('uatut'),
         uaflix: createV2('uaflix'),
         kurwaborz: createV2('kurwaborz'),
+        makhno: createV2('makhno'),
         bambooua: createV2('bambooua'),
         animeon: createV2('animeon'),
         starlight: createV2('starlight'),
@@ -547,6 +568,7 @@
         uaflix: 'UAflix',
         uatut: 'UATuT',
         kurwaborz: 'Kurwaborz',
+        makhno: 'Makhno',
         bambooua: 'BambooUA',
         animeon: 'AnimeON',
         starlight: 'StarLight',
@@ -626,7 +648,7 @@
         sources = filterEnabledSources(sources);
         sources = applyUserSources(sources);
         if (!sources.length) {
-          sources = ['uatut', 'uaflix', 'kurwaborz', 'uakino', 'ashdibase'];
+          sources = ['uatut', 'uaflix', 'kurwaborz', 'makhno', 'uakino', 'ashdibase'];
           if (include_anime) {
             sources.push('bambooua', 'animeon');
             sources.push('mikai');
@@ -676,7 +698,7 @@
             return sources[name];
           });
         }
-        return ['uatut', 'uaflix', 'kurwaborz', 'mikai', 'uakino', 'ashdibase'];
+        return ['uatut', 'uaflix', 'kurwaborz', 'makhno', 'mikai', 'uakino', 'ashdibase'];
       }
       function filterEnabledSources(list) {
         var enabled = getEnabledSources();
@@ -757,6 +779,12 @@
       function getYear(movie) {
         var date = movie.release_date || movie.first_air_date || movie.year || movie.start_date;
         return date ? (date + '').slice(0, 4) : '';
+      }
+      function getTmdbId(movie) {
+        if (!movie) return '';
+        if (movie.tmdb_id) return movie.tmdb_id;
+        if (typeof movie.id == 'number' || typeof movie.id == 'string' && /^\d+$/.test(movie.id)) return movie.id;
+        return '';
       }
       this.initialize = function () {
         var _this = this;
@@ -875,6 +903,7 @@
             title: object.movie.title || object.movie.name,
             original_title: object.movie.original_title || object.movie.original_name,
             imdb_id: object.movie.imdb_id,
+            tmdb_id: getTmdbId(object.movie),
             kinopoisk_id: object.movie.kinopoisk_id,
             year: getYear(object.movie)
           }]);
