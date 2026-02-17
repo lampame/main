@@ -74,6 +74,56 @@
           ru: 'Нормализовать имена',
           en: 'Normalize names',
           uk: 'Нормалізувати імена'
+        },
+        its_sort_status: {
+          ru: 'Сортировка статуса',
+          en: 'Status sort',
+          uk: 'Сортування статусу'
+        },
+        its_filter_season: {
+          ru: 'Фильтр сезона',
+          en: 'Season filter',
+          uk: 'Фільтр сезону'
+        },
+        its_sort_status_title: {
+          ru: 'Сортировка по статусу',
+          en: 'Sort by status',
+          uk: 'Сортування за статусом'
+        },
+        its_sort_status_none: {
+          ru: 'Без сортировки',
+          en: 'No sorting',
+          uk: 'Без сортування'
+        },
+        its_sort_status_enabled_first: {
+          ru: 'Сначала передаются',
+          en: 'Enabled first',
+          uk: 'Спочатку передаються'
+        },
+        its_sort_status_disabled_first: {
+          ru: 'Сначала отключенные',
+          en: 'Disabled first',
+          uk: 'Спочатку вимкнені'
+        },
+        its_filter_season_title: {
+          ru: 'Фильтр по сезону',
+          en: 'Filter by season',
+          uk: 'Фільтр за сезоном'
+        },
+        its_filter_season_all: {
+          ru: 'Все сезоны',
+          en: 'All seasons',
+          uk: 'Усі сезони'
+        },
+        its_filter_season_none: {
+          ru: 'Без сезона',
+          en: 'No season',
+          uk: 'Без сезону'
+        },
+        its_no_items_for_filter: {
+          ru: 'Нет элементов по текущему фильтру',
+          en: 'No items for current filter',
+          uk: 'Немає елементів за поточним фільтром'
         }
       });
     }
@@ -92,6 +142,21 @@
     }
     function escapeHtml(value) {
       return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function resolveSeasonNumber(item) {
+      var raw = item && item.season !== undefined ? item.season : item ? item.season_number : undefined;
+      var parsed = parseInt(raw, 10);
+      return !isNaN(parsed) && parsed > 0 ? parsed : null;
+    }
+    function resolveSeasonKey(item) {
+      var seasonNumber = resolveSeasonNumber(item);
+      return seasonNumber === null ? 'none' : String(seasonNumber);
+    }
+    function getSeasonLabelByKey(seasonKey) {
+      if (seasonKey === 'none') {
+        return tr('its_filter_season_none');
+      }
+      return Lampa.Lang.translate('torrent_serial_season') + ' ' + seasonKey;
     }
     var FileNameNormalizer = {
       generateFilename: function generateFilename(item, movie, index) {
@@ -194,10 +259,12 @@
         return {
           id: index,
           index: index + 1,
+          sourceIndex: index,
           originalUrl: sourceUrl,
           editedName: editedName,
           extension: meta.extension,
           enabled: true,
+          seasonKey: resolveSeasonKey(item),
           season: item.season,
           season_number: item.season_number,
           episode: item.episode,
@@ -245,35 +312,119 @@
         onDone();
       });
     }
+    function getSortStatusLabel(sortStatus) {
+      if (sortStatus === 'enabled_first') {
+        return tr('its_sort_status_enabled_first');
+      }
+      if (sortStatus === 'disabled_first') {
+        return tr('its_sort_status_disabled_first');
+      }
+      return tr('its_sort_status_none');
+    }
+    function getSeasonFilterLabel(seasonFilter) {
+      if (seasonFilter === 'all') {
+        return tr('its_filter_season_all');
+      }
+      return getSeasonLabelByKey(seasonFilter);
+    }
+    function getSeasonFilterItems(links) {
+      var keysMap = {};
+      links.forEach(function (item) {
+        keysMap[item.seasonKey] = true;
+      });
+      var numericSeasons = Object.keys(keysMap).filter(function (key) {
+        return key !== 'none';
+      }).sort(function (a, b) {
+        return Number(a) - Number(b);
+      });
+      var items = [{
+        value: 'all',
+        title: tr('its_filter_season_all')
+      }];
+      numericSeasons.forEach(function (seasonKey) {
+        items.push({
+          value: seasonKey,
+          title: getSeasonLabelByKey(seasonKey)
+        });
+      });
+      if (keysMap.none) {
+        items.push({
+          value: 'none',
+          title: tr('its_filter_season_none')
+        });
+      }
+      return items;
+    }
+    function getVisibleLinks(state) {
+      var filtered = state.seasonFilter === 'all' ? state.links.slice() : state.links.filter(function (item) {
+        return item.seasonKey === state.seasonFilter;
+      });
+      if (state.statusSort === 'enabled_first') {
+        return filtered.sort(function (a, b) {
+          if (a.enabled === b.enabled) {
+            return a.sourceIndex - b.sourceIndex;
+          }
+          return a.enabled ? -1 : 1;
+        });
+      }
+      if (state.statusSort === 'disabled_first') {
+        return filtered.sort(function (a, b) {
+          if (a.enabled === b.enabled) {
+            return a.sourceIndex - b.sourceIndex;
+          }
+          return a.enabled ? 1 : -1;
+        });
+      }
+      return filtered.sort(function (a, b) {
+        return a.sourceIndex - b.sourceIndex;
+      });
+    }
     function buildLinksEditorHtml(state, actions) {
       var selectedCount = state.links.filter(function (item) {
         return item.enabled;
       }).length;
-      var html = $("\n        <div class=\"its-links-editor\">\n            <div class=\"its-links-editor__toolbar\">\n                <div class=\"its-links-editor__button selector\" data-action=\"save\">".concat(tr('its_save_changes'), " (").concat(selectedCount, ")</div>\n                <div class=\"its-links-editor__button selector\" data-action=\"normalize\">").concat(tr('its_normalize_names'), "</div>\n                <div class=\"its-links-editor__button selector\" data-action=\"disable-all\">").concat(tr('its_disable_all'), "</div>\n            </div>\n            <div class=\"its-links-editor__list\"></div>\n        </div>\n    "));
+      var visibleLinks = getVisibleLinks(state);
+      var sortStatusLabel = getSortStatusLabel(state.statusSort);
+      var seasonFilterLabel = getSeasonFilterLabel(state.seasonFilter);
+      var html = $("\n        <div class=\"its-links-editor\">\n            <div class=\"its-links-editor__toolbar\">\n                <div class=\"its-links-editor__button selector\" data-action=\"save\">".concat(tr('its_save_changes'), " (").concat(selectedCount, ")</div>\n                <div class=\"its-links-editor__button selector\" data-action=\"normalize\">").concat(tr('its_normalize_names'), "</div>\n                <div class=\"its-links-editor__button selector\" data-action=\"disable-all\">").concat(tr('its_disable_all'), "</div>\n                <div class=\"its-links-editor__button selector\" data-action=\"sort-status\">").concat(tr('its_sort_status'), ": ").concat(escapeHtml(sortStatusLabel), "</div>\n                <div class=\"its-links-editor__button selector\" data-action=\"filter-season\">").concat(tr('its_filter_season'), ": ").concat(escapeHtml(seasonFilterLabel), "</div>\n            </div>\n            <div class=\"its-links-editor__meta\">\n                <span class=\"its-links-editor__meta-item\">").concat(tr('its_sort_status_title'), ": ").concat(escapeHtml(sortStatusLabel), "</span>\n                <span class=\"its-links-editor__meta-item\">").concat(tr('its_filter_season_title'), ": ").concat(escapeHtml(seasonFilterLabel), "</span>\n            </div>\n            <div class=\"its-links-editor__list\"></div>\n        </div>\n    "));
       var list = html.find('.its-links-editor__list');
-      state.links.forEach(function (item) {
+      if (!visibleLinks.length) {
+        list.append("<div class=\"its-links-editor__empty\">".concat(tr('its_no_items_for_filter'), "</div>"));
+      }
+      visibleLinks.forEach(function (item) {
         var stateText = item.enabled ? tr('its_state_enabled') : tr('its_state_disabled');
         var stateClass = item.enabled ? 'its-links-editor__state--enabled' : 'its-links-editor__state--disabled';
-        var row = $("\n            <div class=\"its-links-editor__item ".concat(item.enabled ? '' : 'is-disabled', "\">\n                <div class=\"its-links-editor__head\">\n                    <div class=\"its-links-editor__index\">#").concat(item.index, "</div>\n                    <div class=\"its-links-editor__filename\" title=\"").concat(escapeHtml(item.editedName + item.extension), "\"><span class=\"its-links-editor__name\">").concat(escapeHtml(item.editedName), "</span><span class=\"its-links-editor__ext\">").concat(escapeHtml(item.extension), "</span></div>\n                    <div class=\"its-links-editor__state ").concat(stateClass, "\">").concat(stateText, "</div>\n                </div>\n                <div class=\"its-links-editor__actions\">\n                    <div class=\"its-links-editor__action selector\" data-action=\"edit\" data-id=\"").concat(item.id, "\">").concat(tr('its_edit_name'), "</div>\n                    <div class=\"its-links-editor__action selector\" data-action=\"toggle\" data-id=\"").concat(item.id, "\">").concat(item.enabled ? tr('its_do_not_send') : tr('its_send'), "</div>\n                </div>\n            </div>\n        "));
+        var seasonLabel = getSeasonLabelByKey(item.seasonKey);
+        var row = $("\n            <div class=\"its-links-editor__item ".concat(item.enabled ? '' : 'is-disabled', "\">\n                <div class=\"its-links-editor__head\">\n                    <div class=\"its-links-editor__index\">#").concat(item.index, "</div>\n                    <div class=\"its-links-editor__season\">").concat(escapeHtml(seasonLabel), "</div>\n                    <div class=\"its-links-editor__filename\" title=\"").concat(escapeHtml(item.editedName + item.extension), "\"><span class=\"its-links-editor__name\">").concat(escapeHtml(item.editedName), "</span><span class=\"its-links-editor__ext\">").concat(escapeHtml(item.extension), "</span></div>\n                    <div class=\"its-links-editor__state ").concat(stateClass, "\">").concat(stateText, "</div>\n                </div>\n                <div class=\"its-links-editor__actions\">\n                    <div class=\"its-links-editor__action selector\" data-action=\"edit\" data-id=\"").concat(item.id, "\">").concat(tr('its_edit_name'), "</div>\n                    <div class=\"its-links-editor__action selector\" data-action=\"toggle\" data-id=\"").concat(item.id, "\">").concat(item.enabled ? tr('its_do_not_send') : tr('its_send'), "</div>\n                </div>\n            </div>\n        "));
         list.append(row);
       });
       html.find('[data-action="save"]').on('hover:enter', actions.save);
       html.find('[data-action="normalize"]').on('hover:enter', actions.normalize);
       html.find('[data-action="disable-all"]').on('hover:enter', actions.disableAll);
+      html.find('[data-action="sort-status"]').on('hover:enter', actions.sortStatus);
+      html.find('[data-action="filter-season"]').on('hover:enter', actions.filterSeason);
       html.find('[data-action="toggle"]').on('hover:enter', function () {
         var id = Number($(this).attr('data-id'));
-        actions.toggle(id);
+        actions.toggle(id, {
+          action: 'toggle',
+          id: id
+        });
       });
       html.find('[data-action="edit"]').on('hover:enter', function () {
         var id = Number($(this).attr('data-id'));
-        actions.edit(id);
+        actions.edit(id, {
+          action: 'edit',
+          id: id
+        });
       });
       return html;
     }
     function openLinksEditor(config) {
       var state = {
         links: createEditableLinks(config.items, config.movie),
-        movie: config.movie || null
+        movie: config.movie || null,
+        statusSort: 'none',
+        seasonFilter: 'all'
       };
       var returnController = Lampa.Controller.enabled().name;
       var controllerName = 'its_links_editor';
@@ -303,24 +454,68 @@
         }
         Lampa.Controller.toggle(returnController);
       };
-      var focusSelectorById = function focusSelectorById(targetId) {
+      var setLayerVisible = function setLayerVisible(visible) {
+        if (!layer) {
+          return;
+        }
+        layer.toggleClass('its-links-layer--hidden', visible === false);
+      };
+      var ensureEditorControllerEnabled = function ensureEditorControllerEnabled() {
+        var enabled = Lampa.Controller.enabled();
+        if (!enabled || enabled.name !== controllerName) {
+          Lampa.Controller.toggle(controllerName);
+        }
+      };
+      var readFocusMeta = function readFocusMeta() {
+        if (!layer) {
+          return null;
+        }
+        var focused = layer.find('.selector.focus').first();
+        if (!focused.length) {
+          return null;
+        }
+        var action = focused.attr('data-action');
+        if (!action) {
+          return null;
+        }
+        var meta = {
+          action: action
+        };
+        var idRaw = focused.attr('data-id');
+        if (idRaw !== undefined) {
+          var parsedId = Number(idRaw);
+          if (!isNaN(parsedId)) {
+            meta.id = parsedId;
+          }
+        }
+        return meta;
+      };
+      var focusSelector = function focusSelector(focusMeta) {
         setTimeout(function () {
           if (!layer) {
             return;
           }
           var scope = layer;
-          var target = scope.find('.selector').first();
-          if (typeof targetId === 'number') {
-            var rowButton = scope.find(".its-links-editor__action[data-id=\"".concat(targetId, "\"][data-action=\"edit\"]")).first();
-            if (rowButton.length) {
-              target = rowButton;
+          var target = $();
+          if (focusMeta && focusMeta.action) {
+            if (typeof focusMeta.id === 'number') {
+              target = scope.find(".selector[data-action=\"".concat(focusMeta.action, "\"][data-id=\"").concat(focusMeta.id, "\"]")).first();
+            }
+            if (!target.length) {
+              target = scope.find(".selector[data-action=\"".concat(focusMeta.action, "\"]")).first();
+            }
+            if (!target.length && typeof focusMeta.id === 'number') {
+              target = scope.find(".its-links-editor__action[data-id=\"".concat(focusMeta.id, "\"][data-action=\"edit\"]")).first();
             }
           }
+          if (!target.length) {
+            target = scope.find('.selector').first();
+          }
           if (scope.length && target.length) {
+            ensureEditorControllerEnabled();
             Lampa.Controller.collectionSet(scope);
             Lampa.Controller.collectionFocus(target[0], scope);
             target.trigger('hover:focus');
-            Lampa.Controller.toggle(controllerName);
             scrollFocusedIntoView();
           }
         }, 0);
@@ -353,7 +548,67 @@
           back: close
         });
       };
-      var _render = function render() {
+      var openSortSelect = function openSortSelect() {
+        setLayerVisible(false);
+        Lampa.Select.show({
+          title: tr('its_sort_status_title'),
+          items: [{
+            value: 'none',
+            title: tr('its_sort_status_none'),
+            selected: state.statusSort === 'none'
+          }, {
+            value: 'enabled_first',
+            title: tr('its_sort_status_enabled_first'),
+            selected: state.statusSort === 'enabled_first'
+          }, {
+            value: 'disabled_first',
+            title: tr('its_sort_status_disabled_first'),
+            selected: state.statusSort === 'disabled_first'
+          }],
+          onBack: function onBack() {
+            setLayerVisible(true);
+            focusSelector({
+              action: 'sort-status'
+            });
+          },
+          onSelect: function onSelect(selected) {
+            state.statusSort = selected.value;
+            setLayerVisible(true);
+            _render({
+              action: 'sort-status'
+            });
+          }
+        });
+      };
+      var openSeasonFilterSelect = function openSeasonFilterSelect() {
+        var items = getSeasonFilterItems(state.links).map(function (item) {
+          return {
+            value: item.value,
+            title: item.title,
+            selected: state.seasonFilter === item.value
+          };
+        });
+        setLayerVisible(false);
+        Lampa.Select.show({
+          title: tr('its_filter_season_title'),
+          items: items,
+          onBack: function onBack() {
+            setLayerVisible(true);
+            focusSelector({
+              action: 'filter-season'
+            });
+          },
+          onSelect: function onSelect(selected) {
+            state.seasonFilter = selected.value;
+            setLayerVisible(true);
+            _render({
+              action: 'filter-season'
+            });
+          }
+        });
+      };
+      var _render = function render(focusMeta) {
+        var nextFocusMeta = focusMeta || readFocusMeta();
         var html = buildLinksEditorHtml(state, {
           save: function save() {
             var links = getPreparedLinks(state.links);
@@ -379,15 +634,25 @@
                 item.editedName = normalized;
               }
             });
-            _render();
+            _render({
+              action: 'normalize'
+            });
           },
           disableAll: function disableAll() {
             state.links.forEach(function (item) {
               item.enabled = false;
             });
-            _render();
+            _render({
+              action: 'disable-all'
+            });
           },
-          toggle: function toggle(id) {
+          sortStatus: function sortStatus() {
+            openSortSelect();
+          },
+          filterSeason: function filterSeason() {
+            openSeasonFilterSelect();
+          },
+          toggle: function toggle(id, focusState) {
             var link = state.links.find(function (item) {
               return item.id === id;
             });
@@ -395,9 +660,9 @@
               return;
             }
             link.enabled = !link.enabled;
-            _render();
+            _render(focusState);
           },
-          edit: function edit(id) {
+          edit: function edit(id, focusState) {
             var link = state.links.find(function (item) {
               return item.id === id;
             });
@@ -405,8 +670,7 @@
               return;
             }
             openFileNameEditor(link, function () {
-              _render();
-              focusSelectorById(id);
+              _render(focusState);
             });
           }
         });
@@ -416,14 +680,15 @@
           $('body').append(layer);
           layer.find('.its-links-layer__body').append(html);
           layer.on('hover:focus', '.selector', scrollFocusedIntoView);
-          Lampa.Controller.toggle(controllerName);
-          focusSelectorById();
+          focusSelector(nextFocusMeta);
         } else {
           layer.find('.its-links-layer__body').empty().append(html);
-          focusSelectorById();
+          focusSelector(nextFocusMeta);
         }
       };
-      _render();
+      _render({
+        action: 'save'
+      });
     }
     function addSingleSaveAction(data) {
       data.menu.push({
@@ -502,7 +767,7 @@
         description: 'Some tweaks for Apple TV',
         component: 'its'
       };
-      Lampa.Template.add('its_style', "\n        <style>\n            .infuseSaver{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.6em}.infuseSaverLogo{width:24px;height:24px;-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto}.its-links-editor{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1.2em}.its-links-layer{position:fixed;inset:0;z-index:65;background:rgba(0,0,0,0.5);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:1.2em}.its-links-layer__panel{width:min(1400px,100vw - 2.4em);max-height:92vh;overflow:auto;background:#232425;-webkit-border-radius:1.2em;border-radius:1.2em;padding:1.2em}.its-links-layer__title{font-size:2.1em;margin-bottom:.7em}.its-links-layer--hidden{opacity:0;pointer-events:none}body.keyboard-input--visible .settings-input{z-index:120}.its-links-editor__toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8em}.its-links-editor__button,.its-links-editor__action{background:rgba(255,255,255,0.08);-webkit-border-radius:.6em;border-radius:.6em;border:1px solid rgba(255,255,255,0.18);padding:.7em 1em;font-size:1.1em;line-height:1.2}.its-links-editor .selector.focus{border-color:#ffd27a;-webkit-box-shadow:inset 0 0 0 1px rgba(255,210,122,0.65),0 0 0 2px rgba(255,210,122,0.28);box-shadow:inset 0 0 0 1px rgba(255,210,122,0.65),0 0 0 2px rgba(255,210,122,0.28);background:rgba(255,255,255,0.18)}.its-links-editor__list{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.7em}.its-links-editor__item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);-webkit-border-radius:.8em;border-radius:.8em;padding:.85em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.7em}.its-links-editor__item.is-disabled{opacity:.62}.its-links-editor__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em;font-size:1.05em;min-width:0}.its-links-editor__state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;white-space:nowrap;color:rgba(255,255,255,0.72);margin-left:auto}.its-links-editor__state--enabled{color:#67d67a}.its-links-editor__state--disabled{color:#f0c35a}.its-links-editor__filename{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:baseline;-webkit-align-items:baseline;-ms-flex-align:baseline;align-items:baseline;gap:0;-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;min-width:0;font-size:1.15em;line-height:1.2}.its-links-editor__name{min-width:0;overflow:hidden;white-space:nowrap;-o-text-overflow:ellipsis;text-overflow:ellipsis}.its-links-editor__ext{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;white-space:nowrap;opacity:.65}.its-links-editor__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.6em}.its-links-editor__action{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;text-align:center}@media(max-width:900px){.its-links-layer{padding:.6em}.its-links-layer__panel{width:-webkit-calc(100vw - 1.2em);width:calc(100vw - 1.2em);max-height:94vh}.its-links-editor__toolbar,.its-links-editor__actions{grid-template-columns:1fr;display:grid}}\n        </style>\n    ");
+      Lampa.Template.add('its_style', "\n        <style>\n            .infuseSaver{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.6em}.infuseSaverLogo{width:24px;height:24px;-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto}.its-links-editor{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1.2em}.its-links-layer{position:fixed;inset:0;z-index:65;background:rgba(0,0,0,0.5);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:.6em}.its-links-layer__panel{width:80vw;max-width:80vw;max-height:95vh;overflow:auto;background:#232425;-webkit-border-radius:1.2em;border-radius:1.2em;padding:1.2em}.its-links-layer__title{font-size:2.1em;margin-bottom:.7em}.its-links-layer--hidden{opacity:0;pointer-events:none}body.keyboard-input--visible .settings-input{z-index:120}.its-links-editor__toolbar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.8em}.its-links-editor__button,.its-links-editor__action{background:rgba(255,255,255,0.08);-webkit-border-radius:.6em;border-radius:.6em;border:1px solid rgba(255,255,255,0.18);padding:.7em 1em;font-size:1.1em;line-height:1.2}.its-links-editor__meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.6em;opacity:.82}.its-links-editor__meta-item{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);-webkit-border-radius:.5em;border-radius:.5em;padding:.35em .6em;font-size:.95em;line-height:1.2}.its-links-editor .selector.focus{border-color:#ffd27a;-webkit-box-shadow:inset 0 0 0 1px rgba(255,210,122,0.65),0 0 0 2px rgba(255,210,122,0.28);box-shadow:inset 0 0 0 1px rgba(255,210,122,0.65),0 0 0 2px rgba(255,210,122,0.28);background:rgba(255,255,255,0.18)}.its-links-editor__list{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.7em}.its-links-editor__item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);-webkit-border-radius:.8em;border-radius:.8em;padding:.85em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.7em}.its-links-editor__item.is-disabled{opacity:.62}.its-links-editor__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em;font-size:1.05em;min-width:0}.its-links-editor__season{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;border:1px solid rgba(255,255,255,0.22);-webkit-border-radius:.45em;border-radius:.45em;padding:.12em .45em;font-size:.86em;opacity:.86}.its-links-editor__state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;white-space:nowrap;color:rgba(255,255,255,0.72);margin-left:auto}.its-links-editor__state--enabled{color:#67d67a}.its-links-editor__state--disabled{color:#f0c35a}.its-links-editor__filename{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:baseline;-webkit-align-items:baseline;-ms-flex-align:baseline;align-items:baseline;gap:0;-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;min-width:0;font-size:1.15em;line-height:1.2}.its-links-editor__name{min-width:0;overflow:hidden;white-space:nowrap;-o-text-overflow:ellipsis;text-overflow:ellipsis}.its-links-editor__ext{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;white-space:nowrap;opacity:.65}.its-links-editor__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.6em}.its-links-editor__action{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;text-align:center}.its-links-editor__empty{border:1px dashed rgba(255,255,255,0.22);-webkit-border-radius:.8em;border-radius:.8em;padding:.9em;text-align:center;opacity:.8}@media(max-width:900px){.its-links-layer{padding:.6em}.its-links-layer__panel{width:-webkit-calc(100vw - 1.2em);width:calc(100vw - 1.2em);max-height:95vh}.its-links-editor__toolbar,.its-links-editor__actions{grid-template-columns:1fr;display:grid}}\n        </style>\n    ");
       $('body').append(Lampa.Template.get('its_style', {}, true));
       if (window.appready) {
         add();
