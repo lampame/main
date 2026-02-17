@@ -124,6 +124,11 @@
           ru: 'Нет элементов по текущему фильтру',
           en: 'No items for current filter',
           uk: 'Немає елементів за поточним фільтром'
+        },
+        its_easter_donate_sent: {
+          ru: 'Донат Андрею отправлен успешно',
+          en: 'Donation to Andriy sent successfully',
+          uk: 'Донат Андрію відправлено вдало'
         }
       });
     }
@@ -285,6 +290,57 @@
       return links.reduce(function (acc, item) {
         return acc + encodeURIComponent(item.url + '\n');
       }, '');
+    }
+    function showBellMessage(text) {
+      if (Lampa.Bell && typeof Lampa.Bell.push === 'function') {
+        Lampa.Bell.push({
+          text: text
+        });
+        return;
+      }
+      if (Lampa.Noty && typeof Lampa.Noty.show === 'function') {
+        Lampa.Noty.show(text);
+      }
+    }
+    function attachDonateEasterEgg(titleNode) {
+      if (!titleNode || !titleNode.length) {
+        return;
+      }
+      var tapCount = 0;
+      var resetTimer = null;
+      var lastTapAt = 0;
+      var tapsToActivate = 5;
+      var resetDelay = 1600;
+      var resetCounter = function resetCounter() {
+        tapCount = 0;
+        if (resetTimer) {
+          clearTimeout(resetTimer);
+          resetTimer = null;
+        }
+      };
+      var activate = function activate() {
+        resetCounter();
+        showBellMessage(tr('its_easter_donate_sent'));
+      };
+      var registerTap = function registerTap() {
+        var now = Date.now();
+        if (now - lastTapAt < 250) {
+          return;
+        }
+        lastTapAt = now;
+        tapCount += 1;
+        if (resetTimer) {
+          clearTimeout(resetTimer);
+        }
+        if (tapCount >= tapsToActivate) {
+          activate();
+          return;
+        }
+        resetTimer = setTimeout(resetCounter, resetDelay);
+      };
+      titleNode.on('pointerup', registerTap);
+      titleNode.on('click', registerTap);
+      titleNode.on('hover:long', activate);
     }
     function openFileNameEditor(item, onDone) {
       if (!Lampa.Input || typeof Lampa.Input.edit !== 'function') {
@@ -680,6 +736,24 @@
           $('body').append(layer);
           layer.find('.its-links-layer__body').append(html);
           layer.on('hover:focus', '.selector', scrollFocusedIntoView);
+          attachDonateEasterEgg(layer.find('.its-links-layer__title'));
+          var touchStartedOutsidePanel = false;
+          layer.on('touchstart', function (event) {
+            touchStartedOutsidePanel = $(event.target).closest('.its-links-layer__panel').length === 0;
+          });
+          layer.on('touchend', function (event) {
+            var endedOutsidePanel = $(event.target).closest('.its-links-layer__panel').length === 0;
+            if (touchStartedOutsidePanel && endedOutsidePanel) {
+              close();
+            }
+            touchStartedOutsidePanel = false;
+          });
+          layer.on('click', function (event) {
+            var clickedOutsidePanel = $(event.target).closest('.its-links-layer__panel').length === 0;
+            if (clickedOutsidePanel) {
+              close();
+            }
+          });
           focusSelector(nextFocusMeta);
         } else {
           layer.find('.its-links-layer__body').empty().append(html);
