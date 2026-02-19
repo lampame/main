@@ -768,12 +768,13 @@
       var trakt_headers = {
         'Content-Type': 'application/json',
         'trakt-api-version': '2',
-        'trakt-api-key': 'a77093dcf5db97106d9303f3ab7d46a80a93a6e0c1d7a2ff8a1aacebe0dc161b'
+        'trakt-api-key': 'a77093dcf5db97106d9303f3ab7d46a80a93a6e0c1d7a2ff8a1aacebe0dc161b',
+        'x-requested-with': 'lme-plugins'
       };
 
       // Ensure page starts from 0
       var page = Math.max(0, (params.page || 1) - 1);
-      network["native"]('https://api.trakt.tv/networks', function (networks) {
+      network["native"]('https://proxy.lme.isroot.in/https://api.trakt.tv/networks', function (networks) {
         if (params.searchQuery) {
           console.log('Search query:', params.searchQuery);
           networks = networks.filter(function (network) {
