@@ -113,6 +113,22 @@
       ]
     },
     {
+      "id": "tsTracks",
+      "title": "TS Tracks Probe",
+      "short_uk": "Детальна інформація про аудіо/субтитри та зручний вибір доріжок від TorrServer.",
+      "short_en": "Detailed audio/subtitle metadata and improved track selection from TorrServer.",
+      "short_ru": "Детальная информация об аудио/субтитрах и удобный выбор дорожек от TorrServer.",
+      "desc_uk": "Плагін аналізує медіапотоки через probe API (кодеки, мови, канали, бітрейт, субтитри) і показує метаінфо в списку торрент-файлів. Додатково підсилює перемикання доріжок у плеєрі, включно з webOS-сценаріями, та кешує результати для швидшої роботи.",
+      "desc_en": "Uses a probe API to inspect media streams (codecs, languages, channels, bitrate, subtitles) and renders this metadata in the torrent file list. Also improves track switching in player flows, including webOS-specific handling, with caching for faster repeated access.",
+      "desc_ru": "Анализирует медиапотоки через probe API (кодеки, языки, каналы, битрейт, субтитры) и показывает метаинформацию в списке торрент-файлов. Также улучшает переключение дорожек в плеере, включая webOS-сценарии, и кеширует результаты для ускорения повторных запросов.",
+      "file": "tstracks.js",
+      "langs": [
+        "en",
+        "uk",
+        "ru"
+      ]
+    },
+    {
       "id": "hikka-anime",
       "title": "Hikka Anime",
       "short_uk": "Аніме-каталог Hikka з фільтрами, франшизами, персонажами й карткою.",
