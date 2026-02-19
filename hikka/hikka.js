@@ -68,7 +68,7 @@
     }, _typeof(o);
   }
 
-  var PROXY_URL = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
+  var PROXY_URL = 'https://proxy.lme.isroot.in/';
   var API_BASE = 'https://api.hikka.io/';
   var ENDPOINTS = {
     ANIME: PROXY_URL + API_BASE + 'anime',

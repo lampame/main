@@ -651,7 +651,7 @@
   var url = Lampa.Storage.field("lmetorrentqBittorentUrl");
   var proxy = "";
   if (Lampa.Storage.field("lmetorrentqBittorentProxy") === true) {
-    proxy = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
+    proxy = 'https://proxy.lme.isroot.in/';
   }
   function getHeaders$3(type) {
     var headers = {};
@@ -1107,7 +1107,7 @@
       useProxy: Lampa.Storage.field("".concat(CONFIG_PREFIX$2, "Proxy")) === true,
       autostart: Lampa.Storage.field("".concat(CONFIG_PREFIX$2, "Autostart")),
       sequentialDownload: Lampa.Storage.field("".concat(CONFIG_PREFIX$2, "SequentialDownload")),
-      proxy: 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/'
+      proxy: 'https://proxy.lme.isroot.in/'
     };
   }
 
@@ -1799,7 +1799,7 @@
   }
 
   var CONFIG_PREFIX$1 = 'lmetorrentsynology';
-  var LME_PROXY_URL = 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/';
+  var LME_PROXY_URL = 'https://proxy.lme.isroot.in/';
   var AUTH_ERROR_CODE = 105;
   function getConfig$1() {
     return {
@@ -2345,7 +2345,7 @@
       autostart: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Autostart")),
       sequentialDownload: Lampa.Storage.field("".concat(CONFIG_PREFIX, "SequentialDownload")),
       webdavUrl: Lampa.Storage.field("".concat(CONFIG_PREFIX, "WebdavUrl")),
-      proxy: 'https://p01--corsproxy--h7ynqrkjrc6c.code.run/'
+      proxy: 'https://proxy.lme.isroot.in/'
     };
   }
 
