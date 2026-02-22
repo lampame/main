@@ -617,6 +617,16 @@
         filter.set('sort', buildSourceSortItems());
         filter.chosen('sort', [balanser_titles[balanser] || balanser]);
       }
+      function resolveEpisodeNumber(value, fallback) {
+        if (value === null || typeof value === 'undefined' || value === '') return fallback;
+        return value;
+      }
+      function formatEpisodeNumber(value, fallback) {
+        var episode = resolveEpisodeNumber(value, typeof fallback === 'undefined' ? 0 : fallback);
+        var text = (episode + '').trim();
+        if (!text) text = '0';
+        return text.length < 2 ? '0' + text : text;
+      }
       function buildFilterSources(movie) {
         var sources = getBaseSources();
         var include_anime = shouldIncludeAnimeSources(movie);
@@ -1152,7 +1162,7 @@
             var episode = serial && episodes.length && !params.similars ? episodes.find(function (e) {
               return e.episode_number == element.episode;
             }) : false;
-            var episode_num = element.episode || index + 1;
+            var episode_num = resolveEpisodeNumber(element.episode, index + 1);
             var episode_last = choice.episodes_view[element.season];
             Lampa.Arrays.extend(element, {
               info: '',
@@ -1194,7 +1204,7 @@
               scroll_to_element = html;
             }
             if (serial && !episode) {
-              image.append('<div class="online-prestige__episode-number">' + ('0' + (element.episode || index + 1)).slice(-2) + '</div>');
+              image.append('<div class="online-prestige__episode-number">' + formatEpisodeNumber(element.episode, index + 1) + '</div>');
               loader.remove();
             } else {
               var img = html.find('img')[0];
@@ -1204,7 +1214,7 @@
               img.onload = function () {
                 image.addClass('online-prestige__img--loaded');
                 loader.remove();
-                if (serial) image.append('<div class="online-prestige__episode-number">' + ('0' + (element.episode || index + 1)).slice(-2) + '</div>');
+                if (serial) image.append('<div class="online-prestige__episode-number">' + formatEpisodeNumber(element.episode, index + 1) + '</div>');
               };
               img.src = Lampa.TMDB.image('t/p/w300' + (episode ? episode.still_path : object.movie.backdrop_path));
               images.push(img);
@@ -1314,13 +1324,13 @@
                 img.onload = function () {
                   image.addClass('online-prestige__img--loaded');
                   loader.remove();
-                  image.append('<div class="online-prestige__episode-number">' + ('0' + episode.episode_number).slice(-2) + '</div>');
+                  image.append('<div class="online-prestige__episode-number">' + formatEpisodeNumber(episode.episode_number) + '</div>');
                 };
                 img.src = Lampa.TMDB.image('t/p/w300' + episode.still_path);
                 images.push(img);
               } else {
                 loader.remove();
-                image.append('<div class="online-prestige__episode-number">' + ('0' + episode.episode_number).slice(-2) + '</div>');
+                image.append('<div class="online-prestige__episode-number">' + formatEpisodeNumber(episode.episode_number) + '</div>');
               }
               html.on('hover:focus', function (e) {
                 last = e.target;
@@ -1787,7 +1797,7 @@
       }
       var manifest = {
         type: 'video',
-        version: '2.7.0',
+        version: '2.8.0',
         name: '[Free] Bandera Online',
         //description: 'Плагин для просмотра онлайн сериалов и фильмов',
         component: 'bandera_online',
