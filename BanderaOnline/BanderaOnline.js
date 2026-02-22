@@ -372,15 +372,8 @@
           component.loading(false);
         }
         function drawMovie(json) {
-          var item = {
-            title: object.movie.title || object.movie.name,
-            info: '',
-            voice_name: '',
-            file: '',
-            streams: json.streams || [],
-            stream_ref: json.stream_ref || null
-          };
-          component.draw([item], {
+          var items = buildMovieItems(json);
+          component.draw(items, {
             onEnter: function onEnter(movie) {
               getMovieStream(movie, function (prepared) {
                 var first = prepared.first;
@@ -394,7 +387,7 @@
                   url: play_url,
                   timeline: movie.timeline,
                   quality: qualitys,
-                  title: movie.title,
+                  title: movie.player_title || movie.title,
                   subtitles: first.subtitles
                 });
                 Lampa.Player.playlist([]);
@@ -404,6 +397,56 @@
             }
           });
           component.loading(false);
+        }
+        function getMovieTitle() {
+          return object.movie.title || object.movie.name || '';
+        }
+        function getMovieStreamLabel(stream, index) {
+          return stream.title || stream.quality || 'stream-' + (index + 1);
+        }
+        function normalizeMovieStreamTitle(stream, index) {
+          var label = getMovieStreamLabel(stream, index);
+          var title = String(stream && stream.title || '').trim();
+          if (title) {
+            var cleaned = title.replace(/^\[[^\]]+\]\s*/, '').trim();
+            if (cleaned) return cleaned;
+          }
+          return label;
+        }
+        function normalizeMovieStreamQuality(stream) {
+          return stream && stream.quality || '';
+        }
+        function buildMovieItems(json) {
+          var streams = Array.isArray(json.streams) ? json.streams : [];
+          var movie_title = getMovieTitle();
+          var items = streams.map(function (stream, index) {
+            if (!stream || !stream.url && !stream.ref) return null;
+            var label = getMovieStreamLabel(stream, index);
+            var stream_title = normalizeMovieStreamTitle(stream, index);
+            var stream_quality = normalizeMovieStreamQuality(stream);
+            return {
+              title: stream_title,
+              info: '',
+              quality: stream_quality,
+              voice_name: label,
+              file: '',
+              stream: stream,
+              streams: streams,
+              player_title: movie_title,
+              stream_ref: json.stream_ref || null
+            };
+          }).filter(Boolean);
+          if (items.length) return items;
+          return [{
+            title: movie_title,
+            info: '',
+            quality: '',
+            voice_name: '',
+            file: '',
+            streams: streams,
+            player_title: movie_title,
+            stream_ref: json.stream_ref || null
+          }];
         }
         function prepareStreams(streams) {
           var qualitys = {};
@@ -469,6 +512,20 @@
           });
         }
         function getMovieStream(movie, success, fail) {
+          if (movie.stream) {
+            if (movie.stream.url) {
+              success(prepareStreams([movie.stream]));
+              return;
+            }
+            if (movie.stream.ref) {
+              getStream(movie.stream.ref, function (streams) {
+                success(prepareStreams(streams));
+              }, function (errorText) {
+                if (fail) fail(errorText);
+              });
+              return;
+            }
+          }
           if (movie.stream_ref) {
             getStream(movie.stream_ref, function (streams) {
               success(prepareStreams(streams));
