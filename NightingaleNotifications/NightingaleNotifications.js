@@ -3,7 +3,7 @@
 
     var manifest = {
       type: 'other',
-      version: '0.1.0',
+      version: '0.2.0',
       name: 'Nightingale Notifications',
       description: 'Episode notifications channel with external subscriptions service',
       component: 'nightingale_notifications'
@@ -23,7 +23,7 @@
     var WS_RECONNECT_MAX = 60000;
     var REQUEST_TIMEOUT = 12000;
     var DETAILS_CACHE_TTL = 1000 * 60 * 60 * 6;
-    var SUBSCRIPTIONS_REFRESH_TTL = 1000 * 20;
+    var SUBSCRIPTION_STATUS_TTL = 1000 * 15;
 
     var state = {
       started: false,
@@ -41,6 +41,9 @@
       subscriptionsLoaded: false,
       subscriptionsSyncedAt: 0,
       subscriptionsPromise: null,
+      subscriptionStatusSyncedAt: new Map(),
+      subscriptionStatusRequests: new Map(),
+      subscriptionStatusByContentId: new Map(),
       buttonTargets: new Map(),
       pendingToggle: new Set(),
       detailsCache: new Map()
@@ -48,7 +51,7 @@
 
     function injectStyles() {
       if (document.getElementById('nightingale-notifications-style')) return;
-      Lampa.Template.add('nightingale_notifications_style', "<style id=\"nightingale-notifications-style\">\n        .nightingale-notifications__uid{font-family:monospace;opacity:.86}.nightingale-notifications__bell-body{fill:rgba(247,201,72,0.22);stroke:#2d7de0;-webkit-transition:fill .2s ease,stroke .2s ease;-o-transition:fill .2s ease,stroke .2s ease;transition:fill .2s ease,stroke .2s ease}.nightingale-notifications__bell-clapper{fill:#ffd34d;-webkit-transition:fill .2s ease,opacity .2s ease;-o-transition:fill .2s ease,opacity .2s ease;transition:fill .2s ease,opacity .2s ease}.button--nightingale-subscribe .nightingale-notifications__bell{-webkit-filter:none;filter:none;opacity:1;-webkit-transition:opacity .2s ease,-webkit-filter .2s ease;transition:opacity .2s ease,-webkit-filter .2s ease;-o-transition:filter .2s ease,opacity .2s ease;transition:filter .2s ease,opacity .2s ease;transition:filter .2s ease,opacity .2s ease,-webkit-filter .2s ease}.button--nightingale-subscribe.active .nightingale-notifications__bell{-webkit-filter:grayscale(0);filter:grayscale(0);opacity:1}.button--nightingale-subscribe.active .nightingale-notifications__bell-body{fill:rgba(247,201,72,0.22)}.button--nightingale-subscribe.active .nightingale-notifications__bell-clapper{fill:#ffd34d}.button--nightingale-subscribe.nightingale-notifications--busy{opacity:.62;pointer-events:none}\n    </style>");
+      Lampa.Template.add('nightingale_notifications_style', "<style id=\"nightingale-notifications-style\">\n        .nightingale-notifications__uid{font-family:monospace;opacity:.86}.nightingale-notifications__bell-body{fill:rgba(127,147,170,0.08);stroke:#8ea4bf;-webkit-transition:fill .2s ease,stroke .2s ease;-o-transition:fill .2s ease,stroke .2s ease;transition:fill .2s ease,stroke .2s ease}.nightingale-notifications__bell-clapper{fill:#a2b2c6;-webkit-transition:fill .2s ease,opacity .2s ease;-o-transition:fill .2s ease,opacity .2s ease;transition:fill .2s ease,opacity .2s ease}.button--nightingale-subscribe .nightingale-notifications__bell{-webkit-filter:none;filter:none;opacity:1;-webkit-transition:opacity .2s ease,-webkit-filter .2s ease;transition:opacity .2s ease,-webkit-filter .2s ease;-o-transition:filter .2s ease,opacity .2s ease;transition:filter .2s ease,opacity .2s ease;transition:filter .2s ease,opacity .2s ease,-webkit-filter .2s ease}.button--nightingale-subscribe.active .nightingale-notifications__bell{-webkit-filter:grayscale(0);filter:grayscale(0);opacity:1}.button--nightingale-subscribe.active .nightingale-notifications__bell-body{fill:rgba(0,91,187,0.24);stroke:#005bbb}.button--nightingale-subscribe.active .nightingale-notifications__bell-clapper{fill:#ffd500}.button--nightingale-subscribe.nightingale-notifications--unavailable{opacity:.72}.button--nightingale-subscribe.nightingale-notifications--unavailable .nightingale-notifications__bell-body{fill:rgba(127,147,170,0.04);stroke:#72849b}.button--nightingale-subscribe.nightingale-notifications--unavailable .nightingale-notifications__bell-clapper{fill:#8ea4bf}.button--nightingale-subscribe.nightingale-notifications--busy{opacity:.62;pointer-events:none}\n    </style>");
       $('body').append(Lampa.Template.get('nightingale_notifications_style', {}, true));
     }
 
@@ -190,6 +193,21 @@
           uk: 'Nightingale',
           ru: 'Nightingale'
         },
+        nn_button_state_not_subscribed: {
+          en: 'Not subscribed',
+          uk: 'Не підписано',
+          ru: 'Не подписано'
+        },
+        nn_button_state_subscribed: {
+          en: 'Subscribed',
+          uk: 'Підписано',
+          ru: 'Подписано'
+        },
+        nn_button_state_unavailable: {
+          en: 'Unavailable',
+          uk: 'Недоступно',
+          ru: 'Недоступно'
+        },
         nn_notice_channel_name: {
           en: 'Nightingale',
           uk: 'Nightingale',
@@ -239,6 +257,26 @@
           en: 'Request failed',
           uk: 'Запит не виконано',
           ru: 'Запрос не выполнен'
+        },
+        nn_noty_series_not_releasing: {
+          en: 'This series is no longer releasing',
+          uk: 'Цей серіал більше не виходить',
+          ru: 'Этот сериал больше не выходит'
+        },
+        nn_noty_no_subscription_target: {
+          en: 'No available series to subscribe',
+          uk: 'Немає на що підписуватись',
+          ru: 'Нет доступного сериала для подписки'
+        },
+        nn_noty_subscribe_not_confirmed: {
+          en: 'Subscription is not confirmed',
+          uk: 'Підписку не підтверджено',
+          ru: 'Подписка не подтверждена'
+        },
+        nn_noty_unsubscribe_not_confirmed: {
+          en: 'Unsubscribe is not confirmed',
+          uk: 'Відписку не підтверджено',
+          ru: 'Отписка не подтверждена'
         },
         nn_noty_health_prefix: {
           en: 'Health',
@@ -434,6 +472,15 @@
         method: 'DELETE'
       });
     }
+    function getSubscriptionStatus(contentId) {
+      var normalizedContentId = buildContentId(contentId);
+      if (!normalizedContentId) {
+        return Promise.reject(createApiError(t('nn_noty_no_subscription_target'), 422));
+      }
+      return apiRequest('/v1/subscriptions/' + encodeURIComponent(normalizedContentId) + '/status', {
+        method: 'GET'
+      });
+    }
     function loadSubscriptions(state, redrawAllSubscribeButtons) {
       if (state.subscriptionsPromise) return state.subscriptionsPromise;
       state.subscriptionsPromise = apiRequest('/v1/subscriptions', {
@@ -455,6 +502,9 @@
         state.subscriptions = next;
         state.subscriptionsImdb = nextImdb;
         state.subscriptionsByImdb = nextByImdb;
+        if (state.subscriptionStatusSyncedAt && typeof state.subscriptionStatusSyncedAt.clear === 'function') {
+          state.subscriptionStatusSyncedAt.clear();
+        }
         state.subscriptionsLoaded = true;
         state.subscriptionsSyncedAt = Date.now();
         if (typeof redrawAllSubscribeButtons === 'function') {
@@ -658,13 +708,17 @@
     }
 
     var BUTTON_CLASS = 'button--nightingale-subscribe';
+    var TERMINAL_SERIES_STATUSES = ['ended', 'canceled', 'cancelled', 'released'];
     function createButtonsController(params) {
       var state = params.state;
       var isPluginEnabled = params.isPluginEnabled;
       var isRuntimeAvailable = params.isRuntimeAvailable;
-      var loadSubscriptions = params.loadSubscriptions;
       var subscribeToSeries = params.subscribeToSeries;
       var unsubscribeFromSeries = params.unsubscribeFromSeries;
+      var getSubscriptionStatus = params.getSubscriptionStatus;
+      if (!state.subscriptionStatusSyncedAt) state.subscriptionStatusSyncedAt = new Map();
+      if (!state.subscriptionStatusRequests) state.subscriptionStatusRequests = new Map();
+      if (!state.subscriptionStatusByContentId) state.subscriptionStatusByContentId = new Map();
       function onFullEvent(event) {
         if (!event || event.type !== 'build' || event.name !== 'start') return;
         var startItem = event.item;
@@ -676,6 +730,12 @@
           return;
         }
         if (!isTvCard(event, movie)) return;
+        var button = ensureNightingaleButton(root);
+        if (!button.length) return;
+        button.off('hover:enter.nightingale hover:focus.nightingale');
+        button.on('hover:focus.nightingale', function () {
+          if (startItem) startItem.last = button[0];
+        });
         var objectContentId = resolveEventObjectContentId(event);
         var contentIds = resolveTvContentIds([movie, event && event.object ? event.object.card : null, event && event.object ? event.object.movie : null, event && event.object ? {
           id: event.object.id,
@@ -684,26 +744,19 @@
         if (objectContentId && contentIds.indexOf(objectContentId) === -1) {
           contentIds.unshift(objectContentId);
         }
-        if (!contentIds.length) return;
-        var contentId = contentIds[0];
         var imdbId = normalizeImdbId(movie && movie.imdb_id ? movie.imdb_id : '');
-        var button = ensureNightingaleButton(root);
-        if (!button.length) return;
-        button.find('span').text(t('nn_button_title'));
-        button.off('hover:enter.nightingale hover:focus.nightingale');
-        button.on('hover:focus.nightingale', function () {
-          if (startItem) startItem.last = button[0];
-        });
-        button.on('hover:enter.nightingale', function () {
-          onSubscribeButtonEnter(contentId, contentIds, movie);
-        });
-        registerButtonTarget(contentId, contentIds, imdbId, button[0]);
-        redrawSubscribeButton(contentId);
-        if (isRuntimeAvailable() && shouldRefreshSubscriptions()) {
-          loadSubscriptions().then(function () {
-            redrawSubscribeButton(contentId);
-          })["catch"](function () {});
+        var normalizedIds = normalizeContentIds(contentIds);
+        if (!normalizedIds.length) {
+          setupUnavailableButton(button);
+          return;
         }
+        var contentId = normalizedIds[0];
+        button.on('hover:enter.nightingale', function () {
+          onSubscribeButtonEnter(contentId, normalizedIds, movie);
+        });
+        registerButtonTarget(contentId, normalizedIds, imdbId, button[0]);
+        redrawSubscribeButton(contentId);
+        syncSubscriptionStatus(contentId, normalizedIds, imdbId, true);
       }
       function ensureNightingaleButton(root) {
         var container = root.find('.full-start-new__buttons');
@@ -716,7 +769,7 @@
         return button;
       }
       function createButtonTemplate() {
-        return "<div class=\"full-start__button selector ".concat(BUTTON_CLASS, "\">\n            <svg class=\"nightingale-notifications__bell\" viewBox=\"0 0 25 30\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path class=\"nightingale-notifications__bell-clapper\" d=\"M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z\"></path>\n                <path class=\"nightingale-notifications__bell-body\" d=\"M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z\" stroke-width=\"2.6\"></path>\n            </svg>\n            <span>").concat(escapeHtml(t('nn_button_title')), "</span>\n        </div>");
+        return "<div class=\"full-start__button selector ".concat(BUTTON_CLASS, "\">\n            <svg class=\"nightingale-notifications__bell\" viewBox=\"0 0 25 30\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path class=\"nightingale-notifications__bell-clapper\" d=\"M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z\"></path>\n                <path class=\"nightingale-notifications__bell-body\" d=\"M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z\" stroke-width=\"2.6\"></path>\n            </svg>\n            <span>").concat(escapeHtml(t('nn_button_state_not_subscribed')), "</span>\n        </div>");
       }
       function removeNightingaleButtons(root) {
         if (!root || !root.length) return;
@@ -733,16 +786,38 @@
         node.dataset.nightingaleContentId = primaryContentId;
         node.dataset.nightingaleContentIds = resolvedIds.join(',');
         node.dataset.nightingaleImdbId = imdbId || '';
+        node.dataset.nightingaleSubscribed = resolveKnownSubscribedValue(primaryContentId);
+        node.dataset.nightingaleUnavailable = '0';
         if (!state.buttonTargets.has(primaryContentId)) {
           state.buttonTargets.set(primaryContentId, new Set());
         }
         state.buttonTargets.get(primaryContentId).add(node);
+      }
+      function setupUnavailableButton(button) {
+        if (!button || !button.length) return;
+        var node = button[0];
+        unregisterButtonTarget(node);
+        node.dataset.nightingaleUnavailable = '1';
+        node.dataset.nightingaleSubscribed = '0';
+        var label = t('nn_button_state_unavailable');
+        button.toggleClass('hide', !isPluginEnabled());
+        button.removeClass('active');
+        button.removeClass('nightingale-notifications--busy');
+        button.addClass('nightingale-notifications--unavailable');
+        button.attr('data-subtitle', label);
+        button.find('span').text(label);
+        applyButtonVisualState(button, false, true);
+        button.on('hover:enter.nightingale', function () {
+          Lampa.Noty.show(withPrefix(t('nn_noty_no_subscription_target')));
+        });
       }
       function unregisterButtonTarget(node) {
         if (!node || !node.dataset) return;
         var oldContentId = node.dataset.nightingaleContentId;
         delete node.dataset.nightingaleContentIds;
         delete node.dataset.nightingaleImdbId;
+        delete node.dataset.nightingaleSubscribed;
+        delete node.dataset.nightingaleUnavailable;
         if (!oldContentId) return;
         var targets = state.buttonTargets.get(oldContentId);
         if (!targets) return;
@@ -752,6 +827,16 @@
       function redrawAllSubscribeButtons() {
         state.buttonTargets.forEach(function (_, contentId) {
           redrawSubscribeButton(contentId);
+        });
+        $('.' + BUTTON_CLASS).each(function () {
+          if (this && this.dataset && this.dataset.nightingaleContentId) return;
+          var button = $(this);
+          var enabled = isPluginEnabled();
+          button.toggleClass('hide', !enabled);
+          if (!enabled) {
+            button.removeClass('active');
+            button.removeClass('nightingale-notifications--busy');
+          }
         });
       }
       function redrawSubscribeButton(contentId) {
@@ -768,13 +853,21 @@
           var button = $(node);
           var nodeContentIds = readNodeContentIds(node);
           var nodeImdbId = normalizeImdbId(node.dataset.nightingaleImdbId || '');
-          var subscribed = isSubscribed(nodeContentIds, nodeImdbId);
+          var subscribedOverride = resolveSubscribedFromStatusMap(nodeContentIds, nodeImdbId);
+          var subscribed = subscribedOverride === null ? isSubscribed(nodeContentIds, nodeImdbId) : subscribedOverride;
+          var unavailable = String(node.dataset.nightingaleUnavailable || '') === '1';
+          var label = resolveButtonLabel(subscribed, unavailable);
           button.toggleClass('hide', !enabled);
           button.toggleClass('active', subscribed);
           button.toggleClass('nightingale-notifications--busy', pending);
+          button.toggleClass('nightingale-notifications--unavailable', unavailable);
+          button.attr('data-subtitle', label);
+          button.find('span').text(label);
+          applyButtonVisualState(button, subscribed, unavailable);
           if (!enabled) {
             button.removeClass('active');
             button.removeClass('nightingale-notifications--busy');
+            button.removeClass('nightingale-notifications--unavailable');
           }
         });
         removed.forEach(function (node) {
@@ -789,41 +882,144 @@
           return;
         }
         var normalizedIds = normalizeContentIds(contentIds && contentIds.length ? contentIds : [contentId]);
-        var imdbId = normalizeImdbId(movie && movie.imdb_id ? movie.imdb_id : '');
-        var subscribedContentId = resolveSubscribedContentId(normalizedIds, imdbId);
-        var subscribed = !!subscribedContentId || isImdbSubscribed(imdbId);
-        if (subscribed && !subscribedContentId) {
-          Lampa.Noty.show(withPrefix(t('nn_noty_request_failed')));
+        if (!normalizedIds.length) {
+          Lampa.Noty.show(withPrefix(t('nn_noty_no_subscription_target')));
           return;
         }
-        state.pendingToggle.add(contentId);
-        redrawSubscribeButton(contentId);
-        var action = subscribed ? unsubscribeFromSeries(subscribedContentId) : subscribeToSeries(contentId, imdbId);
-        action.then(function () {
-          if (subscribed) {
-            state.subscriptions["delete"](subscribedContentId);
-            if (imdbId) {
-              state.subscriptionsImdb["delete"](imdbId);
-              if (state.subscriptionsByImdb) state.subscriptionsByImdb["delete"](imdbId);
-            }
-          } else {
-            state.subscriptions.add(contentId);
-            if (imdbId) {
-              state.subscriptionsImdb.add(imdbId);
-              if (state.subscriptionsByImdb) state.subscriptionsByImdb.set(imdbId, contentId);
-            }
+        var primaryContentId = normalizedIds[0];
+        var imdbId = normalizeImdbId(movie && movie.imdb_id ? movie.imdb_id : '');
+        state.pendingToggle.add(primaryContentId);
+        redrawSubscribeButton(primaryContentId);
+        syncSubscriptionStatus(primaryContentId, normalizedIds, imdbId, true)["catch"](function () {})["finally"](function () {
+          var resolvedSubscribedContentId = resolveSubscribedContentId(normalizedIds, imdbId);
+          var resolvedSubscribed = !!resolvedSubscribedContentId || isImdbSubscribed(imdbId);
+          if (resolvedSubscribed && !resolvedSubscribedContentId) {
+            state.pendingToggle["delete"](primaryContentId);
+            redrawSubscribeButton(primaryContentId);
+            Lampa.Noty.show(withPrefix(t('nn_noty_request_failed')));
+            return;
           }
-          state.subscriptionsLoaded = true;
-          state.subscriptionsSyncedAt = Date.now();
-          redrawSubscribeButton(contentId);
-          Lampa.Noty.show(withPrefix(subscribed ? t('nn_noty_unsubscribed') : t('nn_noty_subscribed')));
-        })["catch"](function (error) {
-          var message = error && error.message ? error.message : t('nn_noty_request_failed');
-          Lampa.Noty.show(withPrefix(message));
-        })["finally"](function () {
-          state.pendingToggle["delete"](contentId);
-          redrawSubscribeButton(contentId);
+          var action = resolvedSubscribed ? unsubscribeFromSeries(resolvedSubscribedContentId) : subscribeToSeries(primaryContentId, imdbId);
+          action.then(function (rawActionResult) {
+            var requestedSubscribe = !resolvedSubscribed;
+            var actionResult = normalizeStatusResponse(rawActionResult);
+            var hasExplicitSubscribed = hasSubscribedField(actionResult);
+            var expectedSubscribed = requestedSubscribe;
+            if (hasExplicitSubscribed) {
+              expectedSubscribed = parseSubscribedFlag(actionResult.subscribed);
+              var updatedContentId = applySubscriptionStatus(actionResult, normalizedIds, imdbId);
+              state.subscriptionStatusByContentId.set(primaryContentId, expectedSubscribed);
+              setTargetsSubscribed(primaryContentId, expectedSubscribed);
+              if (updatedContentId && updatedContentId !== primaryContentId) {
+                state.subscriptionStatusByContentId.set(updatedContentId, expectedSubscribed);
+                setTargetsSubscribed(updatedContentId, expectedSubscribed);
+              }
+            } else {
+              if (requestedSubscribe) {
+                applyLocalSubscriptionState(primaryContentId, imdbId, true);
+              } else {
+                applyLocalSubscriptionState(resolvedSubscribedContentId || primaryContentId, imdbId, false);
+                if (resolvedSubscribedContentId && resolvedSubscribedContentId !== primaryContentId) {
+                  applyLocalSubscriptionState(primaryContentId, imdbId, false);
+                }
+              }
+            }
+            state.subscriptionsLoaded = true;
+            state.subscriptionsSyncedAt = Date.now();
+            state.subscriptionStatusSyncedAt.set(primaryContentId, Date.now());
+            setTargetsUnavailable(primaryContentId, false);
+            redrawSubscribeButton(primaryContentId);
+            return syncSubscriptionStatus(primaryContentId, normalizedIds, imdbId, true).then(function () {
+              var finalSubscribed = resolveCurrentSubscribedState(normalizedIds, imdbId);
+              showToggleResultMessage(requestedSubscribe, finalSubscribed);
+            })["catch"](function () {
+              showToggleResultMessage(requestedSubscribe, expectedSubscribed);
+            });
+          })["catch"](function (error) {
+            var message = resolveToggleErrorMessage(error);
+            Lampa.Noty.show(withPrefix(message));
+          })["finally"](function () {
+            state.pendingToggle["delete"](primaryContentId);
+            redrawSubscribeButton(primaryContentId);
+          });
         });
+      }
+      function syncSubscriptionStatus(contentId, contentIds, imdbId, force) {
+        if (!getSubscriptionStatus || typeof getSubscriptionStatus !== 'function') return Promise.resolve(null);
+        if (!isRuntimeAvailable()) return Promise.resolve(null);
+        var normalizedIds = normalizeContentIds(contentIds && contentIds.length ? contentIds : [contentId]);
+        if (!normalizedIds.length) return Promise.resolve(null);
+        var primaryContentId = normalizedIds[0];
+        if (state.subscriptionStatusRequests.has(primaryContentId)) {
+          return state.subscriptionStatusRequests.get(primaryContentId);
+        }
+        var syncedAt = parseInt(state.subscriptionStatusSyncedAt.get(primaryContentId) || 0, 10) || 0;
+        if (!force && syncedAt && Date.now() - syncedAt < SUBSCRIPTION_STATUS_TTL) {
+          return Promise.resolve({
+            cached: true
+          });
+        }
+        var request = getSubscriptionStatus(primaryContentId).then(function (rawResult) {
+          var result = normalizeStatusResponse(rawResult);
+          var updatedContentId = applySubscriptionStatus(result, normalizedIds, imdbId);
+          var statusSubscribed = parseSubscribedFlag(result && result.subscribed);
+          state.subscriptionStatusSyncedAt.set(primaryContentId, Date.now());
+          state.subscriptionStatusByContentId.set(primaryContentId, statusSubscribed);
+          setTargetsSubscribed(primaryContentId, statusSubscribed);
+          setTargetsUnavailable(primaryContentId, false);
+          redrawSubscribeButton(primaryContentId);
+          if (updatedContentId && updatedContentId !== primaryContentId) {
+            state.subscriptionStatusByContentId.set(updatedContentId, statusSubscribed);
+            setTargetsSubscribed(updatedContentId, statusSubscribed);
+            setTargetsUnavailable(updatedContentId, false);
+            redrawSubscribeButton(updatedContentId);
+          }
+          return result;
+        })["catch"](function (error) {
+          if (error && (parseInt(error.status || 0, 10) === 404 || parseInt(error.status || 0, 10) === 422)) {
+            state.subscriptionStatusByContentId.set(primaryContentId, false);
+            setTargetsSubscribed(primaryContentId, false);
+            setTargetsUnavailable(primaryContentId, true);
+            redrawSubscribeButton(primaryContentId);
+          }
+          throw error;
+        })["finally"](function () {
+          state.subscriptionStatusRequests["delete"](primaryContentId);
+        });
+        state.subscriptionStatusRequests.set(primaryContentId, request);
+        return request;
+      }
+      function applyLocalSubscriptionState(contentId, imdbId, subscribed) {
+        var normalizedContentId = buildContentId(contentId);
+        if (!normalizedContentId) return;
+        if (subscribed) {
+          state.subscriptions.add(normalizedContentId);
+          if (imdbId) {
+            state.subscriptionsImdb.add(imdbId);
+            if (state.subscriptionsByImdb) state.subscriptionsByImdb.set(imdbId, normalizedContentId);
+          }
+        } else {
+          state.subscriptions["delete"](normalizedContentId);
+          if (imdbId) {
+            state.subscriptionsImdb["delete"](imdbId);
+            if (state.subscriptionsByImdb) state.subscriptionsByImdb["delete"](imdbId);
+          }
+          pruneImdbMappingsByContentIds([normalizedContentId]);
+        }
+        state.subscriptionStatusByContentId.set(normalizedContentId, subscribed);
+        setTargetsSubscribed(normalizedContentId, subscribed);
+      }
+      function resolveCurrentSubscribedState(contentIds, imdbId) {
+        var fromStatusMap = resolveSubscribedFromStatusMap(contentIds, imdbId);
+        if (fromStatusMap !== null) return fromStatusMap;
+        return isSubscribed(contentIds, imdbId);
+      }
+      function showToggleResultMessage(requestedSubscribe, finalSubscribed) {
+        if (requestedSubscribe) {
+          Lampa.Noty.show(withPrefix(finalSubscribed ? t('nn_noty_subscribed') : t('nn_noty_subscribe_not_confirmed')));
+          return;
+        }
+        Lampa.Noty.show(withPrefix(finalSubscribed ? t('nn_noty_unsubscribe_not_confirmed') : t('nn_noty_unsubscribed')));
       }
       function isSubscribed(contentIds, imdbId) {
         if (resolveSubscribedContentId(contentIds, imdbId)) return true;
@@ -843,6 +1039,50 @@
           if (fromMap && state.subscriptions.has(fromMap)) return fromMap;
         }
         return '';
+      }
+      function applySubscriptionStatus(result, contentIds, imdbId) {
+        var normalizedIds = normalizeContentIds(contentIds);
+        var resolvedContentId = buildContentId(result && (result._id || result.tmdb_id || ''));
+        var resolvedImdbId = normalizeImdbId(result && result.imdb_id ? result.imdb_id : imdbId);
+        var subscribed = parseSubscribedFlag(result && result.subscribed);
+        if (resolvedContentId && normalizedIds.indexOf(resolvedContentId) === -1) {
+          normalizedIds.unshift(resolvedContentId);
+        }
+        if (subscribed) {
+          var actualContentId = resolvedContentId || normalizedIds[0];
+          if (!actualContentId) return '';
+          state.subscriptions.add(actualContentId);
+          if (resolvedImdbId) {
+            state.subscriptionsImdb.add(resolvedImdbId);
+            if (state.subscriptionsByImdb) state.subscriptionsByImdb.set(resolvedImdbId, actualContentId);
+          }
+          return actualContentId;
+        }
+        normalizedIds.forEach(function (id) {
+          state.subscriptions["delete"](id);
+        });
+        if (resolvedImdbId) {
+          state.subscriptionsImdb["delete"](resolvedImdbId);
+          if (state.subscriptionsByImdb) state.subscriptionsByImdb["delete"](resolvedImdbId);
+        }
+        pruneImdbMappingsByContentIds(normalizedIds);
+        return resolvedContentId || '';
+      }
+      function pruneImdbMappingsByContentIds(contentIds) {
+        if (!state.subscriptionsByImdb || !state.subscriptionsByImdb.forEach) return;
+        var normalizedIds = normalizeContentIds(contentIds);
+        if (!normalizedIds.length) return;
+        var keysToDelete = [];
+        state.subscriptionsByImdb.forEach(function (mappedContentId, imdbId) {
+          var normalizedMappedId = buildContentId(mappedContentId);
+          if (normalizedMappedId && normalizedIds.indexOf(normalizedMappedId) >= 0) {
+            keysToDelete.push(imdbId);
+          }
+        });
+        keysToDelete.forEach(function (imdbId) {
+          state.subscriptionsByImdb["delete"](imdbId);
+          state.subscriptionsImdb["delete"](imdbId);
+        });
       }
       function readNodeContentIds(node) {
         if (!node || !node.dataset) return [];
@@ -869,11 +1109,165 @@
         if (method !== 'tv') return '';
         return buildContentId(object.id);
       }
-      function shouldRefreshSubscriptions() {
-        if (!state.subscriptionsLoaded) return true;
-        var syncedAt = parseInt(state.subscriptionsSyncedAt || 0, 10) || 0;
-        if (!syncedAt) return true;
-        return Date.now() - syncedAt > SUBSCRIPTIONS_REFRESH_TTL;
+      function setTargetsUnavailable(contentId, unavailable) {
+        var targets = state.buttonTargets.get(contentId);
+        if (targets && targets.size) {
+          targets.forEach(function (node) {
+            if (!node || !node.dataset) return;
+            node.dataset.nightingaleUnavailable = unavailable ? '1' : '0';
+          });
+        }
+        var direct = findDomTargetsByContentId(contentId);
+        direct.forEach(function (node) {
+          if (!node || !node.dataset) return;
+          node.dataset.nightingaleUnavailable = unavailable ? '1' : '0';
+          renderSingleButtonNode(node);
+        });
+      }
+      function setTargetsSubscribed(contentId, subscribed) {
+        var targets = state.buttonTargets.get(contentId);
+        if (targets && targets.size) {
+          targets.forEach(function (node) {
+            if (!node || !node.dataset) return;
+            node.dataset.nightingaleSubscribed = subscribed ? '1' : '0';
+          });
+        }
+        var direct = findDomTargetsByContentId(contentId);
+        direct.forEach(function (node) {
+          if (!node || !node.dataset) return;
+          node.dataset.nightingaleSubscribed = subscribed ? '1' : '0';
+          renderSingleButtonNode(node);
+        });
+      }
+      function resolveSubscribedFromStatusMap(contentIds, imdbId) {
+        var normalizedIds = normalizeContentIds(contentIds);
+        for (var i = 0; i < normalizedIds.length; i++) {
+          var contentId = normalizedIds[i];
+          if (!state.subscriptionStatusByContentId.has(contentId)) continue;
+          var value = state.subscriptionStatusByContentId.get(contentId);
+          if (typeof value === 'boolean') return value;
+        }
+        if (imdbId && state.subscriptionsByImdb && state.subscriptionsByImdb.has(imdbId)) {
+          var mapped = buildContentId(state.subscriptionsByImdb.get(imdbId));
+          if (mapped && state.subscriptionStatusByContentId.has(mapped)) {
+            var mappedValue = state.subscriptionStatusByContentId.get(mapped);
+            if (typeof mappedValue === 'boolean') return mappedValue;
+          }
+        }
+        return null;
+      }
+      function resolveButtonLabel(subscribed, unavailable) {
+        if (unavailable) return t('nn_button_state_unavailable');
+        return subscribed ? t('nn_button_state_subscribed') : t('nn_button_state_not_subscribed');
+      }
+      function resolveKnownSubscribedValue(contentId) {
+        if (!contentId) return '';
+        if (!state.subscriptionStatusByContentId || !state.subscriptionStatusByContentId.has(contentId)) return '';
+        return state.subscriptionStatusByContentId.get(contentId) ? '1' : '0';
+      }
+      function findDomTargetsByContentId(contentId) {
+        if (!contentId || typeof document === 'undefined' || !document.querySelectorAll) return [];
+        var matches = document.querySelectorAll('.' + BUTTON_CLASS);
+        var nodes = [];
+        for (var i = 0; i < matches.length; i++) {
+          var node = matches[i];
+          if (!node || !node.dataset) continue;
+          var nodeContentId = buildContentId(node.dataset.nightingaleContentId || '');
+          if (nodeContentId !== contentId) continue;
+          nodes.push(node);
+        }
+        return nodes;
+      }
+      function renderSingleButtonNode(node) {
+        if (!node || !node.dataset) return;
+        var button = $(node);
+        var enabled = isPluginEnabled();
+        var contentId = buildContentId(node.dataset.nightingaleContentId || '');
+        var pending = contentId ? state.pendingToggle.has(contentId) : false;
+        var nodeContentIds = readNodeContentIds(node);
+        var nodeImdbId = normalizeImdbId(node.dataset.nightingaleImdbId || '');
+        var subscribedOverride = resolveSubscribedFromStatusMap(nodeContentIds, nodeImdbId);
+        var subscribed = subscribedOverride === null ? isSubscribed(nodeContentIds, nodeImdbId) : subscribedOverride;
+        var unavailable = String(node.dataset.nightingaleUnavailable || '') === '1';
+        var label = resolveButtonLabel(subscribed, unavailable);
+        button.toggleClass('hide', !enabled);
+        button.toggleClass('active', subscribed);
+        button.toggleClass('nightingale-notifications--busy', pending);
+        button.toggleClass('nightingale-notifications--unavailable', unavailable);
+        button.attr('data-subtitle', label);
+        button.find('span').text(label);
+        applyButtonVisualState(button, subscribed, unavailable);
+      }
+      function applyButtonVisualState(button, subscribed, unavailable) {
+        if (!button || !button.length) return;
+        var node = button[0];
+        if (!node || typeof node.querySelector !== 'function') return;
+        var body = node.querySelector('.nightingale-notifications__bell-body');
+        var clapper = node.querySelector('.nightingale-notifications__bell-clapper');
+        if (!body || !clapper) return;
+        if (unavailable) {
+          body.style.fill = 'rgba(127, 147, 170, 0.04)';
+          body.style.stroke = '#72849b';
+          clapper.style.fill = '#8ea4bf';
+          return;
+        }
+        if (subscribed) {
+          body.style.fill = 'rgba(0, 91, 187, 0.24)';
+          body.style.stroke = '#005BBB';
+          clapper.style.fill = '#FFD500';
+          return;
+        }
+        body.style.fill = 'rgba(127, 147, 170, 0.08)';
+        body.style.stroke = '#8ea4bf';
+        clapper.style.fill = '#a2b2c6';
+      }
+      function resolveToggleErrorMessage(error) {
+        if (!error) return t('nn_noty_request_failed');
+        var statusCode = parseInt(error.status || 0, 10) || 0;
+        var payload = error.payload || {};
+        var payloadStatus = String(payload.status || '').toLowerCase();
+        var payloadError = String(payload.error || '').toLowerCase();
+        if (statusCode === 404) {
+          return t('nn_noty_no_subscription_target');
+        }
+        if (statusCode === 409 && isTerminalSeriesStatus(payloadStatus, payloadError)) {
+          return t('nn_noty_series_not_releasing');
+        }
+        return error && error.message ? error.message : t('nn_noty_request_failed');
+      }
+      function isTerminalSeriesStatus(status, message) {
+        if (TERMINAL_SERIES_STATUSES.indexOf(String(status || '').toLowerCase()) >= 0) return true;
+        var text = String(message || '').toLowerCase();
+        if (!text) return false;
+        if (text.indexOf('series is not eligible for subscription') >= 0) return true;
+        for (var i = 0; i < TERMINAL_SERIES_STATUSES.length; i++) {
+          if (text.indexOf(TERMINAL_SERIES_STATUSES[i]) >= 0) return true;
+        }
+        return false;
+      }
+      function parseSubscribedFlag(value) {
+        if (value === true || value === 1) return true;
+        if (typeof value === 'string') {
+          var normalized = value.trim().toLowerCase();
+          return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on';
+        }
+        return false;
+      }
+      function hasSubscribedField(value) {
+        if (!value || _typeof(value) !== 'object') return false;
+        return Object.prototype.hasOwnProperty.call(value, 'subscribed');
+      }
+      function normalizeStatusResponse(raw) {
+        if (!raw || _typeof(raw) !== 'object') return {};
+        var fromData = raw.data && _typeof(raw.data) === 'object' ? raw.data : null;
+        var fromResult = raw.result && _typeof(raw.result) === 'object' ? raw.result : null;
+        if (fromData && hasStatusFields(fromData)) return fromData;
+        if (fromResult && hasStatusFields(fromResult)) return fromResult;
+        return raw;
+      }
+      function hasStatusFields(value) {
+        if (!value || _typeof(value) !== 'object') return false;
+        return Object.prototype.hasOwnProperty.call(value, 'subscribed') || Object.prototype.hasOwnProperty.call(value, '_id') || Object.prototype.hasOwnProperty.call(value, 'tmdb_id');
       }
       return {
         onFullEvent: onFullEvent,
@@ -1515,9 +1909,9 @@
       state: state,
       isPluginEnabled: isPluginEnabled,
       isRuntimeAvailable: isRuntimeAvailable,
-      loadSubscriptions: loadSubscriptionsSafe,
       subscribeToSeries: subscribeToSeries,
-      unsubscribeFromSeries: unsubscribeFromSeries
+      unsubscribeFromSeries: unsubscribeFromSeries,
+      getSubscriptionStatus: getSubscriptionStatus
     });
     function startPlugin() {
       window.plugin_nightingale_notifications_ready = true;
@@ -1565,14 +1959,13 @@
         state.subscriptions.clear();
         state.subscriptionsImdb.clear();
         state.subscriptionsByImdb.clear();
+        if (state.subscriptionStatusSyncedAt) state.subscriptionStatusSyncedAt.clear();
+        if (state.subscriptionStatusRequests) state.subscriptionStatusRequests.clear();
+        if (state.subscriptionStatusByContentId) state.subscriptionStatusByContentId.clear();
         buttonsController.redrawAllSubscribeButtons();
         return;
       }
-      loadSubscriptionsSafe().then(function () {
-        wsController.connectWebSocket();
-      })["catch"](function () {
-        wsController.connectWebSocket();
-      });
+      wsController.connectWebSocket();
     }
     if (!window.plugin_nightingale_notifications_ready) startPlugin();
 
