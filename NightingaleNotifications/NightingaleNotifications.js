@@ -243,6 +243,11 @@
           uk: 'Підписку вимкнено',
           ru: 'Подписка отключена'
         },
+        nn_noty_unsubscribe_by_error: {
+          en: 'Subscription cancelled because series was not found in database',
+          uk: 'Нажаль ваша підписка скасована, так як ми не знайшли його в базі',
+          ru: 'Подписка отменена, так как сериал не найден в базе'
+        },
         nn_noty_sync_uid_required: {
           en: 'Set Sync UID or ensure local lampa_uid exists.',
           uk: 'Вкажіть Sync UID або переконайтесь, що локальний lampa_uid існує.',
@@ -1611,6 +1616,7 @@
       var getEffectiveUserId = params.getEffectiveUserId;
       var pushNotice = params.pushNotice;
       var resolveSeriesDetails = params.resolveSeriesDetails;
+      var redrawAllSubscribeButtons = params.redrawAllSubscribeButtons;
       function connectWebSocket() {
         if (!isRuntimeAvailable()) return;
         var wsUrl = buildWsUrl();
@@ -1759,9 +1765,17 @@
         state.wsPongTimer = null;
       }
       function onWsPayload(payload) {
-        if (!payload || payload.method !== 'lme_episode_new') return;
-        var data = payload.data || {};
-        var eventId = String(data.event_id || '').trim();
+        if (!payload || !payload.method) return;
+        if (payload.method === 'lme_episode_new') {
+          handleEpisodePayload(payload.data || {});
+          return;
+        }
+        if (payload.method === 'unsubscribe_by_error') {
+          handleUnsubscribeByErrorPayload(payload.data || {});
+        }
+      }
+      function handleEpisodePayload(data) {
+        var eventId = String(data && data.event_id ? data.event_id : '').trim();
         if (!eventId) return;
         buildEpisodeNotice(data).then(function (notice) {
           if (!notice) return;
@@ -1769,6 +1783,15 @@
             sendAck(eventId);
           });
         })["catch"](function () {
+          sendAck(eventId);
+        });
+      }
+      function handleUnsubscribeByErrorPayload(data) {
+        var eventId = String(data && data.event_id ? data.event_id : '').trim();
+        if (!eventId) return;
+        Promise.resolve().then(function () {
+          processUnsubscribeByError(data);
+        })["finally"](function () {
           sendAck(eventId);
         });
       }
@@ -1813,6 +1836,42 @@
             card: card,
             labels: labels
           };
+        });
+      }
+      function processUnsubscribeByError(data) {
+        var contentId = buildContentId(data && data._id ? data._id : '');
+        var imdbId = normalizeImdbId(data && data.imdb_id ? data.imdb_id : '');
+        if (contentId) {
+          state.subscriptions["delete"](contentId);
+          state.subscriptionStatusByContentId.set(contentId, false);
+          state.subscriptionStatusSyncedAt.set(contentId, Date.now());
+          pruneImdbMappingsByContentId(contentId);
+        }
+        if (imdbId) {
+          state.subscriptionsImdb["delete"](imdbId);
+          state.subscriptionsByImdb["delete"](imdbId);
+        }
+        state.subscriptionsLoaded = true;
+        state.subscriptionsSyncedAt = Date.now();
+        if (typeof Lampa !== 'undefined' && Lampa.Noty && typeof Lampa.Noty.show === 'function') {
+          Lampa.Noty.show(withPrefix(t('nn_noty_unsubscribe_by_error')));
+        }
+        if (typeof redrawAllSubscribeButtons === 'function') {
+          redrawAllSubscribeButtons();
+        }
+      }
+      function pruneImdbMappingsByContentId(contentId) {
+        if (!contentId) return;
+        if (!state.subscriptionsByImdb || typeof state.subscriptionsByImdb.forEach !== 'function') return;
+        var toDelete = [];
+        state.subscriptionsByImdb.forEach(function (mappedContentId, mappedImdbId) {
+          if (buildContentId(mappedContentId) === contentId) {
+            toDelete.push(mappedImdbId);
+          }
+        });
+        toDelete.forEach(function (mappedImdbId) {
+          state.subscriptionsByImdb["delete"](mappedImdbId);
+          state.subscriptionsImdb["delete"](mappedImdbId);
         });
       }
       return {
@@ -1901,6 +1960,10 @@
       isRuntimeAvailable: isRuntimeAvailable,
       getEffectiveUserId: getEffectiveUserId,
       pushNotice: pushNotice,
+      redrawAllSubscribeButtons: function redrawAllSubscribeButtons() {
+        if (!buttonsController || typeof buttonsController.redrawAllSubscribeButtons !== 'function') return;
+        buttonsController.redrawAllSubscribeButtons();
+      },
       resolveSeriesDetails: function resolveSeriesDetails$1(tmdbId) {
         return resolveSeriesDetails(state, tmdbId);
       }
