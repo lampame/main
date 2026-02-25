@@ -17,13 +17,25 @@
     var API_BASE = 'https://' + SERVICE_HOST;
     var STORAGE_KEYS = {
       enabled: 'nightingale_notifications_enabled',
-      syncUid: 'nightingale_notifications_sync_uid'
+      syncUid: 'nightingale_notifications_sync_uid',
+      autoImportLampa: 'nightingale_auto_import_lampa',
+      autoImportTrakt: 'nightingale_auto_import_trakttv',
+      integrationLastRunAt: 'nightingale_integration_last_run_at',
+      traktBackoffUntil: 'nightingale_trakt_auto_backoff_until'
     };
     var WS_RECONNECT_MIN = 2000;
     var WS_RECONNECT_MAX = 60000;
     var REQUEST_TIMEOUT = 12000;
     var DETAILS_CACHE_TTL = 1000 * 60 * 60 * 6;
     var SUBSCRIPTION_STATUS_TTL = 1000 * 15;
+    var HISTORY_IMPORT_DEBOUNCE = 2000;
+    var TRAKT_AUTO_IMPORT_INTERVAL = 1000 * 60 * 15;
+    var TRAKT_AUTO_IMPORT_BACKOFF_MIN = 1000 * 60 * 5;
+    var TRAKT_AUTO_IMPORT_BACKOFF_MAX = 1000 * 60 * 60;
+    var IMPORT_BATCH_SIZE = 12;
+    var IMPORT_BATCH_PAUSE = 180;
+    var TRAKT_IMPORT_PAGE_LIMIT = 60;
+    var TRAKT_IMPORT_MAX_PAGES = 3;
 
     var state = {
       started: false,
@@ -46,7 +58,13 @@
       subscriptionStatusByContentId: new Map(),
       buttonTargets: new Map(),
       pendingToggle: new Set(),
-      detailsCache: new Map()
+      detailsCache: new Map(),
+      integrationQueue: null,
+      integrationSyncInProgress: false,
+      historyAutoImportTimer: null,
+      traktAutoImportTimer: null,
+      traktAutoFailureCount: 0,
+      traktAutoBackoffUntil: 0
     };
 
     function injectStyles() {
@@ -137,6 +155,41 @@
           en: 'Open subscriptions',
           uk: 'Відкрити підписки',
           ru: 'Открыть подписки'
+        },
+        nn_settings_auto_import_title: {
+          en: 'Import',
+          uk: 'Імпорт',
+          ru: 'Импорт'
+        },
+        nn_settings_auto_import_lampa_name: {
+          en: 'Auto import Lampa',
+          uk: 'Автоімпорт Лампа',
+          ru: 'Автоимпорт Лампа'
+        },
+        nn_settings_auto_import_lampa_descr: {
+          en: 'Automatically import TV series from Lampa history.',
+          uk: 'Автоматично імпортувати серіали з історії Lampa.',
+          ru: 'Автоматически импортировать сериалы из истории Lampa.'
+        },
+        nn_settings_auto_import_trakt_name: {
+          en: 'Auto import TraktTV',
+          uk: 'Автоімпорт TraktTV',
+          ru: 'Автоимпорт TraktTV'
+        },
+        nn_settings_auto_import_trakt_descr: {
+          en: 'Automatically import TraktTV UpNext first, then Watchlist.',
+          uk: 'Автоматично імпортувати TraktTV: спочатку UpNext, потім Watchlist.',
+          ru: 'Автоматически импортировать TraktTV: сначала UpNext, потом Watchlist.'
+        },
+        nn_settings_manual_import_lampa_name: {
+          en: 'Import from Lampa history',
+          uk: 'Імпорт із історії Lampa',
+          ru: 'Импорт из истории Lampa'
+        },
+        nn_settings_manual_import_trakt_name: {
+          en: 'Import from TraktTV',
+          uk: 'Імпорт із TraktTV',
+          ru: 'Импорт из TraktTV'
         },
         nn_menu_subscribes: {
           en: 'Nightingale',
@@ -287,6 +340,51 @@
           en: 'Health',
           uk: 'Стан сервісу',
           ru: 'Состояние сервиса'
+        },
+        nn_noty_trakt_unavailable: {
+          en: 'TraktTV plugin is unavailable',
+          uk: 'Плагін TraktTV недоступний',
+          ru: 'Плагин TraktTV недоступен'
+        },
+        nn_noty_trakt_auth_required: {
+          en: 'Login to TraktTV first',
+          uk: 'Спочатку увійдіть у TraktTV',
+          ru: 'Сначала войдите в TraktTV'
+        },
+        nn_noty_import_summary_prefix: {
+          en: 'Import summary',
+          uk: 'Результат імпорту',
+          ru: 'Результат импорта'
+        },
+        nn_noty_import_source_lampa: {
+          en: 'Lampa',
+          uk: 'Лампа',
+          ru: 'Лампа'
+        },
+        nn_noty_import_source_trakt: {
+          en: 'TraktTV',
+          uk: 'TraktTV',
+          ru: 'TraktTV'
+        },
+        nn_noty_import_added: {
+          en: 'added',
+          uk: 'додано',
+          ru: 'добавлено'
+        },
+        nn_noty_import_duplicates: {
+          en: 'duplicates',
+          uk: 'дублікати',
+          ru: 'дубликаты'
+        },
+        nn_noty_import_skipped: {
+          en: 'skipped',
+          uk: 'пропущено',
+          ru: 'пропущено'
+        },
+        nn_noty_import_failed: {
+          en: 'failed',
+          uk: 'помилки',
+          ru: 'ошибки'
         }
       });
     }
@@ -546,7 +644,7 @@
       return error;
     }
 
-    function registerSettings(restartRuntime) {
+    function registerSettings(restartRuntime, integrationsController) {
       var settingsApi = Lampa.SettingsApi || Lampa.Settings;
       if (!settingsApi || typeof settingsApi.addComponent !== 'function') return;
       settingsApi.addComponent({
@@ -664,6 +762,79 @@
               page: 1
             });
           }, 0);
+        }
+      });
+      settingsApi.addParam({
+        component: SETTINGS_COMPONENT,
+        param: {
+          type: 'title'
+        },
+        field: {
+          name: t('nn_settings_auto_import_title')
+        }
+      });
+      settingsApi.addParam({
+        component: SETTINGS_COMPONENT,
+        param: {
+          name: STORAGE_KEYS.autoImportLampa,
+          type: 'trigger',
+          "default": false
+        },
+        field: {
+          name: t('nn_settings_auto_import_lampa_name'),
+          description: t('nn_settings_auto_import_lampa_descr')
+        },
+        onChange: function onChange() {
+          if (integrationsController && typeof integrationsController.restartAutoImports === 'function') {
+            integrationsController.restartAutoImports('settings_auto_import_lampa');
+          }
+        }
+      });
+      settingsApi.addParam({
+        component: SETTINGS_COMPONENT,
+        param: {
+          name: STORAGE_KEYS.autoImportTrakt,
+          type: 'trigger',
+          "default": false
+        },
+        field: {
+          name: t('nn_settings_auto_import_trakt_name'),
+          description: t('nn_settings_auto_import_trakt_descr')
+        },
+        onChange: function onChange() {
+          if (integrationsController && typeof integrationsController.restartAutoImports === 'function') {
+            integrationsController.restartAutoImports('settings_auto_import_trakt');
+          }
+        }
+      });
+      settingsApi.addParam({
+        component: SETTINGS_COMPONENT,
+        param: {
+          name: 'nightingale_notifications_manual_import_lampa',
+          type: 'button'
+        },
+        field: {
+          name: t('nn_settings_manual_import_lampa_name')
+        },
+        onChange: function onChange() {
+          if (integrationsController && typeof integrationsController.manualImportFromHistory === 'function') {
+            integrationsController.manualImportFromHistory();
+          }
+        }
+      });
+      settingsApi.addParam({
+        component: SETTINGS_COMPONENT,
+        param: {
+          name: 'nightingale_notifications_manual_import_trakt',
+          type: 'button'
+        },
+        field: {
+          name: t('nn_settings_manual_import_trakt_name')
+        },
+        onChange: function onChange() {
+          if (integrationsController && typeof integrationsController.manualImportFromTrakt === 'function') {
+            integrationsController.manualImportFromTrakt();
+          }
         }
       });
       settingsApi.addParam({
@@ -1950,6 +2121,621 @@
       });
     }
 
+    function createTaskQueue() {
+      var tasks = [];
+      var running = false;
+      function runNext() {
+        if (running) return;
+        var current = tasks.shift();
+        if (!current) return;
+        running = true;
+        Promise.resolve().then(function () {
+          return current.task();
+        }).then(function (result) {
+          current.resolve(result);
+        })["catch"](function (error) {
+          current.reject(error);
+        })["finally"](function () {
+          running = false;
+          runNext();
+        });
+      }
+      function push(task) {
+        return new Promise(function (resolve, reject) {
+          tasks.push({
+            task: typeof task === 'function' ? task : function () {
+              return null;
+            },
+            resolve: resolve,
+            reject: reject
+          });
+          runNext();
+        });
+      }
+      function clear() {
+        tasks.length = 0;
+      }
+      function size() {
+        return tasks.length;
+      }
+      return {
+        push: push,
+        clear: clear,
+        size: size,
+        isRunning: function isRunning() {
+          return running;
+        }
+      };
+    }
+
+    var SUBSCRIPTIONS_REFRESH_TTL = 1000 * 60 * 5;
+    function createIntegrationsController(params) {
+      var state = params.state;
+      var isRuntimeAvailable = params.isRuntimeAvailable;
+      var loadSubscriptions = params.loadSubscriptions;
+      var subscribeToSeries = params.subscribeToSeries;
+      var redrawAllSubscribeButtons = params.redrawAllSubscribeButtons;
+      var historyStateChangeListener = null;
+      function init() {
+        if (!state.integrationQueue) {
+          state.integrationQueue = createTaskQueue();
+        }
+        bindHistoryAutoImportListener();
+        restartAutoImports('init');
+      }
+      function destroy() {
+        clearHistoryAutoImportTimer();
+        clearTraktAutoImportTimer();
+        removeHistoryAutoImportListener();
+        if (state.integrationQueue && typeof state.integrationQueue.clear === 'function') {
+          state.integrationQueue.clear();
+        }
+      }
+      function restartAutoImports(reason) {
+        clearHistoryAutoImportTimer();
+        clearTraktAutoImportTimer();
+        if (isAutoImportLampaEnabled()) {
+          scheduleHistoryAutoImport(reason || 'restart');
+        }
+        if (isAutoImportTraktEnabled()) {
+          scheduleTraktAutoImport(1200);
+        }
+      }
+      function onStorageChange(event) {
+        if (!event || !event.name) return;
+        var watched = [STORAGE_KEYS.enabled, STORAGE_KEYS.syncUid, STORAGE_KEYS.autoImportLampa, STORAGE_KEYS.autoImportTrakt, 'lampa_uid', 'trakt_token'];
+        if (watched.indexOf(event.name) >= 0) {
+          restartAutoImports('storage_change:' + event.name);
+        }
+      }
+      function manualImportFromHistory() {
+        return enqueueSyncTask(function () {
+          return importFromHistory({
+            auto: false,
+            trigger: 'manual'
+          });
+        })["catch"](function (error) {
+          showNoty(resolveErrorMessage(error));
+          return createSummary();
+        });
+      }
+      function manualImportFromTrakt() {
+        return enqueueSyncTask(function () {
+          return importFromTrakt({
+            auto: false,
+            trigger: 'manual'
+          });
+        })["catch"](function (error) {
+          showNoty(resolveErrorMessage(error));
+          return createSummary();
+        });
+      }
+      function enqueueSyncTask(task) {
+        if (!state.integrationQueue) {
+          state.integrationQueue = createTaskQueue();
+        }
+        return state.integrationQueue.push(function () {
+          state.integrationSyncInProgress = true;
+          return Promise.resolve().then(function () {
+            return task();
+          })["finally"](function () {
+            state.integrationSyncInProgress = false;
+          });
+        });
+      }
+      function bindHistoryAutoImportListener() {
+        if (historyStateChangeListener) return;
+        if (!Lampa.Listener || typeof Lampa.Listener.follow !== 'function') return;
+        historyStateChangeListener = function historyStateChangeListener(event) {
+          if (!isAutoImportLampaEnabled()) return;
+          if (!event || event.target !== 'favorite') return;
+          var favoriteType = String(event.type || '');
+          if (favoriteType && favoriteType !== 'history') return;
+          scheduleHistoryAutoImport('favorite_state_changed');
+        };
+        Lampa.Listener.follow('state:changed', historyStateChangeListener);
+      }
+      function removeHistoryAutoImportListener() {
+        if (!historyStateChangeListener) return;
+        if (!Lampa.Listener || typeof Lampa.Listener.remove !== 'function') return;
+        Lampa.Listener.remove('state:changed', historyStateChangeListener);
+        historyStateChangeListener = null;
+      }
+      function isAutoImportLampaEnabled() {
+        if (!isRuntimeAvailable()) return false;
+        return Lampa.Storage.get(STORAGE_KEYS.autoImportLampa, false) === true;
+      }
+      function isAutoImportTraktEnabled() {
+        if (!isRuntimeAvailable()) return false;
+        return Lampa.Storage.get(STORAGE_KEYS.autoImportTrakt, false) === true;
+      }
+      function clearHistoryAutoImportTimer() {
+        clearTimeout(state.historyAutoImportTimer);
+        state.historyAutoImportTimer = null;
+      }
+      function clearTraktAutoImportTimer() {
+        clearTimeout(state.traktAutoImportTimer);
+        state.traktAutoImportTimer = null;
+      }
+      function scheduleHistoryAutoImport(reason) {
+        clearHistoryAutoImportTimer();
+        state.historyAutoImportTimer = setTimeout(function () {
+          if (!isAutoImportLampaEnabled()) return;
+          enqueueSyncTask(function () {
+            return importFromHistory({
+              auto: true,
+              trigger: reason || 'history_auto_timer'
+            });
+          })["catch"](function () {});
+        }, HISTORY_IMPORT_DEBOUNCE);
+      }
+      function scheduleTraktAutoImport(delay) {
+        clearTraktAutoImportTimer();
+        var ms = Math.max(500, parseInt(delay || TRAKT_AUTO_IMPORT_INTERVAL, 10) || TRAKT_AUTO_IMPORT_INTERVAL);
+        state.traktAutoImportTimer = setTimeout(function () {
+          runTraktAutoImportCycle();
+        }, ms);
+      }
+      function runTraktAutoImportCycle() {
+        if (!isAutoImportTraktEnabled()) return;
+        var backoffUntil = getTraktBackoffUntil();
+        var now = Date.now();
+        if (backoffUntil > now) {
+          scheduleTraktAutoImport(backoffUntil - now);
+          return;
+        }
+        enqueueSyncTask(function () {
+          return importFromTrakt({
+            auto: true,
+            trigger: 'trakt_auto_timer'
+          });
+        }).then(function (summary) {
+          var hasOnlyFailures = summary && summary.failed > 0 && summary.added === 0;
+          if (hasOnlyFailures) applyTraktBackoff();else clearTraktBackoff();
+        })["catch"](function () {
+          applyTraktBackoff();
+        })["finally"](function () {
+          if (!isAutoImportTraktEnabled()) return;
+          var nowTs = Date.now();
+          var nextBackoff = getTraktBackoffUntil();
+          var nextDelay = nextBackoff > nowTs ? nextBackoff - nowTs : TRAKT_AUTO_IMPORT_INTERVAL;
+          scheduleTraktAutoImport(nextDelay);
+        });
+      }
+      function getTraktBackoffUntil() {
+        var fromStorage = parseInt(Lampa.Storage.get(STORAGE_KEYS.traktBackoffUntil, 0), 10) || 0;
+        var fromState = parseInt(state.traktAutoBackoffUntil || 0, 10) || 0;
+        var value = Math.max(fromStorage, fromState);
+        state.traktAutoBackoffUntil = value;
+        return value;
+      }
+      function applyTraktBackoff() {
+        state.traktAutoFailureCount = Math.min((parseInt(state.traktAutoFailureCount || 0, 10) || 0) + 1, 6);
+        var factor = Math.pow(2, Math.max(0, state.traktAutoFailureCount - 1));
+        var delay = Math.min(TRAKT_AUTO_IMPORT_BACKOFF_MIN * factor, TRAKT_AUTO_IMPORT_BACKOFF_MAX);
+        var until = Date.now() + delay;
+        state.traktAutoBackoffUntil = until;
+        Lampa.Storage.set(STORAGE_KEYS.traktBackoffUntil, until);
+      }
+      function clearTraktBackoff() {
+        state.traktAutoFailureCount = 0;
+        state.traktAutoBackoffUntil = 0;
+        var current = parseInt(Lampa.Storage.get(STORAGE_KEYS.traktBackoffUntil, 0), 10) || 0;
+        if (current) Lampa.Storage.set(STORAGE_KEYS.traktBackoffUntil, 0);
+      }
+      function importFromHistory(options) {
+        var settings = options || {};
+        if (!isRuntimeAvailable()) {
+          if (!settings.auto) showNoty(t('nn_noty_sync_uid_required'));
+          return Promise.resolve(createSummary());
+        }
+        return ensureSubscriptionsFresh().then(function () {
+          var candidates = collectHistoryCandidates();
+          return importCandidates(candidates);
+        }).then(function (summary) {
+          handleImportSuccess('lampa', summary, settings.auto);
+          return summary;
+        })["catch"](function (error) {
+          if (!settings.auto) showNoty(resolveErrorMessage(error));
+          throw error;
+        });
+      }
+      function importFromTrakt(options) {
+        var settings = options || {};
+        if (!isRuntimeAvailable()) {
+          if (!settings.auto) showNoty(t('nn_noty_sync_uid_required'));
+          return Promise.resolve(createSummary());
+        }
+        if (!hasTraktToken()) {
+          if (!settings.auto) showNoty(t('nn_noty_trakt_auth_required'));
+          return Promise.resolve(createSummary());
+        }
+        var traktApi = resolveTraktApi();
+        if (!traktApi) {
+          if (!settings.auto) showNoty(t('nn_noty_trakt_unavailable'));
+          return Promise.resolve(createSummary());
+        }
+        return ensureSubscriptionsFresh().then(function () {
+          return collectTraktCandidates(traktApi);
+        }).then(function (candidates) {
+          return importCandidates(candidates);
+        }).then(function (summary) {
+          handleImportSuccess('trakt', summary, settings.auto);
+          return summary;
+        })["catch"](function (error) {
+          if (!settings.auto) showNoty(resolveErrorMessage(error));
+          throw error;
+        });
+      }
+      function handleImportSuccess(source, summary, auto) {
+        updateLastRunAt();
+        if (typeof redrawAllSubscribeButtons === 'function') {
+          redrawAllSubscribeButtons();
+        }
+        if (auto) {
+          if ((summary.added || 0) < 1 && (summary.failed || 0) < 1) return;
+        }
+        showSummary(source, summary);
+      }
+      function updateLastRunAt() {
+        var now = Date.now();
+        Lampa.Storage.set(STORAGE_KEYS.integrationLastRunAt, now);
+      }
+      function ensureSubscriptionsFresh() {
+        if (typeof loadSubscriptions !== 'function') return Promise.resolve([]);
+        var syncedAt = parseInt(state.subscriptionsSyncedAt || 0, 10) || 0;
+        var stale = !state.subscriptionsLoaded || !syncedAt || Date.now() - syncedAt > SUBSCRIPTIONS_REFRESH_TTL;
+        if (!stale) return Promise.resolve([]);
+        return loadSubscriptions()["catch"](function () {
+          return [];
+        });
+      }
+      function collectHistoryCandidates() {
+        var rows = readFavoriteHistoryRows();
+        var refs = [];
+        rows.forEach(function (row) {
+          if (!isHistoryTvRow(row)) return;
+          var contentId = resolveHistoryContentId(row);
+          if (!contentId) return;
+          refs.push({
+            contentId: contentId,
+            imdbId: resolveCardImdbId(row),
+            source: 'history'
+          });
+        });
+        return dedupeCandidates(refs);
+      }
+      function readFavoriteHistoryRows() {
+        if (!Lampa.Favorite || typeof Lampa.Favorite.get !== 'function') return [];
+        var rows = Lampa.Favorite.get({
+          type: 'history'
+        });
+        return Array.isArray(rows) ? rows : [];
+      }
+      function isHistoryTvRow(row) {
+        if (!row || _typeof(row) !== 'object') return false;
+        var method = String(row.method || '').toLowerCase();
+        if (method === 'tv' || method === 'show') return true;
+        return isTvCard(null, row);
+      }
+      function resolveHistoryContentId(row) {
+        var ids = resolveTvContentIds([row]);
+        if (ids.length) return ids[0];
+        var rowIds = row && row.ids ? row.ids : null;
+        var externalIds = row && row.external_ids ? row.external_ids : null;
+        return resolveContentIdByCandidates([row && row.nightingale_content_id ? row.nightingale_content_id : '', row && row.tmdb_id ? row.tmdb_id : '', rowIds && rowIds.tmdb ? rowIds.tmdb : '', externalIds && externalIds.tmdb_id ? externalIds.tmdb_id : '']);
+      }
+      function collectTraktCandidates(traktApi) {
+        var errors = [];
+        return fetchTraktCandidatesBySource(traktApi, 'upnext')["catch"](function (error) {
+          errors.push(error);
+          return [];
+        }).then(function (upnext) {
+          return fetchTraktCandidatesBySource(traktApi, 'watchlist')["catch"](function (error) {
+            errors.push(error);
+            return [];
+          }).then(function (watchlist) {
+            var refs = dedupeCandidates(upnext.concat(watchlist));
+            if (!refs.length && errors.length > 1) throw errors[0];
+            return refs;
+          });
+        });
+      }
+      function fetchTraktCandidatesBySource(traktApi, source) {
+        if (!traktApi || typeof traktApi[source] !== 'function') return Promise.resolve([]);
+        var page = 1;
+        var refs = [];
+        function loadPage() {
+          if (page > TRAKT_IMPORT_MAX_PAGES) {
+            return Promise.resolve(refs);
+          }
+          return Promise.resolve(traktApi[source]({
+            page: page,
+            limit: TRAKT_IMPORT_PAGE_LIMIT
+          })).then(function (response) {
+            var rows = response && Array.isArray(response.results) ? response.results : [];
+            var totalPages = parseInt(response && response.total_pages ? response.total_pages : 1, 10) || 1;
+            rows.forEach(function (row) {
+              var ref = resolveTraktCandidate(row, source);
+              if (!ref) return;
+              refs.push(ref);
+            });
+            var reachedEnd = !rows.length || page >= totalPages || page >= TRAKT_IMPORT_MAX_PAGES;
+            page++;
+            if (reachedEnd) return refs;
+            return loadPage();
+          });
+        }
+        return loadPage();
+      }
+      function resolveTraktCandidate(row, source) {
+        if (!isTraktTvRow(row)) return null;
+        var contentId = resolveTraktContentId(row);
+        if (!contentId) return null;
+        return {
+          contentId: contentId,
+          imdbId: resolveCardImdbId(row),
+          source: source
+        };
+      }
+      function isTraktTvRow(row) {
+        if (!row || _typeof(row) !== 'object') return false;
+        var method = String(row.method || row.card_type || row.type || '').toLowerCase();
+        if (method === 'movie') return false;
+        if (method === 'tv' || method === 'show') return true;
+        return isTvCard(null, row);
+      }
+      function resolveTraktContentId(row) {
+        var ids = row && row.ids ? row.ids : null;
+        var externalIds = row && row.external_ids ? row.external_ids : null;
+        var source = String(row && row.source ? row.source : '').toLowerCase();
+        return resolveContentIdByCandidates([ids && ids.tmdb ? ids.tmdb : '', row && row.tmdb_id ? row.tmdb_id : '', externalIds && externalIds.tmdb_id ? externalIds.tmdb_id : '', row && row.nightingale_content_id ? row.nightingale_content_id : '', source === 'tmdb' ? row && row.id ? row.id : '' : '']);
+      }
+      function resolveCardImdbId(card) {
+        var ids = card && card.ids ? card.ids : null;
+        var externalIds = card && card.external_ids ? card.external_ids : null;
+        var values = [card && card.imdb_id ? card.imdb_id : '', card && card.imdb ? card.imdb : '', ids && ids.imdb ? ids.imdb : '', externalIds && externalIds.imdb_id ? externalIds.imdb_id : ''];
+        for (var i = 0; i < values.length; i++) {
+          var imdbId = normalizeImdbId(values[i]);
+          if (imdbId) return imdbId;
+        }
+        return '';
+      }
+      function resolveContentIdByCandidates(candidates) {
+        var list = Array.isArray(candidates) ? candidates : [candidates];
+        for (var i = 0; i < list.length; i++) {
+          var contentId = buildContentId(list[i]);
+          if (contentId) return contentId;
+        }
+        return '';
+      }
+      function dedupeCandidates(candidates) {
+        var list = Array.isArray(candidates) ? candidates : [];
+        var seenContent = new Set();
+        var seenImdb = new Set();
+        var result = [];
+        list.forEach(function (item) {
+          if (!item || !item.contentId) return;
+          var contentId = buildContentId(item.contentId);
+          var imdbId = normalizeImdbId(item.imdbId || '');
+          if (!contentId) return;
+          if (seenContent.has(contentId)) return;
+          if (imdbId && seenImdb.has(imdbId)) return;
+          seenContent.add(contentId);
+          if (imdbId) seenImdb.add(imdbId);
+          result.push({
+            contentId: contentId,
+            imdbId: imdbId,
+            source: item.source || ''
+          });
+        });
+        return result;
+      }
+      function importCandidates(candidates) {
+        var list = Array.isArray(candidates) ? candidates : [];
+        var summary = createSummary();
+        summary.total = list.length;
+        if (!list.length) return Promise.resolve(summary);
+        var changed = false;
+        function processIndex(index) {
+          if (index >= list.length) {
+            if (changed) {
+              state.subscriptionsLoaded = true;
+              state.subscriptionsSyncedAt = Date.now();
+            }
+            return Promise.resolve(summary);
+          }
+          var candidate = list[index];
+          return importSingleCandidate(candidate, summary).then(function (didChange) {
+            if (didChange) changed = true;
+            var reachedBatchBoundary = (index + 1) % IMPORT_BATCH_SIZE === 0;
+            if (index < list.length - 1 && IMPORT_BATCH_PAUSE > 0 && reachedBatchBoundary) {
+              return wait(IMPORT_BATCH_PAUSE).then(function () {
+                return processIndex(index + 1);
+              });
+            }
+            return processIndex(index + 1);
+          });
+        }
+        return processIndex(0).then(function () {
+          return summary;
+        });
+      }
+      function importSingleCandidate(candidate, summary) {
+        if (!candidate || !candidate.contentId) {
+          summary.skipped++;
+          return Promise.resolve(false);
+        }
+        var contentId = buildContentId(candidate.contentId);
+        var imdbId = normalizeImdbId(candidate.imdbId || '');
+        if (!contentId) {
+          summary.skipped++;
+          return Promise.resolve(false);
+        }
+        if (typeof subscribeToSeries !== 'function') {
+          summary.failed++;
+          return Promise.resolve(false);
+        }
+        if (isAlreadySubscribed(contentId, imdbId)) {
+          summary.duplicates++;
+          return Promise.resolve(false);
+        }
+        if (state.pendingToggle && state.pendingToggle.has(contentId)) {
+          summary.skipped++;
+          return Promise.resolve(false);
+        }
+        state.pendingToggle.add(contentId);
+        return subscribeToSeries(contentId, imdbId).then(function (result) {
+          var payload = normalizeStatusPayload(result);
+          var subscribed = hasSubscribedField(payload) ? parseSubscribedFlag(payload.subscribed) : true;
+          if (!subscribed) {
+            summary.failed++;
+            return false;
+          }
+          var resolvedContentId = resolveContentIdByCandidates([payload && payload._id ? payload._id : '', payload && payload.tmdb_id ? payload.tmdb_id : '', payload && payload.id ? payload.id : '', payload && payload.content_id ? payload.content_id : '', contentId]);
+          var resolvedImdbId = resolveCardImdbId(payload) || imdbId;
+          applySubscribedState(resolvedContentId || contentId, resolvedImdbId);
+          summary.added++;
+          return true;
+        })["catch"](function (error) {
+          if (isDuplicateSubscribeError(error)) {
+            applySubscribedState(contentId, imdbId);
+            summary.duplicates++;
+            return true;
+          }
+          summary.failed++;
+          return false;
+        })["finally"](function () {
+          state.pendingToggle["delete"](contentId);
+        });
+      }
+      function applySubscribedState(contentId, imdbId) {
+        var normalizedContentId = buildContentId(contentId);
+        var normalizedImdbId = normalizeImdbId(imdbId || '');
+        if (!normalizedContentId) return;
+        state.subscriptions.add(normalizedContentId);
+        state.subscriptionStatusByContentId.set(normalizedContentId, true);
+        state.subscriptionStatusSyncedAt.set(normalizedContentId, Date.now());
+        if (normalizedImdbId) {
+          state.subscriptionsImdb.add(normalizedImdbId);
+          state.subscriptionsByImdb.set(normalizedImdbId, normalizedContentId);
+        }
+      }
+      function normalizeStatusPayload(raw) {
+        if (!raw || _typeof(raw) !== 'object') return {};
+        var data = raw.data && _typeof(raw.data) === 'object' ? raw.data : null;
+        var result = raw.result && _typeof(raw.result) === 'object' ? raw.result : null;
+        if (data && hasStatusFields(data)) return data;
+        if (result && hasStatusFields(result)) return result;
+        return raw;
+      }
+      function hasStatusFields(value) {
+        if (!value || _typeof(value) !== 'object') return false;
+        return hasSubscribedField(value) || Object.prototype.hasOwnProperty.call(value, '_id') || Object.prototype.hasOwnProperty.call(value, 'tmdb_id') || Object.prototype.hasOwnProperty.call(value, 'content_id');
+      }
+      function hasSubscribedField(value) {
+        if (!value || _typeof(value) !== 'object') return false;
+        return Object.prototype.hasOwnProperty.call(value, 'subscribed');
+      }
+      function parseSubscribedFlag(value) {
+        if (value === true || value === 1) return true;
+        if (typeof value === 'string') {
+          var normalized = value.trim().toLowerCase();
+          return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on';
+        }
+        return false;
+      }
+      function isDuplicateSubscribeError(error) {
+        if (!error) return false;
+        var status = parseInt(error.status || 0, 10) || 0;
+        if (status === 409) return true;
+        var payload = error.payload || {};
+        var payloadStatus = String(payload.status || '').toLowerCase();
+        var payloadError = String(payload.error || '').toLowerCase();
+        var message = String(error.message || '').toLowerCase();
+        return payloadStatus === 'already_exists' || payloadError.indexOf('already') >= 0 || message.indexOf('already') >= 0;
+      }
+      function isAlreadySubscribed(contentId, imdbId) {
+        if (state.subscriptions && state.subscriptions.has(contentId)) return true;
+        if (imdbId && state.subscriptionsImdb && state.subscriptionsImdb.has(imdbId)) return true;
+        if (state.subscriptionStatusByContentId && state.subscriptionStatusByContentId.has(contentId)) {
+          var value = state.subscriptionStatusByContentId.get(contentId);
+          if (value === true) return true;
+        }
+        if (imdbId && state.subscriptionsByImdb && state.subscriptionsByImdb.has(imdbId)) {
+          var mappedContentId = buildContentId(state.subscriptionsByImdb.get(imdbId));
+          if (mappedContentId && state.subscriptions.has(mappedContentId)) return true;
+        }
+        return false;
+      }
+      function hasTraktToken() {
+        var token = Lampa.Storage.get('trakt_token', '');
+        return Boolean(String(token || '').trim());
+      }
+      function resolveTraktApi() {
+        if (typeof window === 'undefined' || !window) return null;
+        if (!window.TraktTV || !window.TraktTV.api) return null;
+        var api = window.TraktTV.api;
+        if (typeof api.upnext !== 'function' || typeof api.watchlist !== 'function') return null;
+        return api;
+      }
+      function createSummary() {
+        return {
+          total: 0,
+          added: 0,
+          duplicates: 0,
+          skipped: 0,
+          failed: 0
+        };
+      }
+      function showSummary(source, summary) {
+        var sourceLabel = source === 'trakt' ? t('nn_noty_import_source_trakt') : t('nn_noty_import_source_lampa');
+        var message = t('nn_noty_import_summary_prefix') + ' ' + sourceLabel + ': ' + t('nn_noty_import_added') + ' ' + (summary.added || 0) + ', ' + t('nn_noty_import_duplicates') + ' ' + (summary.duplicates || 0) + ', ' + t('nn_noty_import_skipped') + ' ' + (summary.skipped || 0) + ', ' + t('nn_noty_import_failed') + ' ' + (summary.failed || 0);
+        showNoty(message);
+      }
+      function resolveErrorMessage(error) {
+        if (!error) return t('nn_noty_request_failed');
+        return error && error.message ? String(error.message) : t('nn_noty_request_failed');
+      }
+      function showNoty(message) {
+        if (!Lampa.Noty || typeof Lampa.Noty.show !== 'function') return;
+        Lampa.Noty.show(withPrefix(String(message || '')));
+      }
+      function wait(ms) {
+        return new Promise(function (resolve) {
+          setTimeout(resolve, Math.max(0, parseInt(ms || 0, 10) || 0));
+        });
+      }
+      return {
+        init: init,
+        destroy: destroy,
+        restartAutoImports: restartAutoImports,
+        onStorageChange: onStorageChange,
+        manualImportFromHistory: manualImportFromHistory,
+        manualImportFromTrakt: manualImportFromTrakt
+      };
+    }
+
     var buttonsController;
     var loadSubscriptionsSafe = function loadSubscriptionsSafe() {
       if (!isRuntimeAvailable()) return Promise.resolve([]);
@@ -1976,6 +2762,16 @@
       unsubscribeFromSeries: unsubscribeFromSeries,
       getSubscriptionStatus: getSubscriptionStatus
     });
+    var integrationsController = createIntegrationsController({
+      state: state,
+      isRuntimeAvailable: isRuntimeAvailable,
+      loadSubscriptions: loadSubscriptionsSafe,
+      subscribeToSeries: subscribeToSeries,
+      redrawAllSubscribeButtons: function redrawAllSubscribeButtons() {
+        if (!buttonsController || typeof buttonsController.redrawAllSubscribeButtons !== 'function') return;
+        buttonsController.redrawAllSubscribeButtons();
+      }
+    });
     function startPlugin() {
       window.plugin_nightingale_notifications_ready = true;
       if (window.appready) init();else {
@@ -2001,18 +2797,22 @@
           return resolveSeriesDetails(state, tmdbId);
         }
       });
-      registerSettings(restartRuntime);
+      registerSettings(restartRuntime, integrationsController);
       registerNoticeChannel();
       Lampa.Listener.follow('full', buttonsController.onFullEvent);
+      integrationsController.init();
       if (Lampa.Storage && Lampa.Storage.listener) {
         Lampa.Storage.listener.follow('change', onStorageChange);
       }
-      restartRuntime();
+      restartRuntime('init');
     }
     function onStorageChange(event) {
       if (!event || !event.name) return;
+      if (integrationsController && typeof integrationsController.onStorageChange === 'function') {
+        integrationsController.onStorageChange(event);
+      }
       var watched = [STORAGE_KEYS.enabled, STORAGE_KEYS.syncUid, 'lampa_uid'];
-      if (watched.indexOf(event.name) >= 0) restartRuntime();
+      if (watched.indexOf(event.name) >= 0) restartRuntime('storage_change');
     }
     function restartRuntime(reason) {
       wsController.stopWebSocket();
@@ -2026,9 +2826,15 @@
         if (state.subscriptionStatusRequests) state.subscriptionStatusRequests.clear();
         if (state.subscriptionStatusByContentId) state.subscriptionStatusByContentId.clear();
         buttonsController.redrawAllSubscribeButtons();
+        if (integrationsController && typeof integrationsController.restartAutoImports === 'function') {
+          integrationsController.restartAutoImports('runtime_unavailable');
+        }
         return;
       }
       wsController.connectWebSocket();
+      if (integrationsController && typeof integrationsController.restartAutoImports === 'function') {
+        integrationsController.restartAutoImports(reason || 'runtime_available');
+      }
     }
     if (!window.plugin_nightingale_notifications_ready) startPlugin();
 
