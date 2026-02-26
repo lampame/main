@@ -181,25 +181,43 @@
   }
 
   var API_BASE_URL = 'https://wh.lme.isroot.in';
-  var TOP_ENDPOINT = '/top';
+  var TOP_ENDPOINT = '/v2/top';
   var DEFAULT_PERIOD = '7d';
   var DEFAULT_TOP = 'desc';
   var CACHE_TTL = 1000 * 60 * 5;
-  var LIST_PAGE_SIZE = 60;
   var TMDB_CACHE_LIFE = 60 * 24;
   var CONCURRENT_LOAD_LIMIT = 8;
-  var cache = {};
+  var NATIVE_PER_PAGE = 20;
+  var MIN_PER_PAGE = 1;
+  var MAX_PER_PAGE = 200;
+  var pageCache = {};
+  var filteredStateCache = {};
   function normalizeMinRating(value) {
     var rating = parseFloat(value);
     return Number.isFinite(rating) && rating > 0 ? rating : 0;
   }
-  function createCacheKey(params) {
+  function normalizePage(value) {
+    return Math.max(1, parseInt(value, 10) || 1);
+  }
+  function normalizePerPage(value) {
+    var parsed = parseInt(value, 10) || NATIVE_PER_PAGE;
+    return Math.max(MIN_PER_PAGE, Math.min(MAX_PER_PAGE, parsed));
+  }
+  function createBaseQueryKey() {
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var perPage = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : NATIVE_PER_PAGE;
     var type = params.type || '';
     var period = params.period || DEFAULT_PERIOD;
     var top = params.top || DEFAULT_TOP;
-    var _short = typeof params["short"] == 'boolean' ? params["short"] ? 'true' : 'false' : '';
     var minRating = normalizeMinRating(params.min_rating);
-    return [type, period, top, _short, minRating].join('|');
+    var safePerPage = normalizePerPage(perPage);
+    return [type, period, top, minRating, safePerPage].join('|');
+  }
+  function createPageCacheKey() {
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var perPage = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : NATIVE_PER_PAGE;
+    return createBaseQueryKey(params, perPage) + '|p=' + normalizePage(page);
   }
   function parseTopId(rawId) {
     if (typeof rawId !== 'string') return null;
@@ -210,15 +228,32 @@
       id: parseInt(parsed[2], 10)
     };
   }
+  function cacheGet(bucket, key) {
+    var now = Date.now();
+    var item = bucket[key];
+    if (item && now - item.time < CACHE_TTL) {
+      return item.value;
+    }
+    return null;
+  }
+  function cacheSet(bucket, key, value) {
+    bucket[key] = {
+      time: Date.now(),
+      value: value
+    };
+  }
   function buildTopUrl() {
     var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var query = new URLSearchParams();
     var period = params.period || DEFAULT_PERIOD;
     var top = params.top || DEFAULT_TOP;
+    var page = normalizePage(params.page);
+    var perPage = normalizePerPage(params.per_page);
     query.set('period', period);
     query.set('top', top);
+    query.set('page', String(page));
+    query.set('per_page', String(perPage));
     if (params.type) query.set('type', params.type);
-    if (typeof params["short"] == 'boolean') query.set('short', params["short"] ? 'true' : 'false');
     return API_BASE_URL + TOP_ENDPOINT + '?' + query.toString();
   }
   function parseLineUrl() {
@@ -230,11 +265,13 @@
     var period = query.get('period');
     var type = query.get('type');
     var minRating = normalizeMinRating(query.get('min_rating'));
+    var perPage = normalizePerPage(query.get('per_page'));
     return {
       top: top == 'asc' ? 'asc' : DEFAULT_TOP,
       period: period || DEFAULT_PERIOD,
       type: type == 'movie' || type == 'tv' ? type : '',
-      min_rating: minRating
+      min_rating: minRating,
+      per_page: perPage
     };
   }
   function buildLineUrl() {
@@ -242,17 +279,45 @@
     var query = new URLSearchParams();
     var period = params.period || DEFAULT_PERIOD;
     var top = params.top || DEFAULT_TOP;
+    var perPage = normalizePerPage(params.per_page);
     query.set('period', period);
     query.set('top', top);
+    query.set('per_page', String(perPage));
     if (params.type) query.set('type', params.type);
     if (normalizeMinRating(params.min_rating) > 0) query.set('min_rating', String(normalizeMinRating(params.min_rating)));
-    return 'top?' + query.toString();
+    return 'v2/top?' + query.toString();
   }
-  function requestTop() {
+  function requestTopPage() {
     var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var safePage = normalizePage(params.page);
+    var safePerPage = normalizePerPage(params.per_page);
     return new Promise(function (resolve, reject) {
       Lampa.Network.silent(buildTopUrl(params), function (json) {
-        resolve(Array.isArray(json) ? json : []);
+        if (Array.isArray(json)) {
+          return resolve({
+            items: json,
+            page: safePage,
+            per_page: safePerPage,
+            total: json.length,
+            total_pages: 1
+          });
+        }
+        if (json && Array.isArray(json.items)) {
+          return resolve({
+            items: json.items,
+            page: normalizePage(json.page || safePage),
+            per_page: normalizePerPage(json.per_page || safePerPage),
+            total: Math.max(0, parseInt(json.total, 10) || 0),
+            total_pages: Math.max(1, parseInt(json.total_pages, 10) || 1)
+          });
+        }
+        resolve({
+          items: [],
+          page: safePage,
+          per_page: safePerPage,
+          total: 0,
+          total_pages: 1
+        });
       }, reject);
     });
   }
@@ -302,27 +367,20 @@
       next();
     });
   }
-  function fetchTopCards() {
-    return _fetchTopCards.apply(this, arguments);
+  function mapApiItemsToCards(_x) {
+    return _mapApiItemsToCards.apply(this, arguments);
   }
-  function _fetchTopCards() {
-    _fetchTopCards = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-      var params,
-        minRating,
-        rows,
+  function _mapApiItemsToCards() {
+    _mapApiItemsToCards = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(items) {
+      var minRating,
         parsed,
         cards,
         _args2 = arguments;
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.n) {
           case 0:
-            params = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {};
-            minRating = normalizeMinRating(params.min_rating);
-            _context2.n = 1;
-            return requestTop(params);
-          case 1:
-            rows = _context2.v;
-            parsed = rows.map(function (item) {
+            minRating = _args2.length > 1 && _args2[1] !== undefined ? _args2[1] : 0;
+            parsed = items.map(function (item) {
               var idInfo = parseTopId(item && item.id);
               if (!idInfo) return null;
               return _objectSpread2(_objectSpread2({}, idInfo), {}, {
@@ -331,12 +389,12 @@
               });
             }).filter(Boolean);
             if (parsed.length) {
-              _context2.n = 2;
+              _context2.n = 1;
               break;
             }
             return _context2.a(2, []);
-          case 2:
-            _context2.n = 3;
+          case 1:
+            _context2.n = 2;
             return mapWithLimit(parsed, CONCURRENT_LOAD_LIMIT, /*#__PURE__*/function () {
               var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(entry) {
                 var card;
@@ -366,83 +424,272 @@
                   }
                 }, _callee);
               }));
-              return function (_x) {
+              return function (_x2) {
                 return _ref.apply(this, arguments);
               };
             }());
-          case 3:
+          case 2:
             cards = _context2.v;
             return _context2.a(2, cards.filter(Boolean));
         }
       }, _callee2);
     }));
-    return _fetchTopCards.apply(this, arguments);
+    return _mapApiItemsToCards.apply(this, arguments);
   }
-  function fetchTopCardsCached() {
-    return _fetchTopCardsCached.apply(this, arguments);
+  function fetchTopCardsPage() {
+    return _fetchTopCardsPage.apply(this, arguments);
   }
-  function _fetchTopCardsCached() {
-    _fetchTopCardsCached = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+  function _fetchTopCardsPage() {
+    _fetchTopCardsPage = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
       var params,
-        key,
-        now,
-        cached,
-        cards,
+        page,
+        perPage,
+        minRating,
+        payload,
+        results,
         _args3 = arguments;
       return _regenerator().w(function (_context3) {
         while (1) switch (_context3.n) {
           case 0:
             params = _args3.length > 0 && _args3[0] !== undefined ? _args3[0] : {};
-            key = createCacheKey(params);
-            now = Date.now();
-            cached = cache[key];
-            if (!(cached && now - cached.time < CACHE_TTL)) {
-              _context3.n = 1;
-              break;
-            }
-            return _context3.a(2, cached.cards);
+            page = normalizePage(params.page);
+            perPage = normalizePerPage(params.per_page);
+            minRating = normalizeMinRating(params.min_rating);
+            _context3.n = 1;
+            return requestTopPage(_objectSpread2(_objectSpread2({}, params), {}, {
+              page: page,
+              per_page: perPage
+            }));
           case 1:
+            payload = _context3.v;
             _context3.n = 2;
-            return fetchTopCards(params);
+            return mapApiItemsToCards(payload.items || [], minRating);
           case 2:
-            cards = _context3.v;
-            cache[key] = {
-              time: now,
-              cards: cards
-            };
-            return _context3.a(2, cards);
+            results = _context3.v;
+            return _context3.a(2, {
+              results: results,
+              page: payload.page,
+              per_page: payload.per_page,
+              total: payload.total,
+              total_pages: payload.total_pages
+            });
         }
       }, _callee3);
     }));
-    return _fetchTopCardsCached.apply(this, arguments);
+    return _fetchTopCardsPage.apply(this, arguments);
   }
-  function paginate(cards) {
-    var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
-    var total = cards.length;
-    var totalPages = Math.max(1, Math.ceil(total / LIST_PAGE_SIZE));
-    var safePage = Math.max(1, Math.min(parseInt(page, 10) || 1, totalPages));
-    var from = (safePage - 1) * LIST_PAGE_SIZE;
-    var to = from + LIST_PAGE_SIZE;
-    return {
-      page: safePage,
-      total_pages: totalPages,
-      results: cards.slice(from, to)
+  function fetchTopCardsPageCached() {
+    return _fetchTopCardsPageCached.apply(this, arguments);
+  }
+  function _fetchTopCardsPageCached() {
+    _fetchTopCardsPageCached = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+      var params,
+        page,
+        perPage,
+        key,
+        cached,
+        pageData,
+        _args4 = arguments;
+      return _regenerator().w(function (_context4) {
+        while (1) switch (_context4.n) {
+          case 0:
+            params = _args4.length > 0 && _args4[0] !== undefined ? _args4[0] : {};
+            page = normalizePage(params.page);
+            perPage = normalizePerPage(params.per_page);
+            key = createPageCacheKey(params, page, perPage);
+            cached = cacheGet(pageCache, key);
+            if (!cached) {
+              _context4.n = 1;
+              break;
+            }
+            return _context4.a(2, cached);
+          case 1:
+            _context4.n = 2;
+            return fetchTopCardsPage(_objectSpread2(_objectSpread2({}, params), {}, {
+              page: page,
+              per_page: perPage
+            }));
+          case 2:
+            pageData = _context4.v;
+            cacheSet(pageCache, key, pageData);
+            return _context4.a(2, pageData);
+        }
+      }, _callee4);
+    }));
+    return _fetchTopCardsPageCached.apply(this, arguments);
+  }
+  function getFilteredState() {
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var perPage = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : NATIVE_PER_PAGE;
+    var key = createBaseQueryKey(params, perPage) + '|filtered';
+    var state = cacheGet(filteredStateCache, key);
+    if (state) return state;
+    state = {
+      items: [],
+      next_server_page: 1,
+      server_total_pages: 1,
+      done: false
     };
+    cacheSet(filteredStateCache, key, state);
+    return state;
+  }
+  function fetchFilteredLogicalPage() {
+    return _fetchFilteredLogicalPage.apply(this, arguments);
+  }
+  function _fetchFilteredLogicalPage() {
+    _fetchFilteredLogicalPage = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+      var params,
+        page,
+        perPage,
+        safePage,
+        safePerPage,
+        state,
+        neededItems,
+        pageData,
+        from,
+        to,
+        results,
+        totalPages,
+        _args5 = arguments;
+      return _regenerator().w(function (_context5) {
+        while (1) switch (_context5.n) {
+          case 0:
+            params = _args5.length > 0 && _args5[0] !== undefined ? _args5[0] : {};
+            page = _args5.length > 1 && _args5[1] !== undefined ? _args5[1] : 1;
+            perPage = _args5.length > 2 && _args5[2] !== undefined ? _args5[2] : NATIVE_PER_PAGE;
+            safePage = normalizePage(page);
+            safePerPage = normalizePerPage(perPage);
+            state = getFilteredState(params, safePerPage);
+            neededItems = safePage * safePerPage;
+          case 1:
+            if (!(state.items.length < neededItems && !state.done)) {
+              _context5.n = 3;
+              break;
+            }
+            _context5.n = 2;
+            return fetchTopCardsPageCached(_objectSpread2(_objectSpread2({}, params), {}, {
+              page: state.next_server_page,
+              per_page: safePerPage
+            }));
+          case 2:
+            pageData = _context5.v;
+            state.server_total_pages = Math.max(1, pageData.total_pages || 1);
+            if (pageData.results.length) state.items = state.items.concat(pageData.results);
+            if (state.next_server_page >= state.server_total_pages) {
+              state.done = true;
+            } else {
+              state.next_server_page += 1;
+            }
+            _context5.n = 1;
+            break;
+          case 3:
+            from = (safePage - 1) * safePerPage;
+            to = from + safePerPage;
+            results = state.items.slice(from, to);
+            totalPages = state.done ? Math.max(1, Math.ceil(state.items.length / safePerPage)) : safePage + 1;
+            return _context5.a(2, {
+              results: results,
+              page: safePage,
+              per_page: safePerPage,
+              total_pages: totalPages
+            });
+        }
+      }, _callee5);
+    }));
+    return _fetchFilteredLogicalPage.apply(this, arguments);
+  }
+  function fetchLogicalPage() {
+    return _fetchLogicalPage.apply(this, arguments);
+  }
+  function _fetchLogicalPage() {
+    _fetchLogicalPage = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
+      var params,
+        page,
+        perPage,
+        safePage,
+        safePerPage,
+        pageData,
+        _args6 = arguments;
+      return _regenerator().w(function (_context6) {
+        while (1) switch (_context6.n) {
+          case 0:
+            params = _args6.length > 0 && _args6[0] !== undefined ? _args6[0] : {};
+            page = _args6.length > 1 && _args6[1] !== undefined ? _args6[1] : 1;
+            perPage = _args6.length > 2 && _args6[2] !== undefined ? _args6[2] : NATIVE_PER_PAGE;
+            safePage = normalizePage(page);
+            safePerPage = normalizePerPage(perPage);
+            if (!(normalizeMinRating(params.min_rating) > 0)) {
+              _context6.n = 1;
+              break;
+            }
+            return _context6.a(2, fetchFilteredLogicalPage(params, safePage, safePerPage));
+          case 1:
+            _context6.n = 2;
+            return fetchTopCardsPageCached(_objectSpread2(_objectSpread2({}, params), {}, {
+              page: safePage,
+              per_page: safePerPage
+            }));
+          case 2:
+            pageData = _context6.v;
+            return _context6.a(2, {
+              results: pageData.results,
+              page: pageData.page,
+              per_page: pageData.per_page,
+              total_pages: Math.max(1, pageData.total_pages || 1)
+            });
+        }
+      }, _callee6);
+    }));
+    return _fetchLogicalPage.apply(this, arguments);
+  }
+  function fetchLineFirstPage() {
+    return _fetchLineFirstPage.apply(this, arguments);
+  }
+  function _fetchLineFirstPage() {
+    _fetchLineFirstPage = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
+      var params,
+        perPage,
+        safePerPage,
+        pageData,
+        _args7 = arguments;
+      return _regenerator().w(function (_context7) {
+        while (1) switch (_context7.n) {
+          case 0:
+            params = _args7.length > 0 && _args7[0] !== undefined ? _args7[0] : {};
+            perPage = _args7.length > 1 && _args7[1] !== undefined ? _args7[1] : NATIVE_PER_PAGE;
+            safePerPage = normalizePerPage(perPage);
+            _context7.n = 1;
+            return fetchTopCardsPageCached(_objectSpread2(_objectSpread2({}, params), {}, {
+              page: 1,
+              per_page: safePerPage
+            }));
+          case 1:
+            pageData = _context7.v;
+            return _context7.a(2, {
+              results: pageData.results,
+              page: 1,
+              per_page: pageData.per_page,
+              total_pages: Math.max(1, pageData.total_pages || 1)
+            });
+        }
+      }, _callee7);
+    }));
+    return _fetchLineFirstPage.apply(this, arguments);
   }
   function line() {
     var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var oncomplete = arguments.length > 1 ? arguments[1] : undefined;
     var onerror = arguments.length > 2 ? arguments[2] : undefined;
-    fetchTopCardsCached(_objectSpread2(_objectSpread2({}, params), {}, {
-      "short": true
-    })).then(oncomplete)["catch"](function () {
+    var perPage = normalizePerPage(params.per_page);
+    fetchLineFirstPage(params, perPage).then(oncomplete)["catch"](function () {
       if (onerror) onerror();
     });
   }
   function listByUrl(url, page, oncomplete, onerror) {
     var parsed = parseLineUrl(url);
-    fetchTopCardsCached(parsed).then(function (cards) {
-      var paged = paginate(cards, page);
+    var safePage = normalizePage(page);
+    var perPage = normalizePerPage(parsed.per_page);
+    fetchLogicalPage(parsed, safePage, perPage).then(function (paged) {
       oncomplete(_objectSpread2(_objectSpread2({}, paged), {}, {
         source: 'community_watches',
         url: buildLineUrl(parsed)
@@ -511,16 +758,19 @@
     return function (params, screen) {
       if (config.category && screen == 'category' && params.url !== config.category) return;
       return function (call) {
-        Api.line(config.query, function (cards) {
-          if (!cards.length) return call();
+        Api.line(config.query, function (lineData) {
+          var results = lineData && Array.isArray(lineData.results) ? lineData.results : [];
+          if (!results.length) return call();
           var line = {
             title: config.displayTitle,
-            url: Api.buildLineUrl(config.query),
+            url: Api.buildLineUrl(_objectSpread2(_objectSpread2({}, config.query), {}, {
+              per_page: lineData && lineData.per_page
+            })),
             source: 'community_watches',
             community_watches: true,
             community_watches_title: config.displayTitle,
-            results: cards,
-            total_pages: 2
+            results: results,
+            total_pages: lineData && lineData.total_pages ? lineData.total_pages : 1
           };
           call(line);
         }, call);
@@ -619,7 +869,7 @@
 
   var manifest = {
     type: 'video',
-    version: '0.0.2',
+    version: '0.0.3',
     name: 'Community watches',
     description: 'Лайни популярного контенту спільноти за даними community top API',
     component: 'community_watches'
