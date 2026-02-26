@@ -477,6 +477,20 @@
     root.appendChild(label);
     return root;
   }
+  function registerLineTitleDecorator() {
+    Lampa.Listener.follow('line', function (e) {
+      if (!e || e.type !== 'create' || !e.data || !e.data.community_watches) return;
+      try {
+        var titleNode = createLineTitle(e.data.community_watches_title || e.data.title || '');
+        var container = e.line.render().find('.items-line__title');
+        if (container && container.length) {
+          container.empty().append(titleNode);
+        }
+      } catch (err) {
+        console.error('CommunityWatches: line title decorate error', err);
+      }
+    });
+  }
   function createCall(config) {
     return function (params, screen) {
       if (config.category && screen == 'category' && params.url !== config.category) return;
@@ -484,9 +498,11 @@
         Api.line(config.query, function (cards) {
           if (!cards.length) return call();
           var line = {
-            title: createLineTitle(config.displayTitle),
+            title: config.displayTitle,
             url: Api.buildLineUrl(config.query),
             source: 'community_watches',
+            community_watches: true,
+            community_watches_title: config.displayTitle,
             results: cards,
             total_pages: 2
           };
@@ -578,6 +594,7 @@
   function initRows() {
     if (initialized) return;
     initialized = true;
+    registerLineTitleDecorator();
     registerRows();
   }
 
