@@ -118,9 +118,9 @@
       "short_uk": "Детальна інформація про аудіо/субтитри та зручний вибір доріжок від TorrServer.",
       "short_en": "Detailed audio/subtitle metadata and improved track selection from TorrServer.",
       "short_ru": "Детальная информация об аудио/субтитрах и удобный выбор дорожек от TorrServer.",
-      "desc_uk": "Плагін аналізує медіапотоки через probe API (кодеки, мови, канали, бітрейт, субтитри) і показує метаінфо в списку торрент-файлів. Додатково підсилює перемикання доріжок у плеєрі, включно з webOS-сценаріями, та кешує результати для швидшої роботи.",
-      "desc_en": "Uses a probe API to inspect media streams (codecs, languages, channels, bitrate, subtitles) and renders this metadata in the torrent file list. Also improves track switching in player flows, including webOS-specific handling, with caching for faster repeated access.",
-      "desc_ru": "Анализирует медиапотоки через probe API (кодеки, языки, каналы, битрейт, субтитры) и показывает метаинформацию в списке торрент-файлов. Также улучшает переключение дорожек в плеере, включая webOS-сценарии, и кеширует результаты для ускорения повторных запросов.",
+      "desc_uk": "Плагін для TorrServer, який отримує ffprobe-метадані вибраного торрент-файлу (відео/аудіо/субтитри, кодеки, мови, канали, бітрейт) і показує їх прямо у списку файлів. Також покращує перемикання доріжок у плеєрі та працює через API `torrserver/probe`.",
+      "desc_en": "A TorrServer-focused plugin that fetches ffprobe metadata for the selected torrent file (video/audio/subtitles, codecs, languages, channels, bitrate) and displays it directly in the file list. It also improves in-player track switching and works via the `torrserver/probe` API.",
+      "desc_ru": "Плагин для TorrServer, который получает ffprobe-метаданные выбранного торрент-файла (видео/аудио/субтитры, кодеки, языки, каналы, битрейт) и показывает их прямо в списке файлов. Также улучшает переключение дорожек в плеере и работает через API `torrserver/probe`.",
       "file": "tstracks.js",
       "langs": [
         "en",
