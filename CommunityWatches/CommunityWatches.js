@@ -500,6 +500,7 @@
       name: 'CommunityWatchesMainWeeklyTop',
       title: 'Community watches · Головна · Топ тижня',
       screen: ['main'],
+      index: 0,
       displayTitle: 'Спільнота дивиться на тижні',
       query: {
         period: '7d',
@@ -509,6 +510,7 @@
       name: 'CommunityWatchesMainHiddenGems',
       title: 'Community watches · Головна · Сховані геми',
       screen: ['main'],
+      index: 1,
       displayTitle: 'Сховані геми спільноти',
       query: {
         period: '7d',
@@ -519,6 +521,7 @@
       title: 'Community watches · Фільми · Топ тижня',
       screen: ['category'],
       category: 'movie',
+      index: 0,
       displayTitle: 'Спільнота дивиться на тижні',
       query: {
         period: '7d',
@@ -530,6 +533,7 @@
       title: 'Community watches · Фільми · Сховані геми',
       screen: ['category'],
       category: 'movie',
+      index: 1,
       displayTitle: 'Сховані геми спільноти',
       query: {
         period: '7d',
@@ -541,6 +545,7 @@
       title: 'Community watches · Серіали · Топ тижня',
       screen: ['category'],
       category: 'tv',
+      index: 0,
       displayTitle: 'Спільнота дивиться на тижні',
       query: {
         period: '7d',
@@ -552,6 +557,7 @@
       title: 'Community watches · Серіали · Сховані геми',
       screen: ['category'],
       category: 'tv',
+      index: 1,
       displayTitle: 'Сховані геми спільноти',
       query: {
         period: '7d',
@@ -563,7 +569,7 @@
       Lampa.ContentRows.add({
         name: row.name,
         title: row.title,
-        index: 0,
+        index: row.index,
         screen: row.screen,
         call: createCall(row)
       });
