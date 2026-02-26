@@ -497,16 +497,6 @@
   }
   function registerRows() {
     var rows = [{
-      name: 'CommunityWatchesMainWeeklyTop',
-      title: 'Community watches · Головна · Топ тижня',
-      screen: ['main'],
-      index: 0,
-      displayTitle: 'Спільнота дивиться на тижні',
-      query: {
-        period: '7d',
-        top: 'desc'
-      }
-    }, {
       name: 'CommunityWatchesMainHiddenGems',
       title: 'Community watches · Головна · Сховані геми',
       screen: ['main'],
@@ -517,16 +507,14 @@
         top: 'asc'
       }
     }, {
-      name: 'CommunityWatchesMovieWeeklyTop',
-      title: 'Community watches · Фільми · Топ тижня',
-      screen: ['category'],
-      category: 'movie',
+      name: 'CommunityWatchesMainWeeklyTop',
+      title: 'Community watches · Головна · Топ тижня',
+      screen: ['main'],
       index: 0,
       displayTitle: 'Спільнота дивиться на тижні',
       query: {
         period: '7d',
-        top: 'desc',
-        type: 'movie'
+        top: 'desc'
       }
     }, {
       name: 'CommunityWatchesMovieHiddenGems',
@@ -541,16 +529,16 @@
         type: 'movie'
       }
     }, {
-      name: 'CommunityWatchesTvWeeklyTop',
-      title: 'Community watches · Серіали · Топ тижня',
+      name: 'CommunityWatchesMovieWeeklyTop',
+      title: 'Community watches · Фільми · Топ тижня',
       screen: ['category'],
-      category: 'tv',
+      category: 'movie',
       index: 0,
       displayTitle: 'Спільнота дивиться на тижні',
       query: {
         period: '7d',
         top: 'desc',
-        type: 'tv'
+        type: 'movie'
       }
     }, {
       name: 'CommunityWatchesTvHiddenGems',
@@ -562,6 +550,18 @@
       query: {
         period: '7d',
         top: 'asc',
+        type: 'tv'
+      }
+    }, {
+      name: 'CommunityWatchesTvWeeklyTop',
+      title: 'Community watches · Серіали · Топ тижня',
+      screen: ['category'],
+      category: 'tv',
+      index: 0,
+      displayTitle: 'Спільнота дивиться на тижні',
+      query: {
+        period: '7d',
+        top: 'desc',
         type: 'tv'
       }
     }];
