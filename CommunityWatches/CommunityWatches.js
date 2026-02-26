@@ -189,12 +189,17 @@
   var TMDB_CACHE_LIFE = 60 * 24;
   var CONCURRENT_LOAD_LIMIT = 8;
   var cache = {};
+  function normalizeMinRating(value) {
+    var rating = parseFloat(value);
+    return Number.isFinite(rating) && rating > 0 ? rating : 0;
+  }
   function createCacheKey(params) {
     var type = params.type || '';
     var period = params.period || DEFAULT_PERIOD;
     var top = params.top || DEFAULT_TOP;
     var _short = typeof params["short"] == 'boolean' ? params["short"] ? 'true' : 'false' : '';
-    return [type, period, top, _short].join('|');
+    var minRating = normalizeMinRating(params.min_rating);
+    return [type, period, top, _short, minRating].join('|');
   }
   function parseTopId(rawId) {
     if (typeof rawId !== 'string') return null;
@@ -224,10 +229,12 @@
     var top = query.get('top');
     var period = query.get('period');
     var type = query.get('type');
+    var minRating = normalizeMinRating(query.get('min_rating'));
     return {
       top: top == 'asc' ? 'asc' : DEFAULT_TOP,
       period: period || DEFAULT_PERIOD,
-      type: type == 'movie' || type == 'tv' ? type : ''
+      type: type == 'movie' || type == 'tv' ? type : '',
+      min_rating: minRating
     };
   }
   function buildLineUrl() {
@@ -238,6 +245,7 @@
     query.set('period', period);
     query.set('top', top);
     if (params.type) query.set('type', params.type);
+    if (normalizeMinRating(params.min_rating) > 0) query.set('min_rating', String(normalizeMinRating(params.min_rating)));
     return 'top?' + query.toString();
   }
   function requestTop() {
@@ -300,6 +308,7 @@
   function _fetchTopCards() {
     _fetchTopCards = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
       var params,
+        minRating,
         rows,
         parsed,
         cards,
@@ -308,6 +317,7 @@
         while (1) switch (_context2.n) {
           case 0:
             params = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {};
+            minRating = normalizeMinRating(params.min_rating);
             _context2.n = 1;
             return requestTop(params);
           case 1:
@@ -343,6 +353,12 @@
                       }
                       return _context.a(2, null);
                     case 2:
+                      if (!(minRating > 0 && Number(card.vote_average || 0) < minRating)) {
+                        _context.n = 3;
+                        break;
+                      }
+                      return _context.a(2, null);
+                    case 3:
                       return _context.a(2, _objectSpread2(_objectSpread2({}, card), {}, {
                         community_watches_requests_count: entry.requests_count,
                         community_watches_source_id: entry.source_id
@@ -520,7 +536,8 @@
       displayTitle: 'Сховані геми спільноти',
       query: {
         period: '7d',
-        top: 'asc'
+        top: 'asc',
+        min_rating: 7
       }
     }, {
       name: 'CommunityWatchesMainWeeklyTop',
@@ -542,7 +559,8 @@
       query: {
         period: '7d',
         top: 'asc',
-        type: 'movie'
+        type: 'movie',
+        min_rating: 7
       }
     }, {
       name: 'CommunityWatchesMovieWeeklyTop',
@@ -566,7 +584,8 @@
       query: {
         period: '7d',
         top: 'asc',
-        type: 'tv'
+        type: 'tv',
+        min_rating: 7
       }
     }, {
       name: 'CommunityWatchesTvWeeklyTop',
@@ -600,7 +619,7 @@
 
   var manifest = {
     type: 'video',
-    version: '0.0.1',
+    version: '0.0.2',
     name: 'Community watches',
     description: 'Лайни популярного контенту спільноти за даними community top API',
     component: 'community_watches'
