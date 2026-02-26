@@ -183,6 +183,34 @@
       "langs": [
         "uk"
       ]
+    },
+    {
+      "id": "community-watches",
+      "title": "CommunityWatches",
+      "short_uk": "Лайни спільноти: топ тижня та сховані геми для головної, фільмів і серіалів.",
+      "short_en": "Community lines: weekly top and hidden gems for home, movies, and TV.",
+      "short_ru": "Лайны сообщества: топ недели и скрытые жемчужины для главной, фильмов и сериалов.",
+      "desc_uk": "Плагін додає контент-лайни Community Watches на базі community top API: «Топ тижня» та «Сховані геми» для головної сторінки, фільмів і серіалів. Працює як окреме джерело та кешує результати для швидшого відкриття.",
+      "desc_en": "Adds Community Watches content rows powered by the community top API: Weekly Top and Hidden Gems for home, movies, and TV. Works as a dedicated source and caches results for faster loading.",
+      "desc_ru": "Добавляет контент-лайны Community Watches на базе community top API: «Топ недели» и «Скрытые жемчужины» для главной, фильмов и сериалов. Работает как отдельный источник и кеширует результаты для более быстрой загрузки.",
+      "file": "cw.js",
+      "langs": [
+        "uk"
+      ]
+    },
+    {
+      "id": "nightingale-notifications",
+      "title": "NightingaleNotifications",
+      "short_uk": "Підписки на серіали з дзвоником у картці та каналом сповіщень про нові епізоди.",
+      "short_en": "TV-series subscriptions with a card bell and episode notifications channel.",
+      "short_ru": "Подписки на сериалы с колокольчиком в карточке и уведомлениями о новых эпизодах.",
+      "desc_uk": "Плагін додає окремий канал сповіщень Nightingale: підписка на серіали через дзвоник у картці, екран підписок, синхронізація UID між пристроями та автоімпорт із історії Lampa/TraktTV.",
+      "desc_en": "Adds Nightingale notification channel: series subscriptions via a card bell, subscriptions screen, UID sync across devices, and auto-import from Lampa history/TraktTV.",
+      "desc_ru": "Добавляет канал уведомлений Nightingale: подписка на сериалы через колокольчик в карточке, экран подписок, синхронизация UID между устройствами и автоимпорт из истории Lampa/TraktTV.",
+      "file": "nn.js",
+      "langs": [
+        "uk"
+      ]
     }
   ]
 }
