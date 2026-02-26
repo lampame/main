@@ -1843,11 +1843,63 @@
       });
     }
 
+    var communityWatchesPlugin = {
+      url: 'https://lampame.github.io/main/cw.js',
+      name: 'CommunityWatches',
+      status: 1
+    };
+    var communityWatchesAutoinstallFlag = 'bandera_online_cw_autoinstall_done';
+    function normalizePluginUrl(url) {
+      return (url || '').toString().trim().replace(/[?#].*$/, '').replace(/\/+$/, '').replace(/^https?:\/\//i, '').toLowerCase();
+    }
+    function isCommunityWatchesInstalled(plugin) {
+      if (!plugin) return false;
+      if (typeof plugin === 'string') {
+        return normalizePluginUrl(plugin) === normalizePluginUrl(communityWatchesPlugin.url);
+      }
+      if (plugin.name === communityWatchesPlugin.name) return true;
+      return normalizePluginUrl(plugin.url) === normalizePluginUrl(communityWatchesPlugin.url);
+    }
+    function cleanupCommunityWatchesDuplicates(plugins) {
+      var hasCommunityWatches = false;
+      var duplicates = 0;
+      var uniqPlugins = [];
+      plugins.forEach(function (plugin) {
+        if (isCommunityWatchesInstalled(plugin)) {
+          if (hasCommunityWatches) duplicates++;else {
+            hasCommunityWatches = true;
+            uniqPlugins.push(plugin);
+          }
+          return;
+        }
+        uniqPlugins.push(plugin);
+      });
+      return {
+        hasCommunityWatches: hasCommunityWatches,
+        duplicates: duplicates,
+        plugins: uniqPlugins
+      };
+    }
+    function ensureCommunityWatchesPlugin() {
+      if (Lampa.Storage.get(communityWatchesAutoinstallFlag, false)) return;
+      var plugins = Lampa.Storage.get('plugins', []);
+      if (!Array.isArray(plugins)) plugins = [];
+      var state = cleanupCommunityWatchesDuplicates(plugins);
+      if (state.duplicates > 0) {
+        Lampa.Storage.set('plugins', state.plugins);
+      }
+      if (!state.hasCommunityWatches) {
+        Lampa.Plugins.add({
+          url: communityWatchesPlugin.url,
+          name: communityWatchesPlugin.name,
+          status: communityWatchesPlugin.status
+        });
+      }
+      Lampa.Storage.set(communityWatchesAutoinstallFlag, true);
+    }
     function startPlugin() {
       window.bandera_online = true;
-      //Add CommunityWatches
-      //Lampa.Plugins.add({ url: "https://lampame.github.io/main/cw.js", name: 'CommunityWatches', status: 1 });
-
+      ensureCommunityWatchesPlugin();
       function resetTemplates() {
         Lampa.Template.add('bandera_online_full', "<div class=\"online-prestige online-prestige--full selector\">\n            <div class=\"online-prestige__img\">\n                <img alt=\"\">\n                <div class=\"online-prestige__loader\"></div>\n            </div>\n            <div class=\"online-prestige__body\">\n                <div class=\"online-prestige__head\">\n                    <div class=\"online-prestige__title\">{title}</div>\n                    <div class=\"online-prestige__time\">{time}</div>\n                </div>\n\n                <div class=\"online-prestige__timeline\"></div>\n\n                <div class=\"online-prestige__footer\">\n                    <div class=\"online-prestige__info\">{info}</div>\n                    <div class=\"online-prestige__quality\">{quality}</div>\n                </div>\n            </div>\n        </div>");
         Lampa.Template.add('bandera_online_does_not_answer', "<div class=\"online-empty\">\n            <div class=\"online-empty__title\">\n                #{online_balanser_dont_work}\n            </div>\n            <div class=\"online-empty__time\">\n                #{online_balanser_timeout}\n            </div>\n            <div class=\"online-empty__buttons\">\n                <div class=\"online-empty__button selector cancel\">#{cancel}</div>\n                <div class=\"online-empty__button selector change\">#{online_change_balanser}</div>\n            </div>\n            <div class=\"online-empty__templates\">\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n            </div>\n        </div>");
