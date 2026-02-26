@@ -124,6 +124,37 @@
     }
   };
 
+  const SUPPORTED_LANGS = new Set(["en", "uk", "ru"]);
+
+  function normalizeLang(lang) {
+    return SUPPORTED_LANGS.has(lang) ? lang : "en";
+  }
+
+  function getLangFromHash() {
+    const raw = (window.location.hash || "").replace(/^#/, "").trim().toLowerCase();
+    if (!raw) return null;
+
+    if (SUPPORTED_LANGS.has(raw)) return raw;
+    if (raw.startsWith("lang=")) {
+      const value = raw.slice(5);
+      return SUPPORTED_LANGS.has(value) ? value : null;
+    }
+
+    return null;
+  }
+
+  function setHashLang(lang) {
+    const nextHash = `#${lang}`;
+    if (window.location.hash === nextHash) return;
+
+    if (window.history && typeof window.history.replaceState === "function") {
+      window.history.replaceState(null, "", nextHash);
+      return;
+    }
+
+    window.location.hash = nextHash;
+  }
+
   function t(key) {
     return i18n[state.lang][key];
   }
@@ -415,13 +446,17 @@
   }
 
   // ---------- I18N ----------
-  function setLang(lang) {
-    state.lang = (lang === "uk" || lang === "ru") ? lang : "en";
+  function setLang(lang, opts = {}) {
+    const { syncHash = true } = opts;
+
+    state.lang = normalizeLang(lang);
     document.documentElement.lang = state.lang;
 
     $$(".lang__btn").forEach(b => {
       b.classList.toggle("is-active", b.dataset.lang === state.lang);
     });
+
+    if (syncHash) setHashLang(state.lang);
 
     el.subtitle.textContent = t("subtitle");
     el.q.placeholder = t("searchPlaceholder");
@@ -511,7 +546,19 @@
 
     // language
     $$(".lang__btn").forEach(btn => {
-      btn.addEventListener("click", () => setLang(btn.dataset.lang));
+      btn.addEventListener("click", () => setLang(btn.dataset.lang, { syncHash: true }));
+    });
+
+    window.addEventListener("hashchange", () => {
+      const hashLang = getLangFromHash();
+
+      if (!window.location.hash) {
+        if (state.lang !== "en") setLang("en", { syncHash: false });
+        return;
+      }
+
+      if (!hashLang || hashLang === state.lang) return;
+      setLang(hashLang, { syncHash: false });
     });
   }
 
@@ -520,7 +567,9 @@
 
     wire();
     await load();
-    setLang("en");
+
+    const hashLang = getLangFromHash();
+    setLang(hashLang || "en", { syncHash: Boolean(hashLang) });
   })().catch((err) => {
     console.error(err);
     el.grid.innerHTML = "";
