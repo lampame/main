@@ -3,7 +3,7 @@
 
     var manifest = {
       type: 'other',
-      version: '0.3.0',
+      version: '0.3.5',
       name: 'Nightingale Notifications',
       description: 'Episode notifications channel with external subscriptions service',
       component: 'nightingale_notifications'
@@ -398,6 +398,21 @@
     function withPrefix(message) {
       return t('nn_noty_prefix') + ': ' + String(message || '');
     }
+    function showBell(message) {
+      var text = String(message || '');
+      if (typeof Lampa !== 'undefined' && Lampa.Bell && typeof Lampa.Bell.push === 'function') {
+        try {
+          Lampa.Bell.push({
+            from: t('nn_noty_prefix'),
+            text: text
+          });
+          return;
+        } catch (error) {}
+      }
+      if (typeof Lampa !== 'undefined' && Lampa.Noty && typeof Lampa.Noty.show === 'function') {
+        Lampa.Noty.show(withPrefix(text));
+      }
+    }
 
     function buildContentId(rawId) {
       if (rawId === null || rawId === undefined) return '';
@@ -631,10 +646,10 @@
         auth: false
       }).then(function (result) {
         var status = result && result.status ? String(result.status) : 'ok';
-        Lampa.Noty.show(withPrefix(t('nn_noty_health_prefix') + ': ' + status));
+        showBell(t('nn_noty_health_prefix') + ': ' + status);
       })["catch"](function (error) {
         var message = error && error.message ? error.message : t('nn_noty_request_failed');
-        Lampa.Noty.show(withPrefix(t('nn_noty_health_prefix') + ': ' + message));
+        showBell(t('nn_noty_health_prefix') + ': ' + message);
       });
     }
     function createApiError(message, status, payload) {
@@ -735,7 +750,7 @@
         },
         onChange: function onChange() {
           Lampa.Storage.set(STORAGE_KEYS.syncUid, '');
-          Lampa.Noty.show(withPrefix(t('nn_noty_sync_uid_cleared')));
+          showBell(t('nn_noty_sync_uid_cleared'));
           restartRuntime('settings_clear_sync_uid');
           Lampa.Settings.update();
         }
@@ -984,7 +999,7 @@
         button.find('span').text(label);
         applyButtonVisualState(button, false, true);
         button.on('hover:enter.nightingale', function () {
-          Lampa.Noty.show(withPrefix(t('nn_noty_no_subscription_target')));
+          showBell(t('nn_noty_no_subscription_target'));
         });
       }
       function unregisterButtonTarget(node) {
@@ -1054,12 +1069,12 @@
       function onSubscribeButtonEnter(contentId, contentIds, movie) {
         if (state.pendingToggle.has(contentId)) return;
         if (!isRuntimeAvailable()) {
-          Lampa.Noty.show(withPrefix(t('nn_noty_sync_uid_required')));
+          showBell(t('nn_noty_sync_uid_required'));
           return;
         }
         var normalizedIds = normalizeContentIds(contentIds && contentIds.length ? contentIds : [contentId]);
         if (!normalizedIds.length) {
-          Lampa.Noty.show(withPrefix(t('nn_noty_no_subscription_target')));
+          showBell(t('nn_noty_no_subscription_target'));
           return;
         }
         var primaryContentId = normalizedIds[0];
@@ -1072,7 +1087,7 @@
           if (resolvedSubscribed && !resolvedSubscribedContentId) {
             state.pendingToggle["delete"](primaryContentId);
             redrawSubscribeButton(primaryContentId);
-            Lampa.Noty.show(withPrefix(t('nn_noty_request_failed')));
+            showBell(t('nn_noty_request_failed'));
             return;
           }
           var action = resolvedSubscribed ? unsubscribeFromSeries(resolvedSubscribedContentId) : subscribeToSeries(primaryContentId, imdbId);
@@ -1113,7 +1128,7 @@
             });
           })["catch"](function (error) {
             var message = resolveToggleErrorMessage(error);
-            Lampa.Noty.show(withPrefix(message));
+            showBell(message);
           })["finally"](function () {
             state.pendingToggle["delete"](primaryContentId);
             redrawSubscribeButton(primaryContentId);
@@ -1192,10 +1207,10 @@
       }
       function showToggleResultMessage(requestedSubscribe, finalSubscribed) {
         if (requestedSubscribe) {
-          Lampa.Noty.show(withPrefix(finalSubscribed ? t('nn_noty_subscribed') : t('nn_noty_subscribe_not_confirmed')));
+          showBell(finalSubscribed ? t('nn_noty_subscribed') : t('nn_noty_subscribe_not_confirmed'));
           return;
         }
-        Lampa.Noty.show(withPrefix(finalSubscribed ? t('nn_noty_unsubscribe_not_confirmed') : t('nn_noty_unsubscribed')));
+        showBell(finalSubscribed ? t('nn_noty_unsubscribe_not_confirmed') : t('nn_noty_unsubscribed'));
       }
       function isSubscribed(contentIds, imdbId) {
         if (resolveSubscribedContentId(contentIds, imdbId)) return true;
@@ -1703,13 +1718,13 @@
         if (typeof params.onSubscriptionsChanged === 'function') {
           params.onSubscriptionsChanged();
         }
-        Lampa.Noty.show(withPrefix(t('nn_noty_unsubscribed')));
+        showBell(t('nn_noty_unsubscribed'));
         if (Lampa.Activity && typeof Lampa.Activity.replace === 'function') {
           Lampa.Activity.replace();
         }
       })["catch"](function (error) {
         var message = error && error.message ? error.message : t('nn_noty_request_failed');
-        Lampa.Noty.show(withPrefix(message));
+        showBell(message);
       })["finally"](function () {
         if (params.state && params.state.pendingToggle) {
           params.state.pendingToggle["delete"](contentId);
@@ -2024,9 +2039,7 @@
         }
         state.subscriptionsLoaded = true;
         state.subscriptionsSyncedAt = Date.now();
-        if (typeof Lampa !== 'undefined' && Lampa.Noty && typeof Lampa.Noty.show === 'function') {
-          Lampa.Noty.show(withPrefix(t('nn_noty_unsubscribe_by_error')));
-        }
+        showBell(t('nn_noty_unsubscribe_by_error'));
         if (typeof redrawAllSubscribeButtons === 'function') {
           redrawAllSubscribeButtons();
         }
@@ -2215,7 +2228,7 @@
             trigger: 'manual'
           });
         })["catch"](function (error) {
-          showNoty(resolveErrorMessage(error));
+          showBell$1(resolveErrorMessage(error));
           return createSummary();
         });
       }
@@ -2226,7 +2239,7 @@
             trigger: 'manual'
           });
         })["catch"](function (error) {
-          showNoty(resolveErrorMessage(error));
+          showBell$1(resolveErrorMessage(error));
           return createSummary();
         });
       }
@@ -2346,7 +2359,7 @@
       function importFromHistory(options) {
         var settings = options || {};
         if (!isRuntimeAvailable()) {
-          if (!settings.auto) showNoty(t('nn_noty_sync_uid_required'));
+          if (!settings.auto) showBell$1(t('nn_noty_sync_uid_required'));
           return Promise.resolve(createSummary());
         }
         return ensureSubscriptionsFresh().then(function () {
@@ -2356,23 +2369,23 @@
           handleImportSuccess('lampa', summary, settings.auto);
           return summary;
         })["catch"](function (error) {
-          if (!settings.auto) showNoty(resolveErrorMessage(error));
+          if (!settings.auto) showBell$1(resolveErrorMessage(error));
           throw error;
         });
       }
       function importFromTrakt(options) {
         var settings = options || {};
         if (!isRuntimeAvailable()) {
-          if (!settings.auto) showNoty(t('nn_noty_sync_uid_required'));
+          if (!settings.auto) showBell$1(t('nn_noty_sync_uid_required'));
           return Promise.resolve(createSummary());
         }
         if (!hasTraktToken()) {
-          if (!settings.auto) showNoty(t('nn_noty_trakt_auth_required'));
+          if (!settings.auto) showBell$1(t('nn_noty_trakt_auth_required'));
           return Promise.resolve(createSummary());
         }
         var traktApi = resolveTraktApi();
         if (!traktApi) {
-          if (!settings.auto) showNoty(t('nn_noty_trakt_unavailable'));
+          if (!settings.auto) showBell$1(t('nn_noty_trakt_unavailable'));
           return Promise.resolve(createSummary());
         }
         return ensureSubscriptionsFresh().then(function () {
@@ -2383,7 +2396,7 @@
           handleImportSuccess('trakt', summary, settings.auto);
           return summary;
         })["catch"](function (error) {
-          if (!settings.auto) showNoty(resolveErrorMessage(error));
+          if (!settings.auto) showBell$1(resolveErrorMessage(error));
           throw error;
         });
       }
@@ -2711,15 +2724,14 @@
       function showSummary(source, summary) {
         var sourceLabel = source === 'trakt' ? t('nn_noty_import_source_trakt') : t('nn_noty_import_source_lampa');
         var message = t('nn_noty_import_summary_prefix') + ' ' + sourceLabel + ': ' + t('nn_noty_import_added') + ' ' + (summary.added || 0) + ', ' + t('nn_noty_import_duplicates') + ' ' + (summary.duplicates || 0) + ', ' + t('nn_noty_import_skipped') + ' ' + (summary.skipped || 0) + ', ' + t('nn_noty_import_failed') + ' ' + (summary.failed || 0);
-        showNoty(message);
+        showBell$1(message);
       }
       function resolveErrorMessage(error) {
         if (!error) return t('nn_noty_request_failed');
         return error && error.message ? String(error.message) : t('nn_noty_request_failed');
       }
-      function showNoty(message) {
-        if (!Lampa.Noty || typeof Lampa.Noty.show !== 'function') return;
-        Lampa.Noty.show(withPrefix(String(message || '')));
+      function showBell$1(message) {
+        showBell(String(message || ''));
       }
       function wait(ms) {
         return new Promise(function (resolve) {
