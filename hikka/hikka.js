@@ -2256,6 +2256,93 @@
     });
   }
 
+  var initialized = false;
+  function createCall(config) {
+    return function (params, screen) {
+      if (screen !== 'main') return;
+      return function (call) {
+        Api.getAnimeListWithFilters(config.filters, 1, function (data) {
+          var results = data && Array.isArray(data.results) ? data.results : [];
+          if (!results.length) return call();
+          call({
+            title: config.title,
+            url: '',
+            source: 'hikka',
+            filter: JSON.stringify(config.filters),
+            results: results,
+            total_pages: data && data.total_pages ? data.total_pages : 1,
+            page: 1
+          });
+        }, function () {
+          return call();
+        });
+      };
+    };
+  }
+  function registerRows() {
+    var rows = [{
+      name: 'HikkaMainOngoing',
+      title: 'Hikka · Онгоїнги',
+      index: 0,
+      filters: {
+        media_type: [],
+        status: ['ongoing'],
+        season: [],
+        rating: [],
+        years: [],
+        genres: [],
+        studios: [],
+        only_translated: true,
+        sort: []
+      }
+    }, {
+      name: 'HikkaMainFinishedTop',
+      title: 'Hikka · Завершені й високооцінені',
+      index: 1,
+      filters: {
+        media_type: ['tv', 'ova', 'ona'],
+        status: ['finished'],
+        season: [],
+        rating: [],
+        years: [],
+        genres: [],
+        studios: [],
+        only_translated: true,
+        sort: ['score:desc']
+      }
+    }, {
+      name: 'HikkaMainAnnounced',
+      title: 'Hikka · Анонсовані',
+      index: 2,
+      filters: {
+        media_type: ['tv', 'movie', 'ona'],
+        status: ['announced'],
+        season: [],
+        rating: [],
+        years: [],
+        genres: [],
+        studios: [],
+        only_translated: false,
+        sort: ['start_date:asc']
+      }
+    }];
+    rows.forEach(function (row) {
+      Lampa.ContentRows.add({
+        name: row.name,
+        title: row.title,
+        index: row.index,
+        screen: ['main'],
+        call: createCall(row)
+      });
+    });
+  }
+  function initRows() {
+    if (initialized) return;
+    if (!Lampa || !Lampa.ContentRows || typeof Lampa.ContentRows.add !== 'function') return;
+    initialized = true;
+    registerRows();
+  }
+
   function init() {
     // Додаємо стилі для плагіну через шаблонну систему
     Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card.hikka-hide-type .card__type{display:none !important;visibility:hidden !important;opacity:0 !important;position:absolute !important;left:-9999px !important;z-index:-1 !important}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-card.hikka-hide-type .card__type{display:none !important}.hikka-card .hikka-custom-translate-badge{position:absolute;bottom:8px;left:8px;background:-webkit-gradient(linear,left top,right top,from(#0057b7),to(#ffd700));background:-webkit-linear-gradient(left,#0057b7 0,#ffd700 100%);background:-o-linear-gradient(left,#0057b7 0,#ffd700 100%);background:linear-gradient(90deg,#0057b7 0,#ffd700 100%);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5);padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;text-transform:uppercase;z-index:10}.hikka-card .hikka-custom-type-badge{position:absolute;top:8px;left:8px;background:-webkit-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:-o-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:linear-gradient(135deg,#667eea 0,#764ba2 100%);color:white;padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;z-index:10}.hikka-card.card--tv .hikka-custom-type-badge{background-color:rgba(0,123,255,0.8) !important}.hikka-card.card--movie .hikka-custom-type-badge{background-color:rgba(220,53,69,0.8) !important}.hikka-card.card--ova .hikka-custom-type-badge,.hikka-card.card--ona .hikka-custom-type-badge,.hikka-card.card--special .hikka-custom-type-badge,.hikka-card.card--music .hikka-custom-type-badge{background-color:rgba(108,117,125,0.8) !important}.hikka-character{padding:2em 1.5em}.hikka-character__body{max-width:48em;margin:0 auto}.hikka-character__content{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.hikka-character__image{width:12em;height:12em;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%;-webkit-box-shadow:0 .6em 1.4em rgba(0,0,0,0.35);box-shadow:0 .6em 1.4em rgba(0,0,0,0.35)}.hikka-character__name{font-size:1.8em;font-weight:700;color:rgba(255,255,255,0.8)}.hikka-character__role{font-size:1.1em;color:rgba(255,255,255,0.6)}.hikka-character__meta{display:grid;gap:.4em;padding:.8em 1em;-webkit-border-radius:.8em;border-radius:.8em;background:rgba(255,255,255,0.06)}.hikka-character__meta-row{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:.95em}.hikka-character__meta-label{color:rgba(255,255,255,0.6)}.hikka-character__meta-value{color:rgba(255,255,255,0.8)}.hikka-character__description{max-width:40em;line-height:1.6;color:rgba(255,255,255,0.8)}.hikka-full-active .full-review-add,.hikka-full-active .full-review__footer,.hikka-full-active .full-review__like,.hikka-full-active .full-review__like-icon{display:none !important}\n        </style>\n    ");
@@ -2277,6 +2364,9 @@
     } catch (e) {
       console.warn('[Hikka] Failed to register source provider:', e);
     }
+
+    // Додаємо лайни Hikka на головну через ContentRows
+    initRows();
 
     // Реєструємо компонент
     Lampa.Component.add('hikka_anime', Component);
