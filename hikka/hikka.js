@@ -1549,8 +1549,20 @@
     }]);
   }();
 
+  var iconCounter = 0;
+  function createGradientId() {
+    iconCounter += 1;
+    return 'hikka-logo-gradient-' + iconCounter;
+  }
+  function createLogoIconSvg() {
+    var className = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+    var gradientId = createGradientId();
+    var cssClass = className ? ' ' + className : '';
+    return "<svg class=\"hikka-logo-icon".concat(cssClass, "\" viewBox=\"0 0 118 118\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <defs>\n            <linearGradient id=\"").concat(gradientId, "\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n                <stop offset=\"0%\" stop-color=\"#D792F8\"/>\n                <stop offset=\"100%\" stop-color=\"#5277CB\"/>\n            </linearGradient>\n        </defs>\n        <path d=\"M 92.00 117.50 L 87.00 117.50 L 86.00 116.50 L 85.00 116.50 L 62.00 93.50 L 61.00 93.50 L 60.00 92.50 L 56.00 92.50 L 55.00 93.50 L 54.00 93.50 L 31.00 116.50 L 30.00 116.50 L 29.00 117.50 L 23.00 117.50 L 13.00 107.50 L 12.00 107.50 L 0.50 96.00 L 0.50 95.00 L -0.50 94.00 L -0.50 88.00 L 2.50 85.00 L 2.50 84.00 L 23.50 63.00 L 23.50 62.00 L 24.50 61.00 L 24.50 56.00 L 23.50 55.00 L 23.50 54.00 L 0.50 31.00 L 0.50 30.00 L -0.50 29.00 L -0.50 24.00 L 0.50 23.00 L 0.50 22.00 L 21.00 1.50 L 22.00 1.50 L 23.00 0.50 L 25.00 0.50 L 26.00 -0.50 L 27.00 0.50 L 30.00 0.50 L 53.00 23.50 L 54.00 23.50 L 55.00 24.50 L 56.00 24.50 L 57.00 25.50 L 60.00 25.50 L 61.00 24.50 L 62.00 24.50 L 81.50 5.00 L 81.50 4.00 L 84.00 1.50 L 85.00 1.50 L 88.00 -0.50 L 93.00 -0.50 L 95.00 1.50 L 96.00 1.50 L 115.50 21.00 L 115.50 22.00 L 117.50 25.00 L 117.50 29.00 L 116.50 30.00 L 116.50 31.00 L 92.50 55.00 L 92.50 56.00 L 91.50 57.00 L 91.50 61.00 L 92.50 62.00 L 92.50 63.00 L 115.50 86.00 L 115.50 87.00 L 116.50 88.00 L 116.50 94.00 L 115.50 95.00 L 115.50 96.00 L 96.00 115.50 L 95.00 115.50 L 92.00 117.50 Z\" fill=\"url(#").concat(gradientId, ")\"/>\n    </svg>");
+  }
+
   function addMenuItem() {
-    var button = Lampa.Menu.addButton('<svg><use xlink:href="#sprite-anime"></use></svg>', 'Hikka Anime', function () {
+    var button = Lampa.Menu.addButton(createLogoIconSvg(), 'Hikka Anime', function () {
       Lampa.Activity.push({
         url: '',
         title: 'Hikka Anime',
@@ -2257,6 +2269,37 @@
   }
 
   var initialized = false;
+  function createLineTitle(text) {
+    var root = document.createElement('span');
+    var icon = document.createElement('span');
+    var label = document.createElement('span');
+    root.className = 'hikka-line-title';
+    root.style.display = 'inline-flex';
+    root.style.alignItems = 'center';
+    root.style.gap = '.45em';
+    icon.className = 'hikka-line-title__icon';
+    icon.style.display = 'inline-block';
+    icon.style.width = '1em';
+    icon.style.height = '1em';
+    icon.style.flexShrink = '0';
+    icon.innerHTML = createLogoIconSvg();
+    label.textContent = text;
+    root.appendChild(icon);
+    root.appendChild(label);
+    return root;
+  }
+  function registerLineTitleDecorator() {
+    Lampa.Listener.follow('line', function (e) {
+      if (!e || e.type !== 'create' || !e.data || !e.data.hikka_line) return;
+      try {
+        var titleNode = createLineTitle(e.data.hikka_line_title || e.data.title || '');
+        var container = e.line.render().find('.items-line__title');
+        if (container && container.length) container.empty().append(titleNode);
+      } catch (err) {
+        console.error('[Hikka] line title decorate error', err);
+      }
+    });
+  }
   function createCall(config) {
     return function (params, screen) {
       if (screen !== 'main') return;
@@ -2268,6 +2311,8 @@
             title: config.title,
             url: '',
             source: 'hikka',
+            hikka_line: true,
+            hikka_line_title: config.title,
             filter: JSON.stringify(config.filters),
             results: results,
             total_pages: data && data.total_pages ? data.total_pages : 1,
@@ -2340,6 +2385,7 @@
     if (initialized) return;
     if (!Lampa || !Lampa.ContentRows || typeof Lampa.ContentRows.add !== 'function') return;
     initialized = true;
+    registerLineTitleDecorator();
     registerRows();
   }
 
