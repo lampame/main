@@ -73,11 +73,34 @@
   var ENDPOINTS = {
     ANIME: PROXY_URL + API_BASE + 'anime',
     GENRES: PROXY_URL + API_BASE + 'genres',
+    SCHEDULE_ANIME: function SCHEDULE_ANIME() {
+      var page = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+      var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 50;
+      return PROXY_URL + API_BASE + 'schedule/anime?page=' + page + '&size=' + size;
+    },
     DETAILS: function DETAILS(slug) {
       return PROXY_URL + API_BASE + 'anime/' + slug;
     },
+    COMMENTS: function COMMENTS(slug) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
+      return PROXY_URL + API_BASE + 'comments/anime/' + encodeURIComponent(slug) + '/list?page=' + page + '&size=' + size;
+    },
     CHARACTERS: function CHARACTERS(slug) {
       return PROXY_URL + API_BASE + 'anime/' + slug + '/characters';
+    },
+    CHARACTER_VOICES: function CHARACTER_VOICES(slug) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
+      return PROXY_URL + API_BASE + 'characters/' + encodeURIComponent(slug) + '/voices?page=' + page + '&size=' + size;
+    },
+    PEOPLE: function PEOPLE(slug) {
+      return PROXY_URL + API_BASE + 'people/' + encodeURIComponent(slug);
+    },
+    PEOPLE_ANIME: function PEOPLE_ANIME(slug) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
+      return PROXY_URL + API_BASE + 'people/' + encodeURIComponent(slug) + '/anime?page=' + page + '&size=' + size;
     },
     FRANCHISE: function FRANCHISE(slug) {
       return PROXY_URL + API_BASE + 'related/anime/' + slug + '/franchise';
@@ -235,6 +258,89 @@
     }]
   };
 
+  function safeText$1(value) {
+    return String(value || '');
+  }
+  function escapeHtml$1(value) {
+    return safeText$1(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function sanitizeUrl$1(url) {
+    var value = safeText$1(url).trim();
+    if (!/^https?:\/\//i.test(value)) return '#';
+    return value.replace(/"/g, '%22');
+  }
+  function renderInlineMarkdown$1(text) {
+    var html = escapeHtml$1(text);
+    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function (match, label, url) {
+      return '<a class="hikka-md-link" href="' + sanitizeUrl$1(url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml$1(label) + '</a>';
+    });
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+    html = html.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+    html = html.replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,!?:;]|$)/g, '$1<em>$2</em>');
+    html = html.replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,!?:;]|$)/g, '$1<em>$2</em>');
+    return html;
+  }
+  function markdownToHtml(text) {
+    var source = safeText$1(text).trim();
+    if (!source) return '';
+    var lines = source.replace(/\r\n/g, '\n').split('\n');
+    var html = [];
+    var inList = false;
+    lines.forEach(function (rawLine) {
+      var line = rawLine.trimEnd();
+      var listMatch = line.match(/^\s*[-*]\s+(.+)$/);
+      var quoteMatch = line.match(/^\s*>\s?(.*)$/);
+      if (listMatch) {
+        if (!inList) {
+          html.push('<ul class="hikka-md-list">');
+          inList = true;
+        }
+        html.push('<li>' + renderInlineMarkdown$1(listMatch[1]) + '</li>');
+        return;
+      }
+      if (inList) {
+        html.push('</ul>');
+        inList = false;
+      }
+      if (!line.trim()) {
+        html.push('<br>');
+        return;
+      }
+      if (quoteMatch) {
+        html.push('<blockquote class="hikka-md-quote">' + renderInlineMarkdown$1(quoteMatch[1]) + '</blockquote>');
+        return;
+      }
+      html.push('<span>' + renderInlineMarkdown$1(line) + '</span>');
+    });
+    if (inList) html.push('</ul>');
+    return html.join('');
+  }
+  function markdownToPlainText(text) {
+    var source = safeText$1(text);
+    if (!source.trim()) return '';
+    var plain = source.replace(/\r\n/g, '\n');
+    plain = plain.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1');
+    plain = plain.replace(/`([^`]+)`/g, '$1');
+    plain = plain.replace(/\*\*([^*]+)\*\*/g, '$1');
+    plain = plain.replace(/__([^_]+)__/g, '$1');
+    plain = plain.replace(/~~([^~]+)~~/g, '$1');
+    plain = plain.replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,!?:;]|$)/g, '$1$2');
+    plain = plain.replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,!?:;]|$)/g, '$1$2');
+    plain = plain.replace(/^\s*[-*]\s+/gm, '');
+    plain = plain.replace(/^\s*>\s?/gm, '');
+    plain = plain.replace(/\n{3,}/g, '\n\n');
+    return plain.trim();
+  }
+  function markdownExcerpt(text) {
+    var maxLength = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 280;
+    var plain = markdownToPlainText(text).replace(/\s+/g, ' ').trim();
+    if (!plain) return '';
+    if (plain.length <= maxLength) return plain;
+    return plain.slice(0, maxLength - 1).trim() + '…';
+  }
+
   function normalizeAnimeData(anime) {
     // Отримуємо правильну локалізовану назву типу медіа
     var getMediaTypeLabel = function getMediaTypeLabel(mediaType) {
@@ -253,7 +359,7 @@
       // НЕ додаємо poster_path/backdrop_path - вони викликають TMDB prefix при створенні Card!
       // Тільки для Full потрібні ці поля, там вони передаються окремо через buildFullPayloadFromDetails
       vote_average: anime.score || anime.native_score || 0,
-      overview: anime.synopsis_ua || anime.synopsis_en || '',
+      overview: markdownToPlainText(anime.synopsis_ua || anime.synopsis_en || ''),
       year: anime.year,
       release_year: anime.year || '2023',
       // Побудова дат для Full (fallback з року)
@@ -288,11 +394,7 @@
       original_name: mediaType !== 'movie' ? title_en || title_ja || title_ua : null,
       // Використати title_ja як tagline для відображення оригінальної назви
       tagline: title_ja || '',
-      overview: function () {
-        var raw = details && (details.synopsis_ua || details.synopsis_en) || '';
-        // Очистити Markdown-посилання: [текст](url) -> текст
-        return raw.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-      }(),
+      overview: markdownToHtml(details && (details.synopsis_ua || details.synopsis_en) || ''),
       poster_path: image,
       img: image,
       backdrop_path: details && details.backdrop || image,
@@ -362,7 +464,7 @@
             episode_number: ep.number || ep.episode_number || idx + 1,
             season_number: ep.season || ep.season_number || seasonNumber,
             name: ep.title_ua || ep.title_en || ep.name || 'Епізод ' + (ep.number || idx + 1),
-            overview: ep.synopsis_ua || ep.synopsis_en || ep.overview || '',
+            overview: markdownToPlainText(ep.synopsis_ua || ep.synopsis_en || ep.overview || ''),
             still_path: ep.image || ep.still_path || image || null
           };
         })
@@ -374,6 +476,121 @@
       episodes: episodes,
       method: mediaType,
       id: details && details.slug
+    };
+  }
+  function formatCommentDate(timestamp) {
+    var ts = Number(timestamp);
+    if (!ts) return '';
+    var date = new Date(ts * 1000);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('uk-UA');
+  }
+  function normalizeCommentText(text) {
+    return String(text || '').replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  function formatScore(score) {
+    var value = Number(score || 0);
+    if (value > 0) return '+' + value;
+    return String(value);
+  }
+  function countBranchReplies(items) {
+    if (!Array.isArray(items) || !items.length) return 0;
+    return items.reduce(function (acc, item) {
+      if (!item || item.hidden) return acc;
+      return acc + 1 + countBranchReplies(item.replies);
+    }, 0);
+  }
+  function appendThread(item, lines) {
+    var level = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+    if (!item || item.hidden) return;
+    var text = normalizeCommentText(item.text);
+    if (!text) return;
+    var author = item.author && item.author.username || 'Анонім';
+    var date = formatCommentDate(item.created || item.updated);
+    var score = formatScore(item.vote_score);
+    var prefix = level > 0 ? '  '.repeat(Math.min(level, 5)) + '-> ' : '';
+    var header = prefix + author + (date ? ' | ' + date : '') + ' | ' + score;
+    lines.push(header);
+    text.split('\n').forEach(function (line) {
+      lines.push((level > 0 ? '  '.repeat(Math.min(level, 5)) : '') + line);
+    });
+    lines.push('');
+    if (Array.isArray(item.replies) && item.replies.length) {
+      item.replies.forEach(function (reply) {
+        return appendThread(reply, lines, level + 1);
+      });
+    }
+  }
+  function appendThreadEntries(item, entries) {
+    var level = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+    if (!item || item.hidden) return;
+    var text = normalizeCommentText(item.text);
+    if (text) {
+      var author = item.author && item.author.username || 'Анонім';
+      var dateLabel = formatCommentDate(item.created || item.updated);
+      var score = Number(item.vote_score || 0);
+      entries.push({
+        id: item.reference || 'hikka_thread_' + entries.length,
+        author: author,
+        created_label: dateLabel,
+        score: score,
+        score_label: formatScore(score),
+        level: Math.max(0, Number(level || 0)),
+        text: text
+      });
+    }
+    if (Array.isArray(item.replies) && item.replies.length) {
+      item.replies.forEach(function (reply) {
+        return appendThreadEntries(reply, entries, level + 1);
+      });
+    }
+  }
+  function mapTopLevelComment(item, index) {
+    if (!item || item.hidden) return null;
+    var text = normalizeCommentText(item.text);
+    if (!text) return null;
+    var author = item.author && item.author.username || 'Анонім';
+    var dateLabel = formatCommentDate(item.created || item.updated);
+    var score = Number(item.vote_score || 0);
+    var scoreLabel = formatScore(score);
+    var repliesCount = countBranchReplies(item.replies);
+    var threadLines = [];
+    appendThread(item, threadLines, 0);
+    var threadText = threadLines.join('\n').trim() || text;
+    var threadEntries = [];
+    appendThreadEntries(item, threadEntries, 0);
+    var threadCommentsCount = threadEntries.length || repliesCount + 1;
+    return {
+      id: item.reference || 'hikka_comment_' + index,
+      text: text,
+      comment: threadText,
+      author: author,
+      created_label: dateLabel,
+      score: score,
+      score_label: scoreLabel,
+      replies_count: repliesCount,
+      thread_comments_count: threadCommentsCount,
+      thread_entries: threadEntries,
+      source: 'hikka'
+    };
+  }
+  function mapTopLevelComments(items) {
+    if (!Array.isArray(items) || !items.length) return [];
+    var mapped = [];
+    items.forEach(function (item, index) {
+      var normalized = mapTopLevelComment(item, index);
+      if (normalized) mapped.push(normalized);
+    });
+    return mapped;
+  }
+  function buildDiscussPayloadFromComments(commentsResponse) {
+    var pagination = commentsResponse && commentsResponse.pagination ? commentsResponse.pagination : {};
+    var result = mapTopLevelComments(commentsResponse && commentsResponse.list);
+    return {
+      page: Number(pagination.page || 1),
+      total_pages: Number(pagination.pages || 1),
+      total_results: Number(pagination.total || result.length),
+      result: result
     };
   }
 
@@ -409,6 +626,7 @@
   var network = new Lampa.Reguest();
   var Api = {
     buildFullPayloadFromDetails: buildFullPayloadFromDetails,
+    buildDiscussPayloadFromComments: buildDiscussPayloadFromComments,
     getAnimeList: function getAnimeList(success, error) {
       var url = ENDPOINTS.ANIME;
       var postData = {
@@ -509,6 +727,41 @@
         })
       });
     },
+    getScheduleAnime: function getScheduleAnime(filters) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 50;
+      var success = arguments.length > 3 ? arguments[3] : undefined;
+      var error = arguments.length > 4 ? arguments[4] : undefined;
+      var url = ENDPOINTS.SCHEDULE_ANIME(page, size);
+      var postData = {
+        airing_season: Array.isArray(filters && filters.airing_season) ? filters.airing_season : [],
+        status: Array.isArray(filters && filters.status) ? filters.status : ['ongoing', 'announced']
+      };
+      network["native"](url, function (data) {
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            console.error('[Hikka] Failed to parse schedule response:', e);
+            if (error) error(e);
+            return;
+          }
+        }
+        if (data && Array.isArray(data.list)) {
+          if (success) success(data);
+        } else {
+          if (error) error('No schedule data');
+        }
+      }, function (err) {
+        console.log('[Hikka] Error fetching schedule:', err);
+        if (error) error(err);
+      }, JSON.stringify(postData), {
+        method: 'POST',
+        headers: getProxyHeaders({
+          'Content-Type': 'application/json'
+        })
+      });
+    },
     getAnimeDetails: function getAnimeDetails(hikka_slug, success, error) {
       console.log('[Hikka] Fetching anime details for:', hikka_slug);
 
@@ -541,6 +794,40 @@
         }
       }, function (err) {
         console.log('[Hikka] Error fetching details:', err);
+        if (error) error(err);
+      }, false, {
+        headers: getProxyHeaders({
+          'Content-Type': 'application/json'
+        })
+      });
+    },
+    getComments: function getComments(slug) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
+      var success = arguments.length > 3 ? arguments[3] : undefined;
+      var error = arguments.length > 4 ? arguments[4] : undefined;
+      if (!slug) {
+        if (error) error('No slug');
+        return;
+      }
+      var url = ENDPOINTS.COMMENTS(slug, page, size);
+      network.silent(url, function (data) {
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            console.error('[Hikka] Failed to parse comments response:', e);
+            if (error) error(e);
+            return;
+          }
+        }
+        if (data && Array.isArray(data.list)) {
+          if (success) success(data);
+        } else {
+          if (error) error('No comments data');
+        }
+      }, function (err) {
+        console.log('[Hikka] Error fetching comments:', err);
         if (error) error(err);
       }, false, {
         headers: getProxyHeaders({
@@ -589,6 +876,107 @@
       }, function (err) {
         console.log('[Hikka] Error fetching characters:', err);
         error && error(err);
+      }, false, {
+        headers: getProxyHeaders({
+          'Content-Type': 'application/json'
+        })
+      });
+    },
+    // Hikka Character Voices API: GET /characters/{slug}/voices?page={page}&size={size}
+    getCharacterVoices: function getCharacterVoices(slug) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
+      var success = arguments.length > 3 ? arguments[3] : undefined;
+      var error = arguments.length > 4 ? arguments[4] : undefined;
+      if (!slug) {
+        if (error) error('No slug');
+        return;
+      }
+      var url = ENDPOINTS.CHARACTER_VOICES(slug, page, size);
+      network.silent(url, function (data) {
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            console.error('[Hikka] Failed to parse voices response:', e);
+            if (error) error(e);
+            return;
+          }
+        }
+        if (data && Array.isArray(data.list)) {
+          if (success) success(data);
+        } else {
+          if (error) error('No voices data');
+        }
+      }, function (err) {
+        console.log('[Hikka] Error fetching voices:', err);
+        if (error) error(err);
+      }, false, {
+        headers: getProxyHeaders({
+          'Content-Type': 'application/json'
+        })
+      });
+    },
+    // Hikka Person API: GET /people/{slug}
+    getPerson: function getPerson(slug, success, error) {
+      if (!slug) {
+        if (error) error('No slug');
+        return;
+      }
+      var url = ENDPOINTS.PEOPLE(slug);
+      network.silent(url, function (data) {
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            console.error('[Hikka] Failed to parse person response:', e);
+            if (error) error(e);
+            return;
+          }
+        }
+        if (data && _typeof(data) === 'object') {
+          if (success) success(data);
+        } else {
+          if (error) error('No person data');
+        }
+      }, function (err) {
+        console.log('[Hikka] Error fetching person:', err);
+        if (error) error(err);
+      }, false, {
+        headers: getProxyHeaders({
+          'Content-Type': 'application/json'
+        })
+      });
+    },
+    // Hikka Person Anime API: GET /people/{slug}/anime?page={page}&size={size}
+    getPersonAnime: function getPersonAnime(slug) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
+      var success = arguments.length > 3 ? arguments[3] : undefined;
+      var error = arguments.length > 4 ? arguments[4] : undefined;
+      if (!slug) {
+        if (error) error('No slug');
+        return;
+      }
+      var url = ENDPOINTS.PEOPLE_ANIME(slug, page, size);
+      network.silent(url, function (data) {
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            console.error('[Hikka] Failed to parse person anime response:', e);
+            if (error) error(e);
+            return;
+          }
+        }
+        if (data && Array.isArray(data.list)) {
+          if (success) success(data);
+        } else {
+          if (error) error('No person anime data');
+        }
+      }, function (err) {
+        console.log('[Hikka] Error fetching person anime:', err);
+        if (error) error(err);
       }, false, {
         headers: getProxyHeaders({
           'Content-Type': 'application/json'
@@ -1549,6 +1937,371 @@
     }]);
   }();
 
+  var DAY_MS = 24 * 60 * 60 * 1000;
+  var DEFAULT_STATUSES = ['ongoing', 'announced'];
+  function getCurrentSeasonYear() {
+    var now = new Date();
+    var month = now.getMonth() + 1;
+    var year = now.getFullYear();
+    if (month <= 3) return {
+      season: 'winter',
+      year: year
+    };
+    if (month <= 6) return {
+      season: 'spring',
+      year: year
+    };
+    if (month <= 9) return {
+      season: 'summer',
+      year: year
+    };
+    return {
+      season: 'fall',
+      year: year
+    };
+  }
+  function pad2(value) {
+    return String(value).padStart(2, '0');
+  }
+  function dateKeyFromDate(date) {
+    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+  }
+  function dateKeyFromUnix(timestamp) {
+    var ts = Number(timestamp || 0);
+    if (!ts) return '';
+    var date = new Date(ts * 1000);
+    if (Number.isNaN(date.getTime())) return '';
+    return dateKeyFromDate(date);
+  }
+  function timeLabelFromUnix(timestamp) {
+    var ts = Number(timestamp || 0);
+    if (!ts) return '--:--';
+    var date = new Date(ts * 1000);
+    if (Number.isNaN(date.getTime())) return '--:--';
+    return pad2(date.getHours()) + ':' + pad2(date.getMinutes());
+  }
+  function buildCardFromAnime(anime, index) {
+    var safe = anime || {};
+    var mediaType = safe.media_type === 'movie' ? 'movie' : 'tv';
+    var title = safe.title_ua || safe.title_en || safe.title_ja || '—';
+    var year = safe.year;
+    var fallbackDate = year ? String(year) + '-01-01' : undefined;
+    return {
+      id: safe.slug || 'hikka_schedule_card_' + index,
+      hikka_slug: safe.slug || undefined,
+      title: title,
+      name: mediaType !== 'movie' ? title : undefined,
+      original_title: safe.title_en || safe.title_ja || safe.title_ua || title,
+      original_name: mediaType !== 'movie' ? safe.title_en || safe.title_ja || safe.title_ua || title : null,
+      media_type: mediaType,
+      source: 'hikka',
+      poster_path: null,
+      backdrop_path: null,
+      poster: safe.image || null,
+      img: safe.image || null,
+      vote_average: safe.score || safe.native_score || 0,
+      release_date: mediaType === 'movie' ? fallbackDate : undefined,
+      first_air_date: mediaType !== 'movie' ? fallbackDate : undefined,
+      translated_ua: !!safe.translated_ua,
+      has_translation: !!safe.translated_ua
+    };
+  }
+  function mapScheduleItem(item, index) {
+    if (!item || !item.anime) return null;
+    var anime = item.anime;
+    var card = buildCardFromAnime(anime, index);
+    var airingAt = Number(item.airing_at || 0);
+    return {
+      id: anime.slug ? anime.slug + '_' + String(airingAt || index) : 'hikka_schedule_' + index,
+      airing_at: airingAt,
+      date_key: dateKeyFromUnix(airingAt),
+      time_label: timeLabelFromUnix(airingAt),
+      episode: Number(item.episode || anime.episodes_released || 0) || 0,
+      anime: anime,
+      card: card
+    };
+  }
+  function normalizeScheduleList(list) {
+    var source = Array.isArray(list) ? list : [];
+    var mapped = [];
+    var seen = {};
+    source.forEach(function (item, index) {
+      var normalized = mapScheduleItem(item, index);
+      if (!normalized || !normalized.date_key) return;
+      var key = normalized.card.id + '::' + normalized.airing_at + '::' + normalized.episode;
+      if (seen[key]) return;
+      seen[key] = true;
+      mapped.push(normalized);
+    });
+    mapped.sort(function (a, b) {
+      return Number(a.airing_at || 0) - Number(b.airing_at || 0);
+    });
+    return mapped;
+  }
+  function groupByDate(items) {
+    var grouped = {};
+    var source = Array.isArray(items) ? items : [];
+    source.forEach(function (item) {
+      var key = item && item.date_key;
+      if (!key) return;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(item);
+    });
+    Object.keys(grouped).forEach(function (key) {
+      grouped[key].sort(function (a, b) {
+        return Number(a.airing_at || 0) - Number(b.airing_at || 0);
+      });
+    });
+    return grouped;
+  }
+  function buildDateRange(startDate, days) {
+    var dates = [];
+    var begin = new Date(startDate.getTime());
+    begin.setHours(0, 0, 0, 0);
+    for (var i = 0; i < days; i++) {
+      dates.push(new Date(begin.getTime() + i * DAY_MS));
+    }
+    return dates;
+  }
+  function fetchAllSchedule(filters, oncomplite, onerror) {
+    var pageSize = 50;
+    var maxPages = 40;
+    var collected = [];
+    var _loadPage = function loadPage(page) {
+      Api.getScheduleAnime(filters, page, pageSize, function (response) {
+        var list = Array.isArray(response && response.list) ? response.list : [];
+        var pages = Math.max(1, Number(response && response.pagination && response.pagination.pages) || 1);
+        list.forEach(function (item) {
+          return collected.push(item);
+        });
+        if (page < pages && page < maxPages) {
+          _loadPage(page + 1);
+        } else {
+          oncomplite(normalizeScheduleList(collected));
+        }
+      }, function (err) {
+        if (page === 1) {
+          if (onerror) onerror(err);
+          return;
+        }
+        oncomplite(normalizeScheduleList(collected));
+      });
+    };
+    _loadPage(1);
+  }
+  function HikkaScheduleComponent(object) {
+    var _this = this;
+    var Scroll = Lampa.Scroll;
+    var Activity = Lampa.Activity;
+    var Modal = Lampa.Modal;
+    var Template = Lampa.Template;
+    var Empty = Lampa.Empty;
+    var Controller = Lampa.Controller;
+    var Utils = Lampa.Utils;
+    var Background = Lampa.Background;
+    var Lang = Lampa.Lang;
+    var scroll = new Scroll({
+      mask: true,
+      over: true,
+      step: 300
+    });
+    var html = $('<div></div>');
+    var body = $('<div class="timetable"></div>');
+    var weeks = [Lang.translate('week_7'), Lang.translate('week_1'), Lang.translate('week_2'), Lang.translate('week_3'), Lang.translate('week_4'), Lang.translate('week_5'), Lang.translate('week_6')];
+    var seasonInfo = getCurrentSeasonYear();
+    var last = null;
+    var grouped = {};
+    var allEntries = [];
+    this.activity = null;
+    this.empty = function (descr) {
+      var empty = new Empty({
+        descr: descr || 'Розклад Hikka порожній'
+      });
+      html.append(empty.render());
+      _this.start = empty.start.bind(empty);
+      if (_this.activity) _this.activity.loader(false);
+      if (_this.activity) _this.activity.toggle();
+    };
+    this.openDayModal = function (dateKey, dayEntries) {
+      var entries = Array.isArray(dayEntries) ? dayEntries : [];
+      if (!entries.length) return;
+      var modal = $('<div></div>');
+      entries.forEach(function (entry) {
+        var card = entry.card || {};
+        var anime = entry.anime || {};
+        var title = card.name || card.title || '—';
+        var synopsisRaw = anime.synopsis_ua || anime.synopsis_en || '';
+        var synopsis = markdownExcerpt(synopsisRaw, 280) || 'Опис відсутній';
+        var episode = entry.episode ? 'Епізод ' + entry.episode : 'Епізод —';
+        var noty = Template.get('notice_card', {
+          time: dateKey + ' ' + entry.time_label,
+          title: title,
+          descr: synopsis
+        });
+        var footer = $('<div class="notice__footer"></div>');
+        footer.append('<div>' + episode + '</div>');
+        footer.append('<div>' + (anime.status || '') + '</div>');
+        noty.find('.notice__descr').append(footer);
+        if (card.img) {
+          Utils.imgLoad(noty.find('img'), card.img, function () {
+            noty.addClass('image--loaded');
+          }, function () {
+            noty.find('img').remove();
+          });
+        } else {
+          noty.find('img').remove();
+        }
+        noty.on('hover:enter', function () {
+          Modal.close();
+          Activity.push({
+            url: '',
+            component: 'full',
+            id: card.hikka_slug || card.id,
+            method: card.media_type === 'movie' ? 'movie' : 'tv',
+            card: card,
+            source: 'hikka'
+          });
+        });
+        modal.append(noty);
+      });
+      Modal.open({
+        title: 'Hikka Розклад',
+        size: 'medium',
+        html: modal,
+        onBack: function onBack() {
+          Modal.close();
+          Controller.toggle('content');
+        }
+      });
+    };
+    this.appendDay = function (date, dayEntries) {
+      var item = $("\n            <div class=\"timetable__item selector\">\n                <div class=\"timetable__inner\">\n                    <div class=\"timetable__date\"></div>\n                    <div class=\"timetable__body\"></div>\n                </div>\n            </div>\n        ");
+      var dateKey = dateKeyFromDate(date);
+      var entries = Array.isArray(dayEntries) ? dayEntries : [];
+      var dayTime = Utils.parseTime(date.getTime());
+      if (entries.length) {
+        entries.slice(0, 3).forEach(function (entry) {
+          var cardTitle = entry.card && (entry.card.name || entry.card.title) || '—';
+          var dotColor = Utils.stringToHslColor(cardTitle, 55, 52);
+          var episodeLabel = entry.episode ? ' · E' + entry.episode : '';
+          item.find('.timetable__body').append('<div><span style="background-color: ' + dotColor + '"></span>' + cardTitle + ' ' + entry.time_label + episodeLabel + '</div>');
+        });
+        if (entries.length > 3) {
+          item.find('.timetable__body').append('<div>+' + (entries.length - 3) + '</div>');
+        }
+        if (entries.length === 1 && entries[0].card && entries[0].card.img) {
+          var preview = $('<div class="timetable__preview"><img><div>Епізод ' + (entries[0].episode || '—') + '</div></div>');
+          Utils.imgLoad(preview.find('img'), entries[0].card.img, false, function () {
+            preview.find('img').remove();
+          });
+          item.find('.timetable__body').prepend(preview);
+        }
+        item.addClass('timetable__item--any');
+      }
+      item.find('.timetable__date').text(dayTime["short"] + ' - ' + weeks[date.getDay()] + '.');
+      item.on('hover:focus', function () {
+        last = $(this)[0];
+        scroll.update($(this));
+      }).on('hover:hover', function () {
+        last = $(this)[0];
+        if (typeof Navigator !== 'undefined' && Navigator.focused) Navigator.focused(last);
+      }).on('hover:enter', function () {
+        last = item[0];
+        _this.openDayModal(dateKey, entries);
+      });
+      body.append(item);
+    };
+    this.create = function () {
+      var _this2 = this;
+      if (!this.activity) {
+        var active = Lampa.Activity.active();
+        this.activity = active && active.activity ? active.activity : null;
+      }
+      if (this.activity) this.activity.loader(true);
+      var filters = {
+        airing_season: [seasonInfo.season, seasonInfo.year],
+        status: DEFAULT_STATUSES
+      };
+      fetchAllSchedule(filters, function (entries) {
+        allEntries = entries;
+        grouped = groupByDate(entries);
+        var today = new Date();
+        var dates = buildDateRange(today, 45);
+        var hasAny = dates.some(function (date) {
+          var key = dateKeyFromDate(date);
+          var list = grouped[key];
+          return Array.isArray(list) && list.length > 0;
+        });
+        if (!hasAny && allEntries.length) {
+          var fallbackStart = new Date((allEntries[0].airing_at || 0) * 1000);
+          if (!Number.isNaN(fallbackStart.getTime())) {
+            dates = buildDateRange(fallbackStart, 30);
+            hasAny = dates.some(function (date) {
+              var key = dateKeyFromDate(date);
+              var list = grouped[key];
+              return Array.isArray(list) && list.length > 0;
+            });
+          }
+        }
+        dates.forEach(function (date) {
+          var key = dateKeyFromDate(date);
+          _this2.appendDay(date, grouped[key] || []);
+        });
+        if (!hasAny) {
+          _this2.empty('Немає епізодів у розкладі Hikka для поточного сезону');
+          return;
+        }
+        scroll.minus();
+        scroll.append(body);
+        html.append(scroll.render());
+        if (_this2.activity) _this2.activity.loader(false);
+        if (_this2.activity) _this2.activity.toggle();
+      }, function () {
+        _this2.empty('Не вдалося завантажити розклад Hikka');
+      });
+      return this.render();
+    };
+    this.back = function () {
+      Activity.backward();
+    };
+    this.start = function () {
+      Controller.add('content', {
+        link: this,
+        toggle: function toggle() {
+          Controller.collectionSet(scroll.render());
+          if (!last) {
+            last = body.find('.timetable__item.selector').get(0) || false;
+          }
+          Controller.collectionFocus(last || false, scroll.render());
+          Background.change('');
+        },
+        left: function left() {
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');else Controller.toggle('menu');
+        },
+        right: function right() {
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('right')) Navigator.move('right');
+        },
+        up: function up() {
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');else Controller.toggle('head');
+        },
+        down: function down() {
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');
+        },
+        back: this.back
+      });
+      Controller.toggle('content');
+    };
+    this.pause = function () {};
+    this.stop = function () {};
+    this.render = function () {
+      return html;
+    };
+    this.destroy = function () {
+      scroll.destroy();
+      html.remove();
+    };
+  }
+
   var iconCounter = 0;
   function createGradientId() {
     iconCounter += 1;
@@ -1561,6 +2314,9 @@
     return "<svg class=\"hikka-logo-icon".concat(cssClass, "\" viewBox=\"0 0 118 118\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <defs>\n            <linearGradient id=\"").concat(gradientId, "\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n                <stop offset=\"0%\" stop-color=\"#D792F8\"/>\n                <stop offset=\"100%\" stop-color=\"#5277CB\"/>\n            </linearGradient>\n        </defs>\n        <path d=\"M 92.00 117.50 L 87.00 117.50 L 86.00 116.50 L 85.00 116.50 L 62.00 93.50 L 61.00 93.50 L 60.00 92.50 L 56.00 92.50 L 55.00 93.50 L 54.00 93.50 L 31.00 116.50 L 30.00 116.50 L 29.00 117.50 L 23.00 117.50 L 13.00 107.50 L 12.00 107.50 L 0.50 96.00 L 0.50 95.00 L -0.50 94.00 L -0.50 88.00 L 2.50 85.00 L 2.50 84.00 L 23.50 63.00 L 23.50 62.00 L 24.50 61.00 L 24.50 56.00 L 23.50 55.00 L 23.50 54.00 L 0.50 31.00 L 0.50 30.00 L -0.50 29.00 L -0.50 24.00 L 0.50 23.00 L 0.50 22.00 L 21.00 1.50 L 22.00 1.50 L 23.00 0.50 L 25.00 0.50 L 26.00 -0.50 L 27.00 0.50 L 30.00 0.50 L 53.00 23.50 L 54.00 23.50 L 55.00 24.50 L 56.00 24.50 L 57.00 25.50 L 60.00 25.50 L 61.00 24.50 L 62.00 24.50 L 81.50 5.00 L 81.50 4.00 L 84.00 1.50 L 85.00 1.50 L 88.00 -0.50 L 93.00 -0.50 L 95.00 1.50 L 96.00 1.50 L 115.50 21.00 L 115.50 22.00 L 117.50 25.00 L 117.50 29.00 L 116.50 30.00 L 116.50 31.00 L 92.50 55.00 L 92.50 56.00 L 91.50 57.00 L 91.50 61.00 L 92.50 62.00 L 92.50 63.00 L 115.50 86.00 L 115.50 87.00 L 116.50 88.00 L 116.50 94.00 L 115.50 95.00 L 115.50 96.00 L 96.00 115.50 L 95.00 115.50 L 92.00 117.50 Z\" fill=\"url(#").concat(gradientId, ")\"/>\n    </svg>");
   }
 
+  function createCalendarIconSvg() {
+    return "<svg viewBox=\"0 0 39 39\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <use xlink:href=\"#sprite-calendar\" href=\"#sprite-calendar\"></use>\n    </svg>";
+  }
   function addMenuItem() {
     var button = Lampa.Menu.addButton(createLogoIconSvg(), 'Hikka Anime', function () {
       Lampa.Activity.push({
@@ -1571,8 +2327,276 @@
       });
     });
     button.addClass('my_class');
+    var scheduleButton = Lampa.Menu.addButton(createCalendarIconSvg(), 'Hikka Розклад', function () {
+      Lampa.Activity.push({
+        url: '',
+        title: 'Hikka Розклад',
+        component: 'hikka_schedule',
+        page: 1,
+        source: 'hikka'
+      });
+    });
+    scheduleButton.addClass('my_class');
   }
 
+  function safeText(value) {
+    return String(value || '').trim();
+  }
+  function escapeHtml(value) {
+    return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function sanitizeUrl(url) {
+    var value = safeText(url);
+    if (!/^https?:\/\//i.test(value)) return '#';
+    return value.replace(/"/g, '%22');
+  }
+  function renderInlineMarkdown(text) {
+    var html = escapeHtml(text);
+    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function (match, label, url) {
+      return '<a class="hikka-md-link" href="' + sanitizeUrl(url) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
+    });
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+    html = html.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+    html = html.replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,!?:;]|$)/g, '$1<em>$2</em>');
+    html = html.replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,!?:;]|$)/g, '$1<em>$2</em>');
+    return html;
+  }
+  function renderMarkdownPreview(text) {
+    return safeText(text).replace(/\r\n/g, '\n').split('\n').map(function (line) {
+      return renderInlineMarkdown(line);
+    }).join('<br>');
+  }
+  function renderMarkdownToHtml(text) {
+    var source = safeText(text);
+    if (!source) return '—';
+    var lines = source.replace(/\r\n/g, '\n').split('\n');
+    var html = [];
+    var inList = false;
+    lines.forEach(function (rawLine) {
+      var line = rawLine.trimEnd();
+      var listMatch = line.match(/^\s*[-*]\s+(.+)$/);
+      var quoteMatch = line.match(/^\s*>\s?(.*)$/);
+      if (listMatch) {
+        if (!inList) {
+          html.push('<ul class="hikka-md-list">');
+          inList = true;
+        }
+        html.push('<li>' + renderInlineMarkdown(listMatch[1]) + '</li>');
+        return;
+      }
+      if (inList) {
+        html.push('</ul>');
+        inList = false;
+      }
+      if (!line.trim()) {
+        html.push('<br>');
+        return;
+      }
+      if (quoteMatch) {
+        html.push('<blockquote class="hikka-md-quote">' + renderInlineMarkdown(quoteMatch[1]) + '</blockquote>');
+        return;
+      }
+      html.push('<span>' + renderInlineMarkdown(line) + '</span>');
+    });
+    if (inList) html.push('</ul>');
+    return html.join('');
+  }
+  function createChip(text, modifier) {
+    var chip = document.createElement('span');
+    chip.className = 'hikka-comment-chip' + (modifier ? ' hikka-comment-chip--' + modifier : '');
+    chip.textContent = safeText(text);
+    return chip;
+  }
+  function splitWords(text, maxLength) {
+    var words = safeText(text).split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+    var chunks = [];
+    var current = '';
+    words.forEach(function (word) {
+      var candidate = current ? current + ' ' + word : word;
+      if (candidate.length > maxLength && current) {
+        chunks.push(current);
+        current = word;
+      } else {
+        current = candidate;
+      }
+    });
+    if (current) chunks.push(current);
+    return chunks;
+  }
+  function splitTextToChunks(text) {
+    var maxLength = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 360;
+    var content = safeText(text);
+    if (!content) return ['—'];
+    var paragraphs = content.replace(/\r\n/g, '\n').split('\n').map(function (line) {
+      return line.trim();
+    }).filter(Boolean);
+    if (!paragraphs.length) return ['—'];
+    var chunks = [];
+    var current = '';
+    paragraphs.forEach(function (paragraph) {
+      var lines = paragraph.length > maxLength ? splitWords(paragraph, maxLength) : [paragraph];
+      lines.forEach(function (line) {
+        var candidate = current ? current + '\n' + line : line;
+        if (candidate.length > maxLength && current) {
+          chunks.push(current);
+          current = line;
+        } else {
+          current = candidate;
+        }
+      });
+    });
+    if (current) chunks.push(current);
+    return chunks.length ? chunks : ['—'];
+  }
+  function drawThreadItem(itemNode, entry, textChunk, isFirstChunk, chunkIndex, chunkCount) {
+    var level = Math.max(0, Math.min(5, Number(entry && entry.level || 0)));
+    var wrapper = document.createElement('div');
+    var head = document.createElement('div');
+    var text = document.createElement('div');
+    wrapper.className = 'hikka-thread-entry';
+    wrapper.style.marginLeft = level * 0.9 + 'em';
+    head.className = 'hikka-thread-entry__head';
+    text.className = 'hikka-thread-entry__text';
+    text.innerHTML = renderMarkdownToHtml(textChunk);
+    if (isFirstChunk) {
+      head.appendChild(createChip(entry && entry.author || 'Анонім', 'author'));
+      head.appendChild(createChip(entry && entry.created_label || 'Невідома дата', 'date'));
+      head.appendChild(createChip('Оцінка ' + (entry && entry.score_label || '0'), 'score'));
+      if (level > 0) head.appendChild(createChip('Рівень ' + (level + 1), 'level'));
+    } else {
+      head.appendChild(createChip(entry && entry.author || 'Анонім', 'author'));
+      head.appendChild(createChip('Продовження ' + chunkIndex + '/' + chunkCount, 'continuation'));
+      if (level > 0) head.appendChild(createChip('Рівень ' + (level + 1), 'level'));
+    }
+    wrapper.appendChild(head);
+    wrapper.appendChild(text);
+    itemNode.classList.add('hikka-thread-item');
+    itemNode.innerHTML = '';
+    itemNode.appendChild(wrapper);
+  }
+  function buildThreadItems(comment) {
+    var entries = Array.isArray(comment && comment.thread_entries) && comment.thread_entries.length ? comment.thread_entries : [{
+      author: comment && comment.author || 'Анонім',
+      created_label: comment && comment.created_label || '',
+      score_label: comment && comment.score_label || '0',
+      level: 0,
+      text: comment && (comment.comment || comment.text) || ''
+    }];
+    var items = [];
+    entries.forEach(function (entry) {
+      var chunks = splitTextToChunks(entry.text, 360);
+      chunks.forEach(function (chunk, index) {
+        var chunkIndex = index + 1;
+        var chunkCount = chunks.length;
+        items.push({
+          title: ' ',
+          subtitle: ' ',
+          noenter: true,
+          onDraw: function onDraw(item) {
+            var node = item && item[0] ? item[0] : item;
+            if (!node) return;
+            drawThreadItem(node, entry, chunk, index === 0, chunkIndex, chunkCount);
+          }
+        });
+      });
+    });
+    if (!items.length) {
+      items.push({
+        title: 'Немає даних',
+        subtitle: 'Коментарі відсутні',
+        noenter: true
+      });
+    }
+    return items;
+  }
+  function openThreadSidebar(comment) {
+    var previousController = Lampa.Controller.enabled();
+    var author = safeText(comment && comment.author) || 'Анонім';
+    var repliesCount = Number(comment && comment.replies_count || 0);
+    var commentsInThread = Number(comment && comment.thread_comments_count || 0) || repliesCount + 1;
+    Lampa.Select.show({
+      title: 'Гілка: ' + author,
+      items: buildThreadItems(comment),
+      nomark: true,
+      onFullDraw: function onFullDraw(selectScroll) {
+        var body = selectScroll && selectScroll.body ? selectScroll.body(true) : null;
+        if (!body) return;
+        var panel = document.createElement('div');
+        var head = document.createElement('div');
+        panel.className = 'hikka-comment-sidebar';
+        head.className = 'hikka-comment-sidebar__head';
+        head.appendChild(createChip('Коментарів ' + commentsInThread, 'replies'));
+        if (repliesCount > 0) {
+          head.appendChild(createChip('Відповідей ' + repliesCount, 'replies'));
+        }
+        panel.appendChild(head);
+        body.prepend(panel);
+      },
+      onBack: function onBack() {
+        if (previousController && previousController.name) {
+          Lampa.Controller.toggle(previousController.name);
+        }
+      }
+    });
+  }
+  var HikkaCommentItem = /*#__PURE__*/function () {
+    function HikkaCommentItem(data) {
+      _classCallCheck(this, HikkaCommentItem);
+      this.data = data || {};
+      this.html = null;
+    }
+    return _createClass(HikkaCommentItem, [{
+      key: "create",
+      value: function create() {
+        var _this = this;
+        var author = safeText(this.data.author) || 'Анонім';
+        var dateLabel = safeText(this.data.created_label) || 'Невідома дата';
+        var scoreLabel = safeText(this.data.score_label) || '0';
+        var repliesCount = Number(this.data.replies_count || 0);
+        var commentsInThread = Number(this.data.thread_comments_count || 0) || repliesCount + 1;
+        var text = safeText(this.data.text) || 'Текст коментаря відсутній';
+        var root = document.createElement('div');
+        var topMeta = document.createElement('div');
+        var textNode = document.createElement('div');
+        var bottomMeta = document.createElement('div');
+        root.className = 'full-review selector layer--visible hikka-comment-card';
+        topMeta.className = 'hikka-comment-meta';
+        textNode.className = 'full-review__text hikka-comment-card__text';
+        bottomMeta.className = 'hikka-comment-card__footer';
+        topMeta.appendChild(createChip(author, 'author'));
+        topMeta.appendChild(createChip(dateLabel, 'date'));
+        textNode.innerHTML = renderMarkdownPreview(text);
+        bottomMeta.appendChild(createChip('Оцінка ' + scoreLabel, 'score'));
+        bottomMeta.appendChild(createChip('Коментарів ' + commentsInThread, 'replies'));
+        root.appendChild(topMeta);
+        root.appendChild(textNode);
+        root.appendChild(bottomMeta);
+        if (typeof root.on === 'function') {
+          root.on('hover:enter', function () {
+            return openThreadSidebar(_this.data);
+          });
+        }
+        this.html = root;
+      }
+    }, {
+      key: "render",
+      value: function render(js) {
+        return js ? this.html : $(this.html);
+      }
+    }, {
+      key: "destroy",
+      value: function destroy() {
+        if (this.html) this.html.remove();
+      }
+    }]);
+  }();
+
+  var characterVoicesCache = new Map();
+  var personAnimeCache = new Map();
+  var personDetailsCache = new Map();
   function toArray(value) {
     if (Array.isArray(value)) return value;
     if (value === undefined || value === null || value === '') return [];
@@ -1650,6 +2674,354 @@
       if (allowedMedia.indexOf(params.url) !== -1) filters.media_type = [params.url];
     }
     return filters;
+  }
+  function decorateDiscussResult(discuss) {
+    if (!discuss || !Array.isArray(discuss.result)) return discuss;
+    discuss.result = discuss.result.map(function (comment) {
+      var params = comment && comment.params && _typeof(comment.params) === 'object' ? comment.params : {};
+      params.createInstance = function (item) {
+        return new HikkaCommentItem(item);
+      };
+      return _objectSpread2(_objectSpread2({}, comment), {}, {
+        params: params
+      });
+    });
+    return discuss;
+  }
+  function pickPersonName(person) {
+    return person && (person.name_ua || person.name_en || person.name_native || person.name) || '—';
+  }
+  function pickCharacterName(character) {
+    return character && (character.name_ua || character.name_en || character.name_ja || character.name) || 'Персонаж';
+  }
+  function pickAnimeTitle(anime) {
+    return anime && (anime.title_ua || anime.title_en || anime.title_ja || anime.name) || '';
+  }
+  function formatDateFromUnix(timestamp) {
+    var value = Number(timestamp || 0);
+    if (!value) return undefined;
+    var date = new Date(value * 1000);
+    if (Number.isNaN(date.getTime())) return undefined;
+    return date.toISOString().slice(0, 10);
+  }
+  function mapPersonAnimeCard(entry, index) {
+    var anime = entry && entry.anime || null;
+    if (!anime) return null;
+    var mediaType = anime.media_type === 'movie' ? 'movie' : 'tv';
+    var title = pickAnimeTitle(anime);
+    var yearDate = anime.year ? anime.year + '-01-01' : undefined;
+    var startDate = formatDateFromUnix(anime.start_date);
+    var dateValue = startDate || yearDate;
+    var roleLabels = Array.isArray(entry && entry.roles) ? entry.roles.map(function (role) {
+      return role && (role.name_ua || role.name_en);
+    }).filter(Boolean) : [];
+    return {
+      id: anime.slug || 'hikka_person_anime_' + index,
+      hikka_slug: anime.slug,
+      title: title || '—',
+      name: mediaType !== 'movie' ? title || '—' : undefined,
+      original_title: anime.title_en || anime.title_ja || anime.title_ua || title || '',
+      original_name: mediaType !== 'movie' ? anime.title_en || anime.title_ja || anime.title_ua || title || '' : null,
+      poster_path: null,
+      backdrop_path: null,
+      poster: anime.image || null,
+      img: anime.image || null,
+      media_type: mediaType,
+      vote_average: anime.score || anime.native_score || 0,
+      release_date: mediaType === 'movie' ? dateValue : undefined,
+      first_air_date: mediaType !== 'movie' ? dateValue : undefined,
+      source: 'hikka',
+      character: roleLabels.join(', ')
+    };
+  }
+  function collectCharacterVoices(characterSlug, animeSlug, oncomplite) {
+    if (!characterSlug) {
+      oncomplite([]);
+      return;
+    }
+    var cacheKey = characterSlug + '::' + animeSlug;
+    if (characterVoicesCache.has(cacheKey)) {
+      oncomplite(characterVoicesCache.get(cacheKey) || []);
+      return;
+    }
+    var pageSize = 20;
+    var filterForAnime = function filterForAnime(list) {
+      var safeList = Array.isArray(list) ? list : [];
+      return safeList.filter(function (item) {
+        return item && item.anime && item.anime.slug === animeSlug;
+      });
+    };
+    Api.getCharacterVoices(characterSlug, 1, pageSize, function (firstPage) {
+      var firstList = Array.isArray(firstPage && firstPage.list) ? firstPage.list : [];
+      var pages = Math.max(1, Number(firstPage && firstPage.pagination && firstPage.pagination.pages) || 1);
+      var firstMatched = filterForAnime(firstList);
+      if (firstMatched.length) {
+        characterVoicesCache.set(cacheKey, firstMatched);
+        oncomplite(firstMatched);
+        return;
+      }
+      if (pages <= 1) {
+        characterVoicesCache.set(cacheKey, firstList);
+        oncomplite(firstList);
+        return;
+      }
+      var page = 2;
+      var _scanNextPage = function scanNextPage() {
+        if (page > pages) {
+          characterVoicesCache.set(cacheKey, firstList);
+          oncomplite(firstList);
+          return;
+        }
+        Api.getCharacterVoices(characterSlug, page, pageSize, function (nextPage) {
+          var list = Array.isArray(nextPage && nextPage.list) ? nextPage.list : [];
+          var matched = filterForAnime(list);
+          if (matched.length) {
+            characterVoicesCache.set(cacheKey, matched);
+            oncomplite(matched);
+            return;
+          }
+          page++;
+          _scanNextPage();
+        }, function () {
+          page++;
+          _scanNextPage();
+        });
+      };
+      _scanNextPage();
+    }, function () {
+      characterVoicesCache.set(cacheKey, []);
+      oncomplite([]);
+    });
+  }
+  function buildVoiceCastFromCharacters(characters, animeSlug, oncomplite) {
+    var sourceList = Array.isArray(characters) ? characters : [];
+    if (!sourceList.length) {
+      oncomplite([]);
+      return;
+    }
+    var prepared = sourceList.map(function (item, position) {
+      return _objectSpread2(_objectSpread2({}, item), {}, {
+        __characterOrder: position
+      });
+    }).filter(function (item) {
+      return item && item.character && item.character.slug;
+    }).sort(function (a, b) {
+      var mainDiff = Number(!!(b && b.main)) - Number(!!(a && a.main));
+      if (mainDiff !== 0) return mainDiff;
+      return Number(a && a.__characterOrder || 0) - Number(b && b.__characterOrder || 0);
+    }).slice(0, 24);
+    if (!prepared.length) {
+      oncomplite([]);
+      return;
+    }
+    var actorMap = {};
+    var index = 0;
+    var active = 0;
+    var maxParallel = 4;
+    var appendFromVoices = function appendFromVoices(characterItem, voices) {
+      var character = characterItem && characterItem.character ? characterItem.character : {};
+      var characterName = pickCharacterName(character);
+      var isMain = !!(characterItem && characterItem.main);
+      var rawCharacterOrder = Number(characterItem && characterItem.__characterOrder);
+      var characterOrder = Number.isFinite(rawCharacterOrder) ? rawCharacterOrder : 9999;
+      var list = Array.isArray(voices) ? voices : [];
+      list.forEach(function (voice) {
+        var person = voice && voice.person || {};
+        var personSlug = person.slug;
+        if (!personSlug) return;
+        var languageRaw = String(voice && voice.language || 'unknown').toLowerCase();
+        var language = languageRaw || 'unknown';
+        var key = personSlug + '::' + language;
+        if (!actorMap[key]) {
+          actorMap[key] = {
+            id: personSlug,
+            slug: personSlug,
+            name: pickPersonName(person),
+            image: person.image || null,
+            language: language,
+            characters: [],
+            mainCount: 0,
+            hasMainCharacter: false,
+            firstCharacterOrder: characterOrder
+          };
+        }
+        var row = actorMap[key];
+        var exists = row.characters.some(function (item) {
+          return item.name === characterName;
+        });
+        if (!exists) {
+          row.characters.push({
+            name: characterName,
+            main: isMain,
+            order: characterOrder
+          });
+        }
+        if (isMain) {
+          row.mainCount++;
+          row.hasMainCharacter = true;
+        }
+        if (characterOrder < Number(row.firstCharacterOrder || 9999)) {
+          row.firstCharacterOrder = characterOrder;
+        }
+      });
+    };
+    var buildCast = function buildCast() {
+      var cast = Object.keys(actorMap).map(function (key) {
+        var row = actorMap[key];
+        var orderedCharacters = row.characters.slice().sort(function (a, b) {
+          var mainDiff = Number(!!b.main) - Number(!!a.main);
+          if (mainDiff !== 0) return mainDiff;
+          return Number(a.order || 9999) - Number(b.order || 9999);
+        }).map(function (item) {
+          return item.name;
+        });
+        var preview = orderedCharacters.slice(0, 2);
+        var tailCount = orderedCharacters.length > 2 ? orderedCharacters.length - 2 : 0;
+        var previewText = preview.join(', ') + (tailCount > 0 ? ' +' + tailCount : '');
+        var languageLabel = row.language && row.language !== 'unknown' ? row.language.toUpperCase() : '';
+        var roleParts = [];
+        if (languageLabel) roleParts.push(languageLabel);
+        if (previewText) roleParts.push(previewText);
+        return {
+          id: row.id,
+          name: row.name,
+          character: roleParts.join(' • ') || 'Актор озвучки',
+          known_for_department: 'Acting',
+          profile_path: null,
+          img: row.image,
+          source: 'hikka',
+          gender: 0,
+          voice_language: languageLabel || '—',
+          voice_characters_count: orderedCharacters.length,
+          voice_characters: orderedCharacters,
+          __sort_weight: row.mainCount * 100 + orderedCharacters.length,
+          __has_main_character: row.hasMainCharacter ? 1 : 0,
+          __first_character_order: Number(row.firstCharacterOrder || 9999)
+        };
+      });
+      cast.sort(function (a, b) {
+        var mainCharacterDiff = Number(b.__has_main_character || 0) - Number(a.__has_main_character || 0);
+        if (mainCharacterDiff !== 0) return mainCharacterDiff;
+        var characterOrderDiff = Number(a.__first_character_order || 9999) - Number(b.__first_character_order || 9999);
+        if (characterOrderDiff !== 0) return characterOrderDiff;
+        var scoreDiff = Number(b.__sort_weight || 0) - Number(a.__sort_weight || 0);
+        if (scoreDiff !== 0) return scoreDiff;
+        return String(a.name || '').localeCompare(String(b.name || ''), 'uk');
+      });
+      cast.forEach(function (item) {
+        delete item.__sort_weight;
+        delete item.__has_main_character;
+        delete item.__first_character_order;
+      });
+      oncomplite(cast.slice(0, 30));
+    };
+    var _runQueue = function runQueue() {
+      if (index >= prepared.length && active <= 0) {
+        buildCast();
+        return;
+      }
+      var _loop = function _loop() {
+        var current = prepared[index++];
+        var characterSlug = current && current.character ? current.character.slug : null;
+        active++;
+        collectCharacterVoices(characterSlug, animeSlug, function (voices) {
+          appendFromVoices(current, voices);
+          active--;
+          _runQueue();
+        });
+      };
+      while (active < maxParallel && index < prepared.length) {
+        _loop();
+      }
+    };
+    _runQueue();
+  }
+  function loadAllPersonAnime(personSlug, oncomplite) {
+    if (!personSlug) {
+      oncomplite([]);
+      return;
+    }
+    if (personAnimeCache.has(personSlug)) {
+      oncomplite(personAnimeCache.get(personSlug) || []);
+      return;
+    }
+    var pageSize = 20;
+    var all = [];
+    var _loadPage = function loadPage(page) {
+      Api.getPersonAnime(personSlug, page, pageSize, function (data) {
+        var list = Array.isArray(data && data.list) ? data.list : [];
+        var pages = Math.max(1, Number(data && data.pagination && data.pagination.pages) || 1);
+        list.forEach(function (item) {
+          all.push(item);
+        });
+        if (page < pages) {
+          _loadPage(page + 1);
+        } else {
+          personAnimeCache.set(personSlug, all);
+          oncomplite(all);
+        }
+      }, function () {
+        personAnimeCache.set(personSlug, all);
+        oncomplite(all);
+      });
+    };
+    _loadPage(1);
+  }
+  function buildPersonPayload(personData, animeEntries) {
+    var person = personData || {};
+    var name = pickPersonName(person);
+    var animeList = Array.isArray(animeEntries) ? animeEntries : [];
+    var bySlug = {};
+    animeList.forEach(function (entry, index) {
+      var card = mapPersonAnimeCard(entry, index);
+      if (!card) return;
+      var slug = card.hikka_slug || card.id || 'person_anime_' + index;
+      if (!bySlug[slug]) {
+        bySlug[slug] = _objectSpread2(_objectSpread2({}, card), {}, {
+          __roles: []
+        });
+      }
+      if (card.character && bySlug[slug].__roles.indexOf(card.character) === -1) {
+        bySlug[slug].__roles.push(card.character);
+      }
+    });
+    var credits = Object.keys(bySlug).map(function (slug) {
+      var item = bySlug[slug];
+      if (item.__roles && item.__roles.length) {
+        item.character = item.__roles.join(', ');
+      }
+      delete item.__roles;
+      return item;
+    });
+    var stats = [];
+    if (typeof person.anime_count === 'number') stats.push('Аніме: ' + person.anime_count);
+    if (typeof person.characters_count === 'number') stats.push('Персонажів: ' + person.characters_count);
+    if (typeof person.comments_count === 'number' && person.comments_count > 0) {
+      stats.push('Коментарів: ' + person.comments_count);
+    }
+    var statsLine = stats.join(' • ');
+    var description = person.description_ua || person.description_en || '';
+    var biography = statsLine ? description ? statsLine + '\n\n' + description : statsLine : description;
+    return {
+      person: {
+        id: person.slug || '',
+        slug: person.slug || '',
+        name: name || '—',
+        profile_path: null,
+        img: person.image || null,
+        biography: biography || '',
+        birthday: person.birthday || null,
+        place_of_birth: person.place_of_birth || null,
+        known_for_department: 'Acting',
+        source: 'hikka'
+      },
+      credits: {
+        knownFor: credits.length ? [{
+          name: 'Аніме',
+          credits: credits
+        }] : []
+      }
+    };
   }
 
   /**
@@ -1803,8 +3175,8 @@
             discuss: null
           };
 
-          // 2) Parallel fetch: persons (characters) and franchise collection
-          var pending = 2;
+          // 2) Parallel fetch: persons, franchise collection, comments
+          var pending = 3;
           var done = function done() {
             pending--;
             if (pending <= 0) {
@@ -1812,65 +3184,25 @@
             }
           };
 
-          // 2.a) Characters -> persons.cast (Hikka schema: { pagination, list: [{ main, character: {...} }] })
+          // 2.a) Characters + voices -> persons.cast (реальні актори озвучки)
           Api.getCharacters(slug, function (chars) {
             try {
               var list = Array.isArray(chars && chars.list) ? chars.list : [];
-              var cast = list.map(function (item, idx) {
-                var ch = item && item.character || {};
-                var roleText = item && item.main ? 'Головний персонаж' : 'Персонаж';
-                return {
-                  id: ch.slug || 'ch_' + idx,
-                  name: ch.name_ua || ch.name_en || ch.name_ja || '—',
-                  name_ua: ch.name_ua,
-                  name_en: ch.name_en,
-                  name_ja: ch.name_ja,
-                  character: roleText,
-                  // Використовуємо прямий URL як img, щоб обійти Api.img для TMDB
-                  profile_path: null,
-                  img: ch.image || null,
-                  description_ua: ch.description_ua || ch.description || ch.about,
-                  description_en: ch.description_en,
-                  description_ja: ch.description_ja,
-                  source: 'hikka',
-                  params: {
-                    emit: {
-                      onEnter: function onEnter(html, element) {
-                        var name = element && (element.name || element.title) || 'Персонаж';
-                        Lampa.Activity.push({
-                          url: '',
-                          title: name,
-                          component: 'hikka_character',
-                          page: 1,
-                          source: 'hikka',
-                          name: element && element.name,
-                          name_ua: element && element.name_ua,
-                          name_en: element && element.name_en,
-                          name_ja: element && element.name_ja,
-                          character: element && element.character,
-                          img: element && element.img,
-                          description_ua: element && element.description_ua,
-                          description_en: element && element.description_en,
-                          description_ja: element && element.description_ja,
-                          character_data: ch
-                        });
-                      }
-                    }
-                  }
+              buildVoiceCastFromCharacters(list, slug, function (cast) {
+                data.persons = {
+                  cast: cast,
+                  crew: []
                 };
+                done();
               });
-              data.persons = {
-                cast: cast,
-                crew: []
-              };
             } catch (e) {
               console.log('[Hikka] SourceProvider: map characters error', e);
               data.persons = {
                 cast: [],
                 crew: []
               };
+              done();
             }
-            done();
           }, function (err) {
             console.log('[Hikka] SourceProvider: characters error', err);
             data.persons = {
@@ -1924,6 +3256,28 @@
             };
             done();
           });
+
+          // 2.d) Comments -> discuss row in Full
+          Api.getComments(slug, 1, 20, function (comments) {
+            try {
+              var discuss = decorateDiscussResult(Api.buildDiscussPayloadFromComments(comments));
+              if (discuss && Array.isArray(discuss.result) && discuss.result.length) {
+                // "More" у Full веде в CUB discuss, тому для hikka лишаємо тільки inline-рядок
+                discuss.total_pages = 1;
+                data.discuss = discuss;
+              } else {
+                data.discuss = null;
+              }
+            } catch (e) {
+              console.log('[Hikka] SourceProvider: map comments error', e);
+              data.discuss = null;
+            }
+            done();
+          }, function (err) {
+            console.log('[Hikka] SourceProvider: comments error', err);
+            data.discuss = null;
+            done();
+          });
         }, function (err) {
           console.log('[Hikka] SourceProvider: error loading details', err);
           if (onerror) onerror(err);
@@ -1939,11 +3293,80 @@
      * params: { id|slug|object, page }
      */
     discussGet: function discussGet() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
       var onerror = arguments.length > 2 ? arguments[2] : undefined;
       try {
-        if (onerror) onerror('Hikka discussGet disabled');
+        var slug = params.id || params.slug || params.card && (params.card.hikka_slug || params.card.id) || null;
+        var page = Number(params.page || 1) || 1;
+        if (!slug) {
+          if (onerror) onerror('Hikka discussGet: slug is empty');
+          return;
+        }
+        Api.getComments(slug, page, 20, function (comments) {
+          var discuss = decorateDiscussResult(Api.buildDiscussPayloadFromComments(comments));
+          oncomplite && oncomplite(discuss);
+        }, function (err) {
+          if (onerror) onerror(err);
+        });
       } catch (e) {
         console.log('[Hikka] discussGet exception:', e);
+        if (onerror) onerror(e);
+      }
+    },
+    /**
+     * Person page data for component 'actor'
+     * Signature: person(params, oncomplite, onerror)
+     */
+    person: function person() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      try {
+        var slug = params.id || params.slug || null;
+        if (!slug) {
+          if (onerror) onerror('Hikka person: slug is empty');
+          return;
+        }
+        var personData = null;
+        var personAnime = [];
+        var pending = 2;
+        var done = function done() {
+          pending--;
+          if (pending > 0) return;
+          if (!personData) {
+            personData = {
+              slug: slug,
+              name_ua: params.name || params.title || slug,
+              image: params.img || null
+            };
+          }
+          var payload = buildPersonPayload(personData, personAnime);
+          if (payload && payload.person) {
+            oncomplite && oncomplite(payload);
+          } else if (onerror) {
+            onerror('Hikka person: empty payload');
+          }
+        };
+        if (personDetailsCache.has(slug)) {
+          personData = personDetailsCache.get(slug);
+          done();
+        } else {
+          Api.getPerson(slug, function (person) {
+            personData = person;
+            personDetailsCache.set(slug, person);
+            done();
+          }, function (err) {
+            console.log('[Hikka] person details error:', err);
+            done();
+          });
+        }
+        loadAllPersonAnime(slug, function (entries) {
+          personAnime = Array.isArray(entries) ? entries : [];
+          done();
+        });
+      } catch (e) {
+        console.log('[Hikka] person exception:', e);
         if (onerror) onerror(e);
       }
     },
@@ -2100,13 +3523,84 @@
 
   function overrideFullChipsAndDiscuss() {
     var tagsObserver = null;
+    var uiObserver = null;
+    var cleanupBusy = false;
     function getSourceFromObject(obj) {
       return obj && (obj.source || obj.card && obj.card.source || obj.movie && obj.movie.source);
+    }
+    function focusFirstVisibleCommentFrom(element) {
+      try {
+        var line = element && element.closest && element.closest('.items-line') || null;
+        var target = line && line.querySelector('.hikka-comment-card.selector') || document.querySelector('.hikka-comment-card.selector');
+        if (target && Lampa && Lampa.Controller && typeof Lampa.Controller.focus === 'function') {
+          setTimeout(function () {
+            return Lampa.Controller.focus(target);
+          }, 0);
+        }
+      } catch (err) {
+        console.log('[Hikka] focusFirstVisibleCommentFrom error:', err);
+      }
+    }
+    function cleanupHikkaFullUI() {
+      if (!document.body.classList.contains('hikka-full-active')) return;
+      if (cleanupBusy) return;
+      cleanupBusy = true;
+      try {
+        // Reactions blocks (new and legacy) та кнопки реакцій
+        document.querySelectorAll('.full-start-new__reactions, .full-start__reactions, .button--reaction').forEach(function (el) {
+          return el.remove();
+        });
+
+        // "Ще" (More) блок CUB discuss – повністю прибираємо з DOM
+        document.querySelectorAll('.full-review-all').forEach(function (el) {
+          var wasFocused = el.classList.contains('focus');
+          if (wasFocused) focusFirstVisibleCommentFrom(el);
+          el.remove();
+        });
+
+        // Add review картка від CUB: повністю прибираємо з DOM,
+        // щоб вона ніколи не могла бути ціллю TV-навігації
+        document.querySelectorAll('.full-review-add').forEach(function (el) {
+          var wasFocused = el.classList.contains('focus');
+          if (wasFocused) focusFirstVisibleCommentFrom(el);
+          el.remove();
+        });
+
+        // Лайки у футері штатних відгуків
+        document.querySelectorAll('.full-review__footer').forEach(function (el) {
+          return el.remove();
+        });
+      } catch (err) {
+        console.log('[Hikka] Cleanup UI error:', err);
+      } finally {
+        cleanupBusy = false;
+      }
+    }
+    function startUiObserver() {
+      if (uiObserver) return;
+      uiObserver = new MutationObserver(function (mutations) {
+        var needCleanup = false;
+        for (var i = 0; i < mutations.length; i++) {
+          if (mutations[i].addedNodes && mutations[i].addedNodes.length) {
+            needCleanup = true;
+            break;
+          }
+        }
+        if (needCleanup) cleanupHikkaFullUI();
+      });
+      uiObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
     }
     function cleanupObservers() {
       if (tagsObserver) {
         tagsObserver.disconnect();
         tagsObserver = null;
+      }
+      if (uiObserver) {
+        uiObserver.disconnect();
+        uiObserver = null;
       }
     }
     function setHikkaFullState(active) {
@@ -2156,43 +3650,24 @@
       });
     }
     Lampa.Listener.follow('full', function (e) {
-      if (e.type === 'complite' && e.object && getSourceFromObject(e.object) === 'hikka') {
-        // Прибрати лайки/футер у відгуках, кнопку "Ще" (More) та блок реакцій у шапці
-        var cleanupHikkaFullUI = function cleanupHikkaFullUI() {
-          try {
-            // Reactions blocks (new and legacy) та кнопки реакцій
-            document.querySelectorAll('.full-start-new__reactions, .full-start__reactions, .button--reaction').forEach(function (el) {
-              return el.remove();
-            });
-
-            // "Ще" (More) блок, який тригерить CUB discuss fetch
-            document.querySelectorAll('.full-review-all').forEach(function (el) {
-              return el.remove();
-            });
-
-            // Лайки у футері кожного відгуку
-            document.querySelectorAll('.full-review__footer').forEach(function (el) {
-              return el.remove();
-            });
-
-            // Приховати блок додавання коментаря, але не ламати навігацію
-            document.querySelectorAll('.full-review-add').forEach(function (el) {
-              el.classList.remove('selector');
-              el.classList.add('hide');
-            });
-          } catch (err) {
-            console.log('[Hikka] Cleanup UI error:', err);
-          }
-        }; // Одноразове очищення + повтори після можливих асинхронних вставок
-        // Хелпер для оновлення відображення епізодів у шапці (3/12 або 12) — завжди додаємо власний бейдж
+      if (!e) return;
+      if (e.type === 'build' && e.name === 'discuss' && document.body.classList.contains('hikka-full-active')) {
+        // discuss рядок може будуватися після complite; чистимо одразу в момент побудови
+        cleanupHikkaFullUI();
+        setTimeout(cleanupHikkaFullUI, 0);
+        return;
+      }
+      if (!e.object || getSourceFromObject(e.object) !== 'hikka') return;
+      if (e.type === 'complite') {
+        // Хелпер для оновлення відображення епізодів у шапці (3/12 або 12)
         var _updateEpisodesHeader = function updateEpisodesHeader(movie) {
           if (!movie) return;
           var total = Number(movie.episodes_total || movie.number_of_episodes || 0);
-          Number(movie.episodes_released || 0);
+          var released = Number(movie.episodes_released || 0);
           if (!total) return;
+          var desired = released && released < total ? released + '/' + total : String(total);
           var header = document.querySelector('.full-start') || document.querySelector('.full-start-new');
           if (!header) {
-            // якщо шапка ще не промальована, повторимо пізніше
             setTimeout(function () {
               return _updateEpisodesHeader(movie);
             }, 300);
@@ -2205,7 +3680,8 @@
             }, 300);
             return;
           }
-        }; // Хелпер для перевизначення бейджа типу (TV → розширений тип Hikka)
+          return desired;
+        }; // Хелпер для перевизначення бейджа типу (TV -> розширений тип Hikka)
         var updateTypeBadge = function updateTypeBadge(movie) {
           if (!movie) return;
           var MAP = {
@@ -2219,16 +3695,10 @@
           var label = MAP[movie.media_type] || movie.quality || movie.media_type || 'TV';
           var typeEl = document.querySelector('.card__type');
           if (typeEl) typeEl.textContent = label;
-        }; // Первинна перев’язка чипів після complite + оновлення лічильника епізодів
+        }; // Первинна перев’язка чипів після complite
         cleanupObservers();
         setHikkaFullState(true);
-        // Приховати форму додавання коментаря для джерела hikka
-        try {
-          var addReview = document.querySelector('.full-review-add.selector');
-          if (addReview) addReview.remove();
-        } catch (err) {
-          console.log('[Hikka] Hide add review error:', err);
-        }
+        startUiObserver();
         cleanupHikkaFullUI();
         setTimeout(cleanupHikkaFullUI, 300);
         setTimeout(cleanupHikkaFullUI, 1000);
@@ -2241,7 +3711,7 @@
           console.log('[Hikka] Override chips error:', err);
         }
 
-        // Додатково спостерігаємо за змінами тегів і перев’язуємо при оновленні DOM; також оновлюємо епізоди при зміні
+        // Додатково спостерігаємо за змінами тегів і перев’язуємо при оновленні DOM
         try {
           var tagsContainer = document.querySelector('.full-descr__tags');
           var _movie = e.data && e.data.movie ? e.data.movie : null;
@@ -2254,9 +3724,8 @@
               subtree: true
             });
           }
-          var startContainer = document.querySelector('.full-start') || document.querySelector('.full-start-new');
         } catch (err) {
-          console.log('[Hikka] Chips/Episodes/Likes observer error:', err);
+          console.log('[Hikka] Chips observer error:', err);
         }
       }
     });
@@ -2391,7 +3860,7 @@
 
   function init() {
     // Додаємо стилі для плагіну через шаблонну систему
-    Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card.hikka-hide-type .card__type{display:none !important;visibility:hidden !important;opacity:0 !important;position:absolute !important;left:-9999px !important;z-index:-1 !important}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-card.hikka-hide-type .card__type{display:none !important}.hikka-card .hikka-custom-translate-badge{position:absolute;bottom:8px;left:8px;background:-webkit-gradient(linear,left top,right top,from(#0057b7),to(#ffd700));background:-webkit-linear-gradient(left,#0057b7 0,#ffd700 100%);background:-o-linear-gradient(left,#0057b7 0,#ffd700 100%);background:linear-gradient(90deg,#0057b7 0,#ffd700 100%);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5);padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;text-transform:uppercase;z-index:10}.hikka-card .hikka-custom-type-badge{position:absolute;top:8px;left:8px;background:-webkit-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:-o-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:linear-gradient(135deg,#667eea 0,#764ba2 100%);color:white;padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;z-index:10}.hikka-card.card--tv .hikka-custom-type-badge{background-color:rgba(0,123,255,0.8) !important}.hikka-card.card--movie .hikka-custom-type-badge{background-color:rgba(220,53,69,0.8) !important}.hikka-card.card--ova .hikka-custom-type-badge,.hikka-card.card--ona .hikka-custom-type-badge,.hikka-card.card--special .hikka-custom-type-badge,.hikka-card.card--music .hikka-custom-type-badge{background-color:rgba(108,117,125,0.8) !important}.hikka-character{padding:2em 1.5em}.hikka-character__body{max-width:48em;margin:0 auto}.hikka-character__content{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.hikka-character__image{width:12em;height:12em;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%;-webkit-box-shadow:0 .6em 1.4em rgba(0,0,0,0.35);box-shadow:0 .6em 1.4em rgba(0,0,0,0.35)}.hikka-character__name{font-size:1.8em;font-weight:700;color:rgba(255,255,255,0.8)}.hikka-character__role{font-size:1.1em;color:rgba(255,255,255,0.6)}.hikka-character__meta{display:grid;gap:.4em;padding:.8em 1em;-webkit-border-radius:.8em;border-radius:.8em;background:rgba(255,255,255,0.06)}.hikka-character__meta-row{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:.95em}.hikka-character__meta-label{color:rgba(255,255,255,0.6)}.hikka-character__meta-value{color:rgba(255,255,255,0.8)}.hikka-character__description{max-width:40em;line-height:1.6;color:rgba(255,255,255,0.8)}.hikka-full-active .full-review-add,.hikka-full-active .full-review__footer,.hikka-full-active .full-review__like,.hikka-full-active .full-review__like-icon{display:none !important}\n        </style>\n    ");
+    Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card.hikka-hide-type .card__type{display:none !important;visibility:hidden !important;opacity:0 !important;position:absolute !important;left:-9999px !important;z-index:-1 !important}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-card.hikka-hide-type .card__type{display:none !important}.hikka-card .hikka-custom-translate-badge{position:absolute;bottom:8px;left:8px;background:-webkit-gradient(linear,left top,right top,from(#0057b7),to(#ffd700));background:-webkit-linear-gradient(left,#0057b7 0,#ffd700 100%);background:-o-linear-gradient(left,#0057b7 0,#ffd700 100%);background:linear-gradient(90deg,#0057b7 0,#ffd700 100%);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5);padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;text-transform:uppercase;z-index:10}.hikka-card .hikka-custom-type-badge{position:absolute;top:8px;left:8px;background:-webkit-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:-o-linear-gradient(315deg,#667eea 0,#764ba2 100%);background:linear-gradient(135deg,#667eea 0,#764ba2 100%);color:white;padding:2px 6px;-webkit-border-radius:3px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;z-index:10}.hikka-card.card--tv .hikka-custom-type-badge{background-color:rgba(0,123,255,0.8) !important}.hikka-card.card--movie .hikka-custom-type-badge{background-color:rgba(220,53,69,0.8) !important}.hikka-card.card--ova .hikka-custom-type-badge,.hikka-card.card--ona .hikka-custom-type-badge,.hikka-card.card--special .hikka-custom-type-badge,.hikka-card.card--music .hikka-custom-type-badge{background-color:rgba(108,117,125,0.8) !important}.hikka-character{padding:2em 1.5em}.hikka-character__body{max-width:48em;margin:0 auto}.hikka-character__content{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.hikka-character__image{width:12em;height:12em;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%;-webkit-box-shadow:0 .6em 1.4em rgba(0,0,0,0.35);box-shadow:0 .6em 1.4em rgba(0,0,0,0.35)}.hikka-character__name{font-size:1.8em;font-weight:700;color:rgba(255,255,255,0.8)}.hikka-character__role{font-size:1.1em;color:rgba(255,255,255,0.6)}.hikka-character__meta{display:grid;gap:.4em;padding:.8em 1em;-webkit-border-radius:.8em;border-radius:.8em;background:rgba(255,255,255,0.06)}.hikka-character__meta-row{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:.95em}.hikka-character__meta-label{color:rgba(255,255,255,0.6)}.hikka-character__meta-value{color:rgba(255,255,255,0.8)}.hikka-character__description{max-width:40em;line-height:1.6;color:rgba(255,255,255,0.8)}.hikka-full-active .full-descr__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .full-descr__text .hikka-md-list{margin:.3em 0 .35em 1.25em;padding:0}.hikka-full-active .full-descr__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .full-review-add,.hikka-full-active .full-review__footer,.hikka-full-active .full-review__like,.hikka-full-active .full-review__like-icon{display:none !important}.hikka-full-active .mapping--line>.hikka-comment-card{min-width:17em;max-width:21em;padding:.9em;-webkit-border-radius:.9em;border-radius:.9em;background:-webkit-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:-o-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:linear-gradient(160deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));border:1px solid rgba(255,255,255,0.16);-webkit-box-shadow:0 10px 24px rgba(0,0,0,0.28);box-shadow:0 10px 24px rgba(0,0,0,0.28);gap:.6em}.hikka-full-active .hikka-comment-card.focus{border-color:rgba(255,255,255,0.52);background:rgba(20,24,31,0.97);-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-card.focus .hikka-comment-card__text,.hikka-full-active .hikka-comment-card.focus .hikka-comment-chip{color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-card__footer{margin-top:auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-chip{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;height:1.75em;padding:0 .58em;-webkit-border-radius:.55em;border-radius:.55em;font-size:.88em;font-weight:500;background:rgba(255,255,255,0.12);color:rgba(240,245,255,0.92);border:1px solid rgba(255,255,255,0.16);letter-spacing:.01em}.hikka-full-active .hikka-comment-chip--author{background:rgba(255,255,255,0.18)}.hikka-full-active .hikka-comment-chip--date,.hikka-full-active .hikka-comment-chip--score,.hikka-full-active .hikka-comment-chip--replies,.hikka-full-active .hikka-comment-chip--level,.hikka-full-active .hikka-comment-chip--continuation{background:rgba(255,255,255,0.12)}.hikka-full-active .hikka-comment-chip--continuation{opacity:.82}.hikka-full-active .hikka-comment-card__text{font-size:1.02em;line-height:1.33;margin:0;-webkit-line-clamp:5;line-clamp:5;color:rgba(236,242,255,0.92)}.hikka-full-active .hikka-comment-sidebar{-webkit-border-radius:.9em;border-radius:.9em;padding:.85em;margin-bottom:.75em;border:1px solid rgba(255,255,255,0.14);background:rgba(15,19,26,0.82)}.hikka-full-active .hikka-comment-sidebar__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em;margin-bottom:.25em}.hikka-full-active .hikka-thread-item{background:transparent !important;padding:.65em 1.15em !important;border-bottom:1px solid rgba(255,255,255,0.08)}.hikka-full-active .hikka-thread-item.focus{background:rgba(255,255,255,0.06) !important}.hikka-full-active .hikka-thread-entry{border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.74em;border-radius:.74em;background:rgba(9,11,16,0.72);padding:.72em .8em}.hikka-full-active .hikka-thread-entry__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.4em;margin-bottom:.5em}.hikka-full-active .hikka-thread-entry__text{white-space:pre-wrap;word-wrap:break-word;color:rgba(240,245,255,0.93);font-size:1.06em;line-height:1.36}.hikka-full-active .hikka-comment-card__text strong,.hikka-full-active .hikka-thread-entry__text strong{font-weight:700;color:rgba(255,255,255,0.98)}.hikka-full-active .hikka-comment-card__text em,.hikka-full-active .hikka-thread-entry__text em{font-style:italic}.hikka-full-active .hikka-comment-card__text code,.hikka-full-active .hikka-thread-entry__text code{font-family:monospace;font-size:.92em;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.36em;border-radius:.36em;padding:.05em .35em}.hikka-full-active .hikka-comment-card__text .hikka-md-link,.hikka-full-active .hikka-thread-entry__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .hikka-comment-card__text .hikka-md-list,.hikka-full-active .hikka-thread-entry__text .hikka-md-list{margin:.25em 0 .3em 1.1em;padding:0}.hikka-full-active .hikka-comment-card__text .hikka-md-quote,.hikka-full-active .hikka-thread-entry__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .hikka-comment-sidebar__content{margin:0;white-space:pre-wrap;word-wrap:break-word;font-size:1.02em;line-height:1.36;color:rgba(242,247,255,0.92);font-family:inherit}\n        </style>\n    ");
     // Inject styles
     $('body').append(Lampa.Template.get('hikka_styles'));
 
@@ -2417,6 +3886,7 @@
     // Реєструємо компонент
     Lampa.Component.add('hikka_anime', Component);
     Lampa.Component.add('hikka_character', HikkaCharacter);
+    Lampa.Component.add('hikka_schedule', HikkaScheduleComponent);
 
     // Перевизначення поведінки чипів Full та приховування форми додавання коментаря
     overrideFullChipsAndDiscuss();
@@ -2429,23 +3899,6 @@
         Lampa.Activity.push = function (obj) {
           try {
             var source = obj && (obj.source || obj.card && obj.card.source || obj.movie && obj.movie.source);
-            if (obj && source === 'hikka' && obj.component === 'actor') {
-              var name = obj.name || obj.title || obj.character || 'Персонаж';
-              if (obj.name || obj.character || obj.img) {
-                return __origPush({
-                  url: '',
-                  title: name,
-                  component: 'hikka_character',
-                  page: 1,
-                  source: 'hikka',
-                  name: obj.name,
-                  character: obj.character || obj.role,
-                  img: obj.img
-                });
-              }
-              Lampa.Noty.show('Персонажі Hikka недоступні');
-              return;
-            }
             if (obj && source === 'hikka' && obj.component === 'company') {
               var studios = obj.id ? [obj.id] : [];
               return __origPush({
