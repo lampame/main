@@ -347,9 +347,7 @@
     return canvas.toDataURL('image/png');
   }
 
-  var CLIENT_ID = 'a77093dcf5db97106d9303f3ab7d46a80a93a6e0c1d7a2ff8a1aacebe0dc161b';
-  var CLIENT_SECRET = 'a8cf25070f8c9a609782deecf56197f99e96084b080c1c86fccf9dc682465f1b';
-  var API_URL = 'https://proxy.lme.isroot.in/https://api.trakt.tv';
+  var API_URL = 'https://apx.lme.isroot.in/trakt/';
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
   var DEVICE_AUTH_STALE_MS = 20 * 60 * 1000;
   function getStorageNumber(name) {
@@ -854,8 +852,6 @@
             }
             return _context.a(2, _performRequest('POST', '/oauth/token', {
               refresh_token: refresh_token,
-              client_id: CLIENT_ID,
-              client_secret: CLIENT_SECRET,
               redirect_uri: redirect_uri || '',
               grant_type: 'refresh_token'
             }, true).then(function (res) {
@@ -1104,7 +1100,6 @@
    * Ensure Trakt headers (canonical).
    * Always sets:
    * - 'Content-Type': 'application/json'
-   * - 'trakt-api-key': CLIENT_ID
    * - 'trakt-api-version': '2'
    * - 'x-requested-with': 'lme-plugins'
    * When unauthorized === true, DO NOT add Authorization Bearer header.
@@ -1118,7 +1113,6 @@
       unauthorized = _ref2.unauthorized;
     var headers = {
       'Content-Type': 'application/json',
-      'trakt-api-key': CLIENT_ID,
       'trakt-api-version': '2',
       'x-requested-with': 'lme-plugins'
     };
@@ -1602,9 +1596,8 @@
           state = _ref5.state,
           signup = _ref5.signup,
           prompt = _ref5.prompt;
-        var base = 'https://trakt.tv/oauth/authorize';
+        var base = "".concat(API_URL, "oauth/authorize");
         var qs = new URLSearchParams({
-          client_id: CLIENT_ID,
           redirect_uri: redirect_uri,
           response_type: 'code'
         });
@@ -1615,7 +1608,7 @@
       },
       /**
        * Exchange authorization code for tokens
-       * Body: { code, client_id, client_secret, redirect_uri, grant_type: 'authorization_code' }
+       * Body: { code, redirect_uri, grant_type: 'authorization_code' }
        * unauthorized = true
        */
       exchangeCode: function exchangeCode(_ref6) {
@@ -1623,8 +1616,6 @@
           redirect_uri = _ref6.redirect_uri;
         return requestApi('POST', '/oauth/token', {
           code: code,
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET,
           redirect_uri: redirect_uri,
           grant_type: 'authorization_code'
         }, true).then(function (res) {
@@ -1663,9 +1654,7 @@
       revoke: function revoke(_ref7) {
         var token = _ref7.token;
         return requestApi('POST', '/oauth/revoke', {
-          token: token,
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET
+          token: token
         }, true);
       },
       device: {
@@ -1673,9 +1662,7 @@
          * Device OAuth: start
          */
         login: function login() {
-          return _performRequest('POST', '/oauth/device/code', {
-            client_id: CLIENT_ID
-          }, true);
+          return _performRequest('POST', '/oauth/device/code', {}, true);
         },
         /**
          * Device OAuth: poll token
@@ -1683,9 +1670,7 @@
          */
         poll: function poll(device_code) {
           return _performRequest('POST', '/oauth/device/token', {
-            code: device_code,
-            client_id: CLIENT_ID,
-            client_secret: CLIENT_SECRET
+            code: device_code
           }, true).then(function (response) {
             if (response && response.access_token) {
               saveTokens(response);

@@ -68,7 +68,7 @@
     }, _typeof(o);
   }
 
-  var PROXY_URL = 'https://proxy.lme.isroot.in/';
+  var PROXY_URL = 'https://apx.lme.isroot.in/destination/';
   var API_BASE = 'https://api.hikka.io/';
   var ENDPOINTS = {
     ANIME: PROXY_URL + API_BASE + 'anime',
@@ -2290,23 +2290,20 @@
     return "<svg class=\"hikka-logo-icon".concat(cssClass, "\" viewBox=\"0 0 118 118\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <defs>\n            <linearGradient id=\"").concat(gradientId, "\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n                <stop offset=\"0%\" stop-color=\"#D792F8\"/>\n                <stop offset=\"100%\" stop-color=\"#5277CB\"/>\n            </linearGradient>\n        </defs>\n        <path d=\"M 92.00 117.50 L 87.00 117.50 L 86.00 116.50 L 85.00 116.50 L 62.00 93.50 L 61.00 93.50 L 60.00 92.50 L 56.00 92.50 L 55.00 93.50 L 54.00 93.50 L 31.00 116.50 L 30.00 116.50 L 29.00 117.50 L 23.00 117.50 L 13.00 107.50 L 12.00 107.50 L 0.50 96.00 L 0.50 95.00 L -0.50 94.00 L -0.50 88.00 L 2.50 85.00 L 2.50 84.00 L 23.50 63.00 L 23.50 62.00 L 24.50 61.00 L 24.50 56.00 L 23.50 55.00 L 23.50 54.00 L 0.50 31.00 L 0.50 30.00 L -0.50 29.00 L -0.50 24.00 L 0.50 23.00 L 0.50 22.00 L 21.00 1.50 L 22.00 1.50 L 23.00 0.50 L 25.00 0.50 L 26.00 -0.50 L 27.00 0.50 L 30.00 0.50 L 53.00 23.50 L 54.00 23.50 L 55.00 24.50 L 56.00 24.50 L 57.00 25.50 L 60.00 25.50 L 61.00 24.50 L 62.00 24.50 L 81.50 5.00 L 81.50 4.00 L 84.00 1.50 L 85.00 1.50 L 88.00 -0.50 L 93.00 -0.50 L 95.00 1.50 L 96.00 1.50 L 115.50 21.00 L 115.50 22.00 L 117.50 25.00 L 117.50 29.00 L 116.50 30.00 L 116.50 31.00 L 92.50 55.00 L 92.50 56.00 L 91.50 57.00 L 91.50 61.00 L 92.50 62.00 L 92.50 63.00 L 115.50 86.00 L 115.50 87.00 L 116.50 88.00 L 116.50 94.00 L 115.50 95.00 L 115.50 96.00 L 96.00 115.50 L 95.00 115.50 L 92.00 117.50 Z\" fill=\"url(#").concat(gradientId, ")\"/>\n    </svg>");
   }
 
-  function createCalendarIconSvg() {
-    return "<svg viewBox=\"0 0 39 39\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <use xlink:href=\"#sprite-calendar\" href=\"#sprite-calendar\"></use>\n    </svg>";
-  }
   function addMenuItem() {
-    var button = Lampa.Menu.addButton(createLogoIconSvg(), 'Hikka Anime', function () {
+    var button = Lampa.Menu.addButton(createLogoIconSvg(), 'Anime', function () {
       Lampa.Activity.push({
         url: '',
-        title: 'Hikka Anime',
+        title: Lampa.Lang.translate('menu_anime'),
         component: 'hikka_anime',
         page: 1
       });
     });
     button.addClass('my_class');
-    var scheduleButton = Lampa.Menu.addButton(createCalendarIconSvg(), 'Hikka Розклад', function () {
+    var scheduleButton = Lampa.Menu.addButton(createLogoIconSvg(), 'Schedule', function () {
       Lampa.Activity.push({
         url: '',
-        title: 'Hikka Розклад',
+        title: Lampa.Lang.translate('title_timetable'),
         component: 'hikka_schedule',
         page: 1,
         source: 'hikka'

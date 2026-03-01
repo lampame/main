@@ -774,7 +774,7 @@
 
       // Ensure page starts from 0
       var page = Math.max(0, (params.page || 1) - 1);
-      network["native"]('https://proxy.lme.isroot.in/https://api.trakt.tv/networks', function (networks) {
+      network["native"]('https://apx.lme.isroot.in/trakt/networks', function (networks) {
         if (params.searchQuery) {
           console.log('Search query:', params.searchQuery);
           networks = networks.filter(function (network) {

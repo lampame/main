@@ -1011,7 +1011,7 @@
               console.log('StreamingDiscovery: Added tt prefix to IMDB ID', imdbId);
             }
             var settings = {
-              url: "https://proxy.lme.isroot.in/https://www.streamingdiscovery.com/api/public/cache/ratings/movie?id=".concat(imdbId),
+              url: "https://apx.lme.isroot.in/destination/https://www.streamingdiscovery.com/api/public/cache/ratings/movie?id=".concat(imdbId),
               method: "GET",
               timeout: 0
             };

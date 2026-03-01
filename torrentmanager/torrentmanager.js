@@ -811,8 +811,10 @@
     return _getPosterFromLabels.apply(this, arguments);
   }
 
+  var LME_PROXY_URL = "https://apx.lme.isroot.in/destination/";
+  var LME_SIMKL_URL = "https://apx.lme.isroot.in/simkl/";
+
   var CONFIG_PREFIX$1 = "lmetorrentqBittorent";
-  var LME_PROXY_URL$2 = "https://proxy.lme.isroot.in/";
   function getConfig$1() {
     var rawApiKey = Lampa.Storage.field("".concat(CONFIG_PREFIX$1, "ApiKey"));
     return {
@@ -823,7 +825,7 @@
   }
   function getApiBase$1() {
     var config = getConfig$1();
-    return "".concat(config.useProxy ? LME_PROXY_URL$2 : "").concat(config.url);
+    return "".concat(config.useProxy ? LME_PROXY_URL : "").concat(config.url);
   }
   function getHeaders$1(contentType) {
     var config = getConfig$1();
@@ -1438,7 +1440,6 @@
   }
 
   var DEFAULT_RPC_PATH = "/transmission/rpc";
-  var LME_PROXY_URL$1 = "https://proxy.lme.isroot.in/";
   var DEFAULT_STATUS_MAP = {
     0: "Stopped",
     1: "Queued to verify local data",
@@ -1471,7 +1472,7 @@
         useProxy: Lampa.Storage.field("".concat(configPrefix, "Proxy")) === true,
         autostart: Lampa.Storage.field("".concat(configPrefix, "Autostart")),
         sequentialDownload: Lampa.Storage.field("".concat(configPrefix, "SequentialDownload")),
-        proxy: LME_PROXY_URL$1
+        proxy: LME_PROXY_URL
       }, getExtraConfig(configPrefix));
     }
     function getHeaders() {
@@ -2244,9 +2245,137 @@
     return _getMetadata.apply(this, arguments);
   }
 
+  var SIMKL_SEARCH_URL = "".concat(LME_SIMKL_URL, "search/file");
+  function parseResponse$1(response) {
+    if (!response) {
+      return null;
+    }
+    if (typeof response === 'string') {
+      try {
+        return JSON.parse(response);
+      } catch (error) {
+        return null;
+      }
+    }
+    if (_typeof(response) !== 'object') {
+      return null;
+    }
+    return response;
+  }
+  function normalizeTmdbId(value) {
+    var id = String(value || '').trim();
+    if (!/^\d+$/.test(id)) {
+      return null;
+    }
+    var numericId = Number(id);
+    return Number.isFinite(numericId) && numericId > 0 ? numericId : null;
+  }
+  function normalizeMoviePayload(payload) {
+    var movieIds = payload && payload.movie && payload.movie.ids ? payload.movie.ids : {};
+    var tmdbId = normalizeTmdbId(movieIds.moviedb || movieIds.tmdb);
+    if (!tmdbId) {
+      return null;
+    }
+    return {
+      media_type: 'movie',
+      tmdb_id: tmdbId
+    };
+  }
+  function normalizeShowPayload(payload) {
+    var showIds = payload && payload.show && payload.show.ids ? payload.show.ids : {};
+    var tmdbId = normalizeTmdbId(showIds.tmdbtv || showIds.tmdb);
+    if (!tmdbId) {
+      return null;
+    }
+    return {
+      media_type: 'tv',
+      tmdb_id: tmdbId
+    };
+  }
+  function normalizeSimklPayload(payload) {
+    var type = String(payload && payload.type || '').toLowerCase();
+    if (type === 'movie') {
+      return normalizeMoviePayload(payload);
+    }
+    if (type === 'episode' || type === 'show') {
+      return normalizeShowPayload(payload);
+    }
+    return null;
+  }
+  function buildRequestOptions() {
+    return {
+      timeout: 10000,
+      type: 'POST',
+      dataType: 'json',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      }
+    };
+  }
+  function requestSearchByFileName(_x) {
+    return _requestSearchByFileName.apply(this, arguments);
+  }
+  function _requestSearchByFileName() {
+    _requestSearchByFileName = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(fileName) {
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            return _context.a(2, new Promise(function (resolve, reject) {
+              Lampa.Network.silent(SIMKL_SEARCH_URL, resolve, reject, JSON.stringify({
+                file: fileName,
+                part: 1
+              }), buildRequestOptions());
+            }));
+        }
+      }, _callee);
+    }));
+    return _requestSearchByFileName.apply(this, arguments);
+  }
+  function resolveTmdbFromSimkl(_x2) {
+    return _resolveTmdbFromSimkl.apply(this, arguments);
+  }
+  function _resolveTmdbFromSimkl() {
+    _resolveTmdbFromSimkl = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(fileName) {
+      var normalizedFileName, response, payload, _t;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.n) {
+          case 0:
+            normalizedFileName = String(fileName || '').trim();
+            if (normalizedFileName) {
+              _context2.n = 1;
+              break;
+            }
+            return _context2.a(2, null);
+          case 1:
+            _context2.p = 1;
+            _context2.n = 2;
+            return requestSearchByFileName(normalizedFileName);
+          case 2:
+            response = _context2.v;
+            payload = parseResponse$1(response);
+            if (payload) {
+              _context2.n = 3;
+              break;
+            }
+            return _context2.a(2, null);
+          case 3:
+            return _context2.a(2, normalizeSimklPayload(payload));
+          case 4:
+            _context2.p = 4;
+            _t = _context2.v;
+            console.log('TDM', 'Simkl search error:', _t);
+            return _context2.a(2, null);
+        }
+      }, _callee2, null, [[1, 4]]);
+    }));
+    return _resolveTmdbFromSimkl.apply(this, arguments);
+  }
+
   var CONFIG_PREFIX = 'lmetorrentsynology';
-  var LME_PROXY_URL = 'https://proxy.lme.isroot.in/';
   var AUTH_ERROR_CODES = [105, 106, 107, 119];
+  var SIMKL_RETRY_INTERVAL = 1000 * 60 * 60 * 12;
+  var simklSearchCache = {};
   function getConfig() {
     return {
       url: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Url")),
@@ -2595,17 +2724,160 @@
     }
     return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : '';
   }
+  function hasMetadataReference(metadata) {
+    return Boolean(metadata && metadata.tmdb_id && (metadata.media_type === 'movie' || metadata.media_type === 'tv'));
+  }
+  function shouldTrySimklLookup(metadata, title) {
+    if (!title) {
+      return false;
+    }
+    if (hasMetadataReference(metadata)) {
+      return false;
+    }
+    var failedAt = Number(metadata && metadata.simkl_failed_at) || 0;
+    if (!failedAt) {
+      return true;
+    }
+    return Date.now() - failedAt > SIMKL_RETRY_INTERVAL;
+  }
+  function getSimklCacheKey(title) {
+    return String(title || '').trim().toLowerCase();
+  }
+  function resolveSimklWithCache(_x2) {
+    return _resolveSimklWithCache.apply(this, arguments);
+  }
+  function _resolveSimklWithCache() {
+    _resolveSimklWithCache = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(title) {
+      var cacheKey;
+      return _regenerator().w(function (_context4) {
+        while (1) switch (_context4.n) {
+          case 0:
+            cacheKey = getSimklCacheKey(title);
+            if (cacheKey) {
+              _context4.n = 1;
+              break;
+            }
+            return _context4.a(2, null);
+          case 1:
+            if (!simklSearchCache[cacheKey]) {
+              simklSearchCache[cacheKey] = resolveTmdbFromSimkl(title)["finally"](function () {
+                delete simklSearchCache[cacheKey];
+              });
+            }
+            return _context4.a(2, simklSearchCache[cacheKey]);
+        }
+      }, _callee4);
+    }));
+    return _resolveSimklWithCache.apply(this, arguments);
+  }
+  function resolvePosterByMetadata(_x3) {
+    return _resolvePosterByMetadata.apply(this, arguments);
+  }
+  function _resolvePosterByMetadata() {
+    _resolvePosterByMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(metadata) {
+      var label, resolvedPoster;
+      return _regenerator().w(function (_context5) {
+        while (1) switch (_context5.n) {
+          case 0:
+            if (hasMetadataReference(metadata)) {
+              _context5.n = 1;
+              break;
+            }
+            return _context5.a(2, '');
+          case 1:
+            label = "".concat(metadata.media_type, "/").concat(metadata.tmdb_id);
+            _context5.n = 2;
+            return getPosterFromLabels(label);
+          case 2:
+            resolvedPoster = _context5.v;
+            if (!(!resolvedPoster || resolvedPoster === './img/img_load.svg')) {
+              _context5.n = 3;
+              break;
+            }
+            return _context5.a(2, '');
+          case 3:
+            return _context5.a(2, resolvedPoster);
+        }
+      }, _callee5);
+    }));
+    return _resolvePosterByMetadata.apply(this, arguments);
+  }
+  function hydrateMetadataFromSimkl(_x4, _x5, _x6) {
+    return _hydrateMetadataFromSimkl.apply(this, arguments);
+  }
+  function _hydrateMetadataFromSimkl() {
+    _hydrateMetadataFromSimkl = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(torrentId, title, metadata) {
+      var now, currentMetadata, match, failedMetadata, nextMetadata, resolvedPoster, _t3;
+      return _regenerator().w(function (_context6) {
+        while (1) switch (_context6.n) {
+          case 0:
+            if (shouldTrySimklLookup(metadata, title)) {
+              _context6.n = 1;
+              break;
+            }
+            return _context6.a(2, metadata);
+          case 1:
+            now = Date.now();
+            currentMetadata = metadata && _typeof(metadata) === 'object' ? metadata : {};
+            _context6.n = 2;
+            return resolveSimklWithCache(title);
+          case 2:
+            match = _context6.v;
+            if (!(!match || !match.tmdb_id || !match.media_type)) {
+              _context6.n = 4;
+              break;
+            }
+            failedMetadata = _objectSpread2(_objectSpread2({}, currentMetadata), {}, {
+              simkl_checked_at: now,
+              simkl_failed_at: now
+            });
+            _context6.n = 3;
+            return saveMetadata(String(torrentId), failedMetadata);
+          case 3:
+            return _context6.a(2, failedMetadata);
+          case 4:
+            nextMetadata = _objectSpread2(_objectSpread2({}, currentMetadata), {}, {
+              tmdb_id: match.tmdb_id,
+              media_type: match.media_type,
+              simkl_checked_at: now,
+              simkl_failed_at: 0,
+              updated_at: now
+            });
+            _context6.p = 5;
+            _context6.n = 6;
+            return resolvePosterByMetadata(nextMetadata);
+          case 6:
+            resolvedPoster = _context6.v;
+            if (resolvedPoster) {
+              nextMetadata.poster = resolvedPoster;
+            }
+            _context6.n = 8;
+            break;
+          case 7:
+            _context6.p = 7;
+            _t3 = _context6.v;
+            console.log('TDM', 'Synology Simkl poster resolve error:', _t3);
+          case 8:
+            _context6.n = 9;
+            return saveMetadata(String(torrentId), nextMetadata);
+          case 9:
+            return _context6.a(2, nextMetadata);
+        }
+      }, _callee6, null, [[5, 7]]);
+    }));
+    return _hydrateMetadataFromSimkl.apply(this, arguments);
+  }
   function GetData() {
     return _GetData.apply(this, arguments);
   }
   function _GetData() {
-    _GetData = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
-      var payload, tasks, _t4;
-      return _regenerator().w(function (_context5) {
-        while (1) switch (_context5.n) {
+    _GetData = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
+      var payload, tasks, _t5;
+      return _regenerator().w(function (_context8) {
+        while (1) switch (_context8.n) {
           case 0:
-            _context5.p = 0;
-            _context5.n = 1;
+            _context8.p = 0;
+            _context8.n = 1;
             return requestSynology('/webapi/DownloadStation/task.cgi', {
               api: 'SYNO.DownloadStation.Task',
               version: 3,
@@ -2614,53 +2886,59 @@
               limit: -1
             });
           case 1:
-            payload = _context5.v;
+            payload = _context8.v;
             tasks = payload && payload.data && Array.isArray(payload.data.tasks) ? payload.data.tasks : [];
-            return _context5.a(2, Promise.all(tasks.map(/*#__PURE__*/function () {
-              var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(torrent) {
-                var metadata, title, progress, imageUrl, label, resolvedPoster, _t3;
-                return _regenerator().w(function (_context4) {
-                  while (1) switch (_context4.n) {
+            return _context8.a(2, Promise.all(tasks.map(/*#__PURE__*/function () {
+              var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(torrent) {
+                var metadata, title, progress, imageUrl, resolvedPoster, nextMetadata, _t4;
+                return _regenerator().w(function (_context7) {
+                  while (1) switch (_context7.n) {
                     case 0:
-                      _context4.n = 1;
+                      _context7.n = 1;
                       return getMetadata(torrent.id);
                     case 1:
-                      metadata = _context4.v;
+                      metadata = _context7.v;
                       title = torrent.title || torrent.id;
                       progress = getTaskProgress(torrent);
+                      _context7.n = 2;
+                      return hydrateMetadataFromSimkl(torrent.id, title, metadata);
+                    case 2:
+                      metadata = _context7.v;
                       imageUrl = metadata && metadata.poster ? metadata.poster : ''; // Backward compatibility for older metadata rows without cached poster.
-                      if (!(!imageUrl && metadata && metadata.tmdb_id && metadata.media_type)) {
-                        _context4.n = 6;
+                      if (!(!imageUrl && hasMetadataReference(metadata))) {
+                        _context7.n = 8;
                         break;
                       }
-                      _context4.p = 2;
-                      label = "".concat(metadata.media_type, "/").concat(metadata.tmdb_id);
-                      _context4.n = 3;
-                      return getPosterFromLabels(label);
-                    case 3:
-                      resolvedPoster = _context4.v;
-                      if (!(resolvedPoster && resolvedPoster !== './img/img_load.svg')) {
-                        _context4.n = 4;
+                      _context7.p = 3;
+                      _context7.n = 4;
+                      return resolvePosterByMetadata(metadata);
+                    case 4:
+                      resolvedPoster = _context7.v;
+                      if (!resolvedPoster) {
+                        _context7.n = 6;
                         break;
                       }
                       imageUrl = resolvedPoster;
-                      _context4.n = 4;
-                      return saveMetadata(String(torrent.id), _objectSpread2(_objectSpread2({}, metadata), {}, {
+                      nextMetadata = _objectSpread2(_objectSpread2({}, metadata), {}, {
                         poster: resolvedPoster,
                         updated_at: Date.now()
-                      }));
-                    case 4:
-                      _context4.n = 6;
-                      break;
+                      });
+                      _context7.n = 5;
+                      return saveMetadata(String(torrent.id), _objectSpread2({}, nextMetadata));
                     case 5:
-                      _context4.p = 5;
-                      _t3 = _context4.v;
-                      console.log('TDM', 'Synology poster resolve error:', _t3);
+                      metadata = nextMetadata;
                     case 6:
+                      _context7.n = 8;
+                      break;
+                    case 7:
+                      _context7.p = 7;
+                      _t4 = _context7.v;
+                      console.log('TDM', 'Synology poster resolve error:', _t4);
+                    case 8:
                       if (!imageUrl) {
                         imageUrl = textToImage(title);
                       }
-                      return _context4.a(2, {
+                      return _context7.a(2, {
                         name: title,
                         id: torrent.id,
                         size: progress.size,
@@ -2671,21 +2949,21 @@
                         media_type: metadata ? metadata.media_type : null
                       });
                   }
-                }, _callee4, null, [[2, 5]]);
+                }, _callee7, null, [[3, 7]]);
               }));
-              return function (_x7) {
+              return function (_x10) {
                 return _ref2.apply(this, arguments);
               };
             }())));
           case 2:
-            _context5.p = 2;
-            _t4 = _context5.v;
-            console.error('TDM', 'GetData error:', _t4);
-            throw new Error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0435 \u0434\u0430\u043D\u043D\u044B\u0445 \u0438\u043B\u0438 AJAX \u0437\u0430\u043F\u0440\u043E\u0441\u0430: ".concat(_t4.message || _t4));
+            _context8.p = 2;
+            _t5 = _context8.v;
+            console.error('TDM', 'GetData error:', _t5);
+            throw new Error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0435 \u0434\u0430\u043D\u043D\u044B\u0445 \u0438\u043B\u0438 AJAX \u0437\u0430\u043F\u0440\u043E\u0441\u0430: ".concat(_t5.message || _t5));
           case 3:
-            return _context5.a(2);
+            return _context8.a(2);
         }
-      }, _callee5, null, [[0, 2]]);
+      }, _callee8, null, [[0, 2]]);
     }));
     return _GetData.apply(this, arguments);
   }
@@ -2712,13 +2990,13 @@
     return _GetInfo.apply(this, arguments);
   }
   function _GetInfo() {
-    _GetInfo = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
-      var payload, shares, moviesPath, tvPath, selectedShare, _t5;
-      return _regenerator().w(function (_context6) {
-        while (1) switch (_context6.n) {
+    _GetInfo = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
+      var payload, shares, moviesPath, tvPath, selectedShare, _t6;
+      return _regenerator().w(function (_context9) {
+        while (1) switch (_context9.n) {
           case 0:
-            _context6.p = 0;
-            _context6.n = 1;
+            _context9.p = 0;
+            _context9.n = 1;
             return requestSynology('/webapi/entry.cgi', {
               version: 2,
               api: 'SYNO.FileStation.List',
@@ -2726,10 +3004,10 @@
               additional: 'volume_status'
             });
           case 1:
-            payload = _context6.v;
+            payload = _context9.v;
             shares = payload && payload.data && Array.isArray(payload.data.shares) ? payload.data.shares : [];
             if (shares.length) {
-              _context6.n = 2;
+              _context9.n = 2;
               break;
             }
             throw new Error('Failed to fetch volume information');
@@ -2748,32 +3026,32 @@
                 return getShareFreeSpace(share) !== null;
               }) || null;
             }
-            return _context6.a(2, {
+            return _context9.a(2, {
               space: selectedShare ? getShareFreeSpace(selectedShare) : 0
             });
           case 3:
-            _context6.p = 3;
-            _t5 = _context6.v;
-            console.error('TDM', 'Error fetching session info:', _t5);
-            throw new Error("Failed to fetch session info: ".concat(_t5.message));
+            _context9.p = 3;
+            _t6 = _context9.v;
+            console.error('TDM', 'Error fetching session info:', _t6);
+            throw new Error("Failed to fetch session info: ".concat(_t6.message));
           case 4:
-            return _context6.a(2);
+            return _context9.a(2);
         }
-      }, _callee6, null, [[0, 3]]);
+      }, _callee9, null, [[0, 3]]);
     }));
     return _GetInfo.apply(this, arguments);
   }
-  function SendCommand(_x2, _x3) {
+  function SendCommand(_x7, _x8) {
     return _SendCommand.apply(this, arguments);
   }
   function _SendCommand() {
-    _SendCommand = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(action, torrentData) {
-      var _t6;
-      return _regenerator().w(function (_context7) {
-        while (1) switch (_context7.n) {
+    _SendCommand = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0(action, torrentData) {
+      var _t7;
+      return _regenerator().w(function (_context0) {
+        while (1) switch (_context0.n) {
           case 0:
-            _context7.p = 0;
-            _context7.n = 1;
+            _context0.p = 0;
+            _context0.n = 1;
             return requestSynology('/webapi/DownloadStation/task.cgi', {
               api: 'SYNO.DownloadStation.Task',
               version: 1,
@@ -2784,42 +3062,42 @@
             Lampa.Bell.push({
               text: Lampa.Lang.translate('actionSentSuccessfully')
             });
-            _context7.n = 3;
+            _context0.n = 3;
             break;
           case 2:
-            _context7.p = 2;
-            _t6 = _context7.v;
-            console.log('TDM', 'Send action:', _t6);
+            _context0.p = 2;
+            _t7 = _context0.v;
+            console.log('TDM', 'Send action:', _t7);
             Lampa.Bell.push({
               text: Lampa.Lang.translate('actionReturnedError')
             });
-            throw _t6;
+            throw _t7;
           case 3:
-            return _context7.a(2);
+            return _context0.a(2);
         }
-      }, _callee7, null, [[0, 2]]);
+      }, _callee0, null, [[0, 2]]);
     }));
     return _SendCommand.apply(this, arguments);
   }
-  function SendTask(_x4, _x5, _x6) {
+  function SendTask(_x9, _x0, _x1) {
     return _SendTask.apply(this, arguments);
   }
   function _SendTask() {
-    _SendTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8(selectedTorrent, labels, dtype) {
-      var sourceUri, destination, _t7;
-      return _regenerator().w(function (_context8) {
-        while (1) switch (_context8.n) {
+    _SendTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1(selectedTorrent, labels, dtype) {
+      var sourceUri, destination, _t8;
+      return _regenerator().w(function (_context1) {
+        while (1) switch (_context1.n) {
           case 0:
-            _context8.p = 0;
+            _context1.p = 0;
             sourceUri = selectedTorrent && (selectedTorrent.MagnetUri || selectedTorrent.Link);
             if (sourceUri) {
-              _context8.n = 1;
+              _context1.n = 1;
               break;
             }
             throw new Error('No torrent URI provided');
           case 1:
             destination = Lampa.Storage.get("".concat(CONFIG_PREFIX, "Path").concat(dtype)) || '';
-            _context8.n = 2;
+            _context1.n = 2;
             return requestSynology('/webapi/DownloadStation/task.cgi', {
               api: 'SYNO.DownloadStation.Task',
               version: 1,
@@ -2831,20 +3109,20 @@
             Lampa.Bell.push({
               text: Lampa.Lang.translate('actionSentSuccessfully')
             });
-            _context8.n = 4;
+            _context1.n = 4;
             break;
           case 3:
-            _context8.p = 3;
-            _t7 = _context8.v;
-            console.log('TDM', 'Send file:', _t7);
+            _context1.p = 3;
+            _t8 = _context1.v;
+            console.log('TDM', 'Send file:', _t8);
             Lampa.Bell.push({
               text: Lampa.Lang.translate('actionReturnedError')
             });
-            throw _t7;
+            throw _t8;
           case 4:
-            return _context8.a(2);
+            return _context1.a(2);
         }
-      }, _callee8, null, [[0, 3]]);
+      }, _callee1, null, [[0, 3]]);
     }));
     return _SendTask.apply(this, arguments);
   }
@@ -3542,26 +3820,120 @@
     return _updateAllMetadata.apply(this, arguments);
   }
 
-  /**
-   * Parse torrent labels to extract media information
-   * 
-   * @param {Array|string} labels - Labels to parse
-   * @returns {Object|null} - Parsed media type and ID, or null if not found
-   */
+  var METADATA_CLIENTS = {
+    qBittorent: {
+      type: "qbittorrent",
+      prefix: "lmetorrentqBittorent",
+      withCredentials: false
+    },
+    transmission: {
+      type: "transmission",
+      prefix: "lmetorrenttransmission",
+      withCredentials: true
+    },
+    keenetic: {
+      type: "keenetic",
+      prefix: "lmetorrentkeenetic",
+      withCredentials: true
+    },
+    synology: {
+      type: "synology",
+      prefix: "lmetorrentsynology",
+      withCredentials: true
+    }
+  };
+  function buildMetadataClientConfig(clientName) {
+    var client = METADATA_CLIENTS[clientName];
+    if (!client) {
+      return null;
+    }
+    var config = {
+      type: client.type,
+      url: Lampa.Storage.field("".concat(client.prefix, "Url")),
+      useProxy: Lampa.Storage.field("".concat(client.prefix, "Proxy")) === true
+    };
+    if (client.withCredentials) {
+      config.user = Lampa.Storage.field("".concat(client.prefix, "User"));
+      config.pass = Lampa.Storage.field("".concat(client.prefix, "Pass"));
+    }
+    return config;
+  }
+  function isMetadataAction(actionType) {
+    return actionType === "parse" || actionType === "parse-all";
+  }
+  function openTorrentCard(torrentData) {
+    var cardInfo = null;
+    if (torrentData.tmdb_id && torrentData.media_type) {
+      cardInfo = {
+        tID: torrentData.tmdb_id,
+        method: torrentData.media_type
+      };
+    } else {
+      cardInfo = parseLabels(torrentData.labels);
+    }
+    if (!cardInfo) {
+      Lampa.Bell.push({
+        text: "No metadata available for this torrent"
+      });
+      return;
+    }
+    Lampa.Activity.push({
+      url: "",
+      component: "full",
+      id: cardInfo.tID,
+      method: cardInfo.method,
+      source: Lampa.Storage.field("source") || "tmdb"
+    });
+  }
+  function handleMetadataAction(_x, _x2, _x3, _x4) {
+    return _handleMetadataAction.apply(this, arguments);
+  }
+  function _handleMetadataAction() {
+    _handleMetadataAction = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(actionType, torrentData, torrentList, clientName) {
+      var clientConfig;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            clientConfig = buildMetadataClientConfig(clientName);
+            if (clientConfig) {
+              _context.n = 1;
+              break;
+            }
+            Lampa.Bell.push({
+              text: "Unknown client type"
+            });
+            return _context.a(2);
+          case 1:
+            if (!(actionType === "parse")) {
+              _context.n = 3;
+              break;
+            }
+            _context.n = 2;
+            return updateMetadataForTorrent(torrentData, clientConfig);
+          case 2:
+            return _context.a(2);
+          case 3:
+            _context.n = 4;
+            return updateAllMetadata(torrentList, clientConfig);
+          case 4:
+            return _context.a(2);
+        }
+      }, _callee);
+    }));
+    return _handleMetadataAction.apply(this, arguments);
+  }
   function parseLabels(labels) {
-    if (!labels) return null;
-
-    // Convert string to array if needed
-    var labelArray = Array.isArray(labels) ? labels : labels.split(',');
-
-    // Find label matching tv/movie pattern
+    if (!labels) {
+      return null;
+    }
+    var labelArray = Array.isArray(labels) ? labels : labels.split(",");
     var matchedLabel = labelArray.find(function (label) {
       return /^(tv|movie)\/\d+$/.test(label);
     });
-    if (!matchedLabel) return null;
-
-    // Split matched label into parts
-    var _matchedLabel$split = matchedLabel.split('/'),
+    if (!matchedLabel) {
+      return null;
+    }
+    var _matchedLabel$split = matchedLabel.split("/"),
       _matchedLabel$split2 = _slicedToArray(_matchedLabel$split, 2),
       method = _matchedLabel$split2[0],
       tID = _matchedLabel$split2[1];
@@ -3570,51 +3942,44 @@
       tID: tID
     };
   }
-
-  /**
-   * Show the torrent action menu
-   * 
-   * @param {Object} torrentData - Data for the selected torrent
-   * @param {Array} allTorrents - All torrents (needed for 'parse-all' action)
-   */
   function showTorrentMenu(torrentData) {
     var allTorrents = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-    var client = Lampa.Storage.field('lmetorrentSelect');
+    var client = Lampa.Storage.field("lmetorrentSelect");
     var enabled = Lampa.Controller.enabled().name;
     var hasMetadata = torrentData.tmdb_id && torrentData.media_type || parseLabels(torrentData.labels);
     var torrentList = Array.isArray(allTorrents) ? allTorrents : [];
     var menuItems = [{
-      title: Lampa.Lang.translate('resume'),
-      action: 'resume'
+      title: Lampa.Lang.translate("resume"),
+      action: "resume"
     }, {
-      title: Lampa.Lang.translate('pause'),
-      action: 'pause'
+      title: Lampa.Lang.translate("pause"),
+      action: "pause"
     }, {
-      title: Lampa.Lang.translate('delete'),
-      action: 'delete'
+      title: Lampa.Lang.translate("delete"),
+      action: "delete"
     }].concat(_toConsumableArray(hasMetadata ? [{
-      title: Lampa.Lang.translate('openCard'),
-      action: 'card'
+      title: Lampa.Lang.translate("openCard"),
+      action: "card"
     }] : []), [{
-      title: Lampa.Lang.translate('add_metadata'),
-      action: 'parse'
+      title: Lampa.Lang.translate("add_metadata"),
+      action: "parse"
     }]);
     if (torrentList.length > 1) {
       menuItems.push({
-        title: Lampa.Lang.translate('add_metadata_all'),
-        action: 'parse-all'
+        title: Lampa.Lang.translate("add_metadata_all"),
+        action: "parse-all"
       });
     }
-    if (client === 'keenetic') {
+    if (client === "keenetic") {
       menuItems.push({
-        title: 'Play',
-        action: 'play'
+        title: "Play",
+        action: "play"
       });
     }
-    if (client != 'synology') {
+    if (client !== "synology") {
       menuItems.push({
-        title: Lampa.Lang.translate('fullDelete'),
-        action: 'delete',
+        title: Lampa.Lang.translate("fullDelete"),
+        action: "delete",
         deleteFiles: true
       });
     }
@@ -3622,13 +3987,11 @@
       title: torrentData.name,
       items: menuItems,
       onBack: function onBack() {
-        // Повертаємось до попереднього контролера, якщо він існує
         var currentController = Lampa.Controller.enabled();
         if (currentController && currentController.name !== enabled) {
           Lampa.Controller.toggle(enabled);
         } else {
-          // Якщо контролер не змінився, просто вимикаємо меню
-          Lampa.Controller.toggle('menu');
+          Lampa.Controller.toggle("menu");
         }
       },
       onSelect: function onSelect(action) {
@@ -3636,266 +3999,64 @@
       }
     });
   }
-
-  /**
-   * Handle torrent action selection
-   * 
-   * @param {Object} action - Selected action
-   * @param {Object} torrentData - Data for the selected torrent
-   * @param {Array} allTorrents - All torrents (needed for 'parse-all' action)
-   */
-  function handleTorrentAction(_x, _x2) {
+  function handleTorrentAction(_x5, _x6) {
     return _handleTorrentAction.apply(this, arguments);
   }
   function _handleTorrentAction() {
-    _handleTorrentAction = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(action, torrentData) {
+    _handleTorrentAction = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(action, torrentData) {
       var allTorrents,
         client,
         torrentList,
-        cardInfo,
-        clientConfig,
-        _clientConfig,
-        _clientConfig2,
-        _clientConfig3,
-        _clientConfig4,
-        _clientConfig5,
-        _clientConfig6,
-        _clientConfig7,
-        _args = arguments,
-        _t,
-        _t2;
-      return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        actionType,
+        _args2 = arguments,
+        _t;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.n) {
           case 0:
-            allTorrents = _args.length > 2 && _args[2] !== undefined ? _args[2] : [];
-            client = Lampa.Storage.field('lmetorrentSelect');
+            allTorrents = _args2.length > 2 && _args2[2] !== undefined ? _args2[2] : [];
+            client = Lampa.Storage.field("lmetorrentSelect");
             torrentList = Array.isArray(allTorrents) ? allTorrents : [];
-            if (!(action.action === 'card')) {
-              _context.n = 1;
+            actionType = action && action.action;
+            if (!(actionType === "card")) {
+              _context2.n = 1;
               break;
             }
-            cardInfo = null; // Спочатку перевіряємо новий метод (з DB)
-            if (torrentData.tmdb_id && torrentData.media_type) {
-              cardInfo = {
-                tID: torrentData.tmdb_id,
-                method: torrentData.media_type
-              };
-            }
-            // Якщо не вийшло, перевіряємо старий метод (з labels)
-            else {
-              cardInfo = parseLabels(torrentData.labels);
-            }
-            if (cardInfo) {
-              Lampa.Activity.push({
-                url: '',
-                component: 'full',
-                id: cardInfo.tID,
-                method: cardInfo.method,
-                source: Lampa.Storage.field('source') || 'tmdb'
-              });
-            } else {
-              Lampa.Bell.push({
-                text: 'No metadata available for this torrent'
-              });
-            }
-            _context.n = 29;
-            break;
+            openTorrentCard(torrentData);
+            return _context2.a(2);
           case 1:
-            _context.p = 1;
-            _t = client;
-            _context.n = _t === 'qBittorent' ? 2 : _t === 'transmission' ? 8 : _t === 'keenetic' ? 14 : _t === 'synology' ? 20 : 26;
-            break;
+            _context2.p = 1;
+            if (!isMetadataAction(actionType)) {
+              _context2.n = 3;
+              break;
+            }
+            _context2.n = 2;
+            return handleMetadataAction(actionType, torrentData, torrentList, client);
           case 2:
-            if (!(action.action === 'parse')) {
-              _context.n = 4;
-              break;
-            }
-            // Використовуємо нову уніфіковану функцію для одного торента
-            clientConfig = {
-              type: 'qbittorrent',
-              url: Lampa.Storage.field("lmetorrentqBittorentUrl"),
-              useProxy: Lampa.Storage.field("lmetorrentqBittorentProxy") === true
-            };
-            _context.n = 3;
-            return updateMetadataForTorrent(torrentData, clientConfig);
+            return _context2.a(2);
           case 3:
-            _context.n = 7;
-            break;
+            _context2.n = 4;
+            return executeClientMethod(client, "SendCommand", [action, torrentData], {
+              silentAuth: true
+            });
           case 4:
-            if (!(action.action === 'parse-all')) {
-              _context.n = 6;
-              break;
-            }
-            // Використовуємо нову уніфіковану функцію для всіх торентів
-            _clientConfig = {
-              type: 'qbittorrent',
-              url: Lampa.Storage.field("lmetorrentqBittorentUrl"),
-              useProxy: Lampa.Storage.field("lmetorrentqBittorentProxy") === true
-            };
-            _context.n = 5;
-            return updateAllMetadata(torrentList, _clientConfig);
+            _context2.n = 6;
+            break;
           case 5:
-            _context.n = 7;
-            break;
+            _context2.p = 5;
+            _t = _context2.v;
+            console.error("TDM", "Error handling action:", _t);
+            Lampa.Bell.push({
+              text: Lampa.Lang.translate("actionReturnedError")
+            });
           case 6:
-            _context.n = 7;
-            return executeClientMethod(client, 'SendCommand', [action, torrentData], {
-              silentAuth: true
-            });
-          case 7:
-            return _context.a(3, 27);
-          case 8:
-            if (!(action.action === 'parse')) {
-              _context.n = 10;
-              break;
-            }
-            // Використовуємо нову уніфіковану функцію для одного торента
-            _clientConfig2 = {
-              type: 'transmission',
-              url: Lampa.Storage.field("lmetorrenttransmissionUrl"),
-              user: Lampa.Storage.field("lmetorrenttransmissionUser"),
-              pass: Lampa.Storage.field("lmetorrenttransmissionPass"),
-              useProxy: Lampa.Storage.field("lmetorrenttransmissionProxy") === true
-            };
-            _context.n = 9;
-            return updateMetadataForTorrent(torrentData, _clientConfig2);
-          case 9:
-            _context.n = 13;
-            break;
-          case 10:
-            if (!(action.action === 'parse-all')) {
-              _context.n = 12;
-              break;
-            }
-            // Використовуємо нову уніфіковану функцію для всіх торентів
-            _clientConfig3 = {
-              type: 'transmission',
-              url: Lampa.Storage.field("lmetorrenttransmissionUrl"),
-              user: Lampa.Storage.field("lmetorrenttransmissionUser"),
-              pass: Lampa.Storage.field("lmetorrenttransmissionPass"),
-              useProxy: Lampa.Storage.field("lmetorrenttransmissionProxy") === true
-            };
-            _context.n = 11;
-            return updateAllMetadata(torrentList, _clientConfig3);
-          case 11:
-            _context.n = 13;
-            break;
-          case 12:
-            _context.n = 13;
-            return executeClientMethod(client, 'SendCommand', [action, torrentData], {
-              silentAuth: true
-            });
-          case 13:
-            return _context.a(3, 27);
-          case 14:
-            if (!(action.action === 'parse')) {
-              _context.n = 16;
-              break;
-            }
-            // Використовуємо нову уніфіковану функцію для одного торента
-            _clientConfig4 = {
-              type: 'keenetic',
-              url: Lampa.Storage.field("lmetorrentkeeneticUrl"),
-              user: Lampa.Storage.field("lmetorrentkeeneticUser"),
-              pass: Lampa.Storage.field("lmetorrentkeeneticPass"),
-              useProxy: Lampa.Storage.field("lmetorrentkeeneticProxy") === true
-            };
-            _context.n = 15;
-            return updateMetadataForTorrent(torrentData, _clientConfig4);
-          case 15:
-            _context.n = 19;
-            break;
-          case 16:
-            if (!(action.action === 'parse-all')) {
-              _context.n = 18;
-              break;
-            }
-            // Використовуємо нову уніфіковану функцію для всіх торентів
-            _clientConfig5 = {
-              type: 'keenetic',
-              url: Lampa.Storage.field("lmetorrentkeeneticUrl"),
-              user: Lampa.Storage.field("lmetorrentkeeneticUser"),
-              pass: Lampa.Storage.field("lmetorrentkeeneticPass"),
-              useProxy: Lampa.Storage.field("lmetorrentkeeneticProxy") === true
-            };
-            _context.n = 17;
-            return updateAllMetadata(torrentList, _clientConfig5);
-          case 17:
-            _context.n = 19;
-            break;
-          case 18:
-            _context.n = 19;
-            return executeClientMethod(client, 'SendCommand', [action, torrentData], {
-              silentAuth: true
-            });
-          case 19:
-            return _context.a(3, 27);
-          case 20:
-            if (!(action.action === 'parse')) {
-              _context.n = 22;
-              break;
-            }
-            // Використовуємо нову уніфіковану функцію для одного торента
-            _clientConfig6 = {
-              type: 'synology',
-              url: Lampa.Storage.field("lmetorrentsynologyUrl"),
-              user: Lampa.Storage.field("lmetorrentsynologyUser"),
-              pass: Lampa.Storage.field("lmetorrentsynologyPass"),
-              useProxy: Lampa.Storage.field("lmetorrentsynologyProxy") === true
-            };
-            _context.n = 21;
-            return updateMetadataForTorrent(torrentData, _clientConfig6);
-          case 21:
-            _context.n = 25;
-            break;
-          case 22:
-            if (!(action.action === 'parse-all')) {
-              _context.n = 24;
-              break;
-            }
-            // Використовуємо нову уніфіковану функцію для всіх торентів
-            _clientConfig7 = {
-              type: 'synology',
-              url: Lampa.Storage.field("lmetorrentsynologyUrl"),
-              user: Lampa.Storage.field("lmetorrentsynologyUser"),
-              pass: Lampa.Storage.field("lmetorrentsynologyPass"),
-              useProxy: Lampa.Storage.field("lmetorrentsynologyProxy") === true
-            };
-            _context.n = 23;
-            return updateAllMetadata(torrentList, _clientConfig7);
-          case 23:
-            _context.n = 25;
-            break;
-          case 24:
-            _context.n = 25;
-            return executeClientMethod(client, 'SendCommand', [action, torrentData], {
-              silentAuth: true
-            });
-          case 25:
-            return _context.a(3, 27);
-          case 26:
-            Lampa.Bell.push({
-              text: 'Unknown client type'
-            });
-          case 27:
-            _context.n = 29;
-            break;
-          case 28:
-            _context.p = 28;
-            _t2 = _context.v;
-            console.error('TDM', 'Error handling action:', _t2);
-            Lampa.Bell.push({
-              text: Lampa.Lang.translate('actionReturnedError')
-            });
-          case 29:
-            return _context.a(2);
+            return _context2.a(2);
         }
-      }, _callee, null, [[1, 28]]);
+      }, _callee2, null, [[1, 5]]);
     }));
     return _handleTorrentAction.apply(this, arguments);
   }
 
-  var UPDATE_INTERVAL_MS = 5000;
+  var UPDATE_INTERVAL_MS = 15000;
   var ERROR_KIND = {
     AUTH: "auth",
     NETWORK: "network",
@@ -5342,77 +5503,75 @@
     }
   }
 
-  //Import Clients
+  var DOWNLOAD_ICON = "<svg class=\"btnTDdownload\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><path d=\"M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><path d=\"M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><path d=\"M18 17H12H6\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\"></path><path d=\"M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z\" stroke=\"#ffffff\" stroke-width=\"1.5\"></path></g></svg>";
+  var CLIENT_MENU = {
+    qBittorent: {
+      title: "qBittorrent",
+      type: "client",
+      clientName: "qBittorent"
+    },
+    transmission: {
+      title: "Transmission",
+      type: "client",
+      clientName: "transmission"
+    },
+    keenetic: {
+      title: "Keenetic",
+      type: "client",
+      clientName: "keenetic"
+    },
+    synology: {
+      title: "Synology",
+      type: "client",
+      clientName: "synology"
+    },
+    universalClient: {
+      title: "Universal",
+      type: "universal"
+    }
+  };
+  function sendToClient(clientName, selectedTorrent, labels, dtype) {
+    executeClientMethod(clientName, "SendTask", [selectedTorrent, labels, dtype], {
+      silentAuth: true
+    })["catch"](function () {});
+  }
+  function sendToUniversal(selectedTorrent) {
+    Main(selectedTorrent);
+  }
+  function buildButtonTitle(label) {
+    return "<div class=\"btnTDdownload wait\">".concat(DOWNLOAD_ICON).concat(label, "</div>");
+  }
+  function resolveTorrentLabels(movie) {
+    var type = movie && movie.first_air_date ? "tv" : "movie";
+    return "".concat(type, "/").concat(movie && movie.id);
+  }
+  function resolveDestinationType(movie) {
+    return movie && movie.first_air_date ? "TV" : "Movies";
+  }
   function Send() {
-    function send2qBittorrent(selectedTorrent, labels, dtype) {
-      executeClientMethod('qBittorent', 'SendTask', [selectedTorrent, labels, dtype], {
-        silentAuth: true
-      })["catch"](function () {});
-    }
-    function send2synology(selectedTorrent, labels, dtype) {
-      executeClientMethod('synology', 'SendTask', [selectedTorrent, labels, dtype], {
-        silentAuth: true
-      })["catch"](function () {});
-    }
-    function send2transmission(selectedTorrent, labels, dtype) {
-      executeClientMethod('transmission', 'SendTask', [selectedTorrent, labels, dtype], {
-        silentAuth: true
-      })["catch"](function () {});
-    }
-    function send2keenetic(selectedTorrent, labels, dtype) {
-      executeClientMethod('keenetic', 'SendTask', [selectedTorrent, labels, dtype], {
-        silentAuth: true
-      })["catch"](function () {});
-    }
-    function send2universal(selectedTorrent, labels) {
-      Main(selectedTorrent);
-    }
-    Lampa.Listener.follow('torrent', function (e) {
-      if (e.type === 'onlong') {
-        var _Lampa$Activity$activ, _Lampa$Activity$activ2, _Lampa$Activity$activ3;
-        var selectedTorrent = e.element;
-        var labels = "".concat((_Lampa$Activity$activ = Lampa.Activity.active().movie) !== null && _Lampa$Activity$activ !== void 0 && _Lampa$Activity$activ.first_air_date ? "tv" : "movie", "/").concat((_Lampa$Activity$activ2 = Lampa.Activity.active().movie) === null || _Lampa$Activity$activ2 === void 0 ? void 0 : _Lampa$Activity$activ2.id);
-        var dtype = (_Lampa$Activity$activ3 = Lampa.Activity.active().movie) !== null && _Lampa$Activity$activ3 !== void 0 && _Lampa$Activity$activ3.first_air_date ? "TV" : "Movies";
-        var onSelectApp = function onSelectApp(a) {
-          a.send2app(selectedTorrent, labels ? labels : null, dtype);
-        };
-        if (Lampa.Storage.field("lmetorrentSelect") === 'qBittorent') {
-          e.menu.push({
-            title: "<div class=\"btnTDdownload wait\">\n                            <svg class=\"btnTDdownload\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <path d=\"M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> <path d=\"M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> <path d=\"M18 17H12H6\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\"></path> <path d=\"M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z\" stroke=\"#ffffff\" stroke-width=\"1.5\"></path> </g></svg>\n                            qBittorrent</div>",
-            send2app: send2qBittorrent,
-            onSelect: onSelectApp
-          });
-        }
-        if (Lampa.Storage.field("lmetorrentSelect") === 'transmission') {
-          e.menu.push({
-            title: "<div class=\"btnTDdownload wait\">\n                            <svg class=\"btnTDdownload\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <path d=\"M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> <path d=\"M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> <path d=\"M18 17H12H6\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\"></path> <path d=\"M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z\" stroke=\"#ffffff\" stroke-width=\"1.5\"></path> </g></svg>\n                            Transmission</div>",
-            send2app: send2transmission,
-            onSelect: onSelectApp
-          });
-        }
-        if (Lampa.Storage.field("lmetorrentSelect") === 'keenetic') {
-          e.menu.push({
-            title: "<div class=\"btnTDdownload wait\">\n                            <svg class=\"btnTDdownload\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <path d=\"M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> <path d=\"M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> <path d=\"M18 17H12H6\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\"></path> <path d=\"M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z\" stroke=\"#ffffff\" stroke-width=\"1.5\"></path> </g></svg>\n                            Keenetic</div>",
-            send2app: send2keenetic,
-            onSelect: onSelectApp
-          });
-        }
-        if (Lampa.Storage.field("lmetorrentSelect") === 'synology') {
-          e.menu.push({
-            title: "<div class=\"btnTDdownload wait\">\n                            <svg class=\"btnTDdownload\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <path d=\"M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> <path d=\"M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> <path d=\"M18 17H12H6\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\"></path> <path d=\"M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z\" stroke=\"#ffffff\" stroke-width=\"1.5\"></path> </g></svg>\n                            Synology</div>",
-            send2app: send2synology,
-            onSelect: onSelectApp
-          });
-        }
-        //Universal
-        if (Lampa.Storage.field("lmetorrentSelect") === 'universalClient') {
-          e.menu.push({
-            title: "<div class=\"btnTDdownload wait\">\n                            <svg class=\"btnTDdownload\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <path d=\"M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> <path d=\"M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> <path d=\"M18 17H12H6\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\"></path> <path d=\"M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z\" stroke=\"#ffffff\" stroke-width=\"1.5\"></path> </g></svg>\n                            Universal</div>",
-            send2app: send2universal,
-            onSelect: onSelectApp
-          });
-        }
+    Lampa.Listener.follow("torrent", function (e) {
+      if (e.type !== "onlong") {
+        return;
       }
+      var selectedTorrent = e.element;
+      var activeMovie = Lampa.Activity.active().movie;
+      var labels = resolveTorrentLabels(activeMovie);
+      var dtype = resolveDestinationType(activeMovie);
+      var selectedClient = Lampa.Storage.field("lmetorrentSelect");
+      var menuConfig = CLIENT_MENU[selectedClient];
+      if (!menuConfig) {
+        return;
+      }
+      e.menu.push({
+        title: buildButtonTitle(menuConfig.title),
+        onSelect: function onSelect() {
+          if (menuConfig.type === "universal") {
+            sendToUniversal(selectedTorrent);
+            return;
+          }
+          sendToClient(menuConfig.clientName, selectedTorrent, labels, dtype);
+        }
+      });
     });
   }
 
@@ -5578,7 +5737,7 @@
           return;
         }
         this.timer = this.update.bind(this);
-        Lampa.Timer.add(5000, this.timer, true);
+        Lampa.Timer.add(15000, this.timer, true);
       }
     }, {
       key: "stop",
@@ -5791,6 +5950,8 @@
     component: 'lmetorrent',
     icon: "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\" viewBox=\"0 0 24 24\"><path fill=\"currentColor\" d=\"M13.684 23.94a12.013 12.013 0 0 0 9.599-7.79c-.118.044-.26.096-.432.147c-2 .59-3.404-.466-3.687-.649c-.283-.18-.587-.48-.643-.464c-.183 1.132-1.218 2.706-3.58 3.42c-1.295.391-2.687.4-3.681-.157l.328.822c.13.328.351.866.488 1.192c0 0 .858 2.044 1.608 3.48M2.723 7.153l3.54-.66c.323-.059.68.124.794.407l2.432 6.07c.332.633.399.773.615 1.043c0 0 1.68 2.398 4.24 1.812c1.726-.394 2.532-1.69 2.587-2.612c.057-.296-.032-.669-.185-1.016L13.832 5.61c-.117-.266.022-.527.306-.581l2.953-.55a.69.69 0 0 1 .706.376l3.227 6.91c.13.276.394.712.588.966c0 0 .671.964 1.747.78c.266 0 .569-.143.569-.143c.047-.43.072-.866.072-1.31c0-6.627-5.373-12-12.002-12C5.372.06 0 5.433 0 12.06c0 5.319 3.46 9.827 8.252 11.402a24.768 24.768 0 0 1-.919-2.121L2.298 7.808c-.111-.297.083-.59.425-.654\"/></svg>"
   };
+  var SELECT_KEY = "".concat(MANIFEST.component, "Select");
+  var SYNOLOGY_KEY = "lmetorrentsynologyKey";
 
   /**
    * Register all UI templates with Lampa
@@ -5838,19 +5999,29 @@
    * Initialize client authentication based on selected client
    */
   function initializeClientAuth() {
-    var selectedClient = Lampa.Storage.get(MANIFEST.component + 'Select');
-    if (selectedClient === 'qBittorent') {
-      Qbittorent.auth(false)["catch"](function () {});
-    } else if (selectedClient === 'transmission') {
-      Transmission.auth();
-    } else if (selectedClient === 'synology') {
-      var synologyKey = Lampa.Storage.field('lmetorrentsynologyKey');
-      var hasValidSynologySid = synologyKey && _typeof(synologyKey) === 'object' && synologyKey.sID;
-      if (!hasValidSynologySid || isKeyDateOld(synologyKey.createDate)) {
-        Synology.auth();
+    var selectedClient = Lampa.Storage.get(SELECT_KEY);
+    var clientAuthHandlers = {
+      qBittorent: function qBittorent() {
+        return Qbittorent.auth(false)["catch"](function () {});
+      },
+      transmission: function transmission() {
+        return Transmission.auth();
+      },
+      keenetic: function keenetic() {
+        return Keenetic.auth();
+      },
+      synology: function synology() {
+        var synologyKey = Lampa.Storage.field(SYNOLOGY_KEY);
+        var hasValidSynologySid = synologyKey && _typeof(synologyKey) === "object" && synologyKey.sID;
+        if (!hasValidSynologySid || isKeyDateOld(synologyKey.createDate)) {
+          return Synology.auth();
+        }
+        return Promise.resolve();
       }
-    } else if (selectedClient === 'keenetic') {
-      Keenetic.auth();
+    };
+    var authHandler = clientAuthHandlers[selectedClient];
+    if (authHandler) {
+      authHandler();
     }
   }
 
@@ -5872,7 +6043,7 @@
       Lampa.Manifest.plugins = MANIFEST;
 
       // Add menu button if not using universal client
-      var selectedClient = Lampa.Storage.get(MANIFEST.component + 'Select');
+      var selectedClient = Lampa.Storage.get(SELECT_KEY);
       if (selectedClient !== 'universalClient') {
         torrentInfo();
         createMenuButton();

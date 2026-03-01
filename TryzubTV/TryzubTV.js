@@ -582,7 +582,7 @@
     fetchEpg: fetchEpg
   };
 
-  var REPLAY_BASE$1 = 'https://proxy.lme.isroot.in/https://a.maincast.tv/items';
+  var REPLAY_BASE$1 = 'https://apx.lme.isroot.in/destination/https://a.maincast.tv/items';
   var REPLAY_LIMIT = 10;
   var QR_CARD_POSTER$1 = 'https://iili.io/fkdGkSj.png';
   var CATALOG_ORDER_KEY = 'tryzubtv_catalog_order';
@@ -3449,7 +3449,7 @@
     });
   }
 
-  var REPLAY_BASE = 'https://proxy.lme.isroot.in/https://a.maincast.tv/items';
+  var REPLAY_BASE = 'https://apx.lme.isroot.in/destination/https://a.maincast.tv/items';
   function request(url) {
     return new Promise(function (resolve, reject) {
       Lampa.Network.silent(url, resolve, reject);
