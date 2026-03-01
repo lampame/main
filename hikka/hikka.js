@@ -68,49 +68,48 @@
     }, _typeof(o);
   }
 
-  var PROXY_URL = 'https://apx.lme.isroot.in/destination/';
-  var API_BASE = 'https://api.hikka.io/';
+  var API_BASE = 'https://apx.lme.isroot.in/hikka/';
   var ENDPOINTS = {
-    ANIME: PROXY_URL + API_BASE + 'anime',
-    GENRES: PROXY_URL + API_BASE + 'genres',
+    ANIME: API_BASE + 'anime',
+    GENRES: API_BASE + 'genres',
     SCHEDULE_ANIME: function SCHEDULE_ANIME() {
       var page = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
       var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 50;
-      return PROXY_URL + API_BASE + 'schedule/anime?page=' + page + '&size=' + size;
+      return API_BASE + 'schedule/anime?page=' + page + '&size=' + size;
     },
     DETAILS: function DETAILS(slug) {
-      return PROXY_URL + API_BASE + 'anime/' + slug;
+      return API_BASE + 'anime/' + slug;
     },
     COMMENTS: function COMMENTS(slug) {
       var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
       var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
-      return PROXY_URL + API_BASE + 'comments/anime/' + encodeURIComponent(slug) + '/list?page=' + page + '&size=' + size;
+      return API_BASE + 'comments/anime/' + encodeURIComponent(slug) + '/list?page=' + page + '&size=' + size;
     },
     CHARACTERS: function CHARACTERS(slug) {
-      return PROXY_URL + API_BASE + 'anime/' + slug + '/characters';
+      return API_BASE + 'anime/' + slug + '/characters';
     },
     CHARACTER_VOICES: function CHARACTER_VOICES(slug) {
       var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
       var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
-      return PROXY_URL + API_BASE + 'characters/' + encodeURIComponent(slug) + '/voices?page=' + page + '&size=' + size;
+      return API_BASE + 'characters/' + encodeURIComponent(slug) + '/voices?page=' + page + '&size=' + size;
     },
     PEOPLE: function PEOPLE(slug) {
-      return PROXY_URL + API_BASE + 'people/' + encodeURIComponent(slug);
+      return API_BASE + 'people/' + encodeURIComponent(slug);
     },
     PEOPLE_ANIME: function PEOPLE_ANIME(slug) {
       var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
       var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
-      return PROXY_URL + API_BASE + 'people/' + encodeURIComponent(slug) + '/anime?page=' + page + '&size=' + size;
+      return API_BASE + 'people/' + encodeURIComponent(slug) + '/anime?page=' + page + '&size=' + size;
     },
     FRANCHISE: function FRANCHISE(slug) {
-      return PROXY_URL + API_BASE + 'related/anime/' + slug + '/franchise';
+      return API_BASE + 'related/anime/' + slug + '/franchise';
     },
-    // External APIs (via proxy)
+    // External APIs
     MAL_API: function MAL_API(id) {
-      return PROXY_URL + 'https://animeapi.my.id/myanimelist/' + id;
+      return 'https://animeapi.my.id/myanimelist/' + id;
     },
     TRAKT_SEARCH: function TRAKT_SEARCH(id, type) {
-      return PROXY_URL + 'https://api.trakt.tv/search/trakt/' + id + '?type=' + type;
+      return 'https://api.trakt.tv/search/trakt/' + id + '?type=' + type;
     }
   };
   function getProxyHeaders() {
