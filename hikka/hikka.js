@@ -609,6 +609,23 @@
   var Cache$1 = new Cache();
 
   var network = new Lampa.Reguest();
+  function isSeasonYearTuple(value) {
+    return Array.isArray(value) && value.length === 2 && typeof value[0] === 'string' && (typeof value[1] === 'number' || typeof value[1] === 'string');
+  }
+  function normalizeYearsForApi(years) {
+    var source = Array.isArray(years) ? years : [];
+    if (!source.length) return [];
+    var allTuples = source.every(isSeasonYearTuple);
+    if (!allTuples) return source;
+    var normalized = source.map(function (item) {
+      return [item[0], Number(item[1]) || item[1]];
+    });
+
+    // Hikka API валідатор відхиляє years з єдиним season-year елементом.
+    // Для сумісності дублюємо один елемент.
+    if (normalized.length === 1) return [normalized[0], normalized[0]];
+    return normalized;
+  }
   var Api = {
     buildFullPayloadFromDetails: buildFullPayloadFromDetails,
     buildDiscussPayloadFromComments: buildDiscussPayloadFromComments,
@@ -670,7 +687,7 @@
         status: filters.status || [],
         season: filters.season || [],
         rating: filters.rating || [],
-        years: filters.years || [],
+        years: normalizeYearsForApi(filters.years),
         genres: filters.genres || [],
         // Додаємо підтримку жанрів
         studios: filters.studios || [],
@@ -679,6 +696,11 @@
         // Додаємо підтримку only_translated
         sort: filters.sort || ['score:desc']
       };
+      if (Array.isArray(filters.score) && filters.score.length) {
+        postData.score = filters.score;
+      }
+      var query = typeof filters.query === 'string' ? filters.query.trim() : '';
+      if (query) postData.query = query;
       console.log('[Hikka] Fetching anime with filters:', postData, 'Page:', page);
       network["native"](url, function (data) {
         console.log('[Hikka] Response:', data);
@@ -711,6 +733,33 @@
           'Content-Type': 'application/json'
         })
       });
+    },
+    searchAnime: function searchAnime(query) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var filters = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+      var success = arguments.length > 3 ? arguments[3] : undefined;
+      var error = arguments.length > 4 ? arguments[4] : undefined;
+      var safeQuery = String(query || '').trim();
+      if (!safeQuery) {
+        if (success) {
+          success({
+            results: [],
+            total_pages: 1,
+            page: 1
+          });
+        }
+        return;
+      }
+      this.getAnimeListWithFilters(_objectSpread2(_objectSpread2({}, filters || {}), {}, {
+        query: safeQuery
+      }), page, success, error);
+    },
+    cancelRequests: function cancelRequests() {
+      try {
+        network.clear();
+      } catch (e) {
+        console.log('[Hikka] cancelRequests error:', e);
+      }
     },
     getScheduleAnime: function getScheduleAnime(filters) {
       var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
@@ -1180,6 +1229,8 @@
         status: [],
         season: [],
         rating: [],
+        years: [],
+        score: [],
         sort: ['score:desc'],
         genres: [],
         studios: [],
@@ -1199,6 +1250,8 @@
           if (incoming.status !== undefined) this.filters.status = toArray(incoming.status);
           if (incoming.season !== undefined) this.filters.season = toArray(incoming.season);
           if (incoming.rating !== undefined) this.filters.rating = toArray(incoming.rating);
+          if (incoming.years !== undefined) this.filters.years = toArray(incoming.years);
+          if (incoming.score !== undefined) this.filters.score = toArray(incoming.score);
           if (incoming.sort !== undefined) this.filters.sort = toArray(incoming.sort);
           if (incoming.genres !== undefined) this.filters.genres = toArray(incoming.genres);
           if (incoming.studios !== undefined) this.filters.studios = toArray(incoming.studios);
@@ -1215,6 +1268,8 @@
           status: [],
           season: [],
           rating: [],
+          years: [],
+          score: [],
           sort: ['score:desc'],
           genres: [],
           studios: [],
@@ -1761,6 +1816,22 @@
     }]);
   }();
 
+  function HikkaMainLinesComponent() {
+    var object = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var params = _objectSpread2(_objectSpread2({}, object || {}), {}, {
+      source: 'hikka'
+    });
+    try {
+      var MainComponent = Lampa && Lampa.Component && typeof Lampa.Component.get === 'function' ? Lampa.Component.get('main') : null;
+      if (typeof MainComponent === 'function') {
+        return MainComponent(params);
+      }
+    } catch (e) {
+      console.log('[Hikka] Failed to start lines component, fallback to legacy:', e);
+    }
+    return new Component(params);
+  }
+
   var HikkaCharacter = /*#__PURE__*/function () {
     function HikkaCharacter(object) {
       _classCallCheck(this, HikkaCharacter);
@@ -1914,7 +1985,7 @@
 
   var DAY_MS = 24 * 60 * 60 * 1000;
   var DEFAULT_STATUSES = ['ongoing', 'announced'];
-  function getCurrentSeasonYear() {
+  function getCurrentSeasonYear$1() {
     var now = new Date();
     var month = now.getMonth() + 1;
     var year = now.getFullYear();
@@ -2083,7 +2154,7 @@
     var html = $('<div></div>');
     var body = $('<div class="timetable"></div>');
     var weeks = [Lang.translate('week_7'), Lang.translate('week_1'), Lang.translate('week_2'), Lang.translate('week_3'), Lang.translate('week_4'), Lang.translate('week_5'), Lang.translate('week_6')];
-    var seasonInfo = getCurrentSeasonYear();
+    var seasonInfo = getCurrentSeasonYear$1();
     var last = null;
     var grouped = {};
     var allEntries = [];
@@ -2295,7 +2366,8 @@
         url: '',
         title: Lampa.Lang.translate('menu_anime'),
         component: 'hikka_anime',
-        page: 1
+        page: 1,
+        source: 'hikka'
       });
     });
     button.addClass('my_class');
@@ -2566,6 +2638,142 @@
     }]);
   }();
 
+  var SEASONS = ['winter', 'spring', 'summer', 'fall'];
+  function normalizeDate(date) {
+    return date instanceof Date ? date : new Date();
+  }
+  function getCurrentSeasonYear() {
+    var date = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : new Date();
+    var now = normalizeDate(date);
+    var month = now.getMonth() + 1;
+    var year = now.getFullYear();
+    if (month <= 3) return {
+      season: 'winter',
+      year: year
+    };
+    if (month <= 6) return {
+      season: 'spring',
+      year: year
+    };
+    if (month <= 9) return {
+      season: 'summer',
+      year: year
+    };
+    return {
+      season: 'fall',
+      year: year
+    };
+  }
+  function shiftSeason(source) {
+    var delta = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+    var point = source || getCurrentSeasonYear();
+    var index = Math.max(0, SEASONS.indexOf(point.season));
+    var current = index + Number(delta || 0);
+    var wrapped = (current % SEASONS.length + SEASONS.length) % SEASONS.length;
+    var yearsShift = Math.floor((index + Number(delta || 0)) / SEASONS.length);
+    return {
+      season: SEASONS[wrapped],
+      year: Number(point.year || new Date().getFullYear()) + yearsShift
+    };
+  }
+  function buildSeasonYearWindow() {
+    var date = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : new Date();
+    var fromOffset = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+    var toOffset = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+    var current = getCurrentSeasonYear(date);
+    var start = Math.min(Number(fromOffset || 0), Number(toOffset || 0));
+    var end = Math.max(Number(fromOffset || 0), Number(toOffset || 0));
+    var result = [];
+    for (var offset = start; offset <= end; offset++) {
+      var shifted = shiftSeason(current, offset);
+      result.push([shifted.season, shifted.year]);
+    }
+    return result;
+  }
+
+  function createBaseFilters() {
+    return {
+      media_type: [],
+      status: [],
+      season: [],
+      rating: [],
+      years: [],
+      genres: [],
+      studios: [],
+      score: [],
+      only_translated: false,
+      sort: ['score:desc']
+    };
+  }
+  function withBaseFilters(partial) {
+    return _objectSpread2(_objectSpread2({}, createBaseFilters()), partial || {});
+  }
+  function getMainLinePresets() {
+    return getComponentLinePresets().map(function (line) {
+      return {
+        name: line.name.replace('HikkaComponent', 'HikkaMain'),
+        title: line.title,
+        index: line.index,
+        screen: ['main'],
+        buildFilters: line.buildFilters
+      };
+    });
+  }
+  function getComponentLinePresets() {
+    return [{
+      name: 'HikkaComponentOngoingUA',
+      title: 'Онгоїнги',
+      index: 0,
+      buildFilters: function buildFilters() {
+        return withBaseFilters({
+          status: ['ongoing'],
+          years: [],
+          only_translated: true,
+          sort: ['score:desc']
+        });
+      }
+    }, {
+      name: 'HikkaComponentFinishedPrevSeasonUA',
+      title: 'Минулий сезон',
+      index: 1,
+      buildFilters: function buildFilters() {
+        return withBaseFilters({
+          media_type: ['tv', 'ova', 'ona'],
+          status: ['finished'],
+          years: buildSeasonYearWindow(new Date(), -1, -1),
+          only_translated: true,
+          sort: ['score:desc']
+        });
+      }
+    }, {
+      name: 'HikkaComponentAnnounced',
+      title: 'Анонси',
+      index: 2,
+      buildFilters: function buildFilters() {
+        return withBaseFilters({
+          media_type: ['tv', 'movie', 'ona'],
+          status: ['announced'],
+          years: buildSeasonYearWindow(new Date(), 0, 1),
+          only_translated: false,
+          sort: ['start_date:asc']
+        });
+      }
+    }, {
+      name: 'HikkaComponentTopMoviesUA',
+      title: 'Високо оцінені фільми',
+      index: 3,
+      buildFilters: function buildFilters() {
+        return withBaseFilters({
+          media_type: ['movie'],
+          years: [],
+          score: ['7', '10'],
+          only_translated: true,
+          sort: ['start_date:desc']
+        });
+      }
+    }];
+  }
+
   var characterVoicesCache = new Map();
   var personAnimeCache = new Map();
   var personDetailsCache = new Map();
@@ -2573,6 +2781,15 @@
     if (Array.isArray(value)) return value;
     if (value === undefined || value === null || value === '') return [];
     return [value];
+  }
+  function decodeQuery$1(value) {
+    if (typeof value !== 'string') return '';
+    if (!value.trim()) return '';
+    try {
+      return decodeURIComponent(value).trim();
+    } catch (e) {
+      return value.trim();
+    }
   }
   function buildFiltersFromParams(params) {
     var filters = {
@@ -2583,8 +2800,10 @@
       years: [],
       genres: [],
       studios: [],
+      score: [],
       only_translated: false,
-      sort: ['score:desc']
+      sort: ['score:desc'],
+      query: ''
     };
     if (!params) return filters;
     if (params.filters && _typeof(params.filters) === 'object') {
@@ -2596,8 +2815,10 @@
       if (incoming.years !== undefined) filters.years = toArray(incoming.years);
       if (incoming.genres !== undefined) filters.genres = toArray(incoming.genres);
       if (incoming.studios !== undefined) filters.studios = toArray(incoming.studios);
+      if (incoming.score !== undefined) filters.score = toArray(incoming.score);
       if (incoming.only_translated !== undefined) filters.only_translated = !!incoming.only_translated;
       if (incoming.sort !== undefined) filters.sort = toArray(incoming.sort);
+      if (incoming.query !== undefined) filters.query = String(incoming.query || '');
     }
     if (params.filter) {
       if (typeof params.filter === 'string') {
@@ -2611,8 +2832,10 @@
             if (parsed.years !== undefined) filters.years = toArray(parsed.years);
             if (parsed.genres !== undefined) filters.genres = toArray(parsed.genres);
             if (parsed.studios !== undefined) filters.studios = toArray(parsed.studios);
+            if (parsed.score !== undefined) filters.score = toArray(parsed.score);
             if (parsed.only_translated !== undefined) filters.only_translated = !!parsed.only_translated;
             if (parsed.sort !== undefined) filters.sort = toArray(parsed.sort);
+            if (parsed.query !== undefined) filters.query = String(parsed.query || '');
           }
         } catch (e) {
           // ignore non-JSON filter strings
@@ -2626,8 +2849,10 @@
         if (_parsed.years !== undefined) filters.years = toArray(_parsed.years);
         if (_parsed.genres !== undefined) filters.genres = toArray(_parsed.genres);
         if (_parsed.studios !== undefined) filters.studios = toArray(_parsed.studios);
+        if (_parsed.score !== undefined) filters.score = toArray(_parsed.score);
         if (_parsed.only_translated !== undefined) filters.only_translated = !!_parsed.only_translated;
         if (_parsed.sort !== undefined) filters.sort = toArray(_parsed.sort);
+        if (_parsed.query !== undefined) filters.query = String(_parsed.query || '');
       }
     }
     if (params.media_type) filters.media_type = toArray(params.media_type);
@@ -2637,10 +2862,12 @@
     if (params.years) filters.years = toArray(params.years);
     if (params.genres) filters.genres = toArray(params.genres);
     if (params.studios) filters.studios = toArray(params.studios);
+    if (params.score) filters.score = toArray(params.score);
     if (!filters.studios.length && params.companies) filters.studios = toArray(params.companies);
     if (!filters.studios.length && params.company) filters.studios = toArray(params.company);
     if (params.only_translated !== undefined) filters.only_translated = !!params.only_translated;
     if (params.sort !== undefined) filters.sort = toArray(params.sort);
+    if (params.query !== undefined) filters.query = decodeQuery$1(params.query);
     if (!filters.media_type.length && params.url) {
       var allowedMedia = ['movie', 'tv', 'ova', 'ona', 'special', 'music'];
       if (allowedMedia.indexOf(params.url) !== -1) filters.media_type = [params.url];
@@ -2995,6 +3222,36 @@
       }
     };
   }
+  function buildGenreLinePresets(genres, startIndex) {
+    var list = Array.isArray(genres) ? genres : [];
+    var filtered = list.filter(function (item) {
+      return item && item.slug && item.type === 'genre';
+    }).sort(function (a, b) {
+      var aPriority = a.slug === 'award-winning' ? 0 : 1;
+      var bPriority = b.slug === 'award-winning' ? 0 : 1;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      return 0;
+    });
+    return filtered.map(function (genre, index) {
+      var slug = genre.slug;
+      var title = genre.name_ua || genre.name_en || genre.name || slug;
+      return {
+        name: 'HikkaComponentGenre_' + slug,
+        title: title,
+        index: Number(startIndex || 0) + index,
+        buildFilters: function buildFilters() {
+          return buildFiltersFromParams({
+            filters: {
+              genres: [slug],
+              score: ['7', '10'],
+              only_translated: true,
+              sort: ['start_date:desc', 'score:desc']
+            }
+          });
+        }
+      };
+    });
+  }
 
   /**
    * Hikka Source Provider for Lampa Api.sources
@@ -3007,99 +3264,71 @@
      * Signature: main(params, oncomplite, onerror)
      */
     main: function main() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
-      var buildRows = function buildRows(genres) {
-        var baseRows = [{
-          title: 'Hikka Anime',
-          url: '',
-          filters: {
-            sort: ['score:desc']
-          }
-        }, {
-          title: 'Фільми',
-          url: 'movie',
-          filters: {
-            media_type: ['movie'],
-            sort: ['score:desc']
-          }
-        }, {
-          title: 'ТВ серіали',
-          url: 'tv',
-          filters: {
-            media_type: ['tv'],
-            sort: ['score:desc']
-          }
-        }];
-        var list = Array.isArray(genres) ? genres.filter(function (g) {
-          return g && g.slug;
-        }) : [];
-        var mapRows = function mapRows(items, limit) {
-          return items.slice(0, limit).map(function (g) {
-            return {
-              title: g.name_ua || g.name_en || g.name || g.slug,
-              url: '',
-              filters: {
-                genres: [g.slug],
-                sort: ['score:desc']
-              }
-            };
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      try {
+        var basePresets = getComponentLinePresets();
+        if (!basePresets.length) {
+          if (onerror) onerror('Hikka main: no presets');
+          return;
+        }
+        var loadRows = function loadRows(presets) {
+          var pending = presets.length;
+          var rows = new Array(presets.length);
+          var done = function done() {
+            pending--;
+            if (pending > 0) return;
+            var resolved = rows.filter(function (row) {
+              return row && Array.isArray(row.results) && row.results.length;
+            });
+            if (resolved.length) {
+              oncomplite && oncomplite(resolved);
+            } else if (onerror) {
+              onerror('Hikka main: empty');
+            } else {
+              oncomplite && oncomplite([]);
+            }
+          };
+          presets.forEach(function (preset, index) {
+            var filters = typeof preset.buildFilters === 'function' ? preset.buildFilters() : buildFiltersFromParams({
+              filters: preset.filters || {}
+            });
+            Api.getAnimeListWithFilters(filters, 1, function (data) {
+              rows[index] = {
+                title: preset.title,
+                url: '',
+                source: 'hikka',
+                filter: JSON.stringify(filters),
+                filters: filters,
+                results: data && Array.isArray(data.results) ? data.results : [],
+                total_pages: data && data.total_pages ? data.total_pages : 1,
+                page: 1
+              };
+              done();
+            }, function (err) {
+              console.log('[Hikka] main row error:', err);
+              rows[index] = null;
+              done();
+            });
           });
         };
-        var genreRows = mapRows(list.filter(function (g) {
-          return g.type === 'genre';
-        }), 3);
-        var themeRows = mapRows(list.filter(function (g) {
-          return g.type === 'theme';
-        }), 2);
-        var demographicRows = mapRows(list.filter(function (g) {
-          return g.type === 'demographic';
-        }), 2);
-        return baseRows.concat(genreRows, themeRows, demographicRows);
-      };
-      var loadRows = function loadRows(rows) {
-        var pending = rows.length;
-        var result = new Array(rows.length);
-        var done = function done() {
-          pending--;
-          if (pending <= 0) {
-            oncomplite && oncomplite(result.filter(Boolean));
-          }
-        };
-        rows.forEach(function (row, index) {
-          var filters = buildFiltersFromParams({
-            filters: row.filters,
-            url: row.url
-          });
-          Api.getAnimeListWithFilters(filters, 1, function (data) {
-            result[index] = {
-              title: row.title,
-              url: row.url,
-              source: 'hikka',
-              filter: JSON.stringify(row.filters),
-              filters: row.filters,
-              results: data && data.results || []
-            };
-            done();
-          }, function (err) {
-            console.log('[Hikka] main row error:', err);
-            result[index] = {
-              title: row.title,
-              url: row.url,
-              source: 'hikka',
-              filter: JSON.stringify(row.filters),
-              filters: row.filters,
-              results: []
-            };
-            done();
-          });
+        var shouldAppendGenreLines = params && params.component === 'hikka_anime';
+        if (!shouldAppendGenreLines) {
+          loadRows(basePresets);
+          return;
+        }
+        Api.getGenres(function (data) {
+          var genres = Array.isArray(data && data.list) ? data.list : [];
+          var genrePresets = buildGenreLinePresets(genres, basePresets.length);
+          loadRows(basePresets.concat(genrePresets));
+        }, function () {
+          loadRows(basePresets);
         });
-      };
-      Api.getGenres(function (data) {
-        var list = Array.isArray(data && data.list) ? data.list : [];
-        loadRows(buildRows(list));
-      }, function () {
-        loadRows(buildRows([]));
-      });
+      } catch (e) {
+        console.log('[Hikka] main exception:', e);
+        if (onerror) onerror(e);
+      }
     },
     /**
      * Build Full data from Hikka details
@@ -3411,6 +3640,16 @@
       try {
         var page = params.page || 1;
         var filters = buildFiltersFromParams(params);
+        var query = typeof filters.query === 'string' ? filters.query.trim() : '';
+        if (query) {
+          Api.searchAnime(query, page, filters, function (data) {
+            oncomplite && oncomplite(data);
+          }, function (err) {
+            console.log('[Hikka] list search error:', err);
+            if (onerror) onerror(err);
+          });
+          return;
+        }
         Api.getAnimeListWithFilters(filters, page, function (data) {
           oncomplite && oncomplite(data);
         }, function (err) {
@@ -3709,7 +3948,7 @@
     });
   }
 
-  var initialized = false;
+  var initialized$1 = false;
   function createLineTitle(text) {
     var root = document.createElement('span');
     var icon = document.createElement('span');
@@ -3745,7 +3984,8 @@
     return function (params, screen) {
       if (screen !== 'main') return;
       return function (call) {
-        Api.getAnimeListWithFilters(config.filters, 1, function (data) {
+        var filters = typeof config.buildFilters === 'function' ? config.buildFilters() : config.filters || {};
+        Api.getAnimeListWithFilters(filters, 1, function (data) {
           var results = data && Array.isArray(data.results) ? data.results : [];
           if (!results.length) return call();
           call({
@@ -3754,7 +3994,7 @@
             source: 'hikka',
             hikka_line: true,
             hikka_line_title: config.title,
-            filter: JSON.stringify(config.filters),
+            filter: JSON.stringify(filters),
             results: results,
             total_pages: data && data.total_pages ? data.total_pages : 1,
             page: 1
@@ -3766,68 +4006,138 @@
     };
   }
   function registerRows() {
-    var rows = [{
-      name: 'HikkaMainOngoing',
-      title: 'Hikka · Онгоїнги',
-      index: 0,
-      filters: {
-        media_type: [],
-        status: ['ongoing'],
-        season: [],
-        rating: [],
-        years: [],
-        genres: [],
-        studios: [],
-        only_translated: true,
-        sort: []
-      }
-    }, {
-      name: 'HikkaMainFinishedTop',
-      title: 'Hikka · Завершені й високооцінені',
-      index: 1,
-      filters: {
-        media_type: ['tv', 'ova', 'ona'],
-        status: ['finished'],
-        season: [],
-        rating: [],
-        years: [],
-        genres: [],
-        studios: [],
-        only_translated: true,
-        sort: ['score:desc']
-      }
-    }, {
-      name: 'HikkaMainAnnounced',
-      title: 'Hikka · Анонсовані',
-      index: 2,
-      filters: {
-        media_type: ['tv', 'movie', 'ona'],
-        status: ['announced'],
-        season: [],
-        rating: [],
-        years: [],
-        genres: [],
-        studios: [],
-        only_translated: false,
-        sort: ['start_date:asc']
-      }
-    }];
+    var rows = getMainLinePresets();
     rows.forEach(function (row) {
       Lampa.ContentRows.add({
         name: row.name,
         title: row.title,
         index: row.index,
-        screen: ['main'],
+        screen: row.screen || ['main'],
         call: createCall(row)
       });
     });
   }
   function initRows() {
-    if (initialized) return;
+    if (initialized$1) return;
     if (!Lampa || !Lampa.ContentRows || typeof Lampa.ContentRows.add !== 'function') return;
-    initialized = true;
+    initialized$1 = true;
     registerLineTitleDecorator();
     registerRows();
+  }
+
+  var initialized = false;
+  var MEDIA_TYPE_ORDER = ['movie', 'tv', 'special', 'ova', 'ona', 'music'];
+  var MEDIA_TYPE_TITLES = {
+    special: 'Спешл',
+    movie: 'Фільм',
+    ova: 'OVA',
+    ona: 'ONA',
+    tv: 'TV Серіал',
+    music: 'Музика'
+  };
+  function decodeQuery(value) {
+    if (!value) return '';
+    if (typeof value !== 'string') return String(value);
+    try {
+      return decodeURIComponent(value);
+    } catch (e) {
+      return value;
+    }
+  }
+  function groupResultsByMediaType(results) {
+    var source = Array.isArray(results) ? results : [];
+    var groups = {};
+    MEDIA_TYPE_ORDER.forEach(function (type) {
+      groups[type] = [];
+    });
+    source.forEach(function (item) {
+      var type = String(item && item.media_type || '').toLowerCase();
+      if (groups[type]) groups[type].push(item);
+    });
+    return MEDIA_TYPE_ORDER.filter(function (type) {
+      return groups[type].length > 0;
+    }).map(function (type) {
+      return {
+        type: type,
+        title: MEDIA_TYPE_TITLES[type] || type,
+        results: groups[type]
+      };
+    });
+  }
+  function createSearchSource() {
+    return {
+      title: 'Hikka',
+      params: {
+        save: true
+      },
+      search: function search(params, oncomplite) {
+        var query = decodeQuery(params && params.query).trim();
+        if (!query) {
+          oncomplite([]);
+          return;
+        }
+        Api.searchAnime(query, 1, {}, function (data) {
+          var results = data && Array.isArray(data.results) ? data.results : [];
+          var grouped = groupResultsByMediaType(results);
+          if (!grouped.length) {
+            oncomplite([]);
+            return;
+          }
+          oncomplite(grouped.map(function (group) {
+            return {
+              title: group.title,
+              type: group.type,
+              media_type: group.type,
+              source: 'hikka',
+              query: query,
+              filter: JSON.stringify({
+                query: query,
+                media_type: [group.type],
+                sort: ['score:desc']
+              }),
+              results: group.results,
+              total_pages: data && data.total_pages ? data.total_pages : 1,
+              page: data && data.page ? data.page : 1
+            };
+          }));
+        }, function () {
+          oncomplite([]);
+        });
+      },
+      onMore: function onMore(params, close) {
+        var query = decodeQuery(params && params.query).trim();
+        var mediaType = params && params.data ? params.data.media_type || params.data.type || '' : '';
+        if (!query) {
+          close && close();
+          return;
+        }
+        var title = Lampa && Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('search') + ' - ' + query : 'Search - ' + query;
+        var filter = params && params.data && params.data.filter ? params.data.filter : JSON.stringify({
+          query: query,
+          media_type: mediaType ? [mediaType] : [],
+          sort: ['score:desc']
+        });
+        close && close();
+        Lampa.Activity.push({
+          url: '',
+          title: title,
+          component: 'category_full',
+          page: 2,
+          source: 'hikka',
+          query: encodeURIComponent(query),
+          filter: filter
+        });
+      },
+      onCancel: function onCancel() {
+        Api.cancelRequests();
+      }
+    };
+  }
+  function initSearchIntegration() {
+    if (initialized) return;
+    if (!Lampa || !Lampa.Search || typeof Lampa.Search.addSource !== 'function') return;
+    Lampa.Search.addSource(createSearchSource());
+    initialized = true;
   }
 
   function init() {
@@ -3855,8 +4165,11 @@
     // Додаємо лайни Hikka на головну через ContentRows
     initRows();
 
+    // Додаємо джерело Hikka у нативний глобальний пошук Lampa
+    initSearchIntegration();
+
     // Реєструємо компонент
-    Lampa.Component.add('hikka_anime', Component);
+    Lampa.Component.add('hikka_anime', HikkaMainLinesComponent);
     Lampa.Component.add('hikka_character', HikkaCharacter);
     Lampa.Component.add('hikka_schedule', HikkaScheduleComponent);
 
