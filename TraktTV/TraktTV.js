@@ -806,9 +806,9 @@
   }
   function _refreshTokens() {
     _refreshTokens = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-      var _ref11,
+      var _ref12,
         redirect_uri,
-        _ref11$reason,
+        _ref12$reason,
         reason,
         refresh_token,
         logging,
@@ -816,7 +816,7 @@
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
-            _ref11 = _args.length > 0 && _args[0] !== undefined ? _args[0] : {}, redirect_uri = _ref11.redirect_uri, _ref11$reason = _ref11.reason, reason = _ref11$reason === void 0 ? 'manual' : _ref11$reason;
+            _ref12 = _args.length > 0 && _args[0] !== undefined ? _args[0] : {}, redirect_uri = _ref12.redirect_uri, _ref12$reason = _ref12.reason, reason = _ref12$reason === void 0 ? 'manual' : _ref12$reason;
             refresh_token = Lampa.Storage.get('trakt_refresh_token');
             logging = Lampa.Storage.field('trakt_enable_logging');
             if (refresh_token) {
@@ -894,12 +894,12 @@
   }
   function _ensureValidAccessToken() {
     _ensureValidAccessToken = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-      var _ref12,
-        _ref12$reason,
+      var _ref13,
+        _ref13$reason,
         reason,
-        _ref12$force,
+        _ref13$force,
         force,
-        _ref12$skewMs,
+        _ref13$skewMs,
         skewMs,
         token,
         refreshToken,
@@ -909,7 +909,7 @@
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.n) {
           case 0:
-            _ref12 = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {}, _ref12$reason = _ref12.reason, reason = _ref12$reason === void 0 ? 'preflight' : _ref12$reason, _ref12$force = _ref12.force, force = _ref12$force === void 0 ? false : _ref12$force, _ref12$skewMs = _ref12.skewMs, skewMs = _ref12$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref12$skewMs;
+            _ref13 = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {}, _ref13$reason = _ref13.reason, reason = _ref13$reason === void 0 ? 'preflight' : _ref13$reason, _ref13$force = _ref13.force, force = _ref13$force === void 0 ? false : _ref13$force, _ref13$skewMs = _ref13.skewMs, skewMs = _ref13$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref13$skewMs;
             token = Lampa.Storage.get('trakt_token');
             refreshToken = Lampa.Storage.get('trakt_refresh_token');
             if (refreshToken) {
@@ -1414,6 +1414,68 @@
       total_pages: safePageCount
     };
   }
+  var WATCHLIST_SORT_FIELDS = new Set(['rank', 'added', 'released', 'title', 'runtime', 'popularity', 'percentage', 'votes', 'my_rating', 'random']);
+  function normalizeWatchlistSort(rawSort) {
+    var normalized = (rawSort || 'added/desc').toString().trim().toLowerCase().replace(/^\/+/, '');
+    var parts = normalized.split('/').filter(Boolean);
+    var field = WATCHLIST_SORT_FIELDS.has(parts[0]) ? parts[0] : 'added';
+    var order = parts[1] === 'asc' ? 'asc' : 'desc';
+    return "".concat(field, "/").concat(order);
+  }
+  function normalizeWatchlistMediaType(rawType) {
+    var value = (rawType || '').toString().trim().toLowerCase();
+    if (value === 'movie' || value === 'movies') return 'movies';
+    if (value === 'show' || value === 'shows' || value === 'tv' || value === 'series' || value === 'serials') return 'shows';
+    if (value === 'all' || value === 'mixed' || value === 'movies,shows') return 'movies,shows';
+    return 'movies,shows';
+  }
+  function resolveWatchlistPagination() {
+    var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var items = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+    var page = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var limit = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 36;
+    var hasHeaderPagination = !!(toPositiveInt(headers['x-pagination-page']) || toPositiveInt(headers['x-pagination-limit']) || toPositiveInt(headers['x-pagination-page-count']) || toNonNegativeInt(headers['x-pagination-item-count']) !== null);
+    if (hasHeaderPagination) {
+      return resolvePaginationFromHeaders(headers, {
+        page: page,
+        limit: limit,
+        total: (Math.max(1, page) - 1) * Math.max(1, limit) + (Array.isArray(items) ? items.length : 0)
+      });
+    }
+    var fallback = makePaginationMeta(items, page, limit);
+    return {
+      page: page,
+      limit: limit,
+      total: fallback.total,
+      total_pages: fallback.total_pages
+    };
+  }
+  function buildWatchlistUrl() {
+    var _ref4 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      _ref4$mediaType = _ref4.mediaType,
+      mediaType = _ref4$mediaType === void 0 ? 'movies,shows' : _ref4$mediaType,
+      _ref4$sort = _ref4.sort,
+      sort = _ref4$sort === void 0 ? 'added/desc' : _ref4$sort,
+      _ref4$page = _ref4.page,
+      page = _ref4$page === void 0 ? 1 : _ref4$page,
+      _ref4$limit = _ref4.limit,
+      limit = _ref4$limit === void 0 ? 36 : _ref4$limit,
+      uncollected = _ref4.uncollected;
+    var query = new URLSearchParams({
+      extended: 'images',
+      page: String(page),
+      limit: String(limit)
+    });
+    if (typeof uncollected !== 'undefined' && uncollected !== null) {
+      var normalized = typeof uncollected === 'string' ? uncollected.toLowerCase().trim() : uncollected;
+      if (normalized === true || normalized === 'true' || normalized === 1 || normalized === '1') {
+        query.set('uncollected', 'true');
+      } else if (normalized === false || normalized === 'false' || normalized === 0 || normalized === '0') {
+        query.set('uncollected', 'false');
+      }
+    }
+    return "/sync/watchlist/".concat(mediaType, "/").concat(sort, "?").concat(query.toString());
+  }
 
   /* duplicate ensureHeaders removed */
 
@@ -1503,9 +1565,9 @@
         }
         for (var i = combinedResults.length - 1; i > 0; i--) {
           var j = Math.floor(Math.random() * (i + 1));
-          var _ref4 = [combinedResults[j], combinedResults[i]];
-          combinedResults[i] = _ref4[0];
-          combinedResults[j] = _ref4[1];
+          var _ref5 = [combinedResults[j], combinedResults[i]];
+          combinedResults[i] = _ref5[0];
+          combinedResults[j] = _ref5[1];
         }
         var total = combinedResults.length;
         var total_pages = Math.max(1, Math.ceil(total / limit));
@@ -1519,28 +1581,33 @@
         };
       });
     },
-    watchlist: function watchlist(params) {
-      return new Promise(function (resolve, reject) {
-        var page = params.page || 1;
-        var limit = params.limit || 36;
-        requestApi('GET', '/sync/watchlist/movies,shows/added/asc?extended=images').then(function (response) {
-          // Calculate total items and pages
-          var total = response.length;
-          var total_pages = Math.max(1, Math.ceil(total / limit));
-
-          // Apply pagination
-          var offset = (page - 1) * limit;
-          var paginatedResults = response.slice(offset, offset + limit);
-
-          // Format and return with pagination info
-          var formattedData = formatTraktResults(paginatedResults);
-          formattedData.total = total;
-          formattedData.total_pages = total_pages;
-          formattedData.page = page;
-          resolve(formattedData);
-        })["catch"](function (error) {
-          reject(error);
-        });
+    watchlist: function watchlist() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var page = Math.max(1, parseInt(params.page, 10) || 1);
+      var limit = Math.max(1, parseInt(params.limit, 10) || 36);
+      var sort = normalizeWatchlistSort(params.sort || params.watchlistSort);
+      var mediaType = normalizeWatchlistMediaType(params.mediaType || params.watchlistType || params.type);
+      var url = buildWatchlistUrl({
+        mediaType: mediaType,
+        sort: sort,
+        page: page,
+        limit: limit,
+        uncollected: params.uncollected
+      });
+      return requestApi('GET', url, {}, false, 0, {
+        withMeta: true
+      }).then(function (response) {
+        var payload = response && Array.isArray(response.data) ? response.data : [];
+        var headers = response && response.headers ? response.headers : {};
+        var formatted = formatTraktResults(payload);
+        var pagination = resolveWatchlistPagination(headers, payload, page, limit);
+        return {
+          results: formatted.results || [],
+          total: pagination.total,
+          total_pages: pagination.total_pages,
+          page: pagination.page,
+          limit: pagination.limit
+        };
       });
     },
     upnext: function upnext(params) {
@@ -1591,11 +1658,11 @@
        * params: { redirect_uri, state?, signup?, prompt? }
        */
       startStandardOAuth: function startStandardOAuth() {
-        var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-          redirect_uri = _ref5.redirect_uri,
-          state = _ref5.state,
-          signup = _ref5.signup,
-          prompt = _ref5.prompt;
+        var _ref6 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+          redirect_uri = _ref6.redirect_uri,
+          state = _ref6.state,
+          signup = _ref6.signup,
+          prompt = _ref6.prompt;
         var base = "".concat(API_URL, "oauth/authorize");
         var qs = new URLSearchParams({
           redirect_uri: redirect_uri,
@@ -1611,9 +1678,9 @@
        * Body: { code, redirect_uri, grant_type: 'authorization_code' }
        * unauthorized = true
        */
-      exchangeCode: function exchangeCode(_ref6) {
-        var code = _ref6.code,
-          redirect_uri = _ref6.redirect_uri;
+      exchangeCode: function exchangeCode(_ref7) {
+        var code = _ref7.code,
+          redirect_uri = _ref7.redirect_uri;
         return requestApi('POST', '/oauth/token', {
           code: code,
           redirect_uri: redirect_uri,
@@ -1651,8 +1718,8 @@
        * Revoke token best-effort
        * unauthorized = true
        */
-      revoke: function revoke(_ref7) {
-        var token = _ref7.token;
+      revoke: function revoke(_ref8) {
+        var token = _ref8.token;
         return requestApi('POST', '/oauth/revoke', {
           token: token
         }, true);
@@ -1777,31 +1844,31 @@
       return requestApi('POST', '/users/me/lists', body);
     },
     updateList: function updateList() {
-      var _ref8 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        listId = _ref8.listId,
-        payload = _ref8.payload;
+      var _ref9 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref9.listId,
+        payload = _ref9.payload;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       var body = sanitizeListPayload(payload);
       if (!body.name) return Promise.reject(new Error('List name is missing'));
       return requestApi('PUT', "/users/me/lists/".concat(encodeURIComponent(listId)), body);
     },
     deleteList: function deleteList() {
-      var _ref9 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        listId = _ref9.listId;
+      var _ref0 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref0.listId;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       return requestApi('DELETE', "/users/me/lists/".concat(encodeURIComponent(listId)));
     },
     addToList: function addToList() {
-      var _ref0 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        listId = _ref0.listId,
-        item = _ref0.item;
+      var _ref1 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref1.listId,
+        item = _ref1.item;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       return requestApi('POST', "/users/me/lists/".concat(encodeURIComponent(listId), "/items"), buildSyncPayload(item || {}));
     },
     removeFromList: function removeFromList() {
-      var _ref1 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        listId = _ref1.listId,
-        item = _ref1.item;
+      var _ref10 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref10.listId,
+        item = _ref10.item;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       return requestApi('POST', "/users/me/lists/".concat(encodeURIComponent(listId), "/items/remove"), buildSyncPayload(item || {}));
     },
@@ -1823,13 +1890,13 @@
       });
     },
     inList: function inList() {
-      var _ref10 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        listId = _ref10.listId,
-        item = _ref10.item,
-        _ref10$limit = _ref10.limit,
-        limit = _ref10$limit === void 0 ? 100 : _ref10$limit,
-        _ref10$maxPages = _ref10.maxPages,
-        maxPages = _ref10$maxPages === void 0 ? 10 : _ref10$maxPages;
+      var _ref11 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref11.listId,
+        item = _ref11.item,
+        _ref11$limit = _ref11.limit,
+        limit = _ref11$limit === void 0 ? 100 : _ref11$limit,
+        _ref11$maxPages = _ref11.maxPages,
+        maxPages = _ref11$maxPages === void 0 ? 10 : _ref11$maxPages;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       var ids = resolveTraktIds(item || {});
       if (!Object.keys(ids).length) return Promise.resolve(false);
@@ -2060,6 +2127,13 @@
             });
           } else {
             reject.call(this);
+          }
+        },
+        onController: function onController(controller) {
+          if (type === 'watchlist' && object && typeof object.onHead === 'function') {
+            controller.up = function () {
+              if (Navigator.canmove('up')) Navigator.move('up');else object.onHead();
+            };
           }
         },
         onInstance: function onInstance(card, element) {
@@ -2739,9 +2813,153 @@
     }
     return comp;
   }
+  function normalizeWatchlistTab(rawType) {
+    var value = (rawType || '').toString().trim().toLowerCase();
+    if (value === 'show' || value === 'shows' || value === 'tv' || value === 'series' || value === 'serials') {
+      return 'shows';
+    }
+    return 'movies';
+  }
+  function buildWatchlistTabTitle(tabId) {
+    if (tabId === 'shows') return t$2('trakttv_watchlist_tab_shows', 'Shows');
+    return t$2('trakttv_watchlist_tab_movies', 'Movies');
+  }
+  function watchlistHub() {
+    var object = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var activity;
+    var html;
+    var navigation;
+    var body;
+    var views = {};
+    var activeTab = normalizeWatchlistTab(object.watchlistType || object.mediaType || object.type);
+    var tabs = [{
+      id: 'movies'
+    }, {
+      id: 'shows'
+    }];
+    function buildTabs() {
+      navigation = $('<div class="trakt-watchlist-hub__tabs"></div>');
+      tabs.forEach(function (tab) {
+        var button = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__tab\" data-tab=\"".concat(tab.id, "\">") + "<div>".concat(buildWatchlistTabTitle(tab.id), "</div>") + "</div>");
+        if (tab.id === activeTab) button.addClass('active');
+        button.on('hover:enter', function () {
+          switchTab(tab.id);
+        });
+        navigation.append(button);
+      });
+    }
+    function updateTabs() {
+      navigation.find('.trakt-watchlist__tab').removeClass('active');
+      var activeButton = navigation.find(".trakt-watchlist__tab[data-tab=\"".concat(activeTab, "\"]"));
+      if (activeButton.length) activeButton.addClass('active');
+    }
+    function makeTabView(tabId) {
+      var viewObject = _objectSpread2(_objectSpread2({}, object), {}, {
+        page: 1,
+        watchlistType: tabId,
+        mediaType: tabId,
+        type: tabId,
+        onHead: function onHead() {
+          Lampa.Controller.toggle('trakt_watchlist_tabs');
+        }
+      });
+      var view = new baseComponent(viewObject, 'watchlist');
+      view.activity = activity;
+      view.create();
+      var render = view.render(true);
+      render.classList.add('trakt-watchlist__view');
+      render.classList.add("trakt-watchlist__view--".concat(tabId));
+      if (tabId !== activeTab) render.classList.add('hide');
+      body.append(render);
+      views[tabId] = view;
+      return view;
+    }
+    function getView(tabId) {
+      if (views[tabId]) return views[tabId];
+      return makeTabView(tabId);
+    }
+    function hideView(view) {
+      if (!view) return;
+      var render = view.render(true);
+      render.classList.add('hide');
+      if (view.pause) view.pause();
+    }
+    function showView(view) {
+      if (!view) return;
+      var render = view.render(true);
+      render.classList.remove('hide');
+      if (view.start) view.start();
+    }
+    function switchTab(tabId) {
+      if (!tabId || tabId === activeTab) {
+        Lampa.Controller.toggle('content');
+        return;
+      }
+      hideView(views[activeTab]);
+      activeTab = tabId;
+      updateTabs();
+      showView(getView(tabId));
+    }
+    function ensureTabsController() {
+      Lampa.Controller.add('trakt_watchlist_tabs', {
+        toggle: function toggle() {
+          Lampa.Controller.collectionSet(navigation);
+          var activeButton = navigation.find(".trakt-watchlist__tab[data-tab=\"".concat(activeTab, "\"]"))[0];
+          var fallbackButton = navigation.find('.trakt-watchlist__tab')[0];
+          Lampa.Controller.collectionFocus(activeButton || fallbackButton, navigation);
+        },
+        right: function right() {
+          Navigator.move('right');
+        },
+        left: function left() {
+          if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+        },
+        down: function down() {
+          Lampa.Controller.toggle('content');
+        },
+        up: function up() {
+          Lampa.Controller.toggle('head');
+        },
+        back: function back() {
+          Lampa.Activity.backward();
+        }
+      });
+    }
+    return {
+      create: function create() {
+        activity = this.activity;
+        activity.render().addClass('trakt-watchlist-activity');
+        html = $('<div class="trakt-watchlist-hub"></div>');
+        body = $('<div class="trakt-watchlist-hub__body"></div>');
+        buildTabs();
+        html.append(navigation, body);
+        ensureTabsController();
+        showView(getView(activeTab));
+        return this.render();
+      },
+      render: function render(js) {
+        return js ? html[0] : html;
+      },
+      start: function start() {
+        var current = getView(activeTab);
+        if (current && current.start) current.start();
+      },
+      pause: function pause() {
+        var current = views[activeTab];
+        if (current && current.pause) current.pause();
+      },
+      destroy: function destroy() {
+        Object.values(views).forEach(function (view) {
+          if (view && view.destroy) view.destroy();
+        });
+        if (html) html.remove();
+        views = {};
+      }
+    };
+  }
   function watchlist$1(object) {
     if (!object.page) object.page = 1;
-    return new baseComponent(object, 'watchlist');
+    return new watchlistHub(object);
   }
   function upnext(object) {
     if (!object.page) object.page = 1;
@@ -3286,6 +3504,16 @@
         ru: "Фильмы",
         en: "Movies",
         uk: "Фільми"
+      },
+      trakttv_watchlist_tab_movies: {
+        ru: "Фильмы",
+        en: "Movies",
+        uk: "Фільми"
+      },
+      trakttv_watchlist_tab_shows: {
+        ru: "Сериалы",
+        en: "Shows",
+        uk: "Серіали"
       },
       trakttv_episodes: {
         ru: "Эпизоды",
@@ -7927,7 +8155,7 @@
     } catch (e) {/* noop */}
 
     // Додаємо стилі
-    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{text-align:center;padding:0 1.2em 1.2em}.trakt-device-auth__qr-container{margin:0 auto 1.2em;width:min(100%,22em)}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin-top:.2em}.trakt-device-auth__code strong{letter-spacing:.08em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__qr-container{width:min(100%,18.5em)}}</style>");
+    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.8em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 11em;-ms-flex:1 1 11em;flex:1 1 11em;min-width:9.5em}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{text-align:center;padding:0 1.2em 1.2em}.trakt-device-auth__qr-container{margin:0 auto 1.2em;width:min(100%,22em)}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin-top:.2em}.trakt-device-auth__code strong{letter-spacing:.08em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__qr-container{width:min(100%,18.5em)}}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     // Фонова валідація токена при старті (єдиний шлях auth lifecycle).
