@@ -814,18 +814,88 @@
   var LME_PROXY_URL = "https://apx.lme.isroot.in/destination/";
   var LME_SIMKL_URL = "https://apx.lme.isroot.in/simkl/";
 
+  var HTTP_URL_PATTERN = /^https?:\/\/[^/\s?#]+(?:[/?#]|$)/i;
+  var INVALID_STRING_VALUES = {
+    undefined: true,
+    "null": true
+  };
+  function sanitizeConfigString(value) {
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "";
+    var normalized = typeof value === "string" ? value.trim() : value === null || typeof value === "undefined" ? "" : String(value).trim();
+    if (!normalized) {
+      return fallback;
+    }
+    if (INVALID_STRING_VALUES[normalized.toLowerCase()]) {
+      return fallback;
+    }
+    return normalized;
+  }
+  function normalizeBaseUrl(rawUrl) {
+    var normalized = sanitizeConfigString(rawUrl);
+    if (!normalized) {
+      return "";
+    }
+    return normalized.length > 1 ? normalized.replace(/\/+$/, "") : normalized;
+  }
+  function normalizeApiPath(rawPath) {
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "";
+    var normalizedFallback = sanitizeConfigString(fallback);
+    var normalizedPath = sanitizeConfigString(rawPath, normalizedFallback);
+    if (!normalizedPath) {
+      return "";
+    }
+    return normalizedPath.charAt(0) === "/" ? normalizedPath : "/".concat(normalizedPath);
+  }
+  function createConfigError(message) {
+    var error = new Error(message);
+    error.name = "TorrentClientConfigError";
+    error.isConfigError = true;
+    return error;
+  }
+  function isHttpUrl(url) {
+    return HTTP_URL_PATTERN.test(url);
+  }
+  function isRelativeUrl(url) {
+    return url.charAt(0) === "/";
+  }
+  function normalizeProxyUrl(rawProxyUrl) {
+    var normalized = sanitizeConfigString(rawProxyUrl, LME_PROXY_URL);
+    return normalized.endsWith("/") ? normalized : "".concat(normalized, "/");
+  }
+  function resolveClientBaseUrl() {
+    var config = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var clientName = options.clientName || "Torrent client";
+    var normalizedUrl = normalizeBaseUrl(config.url);
+    if (!normalizedUrl) {
+      throw createConfigError("".concat(clientName, " URL is not configured"));
+    }
+    if (config.useProxy) {
+      if (!isHttpUrl(normalizedUrl)) {
+        throw createConfigError("".concat(clientName, " URL must include http:// or https:// when proxy is enabled"));
+      }
+      return "".concat(normalizeProxyUrl(config.proxy)).concat(normalizedUrl);
+    }
+    if (!isHttpUrl(normalizedUrl) && !isRelativeUrl(normalizedUrl)) {
+      throw createConfigError("".concat(clientName, " URL has invalid format"));
+    }
+    return normalizedUrl;
+  }
+
   var CONFIG_PREFIX$1 = "lmetorrentqBittorent";
   function getConfig$1() {
     var rawApiKey = Lampa.Storage.field("".concat(CONFIG_PREFIX$1, "ApiKey"));
     return {
-      url: Lampa.Storage.field("".concat(CONFIG_PREFIX$1, "Url")) || "",
+      url: sanitizeConfigString(Lampa.Storage.field("".concat(CONFIG_PREFIX$1, "Url"))),
       useProxy: Lampa.Storage.field("".concat(CONFIG_PREFIX$1, "Proxy")) === true,
+      proxy: LME_PROXY_URL,
       apiKey: rawApiKey && rawApiKey !== "undefined" && rawApiKey !== "null" ? rawApiKey : ""
     };
   }
   function getApiBase$1() {
-    var config = getConfig$1();
-    return "".concat(config.useProxy ? LME_PROXY_URL : "").concat(config.url);
+    return resolveClientBaseUrl(getConfig$1(), {
+      clientName: "qBittorrent"
+    });
   }
   function getHeaders$1(contentType) {
     var config = getConfig$1();
@@ -1465,10 +1535,10 @@
     }
     function getConfig() {
       return _objectSpread2({
-        url: Lampa.Storage.field("".concat(configPrefix, "Url")),
-        user: Lampa.Storage.field("".concat(configPrefix, "User")),
-        pass: Lampa.Storage.field("".concat(configPrefix, "Pass")),
-        path: Lampa.Storage.get("".concat(configPrefix, "Path")) || DEFAULT_RPC_PATH,
+        url: sanitizeConfigString(Lampa.Storage.field("".concat(configPrefix, "Url"))),
+        user: sanitizeConfigString(Lampa.Storage.field("".concat(configPrefix, "User"))),
+        pass: sanitizeConfigString(Lampa.Storage.field("".concat(configPrefix, "Pass"))),
+        path: normalizeApiPath(Lampa.Storage.get("".concat(configPrefix, "Path")), DEFAULT_RPC_PATH),
         useProxy: Lampa.Storage.field("".concat(configPrefix, "Proxy")) === true,
         autostart: Lampa.Storage.field("".concat(configPrefix, "Autostart")),
         sequentialDownload: Lampa.Storage.field("".concat(configPrefix, "SequentialDownload")),
@@ -1492,7 +1562,9 @@
     }
     function getApiUrl() {
       var config = getConfig();
-      return "".concat(config.useProxy ? config.proxy : "").concat(config.url).concat(config.path);
+      return "".concat(resolveClientBaseUrl(config, {
+        clientName: clientName
+      })).concat(config.path);
     }
     function reguest(headers, body, timeout) {
       return new Promise(function (resolve, reject) {
@@ -2378,15 +2450,17 @@
   var simklSearchCache = {};
   function getConfig() {
     return {
-      url: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Url")),
-      user: Lampa.Storage.field("".concat(CONFIG_PREFIX, "User")),
-      pass: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Pass")),
-      useProxy: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Proxy")) === true
+      url: sanitizeConfigString(Lampa.Storage.field("".concat(CONFIG_PREFIX, "Url"))),
+      user: sanitizeConfigString(Lampa.Storage.field("".concat(CONFIG_PREFIX, "User"))),
+      pass: sanitizeConfigString(Lampa.Storage.field("".concat(CONFIG_PREFIX, "Pass"))),
+      useProxy: Lampa.Storage.field("".concat(CONFIG_PREFIX, "Proxy")) === true,
+      proxy: LME_PROXY_URL
     };
   }
   function getApiBase() {
-    var config = getConfig();
-    return "".concat(config.useProxy ? LME_PROXY_URL : '').concat(config.url);
+    return resolveClientBaseUrl(getConfig(), {
+      clientName: 'Synology'
+    });
   }
   function getHeaders() {
     var config = getConfig();
