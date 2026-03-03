@@ -80,6 +80,11 @@
     DETAILS: function DETAILS(slug) {
       return API_BASE + 'anime/' + slug;
     },
+    EPISODES: function EPISODES(slug) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
+      return API_BASE + 'anime/' + encodeURIComponent(slug) + '/episodes?page=' + page + '&size=' + size;
+    },
     COMMENTS: function COMMENTS(slug) {
       var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
       var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
@@ -87,6 +92,11 @@
     },
     CHARACTERS: function CHARACTERS(slug) {
       return API_BASE + 'anime/' + slug + '/characters';
+    },
+    STAFF: function STAFF(slug) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
+      return API_BASE + 'anime/' + encodeURIComponent(slug) + '/staff?page=' + page + '&size=' + size;
     },
     CHARACTER_VOICES: function CHARACTER_VOICES(slug) {
       var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
@@ -332,6 +342,146 @@
     return plain.slice(0, maxLength - 1).trim() + '…';
   }
 
+  function normalizeTimestampToIsoDateTime(timestamp) {
+    var value = Number(timestamp || 0);
+    if (!value) return '';
+    var date = new Date(value * 1000);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().replace('T', ' ').slice(0, 19);
+  }
+  function normalizeTimestampToIsoDate(timestamp) {
+    var full = normalizeTimestampToIsoDateTime(timestamp);
+    return full ? full.slice(0, 10) : '';
+  }
+  function normalizeEpisodeNumber(entry, index) {
+    var value = Number(entry && (entry.episode || entry.number || entry.episode_number) || 0);
+    if (value > 0) return value;
+    return Number(index || 0) + 1;
+  }
+  function extractSeasonNumberFromText$1(value) {
+    var text = String(value || '').trim();
+    if (!text) return 0;
+    var patterns = [/\bseason[\s._-]*([0-9]{1,2})\b/i, /\b([0-9]{1,2})(?:st|nd|rd|th)?[\s._-]*season\b/i, /\bсезон[\s._-]*([0-9]{1,2})\b/i, /\b([0-9]{1,2})[\s._-]*(?:й|ий|ій)?[\s._-]*сезон\b/i, /(?:^|[-_])season[-_]*([0-9]{1,2})(?:$|[-_])/i, /(?:^|[-_])([0-9]{1,2})(?:st|nd|rd|th)?[-_]*season(?:$|[-_])/i];
+    for (var i = 0; i < patterns.length; i++) {
+      var match = text.match(patterns[i]);
+      if (!match || !match[1]) continue;
+      var number = Number(match[1]);
+      if (number > 0) return number;
+    }
+    return 0;
+  }
+  function inferSeasonNumber$1(details) {
+    var numericValue = Number(details && (details.season_number || details.season) || 0);
+    if (numericValue > 0) return numericValue;
+    var candidates = [details && details.title_ua, details && details.title_en, details && details.title_ja, details && details.name, details && details.slug];
+    for (var i = 0; i < candidates.length; i++) {
+      var parsed = extractSeasonNumberFromText$1(candidates[i]);
+      if (parsed > 0) return parsed;
+    }
+    return 1;
+  }
+  function normalizeEpisodeImageFields$1(entry, fallbackImage) {
+    var raw = entry && (entry.image || entry.still_path) || fallbackImage || null;
+    if (!raw) return {
+      still_path: null,
+      img: null
+    };
+    var image = String(raw).trim();
+    if (!image) return {
+      still_path: null,
+      img: null
+    };
+    if (/^(https?:)?\/\//i.test(image) || /^data:image\//i.test(image)) {
+      return {
+        still_path: null,
+        img: image
+      };
+    }
+    if (image.charAt(0) === '/') {
+      return {
+        still_path: image,
+        img: null
+      };
+    }
+    return {
+      still_path: null,
+      img: image
+    };
+  }
+  function extractScheduleEntries(details) {
+    return Array.isArray(details && details.schedule) ? details.schedule : [];
+  }
+  function buildNextEpisodeFromSchedule(scheduleEntries) {
+    var now = Math.floor(Date.now() / 1000);
+    var future = (Array.isArray(scheduleEntries) ? scheduleEntries : []).filter(function (entry) {
+      return Number(entry && entry.airing_at || 0) > now;
+    }).sort(function (a, b) {
+      return Number(a && a.airing_at || 0) - Number(b && b.airing_at || 0);
+    });
+    var next = future.length ? future[0] : null;
+    if (!next) return null;
+    var airDate = normalizeTimestampToIsoDateTime(next.airing_at);
+    if (!airDate) return null;
+    return {
+      air_date: airDate,
+      episode_number: normalizeEpisodeNumber(next, 0)
+    };
+  }
+  function buildScheduleEpisodes(scheduleEntries, details, image) {
+    var schedule = Array.isArray(scheduleEntries) ? scheduleEntries : [];
+    if (!schedule.length) return null;
+    var seasonNumber = inferSeasonNumber$1(details);
+    var year = details && details.year;
+    var fallbackDate = year ? year + '-01-01' : undefined;
+    var byEpisode = {};
+    schedule.forEach(function (entry, index) {
+      var episodeNumber = normalizeEpisodeNumber(entry, index);
+      var airDate = normalizeTimestampToIsoDate(entry && entry.airing_at) || fallbackDate;
+      var imageFields = normalizeEpisodeImageFields$1(entry, image);
+      if (!byEpisode[episodeNumber]) {
+        byEpisode[episodeNumber] = {
+          id: 'hikka_schedule_ep_' + episodeNumber,
+          air_date: airDate,
+          episode_number: episodeNumber,
+          season_number: seasonNumber,
+          name: 'Епізод ' + episodeNumber,
+          overview: '',
+          still_path: imageFields.still_path,
+          img: imageFields.img
+        };
+      }
+    });
+    var episodes = Object.keys(byEpisode).map(function (key) {
+      return byEpisode[key];
+    }).sort(function (a, b) {
+      return Number(a.episode_number || 0) - Number(b.episode_number || 0);
+    });
+    if (!episodes.length) return null;
+    return {
+      name: 'Season ' + seasonNumber,
+      episodes: episodes
+    };
+  }
+  function buildScheduleStats(scheduleEntries) {
+    var schedule = Array.isArray(scheduleEntries) ? scheduleEntries : [];
+    if (!schedule.length) return {
+      total: 0,
+      released: 0
+    };
+    var now = Math.floor(Date.now() / 1000);
+    var maxEpisode = 0;
+    var released = 0;
+    schedule.forEach(function (entry, index) {
+      var episodeNumber = normalizeEpisodeNumber(entry, index);
+      if (episodeNumber > maxEpisode) maxEpisode = episodeNumber;
+      var airingAt = Number(entry && entry.airing_at || 0);
+      if (airingAt && airingAt <= now) released++;
+    });
+    return {
+      total: maxEpisode,
+      released: released
+    };
+  }
   function normalizeAnimeData(anime) {
     return {
       id: anime.slug,
@@ -425,36 +575,54 @@
     }
     if (typeof details.episodes_released === 'number') card.episodes_released = details.episodes_released;
 
-    // Компанії виробництва (щоб Full міг відобразити без TMDB)
-    if (details && Array.isArray(details.companies)) {
-      card.production_companies = details.companies.map(function (c) {
-        return {
-          id: c && c.company && c.company.slug || undefined,
-          name: c && c.company && c.company.name || ''
-        };
-      });
+    // Компанії виробництва (повертаємо всі студії/компанії, як у нативному потоці)
+    card.production_companies = Array.isArray(details && details.companies) ? details.companies.map(function (item) {
+      return {
+        id: item && item.company ? item.company.slug : undefined,
+        name: item && item.company ? item.company.name : '',
+        type: String(item && item.type || '').toLowerCase()
+      };
+    }).filter(function (item) {
+      return item.id && item.name;
+    }) : [];
+    var scheduleEntries = extractScheduleEntries(details);
+    var scheduleStats = buildScheduleStats(scheduleEntries);
+    if (!card.episodes_total && scheduleStats.total > 0) card.episodes_total = scheduleStats.total;
+    if (!card.number_of_episodes && card.episodes_total) card.number_of_episodes = card.episodes_total;
+    if (!card.episodes_released && scheduleStats.released > 0) card.episodes_released = scheduleStats.released;
+    if (!card.next_episode_to_air) {
+      var nextEpisode = buildNextEpisodeFromSchedule(scheduleEntries);
+      if (nextEpisode) card.next_episode_to_air = nextEpisode;
     }
 
     // Епізоди
     // Ensure no episodes for pure movies to avoid empty tab
     var episodes;
     if (details && Array.isArray(details.episodes) && details.episodes.length) {
-      var seasonNumber = details.season || 1;
+      var seasonNumber = inferSeasonNumber$1(details);
       episodes = {
         name: 'Season ' + seasonNumber,
         episodes: details.episodes.map(function (ep, idx) {
+          var imageFields = normalizeEpisodeImageFields$1(ep, image);
           return {
             id: ep.id || undefined,
             air_date: ep.air_date || (year ? year + '-01-01' : undefined),
             episode_number: ep.number || ep.episode_number || idx + 1,
             season_number: ep.season || ep.season_number || seasonNumber,
-            name: ep.title_ua || ep.title_en || ep.name || 'Епізод ' + (ep.number || idx + 1),
+            name: ep.title_ua || ep.title_ja || ep.title_en || ep.name || 'Епізод ' + (ep.number || idx + 1),
             overview: markdownToPlainText(ep.synopsis_ua || ep.synopsis_en || ep.overview || ''),
-            still_path: ep.image || ep.still_path || image || null
+            still_path: imageFields.still_path,
+            img: imageFields.img
           };
         })
       };
       if (!card.number_of_episodes) card.number_of_episodes = episodes.episodes.length;
+    } else if (mediaType !== 'movie') {
+      var fallbackEpisodes = buildScheduleEpisodes(scheduleEntries, details, image);
+      if (fallbackEpisodes && Array.isArray(fallbackEpisodes.episodes) && fallbackEpisodes.episodes.length) {
+        episodes = fallbackEpisodes;
+        if (!card.number_of_episodes) card.number_of_episodes = fallbackEpisodes.episodes.length;
+      }
     }
     return {
       card: card,
@@ -835,6 +1003,41 @@
         })
       });
     },
+    // Hikka Episodes API: GET /anime/{slug}/episodes?page={page}&size={size}
+    getAnimeEpisodes: function getAnimeEpisodes(slug) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
+      var success = arguments.length > 3 ? arguments[3] : undefined;
+      var error = arguments.length > 4 ? arguments[4] : undefined;
+      if (!slug) {
+        if (error) error('No slug');
+        return;
+      }
+      var url = ENDPOINTS.EPISODES(slug, page, size);
+      network.silent(url, function (data) {
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            console.error('[Hikka] Failed to parse episodes response:', e);
+            if (error) error(e);
+            return;
+          }
+        }
+        if (data && Array.isArray(data.list)) {
+          if (success) success(data);
+        } else {
+          if (error) error('No episodes data');
+        }
+      }, function (err) {
+        console.log('[Hikka] Error fetching episodes:', err);
+        if (error) error(err);
+      }, false, {
+        headers: getProxyHeaders({
+          'Content-Type': 'application/json'
+        })
+      });
+    },
     getComments: function getComments(slug) {
       var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
       var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
@@ -910,6 +1113,41 @@
       }, function (err) {
         console.log('[Hikka] Error fetching characters:', err);
         error && error(err);
+      }, false, {
+        headers: getProxyHeaders({
+          'Content-Type': 'application/json'
+        })
+      });
+    },
+    // Hikka Staff API: GET /anime/{slug}/staff?page={page}&size={size}
+    getAnimeStaff: function getAnimeStaff(slug) {
+      var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+      var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 20;
+      var success = arguments.length > 3 ? arguments[3] : undefined;
+      var error = arguments.length > 4 ? arguments[4] : undefined;
+      if (!slug) {
+        if (error) error('No slug');
+        return;
+      }
+      var url = ENDPOINTS.STAFF(slug, page, size);
+      network.silent(url, function (data) {
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            console.error('[Hikka] Failed to parse staff response:', e);
+            if (error) error(e);
+            return;
+          }
+        }
+        if (data && Array.isArray(data.list)) {
+          if (success) success(data);
+        } else {
+          if (error) error('No staff data');
+        }
+      }, function (err) {
+        console.log('[Hikka] Error fetching staff:', err);
+        if (error) error(err);
       }, false, {
         headers: getProxyHeaders({
           'Content-Type': 'application/json'
@@ -1150,7 +1388,7 @@
     }
     return _createClass(CardRenderer, null, [{
       key: "render",
-      value: function render(card, element, scroll, activity) {
+      value: function render(card, element, scroll, _activity) {
         var callbacks = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
         // card.render() повертає jQuery об'єкт
         var render = card.render();
@@ -1170,6 +1408,15 @@
           viewElement.appendChild(translateBadge);
         }
 
+        // Для колекцій у Full показуємо реальний media_type (TV/ONA/OVA/...)
+        if (element && element.hikka_collection && viewElement) {
+          var typeLabel = String(element.hikka_media_type_label || element.media_type || '').toUpperCase();
+          var typeNode = viewElement.querySelector('.card__type');
+          if (typeNode && typeLabel) {
+            typeNode.innerText = typeLabel;
+          }
+        }
+
         // Важливо: підписка на події ПЕРЕД додаванням в DOM
         render.on('hover:touch hover:enter hover:focus', function () {
           if (callbacks.onFocus) callbacks.onFocus(card, render[0]);
@@ -1183,36 +1430,29 @@
           }
         });
 
-        // Перевизначаємо стандартну поведінку hover:enter
+        // Enter -> нативний потік Full через source-provider (без prefetch details тут)
         render.off('hover:enter');
         render.on('hover:enter', function () {
-          console.log('[Hikka] Clicked on card:', element.hikka_slug);
-          activity.loader(true);
           var slug = element.hikka_slug || element.id;
-          Api.getAnimeDetails(slug, function (details) {
-            var payload = Api.buildFullPayloadFromDetails(details);
-            if (payload && payload.id && payload.card) {
-              Lampa.Activity.push({
-                url: '',
-                component: 'full',
-                id: payload.id,
-                method: payload.method === 'movie' ? 'movie' : 'tv',
-                card: payload.card,
-                episodes: payload.episodes,
-                search: payload.card && (payload.card.original_title || payload.card.title) || '',
-                search_one: payload.card && payload.card.title || '',
-                search_two: payload.card && payload.card.original_title || '',
-                source: 'hikka'
-              });
-            } else {
-              console.log('[Hikka] Invalid payload from details, cannot open Full');
-              Lampa.Noty.show('Помилка формування картки Hikka');
-            }
-            activity.loader(false);
-          }, function (error) {
-            activity.loader(false);
-            console.log('[Hikka] Error loading Hikka details:', error);
-            Lampa.Noty.show('Помилка завантаження деталей Hikka');
+          if (!slug) {
+            Lampa.Noty.show('Не вдалося відкрити картку: відсутній slug');
+            return;
+          }
+          var cardData = _objectSpread2(_objectSpread2({}, element), {}, {
+            id: slug,
+            hikka_slug: element.hikka_slug || slug,
+            source: 'hikka'
+          });
+          Lampa.Activity.push({
+            url: '',
+            component: 'full',
+            id: slug,
+            method: element.media_type === 'movie' ? 'movie' : 'tv',
+            card: cardData,
+            search: cardData.original_title || cardData.title || '',
+            search_one: cardData.title || '',
+            search_two: cardData.original_title || '',
+            source: 'hikka'
           });
         });
         return render;
@@ -1545,6 +1785,10 @@
       this.total_pages = 1;
       this.current_page = 1;
       this.loading = false;
+      this.nextWait = false;
+      this.buildedTime = Date.now();
+      this.destroyed = false;
+      this.onEndHandler = this.loadNext.bind(this);
 
       // PageView system
       this.pages = {};
@@ -1561,6 +1805,7 @@
         console.log('[Hikka] Component.create called');
         if (this.rendered) return this.html;
         this.rendered = true;
+        this.destroyed = false;
 
         // Lampa passes the activity instance to the component function context, 
         // but here we are a class. Usually 'this' in the component function is the activity context.
@@ -1625,6 +1870,7 @@
       key: "destroy",
       value: function destroy() {
         this.rendered = false;
+        this.destroyed = true;
         Lampa.Arrays.destroy(this.items);
         this.scroll.destroy();
         this.html.remove();
@@ -1632,39 +1878,61 @@
         this.items = [];
       }
     }, {
+      key: "syncOnEnd",
+      value: function syncOnEnd() {
+        if (!this.items.length || this.current_page >= this.total_pages) {
+          this.scroll.onEnd = null;
+          return;
+        }
+        this.scroll.onEnd = this.onEndHandler;
+      }
+    }, {
+      key: "loadNext",
+      value: function loadNext() {
+        if (this.nextWait || this.loading) return;
+        if (!this.items.length) return;
+        if (this.current_page >= this.total_pages) return;
+        if (this.buildedTime > Date.now() - 1000) return;
+        this.nextWait = true;
+        this.current_page++;
+        this.load();
+      }
+    }, {
       key: "load",
       value: function load() {
         var _this2 = this;
         if (this.loading) return;
+        var fromNext = this.nextWait;
         this.loading = true;
         if (this.current_page === 1) this.activity.loader(true);
         Api.getAnimeListWithFilters(this.filterManager.get(), this.current_page, function (data) {
+          if (_this2.destroyed) return;
           _this2.loading = false;
+          _this2.nextWait = false;
           if (_this2.current_page === 1) _this2.activity.loader(false);
           if (data && data.results && data.results.length) {
             _this2.total_pages = data.total_pages || 1;
             _this2.append(data.results);
+            _this2.buildedTime = Date.now();
             if (_this2.current_page === 1) {
               _this2.scroll.minus();
             }
-            if (_this2.current_page < _this2.total_pages) {
-              _this2.scroll.onEnd = function () {
-                if (!_this2.loading) {
-                  _this2.current_page++;
-                  _this2.load();
-                }
-              };
-            } else {
-              _this2.scroll.onEnd = null;
-            }
+            _this2.syncOnEnd();
           } else if (_this2.current_page === 1) {
             _this2.empty();
+          } else {
+            _this2.syncOnEnd();
           }
         }, function () {
+          if (_this2.destroyed) return;
           _this2.loading = false;
+          if (fromNext && _this2.current_page > 1) _this2.current_page--;
+          _this2.nextWait = false;
           if (_this2.current_page === 1) _this2.activity.loader(false);
           if (_this2.current_page === 1) {
             _this2.empty();
+          } else {
+            _this2.syncOnEnd();
           }
         });
       }
@@ -1733,6 +2001,11 @@
         this.active = 0;
         this.pages = {};
         this.added = 0;
+        this.loading = false;
+        this.nextWait = false;
+        this.total_pages = 1;
+        this.buildedTime = Date.now();
+        this.scroll.onEnd = null;
       }
     }, {
       key: "reload",
@@ -2723,7 +2996,7 @@
     return [{
       name: 'HikkaComponentOngoingUA',
       title: 'Онгоїнги',
-      index: 0,
+      index: 3,
       buildFilters: function buildFilters() {
         return withBaseFilters({
           status: ['ongoing'],
@@ -2735,7 +3008,7 @@
     }, {
       name: 'HikkaComponentFinishedPrevSeasonUA',
       title: 'Минулий сезон',
-      index: 1,
+      index: 4,
       buildFilters: function buildFilters() {
         return withBaseFilters({
           media_type: ['tv', 'ova', 'ona'],
@@ -2748,7 +3021,7 @@
     }, {
       name: 'HikkaComponentAnnounced',
       title: 'Анонси',
-      index: 2,
+      index: 5,
       buildFilters: function buildFilters() {
         return withBaseFilters({
           media_type: ['tv', 'movie', 'ona'],
@@ -2761,7 +3034,7 @@
     }, {
       name: 'HikkaComponentTopMoviesUA',
       title: 'Високо оцінені фільми',
-      index: 3,
+      index: 6,
       buildFilters: function buildFilters() {
         return withBaseFilters({
           media_type: ['movie'],
@@ -2903,10 +3176,168 @@
     if (Number.isNaN(date.getTime())) return undefined;
     return date.toISOString().slice(0, 10);
   }
+  function normalizeEpisodeDate(episode) {
+    var aired = Number(episode && (episode.aired || episode.airing_at || episode.air_date) || 0);
+    if (aired > 0) return formatDateFromUnix(aired);
+    var airDate = String(episode && episode.air_date || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(airDate)) return airDate.slice(0, 10);
+    return undefined;
+  }
+  function normalizeEpisodeIndex(episode, fallbackIndex) {
+    var value = Number(episode && (episode.index || episode.number || episode.episode_number || episode.episode) || 0);
+    if (value > 0) return value;
+    return Number(fallbackIndex || 0) + 1;
+  }
+  function normalizeEpisodeTitle(episode, episodeNumber) {
+    var title = episode && (episode.title_ua || episode.title_ja || episode.title_en || episode.name) || '';
+    return title || 'Епізод ' + episodeNumber;
+  }
+  function extractSeasonNumberFromText(value) {
+    var text = String(value || '').trim();
+    if (!text) return 0;
+    var patterns = [/\bseason[\s._-]*([0-9]{1,2})\b/i, /\b([0-9]{1,2})(?:st|nd|rd|th)?[\s._-]*season\b/i, /\bсезон[\s._-]*([0-9]{1,2})\b/i, /\b([0-9]{1,2})[\s._-]*(?:й|ий|ій)?[\s._-]*сезон\b/i, /(?:^|[-_])season[-_]*([0-9]{1,2})(?:$|[-_])/i, /(?:^|[-_])([0-9]{1,2})(?:st|nd|rd|th)?[-_]*season(?:$|[-_])/i];
+    for (var i = 0; i < patterns.length; i++) {
+      var match = text.match(patterns[i]);
+      if (!match || !match[1]) continue;
+      var number = Number(match[1]);
+      if (number > 0) return number;
+    }
+    return 0;
+  }
+  function inferSeasonNumber(details) {
+    var numericValue = Number(details && (details.season_number || details.season) || 0);
+    if (numericValue > 0) return numericValue;
+    var candidates = [details && details.title_ua, details && details.title_en, details && details.title_ja, details && details.name, details && details.slug];
+    for (var i = 0; i < candidates.length; i++) {
+      var parsed = extractSeasonNumberFromText(candidates[i]);
+      if (parsed > 0) return parsed;
+    }
+    return 1;
+  }
+  function normalizeEpisodeImageFields(entry, fallbackImage) {
+    var raw = entry && (entry.image || entry.still_path) || fallbackImage || null;
+    if (!raw) return {
+      still_path: null,
+      img: null
+    };
+    var image = String(raw).trim();
+    if (!image) return {
+      still_path: null,
+      img: null
+    };
+    if (/^(https?:)?\/\//i.test(image) || /^data:image\//i.test(image)) {
+      return {
+        still_path: null,
+        img: image
+      };
+    }
+    if (image.charAt(0) === '/') {
+      return {
+        still_path: image,
+        img: null
+      };
+    }
+    return {
+      still_path: null,
+      img: image
+    };
+  }
+  function buildEpisodesPayloadFromApi(episodes, details, image) {
+    var source = Array.isArray(episodes) ? episodes : [];
+    if (!source.length) return null;
+    var byEpisode = {};
+    var seasonNumber = inferSeasonNumber(details);
+    source.forEach(function (entry, index) {
+      var episodeNumber = normalizeEpisodeIndex(entry, index);
+      if (!episodeNumber) return;
+      var imageFields = normalizeEpisodeImageFields(entry, image);
+      if (!byEpisode[episodeNumber]) {
+        byEpisode[episodeNumber] = {
+          id: 'hikka_ep_' + episodeNumber,
+          episode_number: episodeNumber,
+          season_number: seasonNumber,
+          air_date: normalizeEpisodeDate(entry),
+          name: normalizeEpisodeTitle(entry, episodeNumber),
+          overview: String(entry && (entry.synopsis_ua || entry.synopsis_en || entry.overview) || ''),
+          still_path: imageFields.still_path,
+          img: imageFields.img
+        };
+      }
+    });
+    var mapped = Object.keys(byEpisode).map(function (key) {
+      return byEpisode[key];
+    }).sort(function (a, b) {
+      return Number(a.episode_number || 0) - Number(b.episode_number || 0);
+    });
+    if (!mapped.length) return null;
+    return {
+      name: 'Season ' + seasonNumber,
+      episodes: mapped
+    };
+  }
+  function applyEpisodesStatsToCard(card, episodesPayload) {
+    if (!card || !episodesPayload || !Array.isArray(episodesPayload.episodes)) return;
+    var list = episodesPayload.episodes;
+    var now = Date.now();
+    var released = 0;
+    var nextEpisode = null;
+    list.forEach(function (item) {
+      var airDate = item && item.air_date ? new Date(item.air_date + 'T00:00:00').getTime() : NaN;
+      if (Number.isNaN(airDate)) return;
+      if (airDate <= now) {
+        released++;
+      } else if (!nextEpisode || airDate < nextEpisode.time) {
+        nextEpisode = {
+          time: airDate,
+          air_date: item.air_date + ' 00:00:00',
+          episode_number: item.episode_number
+        };
+      }
+    });
+    if (!card.number_of_episodes) card.number_of_episodes = list.length;
+    if (!card.episodes_total) card.episodes_total = list.length;
+    if (!card.episodes_released) card.episodes_released = released;
+    if (!card.next_episode_to_air && nextEpisode) {
+      card.next_episode_to_air = {
+        air_date: nextEpisode.air_date,
+        episode_number: nextEpisode.episode_number
+      };
+    }
+  }
+  function loadAllAnimeEpisodes(slug, oncomplite, onerror) {
+    var pageSize = 100;
+    var maxPages = 20;
+    var all = [];
+    var page = 1;
+    var _next = function next() {
+      Api.getAnimeEpisodes(slug, page, pageSize, function (data) {
+        var list = Array.isArray(data && data.list) ? data.list : [];
+        var pages = Math.max(1, Number(data && data.pagination && data.pagination.pages) || 1);
+        list.forEach(function (item) {
+          return all.push(item);
+        });
+        if (page < pages && page < maxPages) {
+          page++;
+          _next();
+          return;
+        }
+        oncomplite(all);
+      }, function (err) {
+        if (page === 1) {
+          onerror && onerror(err);
+          return;
+        }
+        oncomplite(all);
+      });
+    };
+    _next();
+  }
   function mapPersonAnimeCard(entry, index) {
     var anime = entry && entry.anime || null;
     if (!anime) return null;
-    var mediaType = anime.media_type === 'movie' ? 'movie' : 'tv';
+    var mediaTypeRaw = String(anime.media_type || 'tv').toLowerCase();
+    var mediaType = mediaTypeRaw || 'tv';
+    var isMovie = mediaType === 'movie';
     var title = pickAnimeTitle(anime);
     var yearDate = anime.year ? anime.year + '-01-01' : undefined;
     var startDate = formatDateFromUnix(anime.start_date);
@@ -2918,20 +3349,50 @@
       id: anime.slug || 'hikka_person_anime_' + index,
       hikka_slug: anime.slug,
       title: title || '—',
-      name: mediaType !== 'movie' ? title || '—' : undefined,
+      name: !isMovie ? title || '—' : undefined,
       original_title: anime.title_en || anime.title_ja || anime.title_ua || title || '',
-      original_name: mediaType !== 'movie' ? anime.title_en || anime.title_ja || anime.title_ua || title || '' : null,
+      original_name: !isMovie ? anime.title_en || anime.title_ja || anime.title_ua || title || '' : null,
       poster_path: null,
       backdrop_path: null,
       poster: anime.image || null,
       img: anime.image || null,
       media_type: mediaType,
       vote_average: anime.score || anime.native_score || 0,
-      release_date: mediaType === 'movie' ? dateValue : undefined,
-      first_air_date: mediaType !== 'movie' ? dateValue : undefined,
+      release_date: isMovie ? dateValue : undefined,
+      first_air_date: !isMovie ? dateValue : undefined,
       source: 'hikka',
       character: roleLabels.join(', ')
     };
+  }
+  function normalizePersonMediaType(value) {
+    var type = String(value || 'tv').toLowerCase();
+    var allowed = ['tv', 'movie', 'ona', 'ova', 'special', 'music'];
+    if (allowed.indexOf(type) !== -1) return type;
+    return 'other';
+  }
+  function getPersonMediaTypeLabel(type) {
+    var labels = {
+      tv: 'TV',
+      movie: 'Movie',
+      ona: 'ONA',
+      ova: 'OVA',
+      special: 'Special',
+      music: 'Music',
+      other: 'Інше'
+    };
+    return labels[type] || labels.other;
+  }
+  function getPersonMediaTypeOrder(type) {
+    var order = {
+      tv: 0,
+      movie: 1,
+      ona: 2,
+      ova: 3,
+      special: 4,
+      music: 5,
+      other: 6
+    };
+    return order[type] !== undefined ? order[type] : 99;
   }
   function collectCharacterVoices(characterSlug, animeSlug, oncomplite) {
     if (!characterSlug) {
@@ -3192,6 +3653,32 @@
       delete item.__roles;
       return item;
     });
+    var groupedCredits = {};
+    credits.forEach(function (item) {
+      var type = normalizePersonMediaType(item && item.media_type);
+      if (!groupedCredits[type]) groupedCredits[type] = [];
+      groupedCredits[type].push(item);
+    });
+    var knownFor = Object.keys(groupedCredits).map(function (type) {
+      return {
+        type: type,
+        name: getPersonMediaTypeLabel(type),
+        credits: groupedCredits[type]
+      };
+    }).filter(function (section) {
+      return Array.isArray(section.credits) && section.credits.length;
+    }).sort(function (a, b) {
+      var byCount = Number(b.credits.length || 0) - Number(a.credits.length || 0);
+      if (byCount !== 0) return byCount;
+      var byOrder = getPersonMediaTypeOrder(a.type) - getPersonMediaTypeOrder(b.type);
+      if (byOrder !== 0) return byOrder;
+      return String(a.name || '').localeCompare(String(b.name || ''), 'uk');
+    }).map(function (section) {
+      return {
+        name: section.name,
+        credits: section.credits
+      };
+    });
     var stats = [];
     if (typeof person.anime_count === 'number') stats.push('Аніме: ' + person.anime_count);
     if (typeof person.characters_count === 'number') stats.push('Персонажів: ' + person.characters_count);
@@ -3215,10 +3702,7 @@
         source: 'hikka'
       },
       credits: {
-        knownFor: credits.length ? [{
-          name: 'Аніме',
-          credits: credits
-        }] : []
+        knownFor: knownFor
       }
     };
   }
@@ -3252,6 +3736,233 @@
       };
     });
   }
+  function mapFranchiseResults(rel) {
+    var rawList = Array.isArray(rel && rel.anime) ? rel.anime : Array.isArray(rel && rel.list) ? rel.list : [];
+    var sorted = rawList.slice().sort(function (a, b) {
+      var yearA = Number(a && a.year || 0);
+      var yearB = Number(b && b.year || 0);
+      if (yearB !== yearA) return yearB - yearA;
+      var startA = Number(a && a.start_date || 0);
+      var startB = Number(b && b.start_date || 0);
+      if (startB !== startA) return startB - startA;
+      return 0;
+    });
+    return sorted.map(function (item, idx) {
+      var mediaTypeRaw = String(item && item.media_type || 'tv').toLowerCase();
+      var mediaType = mediaTypeRaw || 'tv';
+      var year = item && item.year;
+      var startDate = item && item.start_date ? new Date(item.start_date * 1000).toISOString().slice(0, 10) : undefined;
+      return {
+        id: item.slug || 'fr_' + idx,
+        hikka_slug: item.slug || 'fr_' + idx,
+        title: item.title_ua || item.title_en || item.title_ja || '',
+        original_title: item.title_en || item.title_ja || item.title_ua || '',
+        // Для колекційних карток не використовуємо *_path, аби уникнути Api.img з TMDB
+        poster_path: null,
+        backdrop_path: null,
+        poster: item.image || null,
+        img: item.image || null,
+        vote_average: item.score || item.native_score || 0,
+        release_date: mediaType === 'movie' ? year ? year + '-01-01' : startDate : undefined,
+        first_air_date: mediaType !== 'movie' ? year ? year + '-01-01' : startDate : undefined,
+        media_type: mediaType,
+        // Для нормального TV-style картки залишаємо non-movie original_name,
+        // а лейбл типу оновимо в CardRenderer.
+        original_name: mediaType === 'movie' ? null : item.title_en || item.title_ja || item.title_ua || '',
+        source: 'hikka',
+        hikka_collection: true,
+        hikka_media_type_label: mediaType.toUpperCase()
+      };
+    }).slice(0, 19);
+  }
+  function pickStaffRoleLabel(entry) {
+    var roles = Array.isArray(entry && entry.roles) ? entry.roles : [];
+    var labels = roles.map(function (role) {
+      return role && (role.name_ua || role.name_en || role.name);
+    }).filter(Boolean);
+    if (labels.length) return labels.slice(0, 2).join(', ');
+    var direct = entry && (entry.role_ua || entry.role_en || entry.role || entry.department) || '';
+    return String(direct || '').trim();
+  }
+  function mapStaffToCrew(list) {
+    var source = Array.isArray(list) ? list : [];
+    var byPerson = {};
+    source.forEach(function (entry, index) {
+      var person = entry && entry.person || entry || {};
+      var slug = person.slug || 'hikka_staff_' + index;
+      var role = pickStaffRoleLabel(entry) || 'Автор';
+      if (!byPerson[slug]) {
+        byPerson[slug] = {
+          id: slug,
+          name: pickPersonName(person),
+          character: role,
+          known_for_department: 'Production',
+          profile_path: null,
+          img: person.image || null,
+          source: 'hikka',
+          gender: 0,
+          // Full будує staff-лайн тільки для job === 'Director'
+          job: 'Director'
+        };
+        return;
+      }
+      var prev = String(byPerson[slug].character || '');
+      if (prev.indexOf(role) === -1) {
+        byPerson[slug].character = prev ? prev + ', ' + role : role;
+      }
+    });
+    return Object.keys(byPerson).map(function (key) {
+      return byPerson[key];
+    }).slice(0, 24);
+  }
+  function buildStaffLoadingPlaceholder(slug) {
+    return [{
+      id: 'hikka_lazy_staff_loading_' + slug,
+      name: 'Завантаження авторів...',
+      character: 'Триває завантаження',
+      known_for_department: 'Production',
+      profile_path: null,
+      img: null,
+      source: 'hikka',
+      gender: 0,
+      job: 'Director',
+      hikka_lazy_type: 'staff',
+      hikka_lazy_slug: slug,
+      hikka_lazy_loaded: false,
+      params: {
+        emit: {
+          onlyEnter: function onlyEnter() {}
+        }
+      }
+    }];
+  }
+  function buildCastLoadingPlaceholder(slug) {
+    return [{
+      id: 'hikka_lazy_cast_loading_' + slug,
+      name: 'Завантаження акторів...',
+      character: 'Триває завантаження',
+      known_for_department: 'Acting',
+      profile_path: null,
+      img: null,
+      source: 'hikka',
+      gender: 0,
+      hikka_lazy_type: 'cast',
+      hikka_lazy_slug: slug,
+      hikka_lazy_loaded: false,
+      params: {
+        emit: {
+          onlyEnter: function onlyEnter() {}
+        }
+      }
+    }];
+  }
+  function buildDiscussLoadingPlaceholder(slug) {
+    var discuss = decorateDiscussResult({
+      page: 1,
+      total_pages: 1,
+      total_results: 1,
+      result: [{
+        id: 'hikka_lazy_discuss_loading_' + slug,
+        text: 'Завантаження коментарів...',
+        comment: 'Завантаження коментарів...',
+        author: 'Hikka',
+        created_label: '',
+        score: 0,
+        score_label: '0',
+        replies_count: 0,
+        thread_comments_count: 1,
+        thread_entries: [],
+        source: 'hikka',
+        hikka_lazy_placeholder: true,
+        hikka_lazy_type: 'discuss',
+        hikka_lazy_slug: slug,
+        hikka_lazy_loaded: false
+      }]
+    });
+    discuss.hikka_lazy_type = 'discuss';
+    discuss.hikka_lazy_slug = slug;
+    discuss.hikka_lazy_loaded = false;
+    return discuss;
+  }
+  function buildFranchiseLoadingPlaceholder(slug) {
+    return {
+      title: 'Франшиза',
+      results: [{
+        id: 'hikka_lazy_franchise_loading_' + slug,
+        title: 'Завантаження...',
+        original_title: '',
+        poster_path: null,
+        backdrop_path: null,
+        poster: null,
+        img: null,
+        vote_average: 0,
+        media_type: 'tv',
+        source: 'hikka',
+        hikka_lazy_placeholder: true,
+        hikka_lazy_type: 'franchise',
+        hikka_lazy_slug: slug,
+        hikka_lazy_loaded: false,
+        params: {
+          emit: {
+            onlyEnter: function onlyEnter() {}
+          }
+        }
+      }],
+      total_pages: 1,
+      page: 1,
+      hikka_lazy_type: 'franchise',
+      hikka_lazy_slug: slug,
+      hikka_lazy_loaded: false
+    };
+  }
+  function buildRowFromPreset(preset, filters, data) {
+    return {
+      title: preset.title,
+      url: '',
+      source: 'hikka',
+      filter: JSON.stringify(filters),
+      filters: filters,
+      results: data && Array.isArray(data.results) ? data.results : [],
+      total_pages: data && data.total_pages ? data.total_pages : 1,
+      page: 1
+    };
+  }
+  function loadPresetChunk(state, onloaded, onempty) {
+    var presets = state && Array.isArray(state.presets) ? state.presets : [];
+    var chunkSize = Number(state && state.chunkSize) > 0 ? Number(state.chunkSize) : 3;
+    if (!presets.length || state.cursor >= presets.length) {
+      if (onempty) onempty();
+      return;
+    }
+    var chunk = presets.slice(state.cursor, state.cursor + chunkSize);
+    state.cursor += chunk.length;
+    var pending = chunk.length;
+    var rows = [];
+    var done = function done() {
+      pending--;
+      if (pending > 0) return;
+      if (rows.length) {
+        onloaded && onloaded(rows);
+        return;
+      }
+
+      // Пропускаємо порожні чанки, але не завершуємо завчасно всю послідовність.
+      loadPresetChunk(state, onloaded, onempty);
+    };
+    chunk.forEach(function (preset) {
+      var filters = typeof preset.buildFilters === 'function' ? preset.buildFilters() : buildFiltersFromParams({
+        filters: preset.filters || {}
+      });
+      Api.getAnimeListWithFilters(filters, 1, function (data) {
+        var row = buildRowFromPreset(preset, filters, data);
+        if (Array.isArray(row.results) && row.results.length) rows.push(row);
+        done();
+      }, function (err) {
+        console.log('[Hikka] main row error:', err);
+        done();
+      });
+    });
+  }
 
   /**
    * Hikka Source Provider for Lampa Api.sources
@@ -3273,58 +3984,40 @@
           if (onerror) onerror('Hikka main: no presets');
           return;
         }
-        var loadRows = function loadRows(presets) {
-          var pending = presets.length;
-          var rows = new Array(presets.length);
-          var done = function done() {
-            pending--;
-            if (pending > 0) return;
-            var resolved = rows.filter(function (row) {
-              return row && Array.isArray(row.results) && row.results.length;
-            });
-            if (resolved.length) {
-              oncomplite && oncomplite(resolved);
-            } else if (onerror) {
-              onerror('Hikka main: empty');
-            } else {
-              oncomplite && oncomplite([]);
-            }
-          };
-          presets.forEach(function (preset, index) {
-            var filters = typeof preset.buildFilters === 'function' ? preset.buildFilters() : buildFiltersFromParams({
-              filters: preset.filters || {}
-            });
-            Api.getAnimeListWithFilters(filters, 1, function (data) {
-              rows[index] = {
-                title: preset.title,
-                url: '',
-                source: 'hikka',
-                filter: JSON.stringify(filters),
-                filters: filters,
-                results: data && Array.isArray(data.results) ? data.results : [],
-                total_pages: data && data.total_pages ? data.total_pages : 1,
-                page: 1
-              };
-              done();
-            }, function (err) {
-              console.log('[Hikka] main row error:', err);
-              rows[index] = null;
-              done();
-            });
+        var shouldAppendGenreLines = params && params.component === 'hikka_anime';
+        var chunkSize = shouldAppendGenreLines ? 2 : 3;
+        var state = {
+          presets: [],
+          cursor: 0,
+          chunkSize: chunkSize
+        };
+        var loadPart = function loadPart(partLoaded, partEmpty) {
+          loadPresetChunk(state, partLoaded, partEmpty);
+        };
+        var loadInitial = function loadInitial() {
+          loadPart(oncomplite, function () {
+            if (onerror) onerror('Hikka main: empty');else oncomplite && oncomplite([]);
           });
         };
-        var shouldAppendGenreLines = params && params.component === 'hikka_anime';
+        var setPresetsAndStart = function setPresetsAndStart(presets) {
+          state.presets = Array.isArray(presets) ? presets : [];
+          state.cursor = 0;
+          loadInitial();
+        };
         if (!shouldAppendGenreLines) {
-          loadRows(basePresets);
-          return;
+          setPresetsAndStart(basePresets);
+        } else {
+          Api.getGenres(function (data) {
+            var genres = Array.isArray(data && data.list) ? data.list : [];
+            var genrePresets = buildGenreLinePresets(genres, basePresets.length);
+            setPresetsAndStart(basePresets.concat(genrePresets));
+          }, function () {
+            setPresetsAndStart(basePresets);
+          });
         }
-        Api.getGenres(function (data) {
-          var genres = Array.isArray(data && data.list) ? data.list : [];
-          var genrePresets = buildGenreLinePresets(genres, basePresets.length);
-          loadRows(basePresets.concat(genrePresets));
-        }, function () {
-          loadRows(basePresets);
-        });
+        return function (resolve, reject) {
+          loadPart(resolve, reject);
+        };
       } catch (e) {
         console.log('[Hikka] main exception:', e);
         if (onerror) onerror(e);
@@ -3356,128 +4049,44 @@
             if (onerror) onerror('Hikka Source: invalid payload');
             return;
           }
+          var finalize = function finalize() {
+            applyEpisodesStatsToCard(payload.card, payload.episodes);
 
-          // Base data object expected by Full
-          var data = {
-            movie: payload.card,
-            episodes: payload.episodes || null,
-            // Ensure countries array exists at top-level to avoid join errors in Full
-            countries: Array.isArray(payload.card && payload.card.countries) ? payload.card.countries : [],
-            // Sections to be filled below
-            persons: {
-              cast: [],
-              crew: []
-            },
-            collection: null,
-            recomend: null,
-            simular: null,
-            videos: null,
-            reactions: null,
-            discuss: null
-          };
-
-          // 2) Parallel fetch: persons, franchise collection, comments
-          var pending = 3;
-          var done = function done() {
-            pending--;
-            if (pending <= 0) {
-              oncomplite && oncomplite(data);
-            }
-          };
-
-          // 2.a) Characters + voices -> persons.cast (реальні актори озвучки)
-          Api.getCharacters(slug, function (chars) {
-            try {
-              var list = Array.isArray(chars && chars.list) ? chars.list : [];
-              buildVoiceCastFromCharacters(list, slug, function (cast) {
-                data.persons = {
-                  cast: cast,
-                  crew: []
-                };
-                done();
-              });
-            } catch (e) {
-              console.log('[Hikka] SourceProvider: map characters error', e);
-              data.persons = {
-                cast: [],
-                crew: []
-              };
-              done();
-            }
-          }, function (err) {
-            console.log('[Hikka] SourceProvider: characters error', err);
-            data.persons = {
-              cast: [],
-              crew: []
+            // Base data object expected by Full
+            var data = {
+              movie: payload.card,
+              episodes: payload.episodes || null,
+              // Ensure countries array exists at top-level to avoid join errors in Full
+              countries: Array.isArray(payload.card && payload.card.countries) ? payload.card.countries : [],
+              // Sections to be filled below
+              persons: {
+                cast: buildCastLoadingPlaceholder(slug),
+                crew: buildStaffLoadingPlaceholder(slug)
+              },
+              collection: buildFranchiseLoadingPlaceholder(slug),
+              recomend: null,
+              simular: null,
+              videos: null,
+              reactions: null,
+              discuss: buildDiscussLoadingPlaceholder(slug)
             };
-            done();
-          });
-
-          // 2.c) Franchise -> collection slider
-          Api.getFranchise(slug, function (rel) {
-            try {
-              var animeList = Array.isArray(rel && rel.anime) ? rel.anime : [];
-              var results = animeList.map(function (item, idx) {
-                var mediaType = item.media_type === 'movie' ? 'movie' : 'tv';
-                var year = item.year;
-                var startDate = item.start_date ? new Date(item.start_date * 1000).toISOString().slice(0, 10) : undefined;
-                return {
-                  id: item.slug || 'fr_' + idx,
-                  title: item.title_ua || item.title_en || item.title_ja || '',
-                  original_title: item.title_en || item.title_ja || item.title_ua || '',
-                  // Для колекційних карток не використовуємо *_path, аби уникнути Api.img з TMDB
-                  poster_path: null,
-                  backdrop_path: null,
-                  poster: item.image || null,
-                  img: item.image || null,
-                  vote_average: item.score || item.native_score || 0,
-                  release_date: mediaType === 'movie' ? year ? year + '-01-01' : startDate : undefined,
-                  first_air_date: mediaType !== 'movie' ? year ? year + '-01-01' : startDate : undefined,
-                  media_type: mediaType,
-                  source: 'hikka'
-                };
-              }).slice(0, 19);
-              data.collection = {
-                title: 'Франшиза',
-                results: results
-              };
-            } catch (e) {
-              console.log('[Hikka] SourceProvider: map franchise error', e);
-              data.collection = {
-                title: 'Франшиза',
-                results: []
-              };
+            oncomplite && oncomplite(data);
+          };
+          var hasEpisodes = !!(payload.episodes && Array.isArray(payload.episodes.episodes) && payload.episodes.episodes.length);
+          var mediaType = payload.card && payload.card.media_type;
+          var needEpisodesRequest = mediaType !== 'movie' && !hasEpisodes;
+          if (!needEpisodesRequest) {
+            finalize();
+            return;
+          }
+          loadAllAnimeEpisodes(slug, function (episodesList) {
+            var builtEpisodes = buildEpisodesPayloadFromApi(episodesList, details, payload.card && (payload.card.img || payload.card.poster_path));
+            if (builtEpisodes && Array.isArray(builtEpisodes.episodes) && builtEpisodes.episodes.length) {
+              payload.episodes = builtEpisodes;
             }
-            done();
-          }, function (err) {
-            console.log('[Hikka] SourceProvider: franchise error', err);
-            data.collection = {
-              title: 'Франшиза',
-              results: []
-            };
-            done();
-          });
-
-          // 2.d) Comments -> discuss row in Full
-          Api.getComments(slug, 1, 20, function (comments) {
-            try {
-              var discuss = decorateDiscussResult(Api.buildDiscussPayloadFromComments(comments));
-              if (discuss && Array.isArray(discuss.result) && discuss.result.length) {
-                // "More" у Full веде в CUB discuss, тому для hikka лишаємо тільки inline-рядок
-                discuss.total_pages = 1;
-                data.discuss = discuss;
-              } else {
-                data.discuss = null;
-              }
-            } catch (e) {
-              console.log('[Hikka] SourceProvider: map comments error', e);
-              data.discuss = null;
-            }
-            done();
-          }, function (err) {
-            console.log('[Hikka] SourceProvider: comments error', err);
-            data.discuss = null;
-            done();
+            finalize();
+          }, function () {
+            finalize();
           });
         }, function (err) {
           console.log('[Hikka] SourceProvider: error loading details', err);
@@ -3512,6 +4121,125 @@
         });
       } catch (e) {
         console.log('[Hikka] discussGet exception:', e);
+        if (onerror) onerror(e);
+      }
+    },
+    /**
+     * Lazy-load franchise cards for Full component
+     * Signature: franchiseGet(params, oncomplite, onerror)
+     */
+    franchiseGet: function franchiseGet() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      try {
+        var slug = params.id || params.slug || params.card && (params.card.hikka_slug || params.card.id) || null;
+        if (!slug) {
+          if (onerror) onerror('Hikka franchiseGet: slug is empty');
+          return;
+        }
+        Api.getFranchise(slug, function (rel) {
+          try {
+            var results = mapFranchiseResults(rel);
+            oncomplite && oncomplite({
+              title: 'Франшиза',
+              results: results,
+              total_pages: 1,
+              page: 1
+            });
+          } catch (e) {
+            if (onerror) onerror(e);
+          }
+        }, function (err) {
+          if (onerror) onerror(err);
+        });
+      } catch (e) {
+        console.log('[Hikka] franchiseGet exception:', e);
+        if (onerror) onerror(e);
+      }
+    },
+    /**
+     * Lazy-load real staff/authors for Full component
+     * Signature: staffGet(params, oncomplite, onerror)
+     */
+    staffGet: function staffGet() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      try {
+        var slug = params.id || params.slug || params.card && (params.card.hikka_slug || params.card.id) || null;
+        if (!slug) {
+          if (onerror) onerror('Hikka staffGet: slug is empty');
+          return;
+        }
+        var pageSize = 20;
+        var maxPages = 2;
+        var collected = [];
+        var page = 1;
+        var _next2 = function next() {
+          Api.getAnimeStaff(slug, page, pageSize, function (data) {
+            var list = Array.isArray(data && data.list) ? data.list : [];
+            var pages = Math.max(1, Number(data && data.pagination && data.pagination.pages) || 1);
+            list.forEach(function (item) {
+              return collected.push(item);
+            });
+            if (page < pages && page < maxPages) {
+              page++;
+              _next2();
+              return;
+            }
+            oncomplite && oncomplite({
+              crew: mapStaffToCrew(collected),
+              cast: []
+            });
+          }, function (err) {
+            if (page === 1) {
+              if (onerror) onerror(err);
+              return;
+            }
+            oncomplite && oncomplite({
+              crew: mapStaffToCrew(collected),
+              cast: []
+            });
+          });
+        };
+        _next2();
+      } catch (e) {
+        console.log('[Hikka] staffGet exception:', e);
+        if (onerror) onerror(e);
+      }
+    },
+    /**
+     * Lazy-load real cast (voices) for Full component
+     * Signature: castGet(params, oncomplite, onerror)
+     */
+    castGet: function castGet() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      try {
+        var slug = params.id || params.slug || params.card && (params.card.hikka_slug || params.card.id) || null;
+        if (!slug) {
+          if (onerror) onerror('Hikka castGet: slug is empty');
+          return;
+        }
+        Api.getCharacters(slug, function (chars) {
+          try {
+            var list = Array.isArray(chars && chars.list) ? chars.list : [];
+            buildVoiceCastFromCharacters(list, slug, function (cast) {
+              oncomplite && oncomplite({
+                cast: Array.isArray(cast) ? cast : [],
+                crew: []
+              });
+            });
+          } catch (e) {
+            if (onerror) onerror(e);
+          }
+        }, function (err) {
+          if (onerror) onerror(err);
+        });
+      } catch (e) {
+        console.log('[Hikka] castGet exception:', e);
         if (onerror) onerror(e);
       }
     },
@@ -3736,8 +4464,379 @@
     var tagsObserver = null;
     var uiObserver = null;
     var cleanupBusy = false;
+    var lazyDiscussCache = new Map();
+    var lazyDiscussWaiters = new Map();
+    var lazyFranchiseCache = new Map();
+    var lazyFranchiseWaiters = new Map();
+    var lazyStaffCache = new Map();
+    var lazyStaffWaiters = new Map();
+    var lazyCastCache = new Map();
+    var lazyCastWaiters = new Map();
     function getSourceFromObject(obj) {
       return obj && (obj.source || obj.card && obj.card.source || obj.movie && obj.movie.source);
+    }
+    function getHikkaProvider() {
+      if (Lampa && Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.hikka) return Lampa.Api.sources.hikka;
+      return HikkaSourceProvider;
+    }
+    function resolveLazyType(rowData, firstResult) {
+      var rootType = rowData && rowData.hikka_lazy_type;
+      var itemType = firstResult && firstResult.hikka_lazy_type;
+      if (rootType || itemType) return rootType || itemType;
+      var id = String(firstResult && firstResult.id || '');
+      if (id.indexOf('hikka_lazy_discuss_') === 0) return 'discuss';
+      if (id.indexOf('hikka_lazy_franchise_') === 0) return 'franchise';
+      if (id.indexOf('hikka_lazy_staff_') === 0) return 'staff';
+      if (id.indexOf('hikka_lazy_cast_') === 0) return 'cast';
+      return null;
+    }
+    function resolveLazySlug(data, object) {
+      return data && data.hikka_lazy_slug || data && data.movie && (data.movie.hikka_slug || data.movie.id) || object && object.id || object && object.card && (object.card.hikka_slug || object.card.id) || null;
+    }
+    function runLazyRequest(cache, waiters, slug, request, onResult) {
+      if (!slug) {
+        onResult(null);
+        return;
+      }
+      if (cache.has(slug)) {
+        onResult(cache.get(slug));
+        return;
+      }
+      if (waiters.has(slug)) {
+        waiters.get(slug).push(onResult);
+        return;
+      }
+      waiters.set(slug, [onResult]);
+      var settled = false;
+      var timeoutId = null;
+      var flush = function flush(value) {
+        if (settled) return;
+        settled = true;
+        if (timeoutId) clearTimeout(timeoutId);
+        cache.set(slug, value);
+        var queue = waiters.get(slug) || [];
+        waiters["delete"](slug);
+        queue.forEach(function (cb) {
+          try {
+            cb(value);
+          } catch (err) {
+            console.log('[Hikka] lazy waiter error:', err);
+          }
+        });
+      };
+      timeoutId = setTimeout(function () {
+        return flush(null);
+      }, 12000);
+      try {
+        request(function (value) {
+          return flush(value);
+        }, function () {
+          return flush(null);
+        });
+      } catch (err) {
+        console.log('[Hikka] lazy request error:', err);
+        flush(null);
+      }
+    }
+    function createFranchiseStatusItem(slug, text) {
+      return {
+        id: 'hikka_lazy_franchise_status_' + slug,
+        title: text,
+        original_title: '',
+        poster_path: null,
+        backdrop_path: null,
+        poster: null,
+        img: null,
+        vote_average: 0,
+        media_type: 'tv',
+        source: 'hikka',
+        params: {
+          emit: {
+            onlyEnter: function onlyEnter() {}
+          }
+        }
+      };
+    }
+    function createCastStatusItem(slug, text) {
+      return {
+        id: 'hikka_lazy_cast_status_' + slug,
+        name: text,
+        character: '',
+        known_for_department: 'Acting',
+        profile_path: null,
+        img: null,
+        source: 'hikka',
+        gender: 0,
+        params: {
+          emit: {
+            onlyEnter: function onlyEnter() {}
+          }
+        }
+      };
+    }
+    function createStaffStatusItem(slug, text) {
+      return {
+        id: 'hikka_lazy_staff_status_' + slug,
+        name: text,
+        character: '',
+        known_for_department: 'Production',
+        profile_path: null,
+        img: null,
+        source: 'hikka',
+        gender: 0,
+        job: 'Director',
+        params: {
+          emit: {
+            onlyEnter: function onlyEnter() {}
+          }
+        }
+      };
+    }
+    function rebuildLineItems(line) {
+      if (!line || !line.scroll || typeof line.emit !== 'function') return;
+      try {
+        if (Array.isArray(line.items)) {
+          line.items.forEach(function (item) {
+            if (item && typeof item.destroy === 'function') item.destroy();
+          });
+        }
+      } catch (err) {
+        console.log('[Hikka] destroy line items error:', err);
+      }
+      line.items = [];
+      line.active = 0;
+      line.last = null;
+      if (line.more) {
+        try {
+          if (typeof line.more.destroy === 'function') line.more.destroy();
+        } catch (err) {
+          console.log('[Hikka] destroy line more error:', err);
+        }
+        line.more = null;
+      }
+      if (typeof line.scroll.clear === 'function') line.scroll.clear();
+      var results = Array.isArray(line.data && line.data.results) ? line.data.results : [];
+      var view = Number(line.view || line.params && line.params.items && line.params.items.view || 7);
+      results.slice(0, view).forEach(function (element) {
+        line.emit('createAndAppend', element);
+      });
+      line.emit('scroll');
+      if (Lampa && Lampa.Layer && typeof Lampa.Layer.visible === 'function') {
+        Lampa.Layer.visible(line.scroll.render(true));
+      }
+    }
+    function setLineTitle(line, title) {
+      if (!line || !title) return;
+      if (line.data) line.data.title = title;
+      try {
+        var titleEl = line.html && typeof line.html.find === 'function' ? line.html.find('.items-line__title') : null;
+        if (titleEl && titleEl.length) titleEl.text(title);
+      } catch (err) {
+        console.log('[Hikka] setLineTitle error:', err);
+      }
+    }
+    function cloneParamsTemplate(params) {
+      if (!params || _typeof(params) !== 'object') return null;
+      var template = _objectSpread2({}, params);
+      if (params.emit && _typeof(params.emit) === 'object') {
+        template.emit = _objectSpread2({}, params.emit);
+        // placeholder-only handler блокує нативний onEnter у Person/Card
+        delete template.emit.onlyEnter;
+      }
+      return template;
+    }
+    function inheritLineItemParams(items, template) {
+      var list = Array.isArray(items) ? items : [];
+      if (!template) return list;
+      return list.map(function (item) {
+        if (!item || _typeof(item) !== 'object') return item;
+        var currentParams = item.params && _typeof(item.params) === 'object' ? item.params : {};
+        var nextParams = _objectSpread2(_objectSpread2({}, template), currentParams);
+        if (template.emit || currentParams.emit) {
+          nextParams.emit = _objectSpread2(_objectSpread2({}, template.emit || {}), currentParams.emit || {});
+          delete nextParams.emit.onlyEnter;
+        }
+        return _objectSpread2(_objectSpread2({}, item), {}, {
+          params: nextParams
+        });
+      });
+    }
+    function applyDiscussLazy(line, rowData, slug, discuss) {
+      var result = discuss && Array.isArray(discuss.result) ? discuss.result : [];
+      var fallback = Array.isArray(rowData.results) ? rowData.results.slice() : [];
+      var next = result.length ? result : fallback;
+      rowData.hikka_lazy_loading = false;
+      rowData.hikka_lazy_loaded = true;
+      rowData.total_pages = discuss && discuss.total_pages ? discuss.total_pages : 1;
+      rowData.page = discuss && discuss.page ? discuss.page : 1;
+      rowData.results = next;
+      if (!result.length && rowData.results[0]) {
+        rowData.results[0].text = 'Коментарі відсутні';
+        rowData.results[0].comment = 'Коментарі відсутні';
+        rowData.results[0].author = rowData.results[0].author || 'Hikka';
+        rowData.results[0].email = rowData.results[0].email || 'Hikka';
+      }
+      if (line && line.data) {
+        line.data.total_pages = rowData.total_pages;
+        line.data.page = rowData.page;
+        line.data.results = rowData.results;
+        rebuildLineItems(line);
+      }
+    }
+    function applyFranchiseLazy(line, rowData, slug, collection) {
+      var result = collection && Array.isArray(collection.results) ? collection.results : [];
+      var fallback = Array.isArray(rowData.results) ? rowData.results.slice() : [];
+      var next = result.length ? result : fallback.length ? fallback : [createFranchiseStatusItem(slug, 'Франшиза відсутня')];
+      rowData.hikka_lazy_loading = false;
+      rowData.hikka_lazy_loaded = true;
+      rowData.total_pages = 1;
+      rowData.page = 1;
+      rowData.results = next;
+      if (!result.length && rowData.results[0]) {
+        rowData.results[0].title = 'Франшиза відсутня';
+      }
+      if (line && line.data) {
+        line.data.total_pages = rowData.total_pages;
+        line.data.page = rowData.page;
+        line.data.results = rowData.results;
+        rebuildLineItems(line);
+      }
+    }
+    function applyCastLazy(line, rowData, slug, castPayload) {
+      var currentResults = Array.isArray(rowData.results) ? rowData.results : [];
+      var firstCurrent = currentResults.length ? currentResults[0] : null;
+      var paramsTemplate = cloneParamsTemplate(firstCurrent && firstCurrent.params);
+      var cast = castPayload && Array.isArray(castPayload.cast) ? castPayload.cast : [];
+      var nextBase = cast.length ? cast : [createCastStatusItem(slug, 'Актори відсутні')];
+      var next = inheritLineItemParams(nextBase, paramsTemplate);
+      rowData.hikka_lazy_loading = false;
+      rowData.hikka_lazy_loaded = true;
+      rowData.results = next;
+      if (line && line.data) {
+        line.data.results = rowData.results;
+        rebuildLineItems(line);
+      }
+    }
+    function applyStaffLazy(line, rowData, slug, staffPayload) {
+      var currentResults = Array.isArray(rowData.results) ? rowData.results : [];
+      var firstCurrent = currentResults.length ? currentResults[0] : null;
+      var paramsTemplate = cloneParamsTemplate(firstCurrent && firstCurrent.params);
+      var crew = staffPayload && Array.isArray(staffPayload.crew) ? staffPayload.crew : [];
+      var nextBase = crew.length ? crew : [createStaffStatusItem(slug, 'Автори відсутні')];
+      var next = inheritLineItemParams(nextBase, paramsTemplate);
+      rowData.hikka_lazy_loading = false;
+      rowData.hikka_lazy_loaded = true;
+      rowData.results = next;
+      rowData.title = 'Автори';
+      if (line && line.data) {
+        line.data.results = rowData.results;
+        setLineTitle(line, 'Автори');
+        rebuildLineItems(line);
+      }
+    }
+    function loadDiscussLazy(slug, callback) {
+      var provider = getHikkaProvider();
+      if (!provider || typeof provider.discussGet !== 'function') {
+        callback(null);
+        return;
+      }
+      runLazyRequest(lazyDiscussCache, lazyDiscussWaiters, slug, function (resolve, reject) {
+        provider.discussGet({
+          id: slug,
+          source: 'hikka',
+          page: 1
+        }, resolve, reject);
+      }, callback);
+    }
+    function loadFranchiseLazy(slug, callback) {
+      var provider = getHikkaProvider();
+      if (!provider || typeof provider.franchiseGet !== 'function') {
+        callback(null);
+        return;
+      }
+      runLazyRequest(lazyFranchiseCache, lazyFranchiseWaiters, slug, function (resolve, reject) {
+        provider.franchiseGet({
+          id: slug,
+          source: 'hikka',
+          page: 1
+        }, resolve, reject);
+      }, callback);
+    }
+    function loadCastLazy(slug, callback) {
+      var provider = getHikkaProvider();
+      if (!provider || typeof provider.castGet !== 'function') {
+        callback(null);
+        return;
+      }
+      runLazyRequest(lazyCastCache, lazyCastWaiters, slug, function (resolve, reject) {
+        provider.castGet({
+          id: slug,
+          source: 'hikka'
+        }, resolve, reject);
+      }, callback);
+    }
+    function loadStaffLazy(slug, callback) {
+      var provider = getHikkaProvider();
+      if (!provider || typeof provider.staffGet !== 'function') {
+        callback(null);
+        return;
+      }
+      runLazyRequest(lazyStaffCache, lazyStaffWaiters, slug, function (resolve, reject) {
+        provider.staffGet({
+          id: slug,
+          source: 'hikka'
+        }, resolve, reject);
+      }, callback);
+    }
+    function handleLazyBuild(event) {
+      var rowData = event && event.data;
+      var line = event && event.item;
+      var object = event && event.object;
+      if (!rowData || !line) return;
+      var firstResult = Array.isArray(rowData.results) && rowData.results.length ? rowData.results[0] : null;
+      var lazyType = resolveLazyType(rowData, firstResult);
+      if (lazyType !== 'discuss' && lazyType !== 'franchise') return;
+      if (rowData.hikka_lazy_loaded || rowData.hikka_lazy_loading) return;
+      rowData.hikka_lazy_type = lazyType;
+      var slug = resolveLazySlug(rowData, object) || firstResult && firstResult.hikka_lazy_slug;
+      if (!slug) return;
+      rowData.hikka_lazy_loading = true;
+      if (lazyType === 'discuss') {
+        loadDiscussLazy(slug, function (discuss) {
+          applyDiscussLazy(line, rowData, slug, discuss);
+          cleanupHikkaFullUI();
+          setTimeout(cleanupHikkaFullUI, 0);
+        });
+        return;
+      }
+      loadFranchiseLazy(slug, function (collection) {
+        applyFranchiseLazy(line, rowData, slug, collection);
+      });
+    }
+    function handlePersonsLazyBuild(event) {
+      if (!event || event.name !== 'persons' || !event.data || !event.item) return;
+      var rowData = event.data;
+      var line = event.item;
+      var firstResult = Array.isArray(rowData.results) && rowData.results.length ? rowData.results[0] : null;
+      var lazyType = resolveLazyType(rowData, firstResult);
+      if (lazyType !== 'cast' && lazyType !== 'staff') return;
+      if (rowData.hikka_lazy_loaded || rowData.hikka_lazy_loading) return;
+      rowData.hikka_lazy_type = lazyType;
+      var slug = firstResult && firstResult.hikka_lazy_slug || resolveLazySlug(rowData, event.object);
+      if (!slug) return;
+      if (lazyType === 'staff') {
+        setLineTitle(line, 'Автори');
+      }
+      rowData.hikka_lazy_loading = true;
+      if (lazyType === 'staff') {
+        loadStaffLazy(slug, function (staffPayload) {
+          applyStaffLazy(line, rowData, slug, staffPayload);
+        });
+        return;
+      }
+      loadCastLazy(slug, function (castPayload) {
+        applyCastLazy(line, rowData, slug, castPayload);
+      });
     }
     function focusFirstVisibleCommentFrom(element) {
       try {
@@ -3862,36 +4961,58 @@
     }
     Lampa.Listener.follow('full', function (e) {
       if (!e) return;
-      if (e.type === 'build' && e.name === 'discuss' && document.body.classList.contains('hikka-full-active')) {
-        // discuss рядок може будуватися після complite; чистимо одразу в момент побудови
-        cleanupHikkaFullUI();
-        setTimeout(cleanupHikkaFullUI, 0);
+      if (e.type === 'build' && (e.name === 'discuss' || e.name === 'cards')) {
+        handleLazyBuild(e);
+        if (e.name === 'discuss') {
+          cleanupHikkaFullUI();
+          setTimeout(cleanupHikkaFullUI, 0);
+        }
+        return;
+      }
+      if (e.type === 'build' && e.name === 'persons') {
+        handlePersonsLazyBuild(e);
         return;
       }
       if (!e.object || getSourceFromObject(e.object) !== 'hikka') return;
       if (e.type === 'complite') {
         // Хелпер для оновлення відображення епізодів у шапці (3/12 або 12)
         var _updateEpisodesHeader = function updateEpisodesHeader(movie) {
+          var attempt = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
           if (!movie) return;
           var total = Number(movie.episodes_total || movie.number_of_episodes || 0);
           var released = Number(movie.episodes_released || 0);
           if (!total) return;
           var desired = released && released < total ? released + '/' + total : String(total);
+          var episodesTitle = Lampa && Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('title_episodes') : 'Епізоди';
           var header = document.querySelector('.full-start') || document.querySelector('.full-start-new');
           if (!header) {
-            setTimeout(function () {
-              return _updateEpisodesHeader(movie);
-            }, 300);
+            if (attempt < 8) setTimeout(function () {
+              return _updateEpisodesHeader(movie, attempt + 1);
+            }, 250);
             return;
           }
           var tagsWrap = header.querySelector('.full-start__tags') || header.querySelector('.full-start-new__details') || header;
           if (!tagsWrap) {
-            setTimeout(function () {
-              return _updateEpisodesHeader(movie);
-            }, 300);
+            if (attempt < 8) setTimeout(function () {
+              return _updateEpisodesHeader(movie, attempt + 1);
+            }, 250);
             return;
           }
-          return desired;
+          var nodes = tagsWrap.querySelectorAll('span');
+          var applied = false;
+          nodes.forEach(function (node) {
+            var text = String(node && node.textContent || '').trim();
+            if (!text) return;
+            if (text.indexOf(episodesTitle + ':') === 0 || /^episodes\s*:/i.test(text) || /^епізод/i.test(text)) {
+              node.textContent = episodesTitle + ': ' + desired;
+              applied = true;
+            }
+          });
+          if (!applied && attempt < 8) {
+            setTimeout(function () {
+              return _updateEpisodesHeader(movie, attempt + 1);
+            }, 250);
+          }
         }; // Хелпер для перевизначення бейджа типу (TV -> розширений тип Hikka)
         var updateTypeBadge = function updateTypeBadge(movie) {
           if (!movie) return;
@@ -3943,6 +5064,10 @@
     Lampa.Listener.follow('activity', function (e) {
       if (e.type === 'destroy' && e.component === 'full' && getSourceFromObject(e.object) === 'hikka') {
         cleanupObservers();
+        lazyDiscussWaiters.clear();
+        lazyFranchiseWaiters.clear();
+        lazyStaffWaiters.clear();
+        lazyCastWaiters.clear();
         setHikkaFullState(false);
       }
     });
