@@ -5074,6 +5074,69 @@
   }
 
   var initialized$1 = false;
+  var UI_DEADLINE_MAIN_MS = 2400;
+  var STALE_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
+  var STORAGE_CACHE_PREFIX = 'hikka_line_cache_v1_';
+  function getFiltersFingerprint() {
+    var filters = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    try {
+      return JSON.stringify(filters);
+    } catch (err) {
+      return 'filters_parse_error';
+    }
+  }
+  function buildRowCacheKey(config, screen, filters) {
+    return STORAGE_CACHE_PREFIX + [config && config.name ? config.name : 'unknown', screen || 'unknown', getFiltersFingerprint(filters)].join('|');
+  }
+  function saveLineToCache(cacheKey, line) {
+    if (!line || !Array.isArray(line.results) || !line.results.length) return;
+    if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.set !== 'function') return;
+    try {
+      Lampa.Storage.set(cacheKey, {
+        time: Date.now(),
+        line: line
+      });
+    } catch (err) {
+      console.warn('[Hikka] rows cache save error:', err);
+    }
+  }
+  function clearLineCache(cacheKey) {
+    if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.set !== 'function') return;
+    try {
+      Lampa.Storage.set(cacheKey, null);
+    } catch (err) {
+      console.warn('[Hikka] rows cache clear error:', err);
+    }
+  }
+  function loadLineFromCache(cacheKey) {
+    if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.get !== 'function') return null;
+    try {
+      var cached = Lampa.Storage.get(cacheKey);
+      var time = Number(cached && cached.time || 0);
+      var line = cached && cached.line;
+      if (!time || !line || !Array.isArray(line.results) || !line.results.length) return null;
+      if (Date.now() - time > STALE_CACHE_TTL_MS) return null;
+      return line;
+    } catch (err) {
+      console.warn('[Hikka] rows cache load error:', err);
+      return null;
+    }
+  }
+  function createLinePayload(config, filters, data) {
+    var results = data && Array.isArray(data.results) ? data.results : [];
+    if (!results.length) return null;
+    return {
+      title: config.title,
+      url: '',
+      source: 'hikka',
+      hikka_line: true,
+      hikka_line_title: config.title,
+      filter: JSON.stringify(filters),
+      results: results,
+      total_pages: data && data.total_pages ? data.total_pages : 1,
+      page: 1
+    };
+  }
   function createLineTitle(text) {
     var root = document.createElement('span');
     var icon = document.createElement('span');
@@ -5110,22 +5173,25 @@
       if (screen !== 'main') return;
       return function (call) {
         var filters = typeof config.buildFilters === 'function' ? config.buildFilters() : config.filters || {};
+        var cacheKey = buildRowCacheKey(config, screen, filters);
+        var staleLine = loadLineFromCache(cacheKey);
+        var done = false;
+        var timeoutId = null;
+        var finish = function finish(line) {
+          if (done) return;
+          done = true;
+          if (timeoutId) clearTimeout(timeoutId);
+          if (line && Array.isArray(line.results) && line.results.length) call(line);else call();
+        };
+        timeoutId = setTimeout(function () {
+          finish(staleLine);
+        }, UI_DEADLINE_MAIN_MS);
         Api.getAnimeListWithFilters(filters, 1, function (data) {
-          var results = data && Array.isArray(data.results) ? data.results : [];
-          if (!results.length) return call();
-          call({
-            title: config.title,
-            url: '',
-            source: 'hikka',
-            hikka_line: true,
-            hikka_line_title: config.title,
-            filter: JSON.stringify(filters),
-            results: results,
-            total_pages: data && data.total_pages ? data.total_pages : 1,
-            page: 1
-          });
+          var line = createLinePayload(config, filters, data);
+          if (line) saveLineToCache(cacheKey, line);else clearLineCache(cacheKey);
+          if (!done) finish(line);
         }, function () {
-          return call();
+          if (!done) finish(staleLine);
         });
       };
     };

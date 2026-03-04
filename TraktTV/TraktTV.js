@@ -7937,6 +7937,99 @@
   // Local safe resolver for Api
   var Api = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
   var initialized = false;
+  var UI_DEADLINE_MAIN_MS = 2800;
+  var UI_DEADLINE_CATEGORY_MS = 3200;
+  var STALE_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
+  var STORAGE_CACHE_PREFIX = 'trakttv_row_cache_v1_';
+  function getUiDeadline(screen) {
+    return screen === 'main' ? UI_DEADLINE_MAIN_MS : UI_DEADLINE_CATEGORY_MS;
+  }
+  function getAuthFingerprint() {
+    try {
+      if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.get !== 'function') return 'anon';
+      var accessToken = String(Lampa.Storage.get('trakt_token') || '');
+      var refreshToken = String(Lampa.Storage.get('trakt_refresh_token') || '');
+      var token = accessToken || refreshToken;
+      if (!token) return 'anon';
+      return 't' + token.length + '_' + token.slice(-8);
+    } catch (error) {
+      return 'anon';
+    }
+  }
+  function buildRowCacheKey(config, params, screen) {
+    var rowName = config && config.name ? config.name : 'unknown';
+    var categoryContext = params && params.url ? String(params.url) : '';
+    var authFingerprint = getAuthFingerprint();
+    return STORAGE_CACHE_PREFIX + [rowName, screen || 'unknown', categoryContext, authFingerprint].join('|');
+  }
+  function toCacheLine(line) {
+    var cached = Object.assign({}, line);
+    delete cached.onMore;
+    return cached;
+  }
+  function saveRowToCache(cacheKey, line) {
+    if (!line || !Array.isArray(line.results) || !line.results.length) return;
+    if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.set !== 'function') return;
+    try {
+      Lampa.Storage.set(cacheKey, {
+        time: Date.now(),
+        line: toCacheLine(line)
+      });
+    } catch (error) {
+      console.warn('TraktTV', 'rows cache save error', error);
+    }
+  }
+  function clearRowCache(cacheKey) {
+    if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.set !== 'function') return;
+    try {
+      Lampa.Storage.set(cacheKey, null);
+    } catch (error) {
+      console.warn('TraktTV', 'rows cache clear error', error);
+    }
+  }
+  function loadRowFromCache(cacheKey) {
+    if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.get !== 'function') return null;
+    try {
+      var cached = Lampa.Storage.get(cacheKey);
+      var time = Number(cached && cached.time || 0);
+      var line = cached && cached.line;
+      if (!time || !line || !Array.isArray(line.results) || !line.results.length) return null;
+      if (Date.now() - time > STALE_CACHE_TTL_MS) return null;
+      return line;
+    } catch (error) {
+      console.warn('TraktTV', 'rows cache load error', error);
+      return null;
+    }
+  }
+  function createOnMoreHandler(config) {
+    return function () {
+      Lampa.Activity.push({
+        title: config.displayTitle,
+        component: config.component,
+        page: 1
+      });
+    };
+  }
+  function attachOnMore(line, config) {
+    if (!line) return null;
+    var payload = Object.assign({}, line);
+    payload.onMore = createOnMoreHandler(config);
+    return payload;
+  }
+  function createRowPayload(config, data, normalizedResults) {
+    return {
+      title: config.displayTitle,
+      trakt_line: true,
+      trakt_line_title: config.displayTitle,
+      trakt_more_component: config.component,
+      trakt_more_title: config.displayTitle,
+      trakt_row: config.traktRow || '',
+      source: 'tmdb',
+      page: data && data.page ? data.page : 1,
+      total_pages: data && data.total_pages ? data.total_pages : 1,
+      results: normalizedResults
+    };
+  }
 
   /**
    * Initialize ContentRows for TraktTV plugin (Lampa 3.0+)
@@ -7988,40 +8081,42 @@
           console.error('TraktTV', 'Api not available for row', config.name);
           return call();
         }
+        var cacheKey = buildRowCacheKey(config, params, screen);
+        var staleLine = attachOnMore(loadRowFromCache(cacheKey), config);
+        var deadline = getUiDeadline(screen);
+        var done = false;
+        var timeoutId = null;
+        var finish = function finish(line) {
+          if (done) return;
+          done = true;
+          if (timeoutId) clearTimeout(timeoutId);
+          if (line && Array.isArray(line.results) && line.results.length) call(line);else call();
+        };
+        timeoutId = setTimeout(function () {
+          finish(staleLine);
+        }, deadline);
         Api[config.apiMethod]({
           limit: rowLimit,
           page: 1
         }).then(function (data) {
           var results = data && Array.isArray(data.results) ? data.results : [];
           var filtered = typeof config.filter === 'function' ? config.filter(results, params, screen) : results;
-          if (!filtered || !filtered.length) return call();
+          if (!filtered || !filtered.length) {
+            clearRowCache(cacheKey);
+            if (!done) finish(null);
+            return;
+          }
           var limitedResults = rowDisplayLimit > 0 ? filtered.slice(0, rowDisplayLimit) : filtered;
           var normalizedResults = normalizeContentData(limitedResults);
           if (screen === 'main' && config.topshelf) {
             updateTopshelf(config.topshelf, filtered);
           }
-          call({
-            title: config.displayTitle,
-            trakt_line: true,
-            trakt_line_title: config.displayTitle,
-            trakt_more_component: config.component,
-            trakt_more_title: config.displayTitle,
-            trakt_row: config.traktRow || '',
-            source: 'tmdb',
-            page: data && data.page ? data.page : 1,
-            total_pages: data && data.total_pages ? data.total_pages : 1,
-            results: normalizedResults,
-            onMore: function onMore() {
-              Lampa.Activity.push({
-                title: config.displayTitle,
-                component: config.component,
-                page: 1
-              });
-            }
-          });
+          var line = createRowPayload(config, data, normalizedResults);
+          saveRowToCache(cacheKey, line);
+          if (!done) finish(attachOnMore(line, config));
         })["catch"](function (error) {
           console.error('TraktTV', "Row load error (".concat(config.name, "):"), error);
-          call();
+          if (!done) finish(staleLine);
         });
       };
     };

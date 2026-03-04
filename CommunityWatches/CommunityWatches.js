@@ -716,6 +716,65 @@
 
   var initialized = false;
   var iconCounter = 0;
+  var UI_DEADLINE_MAIN_MS = 2200;
+  var UI_DEADLINE_CATEGORY_MS = 3000;
+  var STALE_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
+  var STORAGE_CACHE_PREFIX = 'community_watches_line_cache_v1_';
+  function getUiDeadline(screen) {
+    return screen === 'main' ? UI_DEADLINE_MAIN_MS : UI_DEADLINE_CATEGORY_MS;
+  }
+  function createQueryFingerprint() {
+    var query = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var period = query.period || '';
+    var top = query.top || '';
+    var type = query.type || '';
+    var minRating = Number(query.min_rating || 0);
+    return [period, top, type, minRating].join('|');
+  }
+  function buildRowCacheKey(config, screen) {
+    return STORAGE_CACHE_PREFIX + [config && config.name ? config.name : 'unknown', screen || 'unknown', createQueryFingerprint(config && config.query ? config.query : {})].join('|');
+  }
+  function saveLineToCache(cacheKey, line) {
+    if (!line || !line.results || !line.results.length) return;
+    if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.set !== 'function') return;
+    try {
+      Lampa.Storage.set(cacheKey, {
+        time: Date.now(),
+        line: line
+      });
+    } catch (err) {
+      console.warn('CommunityWatches: cache save error', err);
+    }
+  }
+  function loadLineFromCache(cacheKey) {
+    if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.get !== 'function') return null;
+    try {
+      var cached = Lampa.Storage.get(cacheKey);
+      var time = Number(cached && cached.time || 0);
+      var line = cached && cached.line;
+      if (!time || !line || !Array.isArray(line.results) || !line.results.length) return null;
+      if (Date.now() - time > STALE_CACHE_TTL_MS) return null;
+      return line;
+    } catch (err) {
+      console.warn('CommunityWatches: cache load error', err);
+      return null;
+    }
+  }
+  function createLinePayload(config, lineData) {
+    var results = lineData && Array.isArray(lineData.results) ? lineData.results : [];
+    if (!results.length) return null;
+    return {
+      title: config.displayTitle,
+      url: Api.buildLineUrl(_objectSpread2(_objectSpread2({}, config.query), {}, {
+        per_page: lineData && lineData.per_page
+      })),
+      source: 'community_watches',
+      community_watches: true,
+      community_watches_title: config.displayTitle,
+      results: results,
+      total_pages: lineData && lineData.total_pages ? lineData.total_pages : 1
+    };
+  }
   function createLineIcon() {
     iconCounter += 1;
     var gradientId = 'community-watches-flag-' + iconCounter;
@@ -758,22 +817,33 @@
     return function (params, screen) {
       if (config.category && screen == 'category' && params.url !== config.category) return;
       return function (call) {
+        var deadline = getUiDeadline(screen);
+        var cacheKey = buildRowCacheKey(config, screen);
+        var staleLine = loadLineFromCache(cacheKey);
+        var done = false;
+        var timeoutId = null;
+        var finish = function finish(line) {
+          if (done) return;
+          done = true;
+          if (timeoutId) clearTimeout(timeoutId);
+          if (line && Array.isArray(line.results) && line.results.length) {
+            call(line);
+          } else {
+            call();
+          }
+        };
+        timeoutId = setTimeout(function () {
+          finish(staleLine);
+        }, deadline);
         Api.line(config.query, function (lineData) {
-          var results = lineData && Array.isArray(lineData.results) ? lineData.results : [];
-          if (!results.length) return call();
-          var line = {
-            title: config.displayTitle,
-            url: Api.buildLineUrl(_objectSpread2(_objectSpread2({}, config.query), {}, {
-              per_page: lineData && lineData.per_page
-            })),
-            source: 'community_watches',
-            community_watches: true,
-            community_watches_title: config.displayTitle,
-            results: results,
-            total_pages: lineData && lineData.total_pages ? lineData.total_pages : 1
-          };
-          call(line);
-        }, call);
+          var line = createLinePayload(config, lineData);
+          if (line) {
+            saveLineToCache(cacheKey, line);
+          }
+          if (!done) finish(line);
+        }, function () {
+          if (!done) finish(staleLine);
+        });
       };
     };
   }
