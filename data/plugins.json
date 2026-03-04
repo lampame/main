@@ -211,6 +211,20 @@
       "langs": [
         "uk"
       ]
+    },
+    {
+      "id": "nightingale",
+      "title": "Nightingale",
+      "short_uk": "Відображення наявності перекладу в Онлайн джерелах.",
+      "short_en": "Shows availability of translation in Online sources.",
+      "short_ru": "Отображает наличие перевода в Онлайн источниках.",
+      "desc_uk": "Плагін додає на картки фільмів і серіалів бейдж із прапором України, якщо WH API підтверджує наявність українського перекладу в Онлайн-джерелах. Перевірка виконується у фоні для TMDB/CUB контенту, результати кешуються для швидшого відображення.",
+      "desc_en": "Adds a Ukrainian flag badge to movie and TV cards when WH API confirms Ukrainian translation availability in Online sources. Checks TMDB/CUB content in the background and caches results for faster rendering.",
+      "desc_ru": "Добавляет на карточки фильмов и сериалов бейдж с флагом Украины, если WH API подтверждает наличие украинского перевода в Онлайн-источниках. Проверка выполняется в фоне для TMDB/CUB контента, результаты кешируются для более быстрого отображения.",
+      "file": "n.js",
+      "langs": [
+        "uk"
+      ]
     }
   ]
 }
