@@ -41,6 +41,14 @@
   function setFilmixDeviceId(value) {
     write(AUTH_KEYS$1.filmixDeviceId, value);
   }
+  function ensureFilmixDeviceId() {
+    var deviceId = getFilmixDeviceId();
+    if (!deviceId) {
+      deviceId = Lampa.Utils.uid(16);
+      setFilmixDeviceId(deviceId);
+    }
+    return deviceId;
+  }
 
   function createV2(sourceKey) {
     return function v2(component, _object) {
@@ -158,9 +166,14 @@
         return Lampa.Utils.addUrlComponent(url, key + '=' + encodeURIComponent(value));
       }
       function getSourceAuth() {
+        var token = getFilmixToken();
+        var deviceId = getFilmixDeviceId();
+        if (token && !deviceId) {
+          deviceId = ensureFilmixDeviceId();
+        }
         return {
-          filmix_token: getFilmixToken(),
-          filmix_device_id: getFilmixDeviceId()
+          filmix_token: token,
+          filmix_device_id: deviceId
         };
       }
       function appendSearchAuth(url) {
@@ -1834,13 +1847,22 @@
     var name = item.find('.settings-param__name');
     if (name.length) name.text(text);else item.find('span').first().text(text);
   }
+  function setFilmixTokenButtonTitle(item) {
+    if (!item || !item.length) return;
+    var status = getFilmixToken() ? Lampa.Lang.translate('bandera_online_filmix_token_state_set') : Lampa.Lang.translate('bandera_online_filmix_token_state_empty');
+    var title = Lampa.Lang.translate('bandera_online_filmix_auth_token') + ' (' + status + ')';
+    var name = item.find('.settings-param__name');
+    if (name.length) name.text(title);
+  }
+  function getInternalFilmixDeviceId() {
+    return normalizeValue(getFilmixDeviceId()) || normalizeValue(ensureFilmixDeviceId());
+  }
   function refreshFilmixTitle(item) {
     setFilmixTitle(item, getStoredFilmixMaxQuality());
     var token = getFilmixToken();
-    var deviceId = getFilmixDeviceId();
-    if (!token || !deviceId || filmixHeaderLoading) return;
+    if (!token || filmixHeaderLoading) return;
     filmixHeaderLoading = true;
-    requestFilmixUser(token, deviceId, function (json) {
+    requestFilmixUser(token, function (json) {
       filmixHeaderLoading = false;
       if (!json || !json.ok || !json.authorized) {
         return;
@@ -1922,10 +1944,54 @@
       filmixAuthTimer = null;
     }
   }
-  function requestFilmixUser(token, deviceId, success, fail) {
+  function saveFilmixToken(value) {
+    var token = normalizeValue(value);
+    setFilmixToken(token);
+    setStoredFilmixMaxQuality(0);
+    if (token) {
+      getInternalFilmixDeviceId();
+      Lampa.Noty.show(Lampa.Lang.translate('bandera_online_filmix_token_saved'));
+    } else {
+      Lampa.Noty.show(Lampa.Lang.translate('bandera_online_filmix_auth_reset_done'));
+    }
+    Lampa.Settings.update();
+  }
+  function openFilmixTokenInput() {
+    var current = getFilmixToken();
+    if (Lampa.Input && typeof Lampa.Input.edit === 'function') {
+      Lampa.Input.edit({
+        title: Lampa.Lang.translate('bandera_online_filmix_auth_token'),
+        value: current,
+        free: true,
+        nosave: true,
+        nomic: true
+      }, function (value) {
+        saveFilmixToken(value);
+      });
+      return;
+    }
+    if (typeof window.prompt !== 'function') {
+      Lampa.Noty.show(Lampa.Lang.translate('bandera_online_filmix_auth_error'));
+      return;
+    }
+    var next = window.prompt(Lampa.Lang.translate('bandera_online_filmix_auth_token'), current);
+    if (next === null) return;
+    saveFilmixToken(next);
+  }
+  function requestFilmixUser(token, success, fail, deviceIdOverride) {
+    var authToken = normalizeValue(token);
+    var deviceId = normalizeValue(deviceIdOverride) || getInternalFilmixDeviceId();
+    if (!authToken) {
+      if (fail) fail(Lampa.Lang.translate('bandera_online_filmix_auth_required'));
+      return;
+    }
+    if (!deviceId) {
+      if (fail) fail(Lampa.Lang.translate('bandera_online_filmix_auth_error'));
+      return;
+    }
     var network = new Lampa.Reguest();
     var url = addQuery(api_base + '/filmix/user', {
-      token: token,
+      token: authToken,
       device_id: deviceId
     });
     network.silent(url, function (json) {
@@ -1964,14 +2030,14 @@
       setTimeout(closeModal, 500);
     }
     filmixAuthTimer = setInterval(function () {
-      requestFilmixUser(token, deviceId, function (json) {
+      requestFilmixUser(token, function (json) {
         if (!json || !json.ok) {
           return;
         }
         if (json.authorized) {
           markAuthorized(json);
         }
-      });
+      }, null, deviceId);
     }, FILMIX_POLL_INTERVAL);
     Lampa.Modal.open({
       title: Lampa.Lang.translate('bandera_online_filmix_modal_title'),
@@ -2012,12 +2078,11 @@
   }
   function checkFilmixAuth() {
     var token = getFilmixToken();
-    var deviceId = getFilmixDeviceId();
-    if (!token || !deviceId) {
+    if (!token) {
       Lampa.Noty.show(Lampa.Lang.translate('bandera_online_filmix_auth_required'));
       return;
     }
-    requestFilmixUser(token, deviceId, function (json) {
+    requestFilmixUser(token, function (json) {
       if (!json || !json.ok) {
         showApiError(json, 'bandera_online_filmix_auth_error');
         return;
@@ -2101,6 +2166,9 @@
     sanitizeStoredValue(AUTH_KEYS.filmixToken);
     sanitizeStoredValue(AUTH_KEYS.filmixDeviceId);
     sanitizeStoredValue(FILMIX_MAX_QUALITY_KEY);
+    if (getFilmixToken()) {
+      getInternalFilmixDeviceId();
+    }
     SettingsApi.addComponent({
       component: 'bandera_online',
       name: Lampa.Lang.translate('bandera_online_settings_title'),
@@ -2155,6 +2223,22 @@
       },
       onChange: function onChange() {
         startFilmixAuthFlow();
+      }
+    });
+    SettingsApi.addParam({
+      component: 'bandera_online',
+      param: {
+        name: 'bandera_online_filmix_auth_token',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('bandera_online_filmix_auth_token')
+      },
+      onRender: function onRender(item) {
+        setFilmixTokenButtonTitle(item);
+      },
+      onChange: function onChange() {
+        openFilmixTokenInput();
       }
     });
     SettingsApi.addParam({
@@ -2501,16 +2585,40 @@
         en: 'Filmix token'
       },
       bandera_online_filmix_token_descr: {
-        ru: 'Токен авторизації Filmix (оновлюється після успішного flow)',
-        uk: 'Токен авторизації Filmix (оновлюється після успішного flow)',
-        ua: 'Токен авторизації Filmix (оновлюється після успішного flow)',
-        en: 'Filmix auth token (updated after successful flow)'
+        ru: 'Токен авторизації Filmix (вводиться користувачем вручну)',
+        uk: 'Токен авторизації Filmix (вводиться користувачем вручну)',
+        ua: 'Токен авторизації Filmix (вводиться користувачем вручну)',
+        en: 'Filmix auth token (entered manually by user)'
       },
       bandera_online_filmix_auth_start: {
-        ru: 'Запустити Filmix авторизацію',
-        uk: 'Запустити Filmix авторизацію',
-        ua: 'Запустити Filmix авторизацію',
-        en: 'Start Filmix auth'
+        ru: 'Запустити Filmix авторизацію (код)',
+        uk: 'Запустити Filmix авторизацію (код)',
+        ua: 'Запустити Filmix авторизацію (код)',
+        en: 'Start Filmix auth (code)'
+      },
+      bandera_online_filmix_auth_token: {
+        ru: 'Ввести Filmix token',
+        uk: 'Ввести Filmix token',
+        ua: 'Ввести Filmix token',
+        en: 'Enter Filmix token'
+      },
+      bandera_online_filmix_token_state_set: {
+        ru: 'встановлено',
+        uk: 'встановлено',
+        ua: 'встановлено',
+        en: 'set'
+      },
+      bandera_online_filmix_token_state_empty: {
+        ru: 'не задано',
+        uk: 'не задано',
+        ua: 'не задано',
+        en: 'not set'
+      },
+      bandera_online_filmix_token_saved: {
+        ru: 'Filmix token збережено',
+        uk: 'Filmix token збережено',
+        ua: 'Filmix token збережено',
+        en: 'Filmix token saved'
       },
       bandera_online_filmix_auth_check: {
         ru: 'Перевірити Filmix авторизацію',
@@ -2531,10 +2639,10 @@
         en: 'Filmix token cleared'
       },
       bandera_online_filmix_auth_required: {
-        ru: 'Для Filmix потрібні token і device_id',
-        uk: 'Для Filmix потрібні token і device_id',
-        ua: 'Для Filmix потрібні token і device_id',
-        en: 'Filmix requires token and device_id'
+        ru: 'Для Filmix потрібен token',
+        uk: 'Для Filmix потрібен token',
+        ua: 'Для Filmix потрібен token',
+        en: 'Filmix requires token'
       },
       bandera_online_filmix_auth_error: {
         ru: 'Помилка авторизації Filmix',
