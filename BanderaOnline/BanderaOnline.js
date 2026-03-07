@@ -106,6 +106,12 @@
           kinopoisk_id: kinopoisk_id
         });
       };
+      this.searchByMalId = function (_object, mal_id) {
+        object = _object;
+        search({
+          mal_id: mal_id
+        });
+      };
       this.search = function (_object, data) {
         object = _object;
         if (!data || !data.length) return component.doesNotAnswer();
@@ -121,6 +127,7 @@
           imdb_id: first.imdb_id,
           tmdb_id: first.tmdb_id,
           kinopoisk_id: first.kp_id || first.kinopoisk_id || first.filmId,
+          mal_id: first.mal_id || first.malId || object.movie.mal_id,
           year: getYear(object.movie || {}),
           serial: typeof first.serial != 'undefined' ? first.serial : getSerial(object.movie || {})
         });
@@ -266,6 +273,7 @@
         url = addParam(url, 'imdb_id', params.imdb_id || movie.imdb_id);
         url = addParam(url, 'tmdb_id', params.tmdb_id || getTmdbId(movie));
         url = addParam(url, 'kinopoisk_id', params.kinopoisk_id || movie.kinopoisk_id);
+        url = addParam(url, 'mal_id', params.mal_id || movie.mal_id);
         url = addParam(url, 'year', params.year || getYear(movie));
         if (sourceKey == 'makhno') url = addParam(url, 'serial', typeof params.serial != 'undefined' ? params.serial : getSerial(movie));
         if (movie.name) url = addParam(url, 'type', 'series');else url = addParam(url, 'type', 'movie');
@@ -299,6 +307,7 @@
                 imdb_id: item.imdb_id,
                 tmdb_id: item.tmdb_id,
                 kinopoisk_id: item.kinopoisk_id,
+                mal_id: item.mal_id,
                 serial: item.serial,
                 ref: item.ref
               };
@@ -1064,6 +1073,11 @@
         source.searchByKinopoisk(object, object.movie.kinopoisk_id);
         return;
       }
+      if (object.movie.mal_id && source.searchByMalId) {
+        this.extendChoice();
+        source.searchByMalId(object, object.movie.mal_id);
+        return;
+      }
       if (source.searchByTitle) {
         this.extendChoice();
         source.searchByTitle(object, object.movie.title || object.movie.name);
@@ -1077,6 +1091,7 @@
           imdb_id: object.movie.imdb_id,
           tmdb_id: getTmdbId(object.movie),
           kinopoisk_id: object.movie.kinopoisk_id,
+          mal_id: object.movie.mal_id,
           year: getYear(object.movie)
         }]);
         return;
@@ -1130,8 +1145,11 @@
           selected_id = elem.id;
           _this2.extendChoice();
           var kinopoisk_id = elem.kp_id || elem.filmId;
+          var mal_id = elem.mal_id || elem.malId;
           if (kinopoisk_id && source.searchByKinopoisk) {
             source.searchByKinopoisk(object, kinopoisk_id);
+          } else if (mal_id && source.searchByMalId) {
+            source.searchByMalId(object, mal_id);
           } else if (source.search) {
             source.search(object, [elem]);
           } else {
