@@ -466,7 +466,6 @@
 
     var HEALTH_KEY = 'lme_parser_health';
     function parserSetting() {
-      applySelectedParser();
       Lampa.SettingsApi.addParam({
         component: 'parser',
         param: {
@@ -481,7 +480,6 @@
           openParserModal();
         },
         onRender: function onRender(item) {
-          applySelectedParser();
           var selectedId = Lampa.Storage.get('lme_url_two', 'no_parser');
           var current = parsersInfo.find(function (parser) {
             return parser.id === selectedId;
