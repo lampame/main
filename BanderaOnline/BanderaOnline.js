@@ -297,6 +297,14 @@
             component.empty();
             return;
           }
+          var aggregated_moonanime = sourceKey == 'moonanime' ? items.find(function (item) {
+            return item && item.ref && Array.isArray(item.ref.seasons) && item.ref.seasons.length;
+          }) : null;
+          if (aggregated_moonanime && !object.clarification) {
+            selected = aggregated_moonanime;
+            loadContent(aggregated_moonanime.ref);
+            return;
+          }
           if (items.length > 1 && !object.clarification) {
             component.similars(items.map(function (item) {
               return {
@@ -549,6 +557,27 @@
           };
         }).filter(Boolean);
         if (items.length) return items;
+        var voices = Array.isArray(json.voices) ? json.voices : [];
+        var voice_items = voices.map(function (voice, index) {
+          if (!voice) return null;
+          var label = normalizeVoiceName(voice) || 'Voice ' + (index + 1);
+          var voice_stream_ref = voice.stream_ref || voice.ref || null;
+          var voice_streams = Array.isArray(voice.streams) ? voice.streams.filter(function (stream) {
+            return stream && (stream.url || stream.ref);
+          }) : [];
+          if (!voice_stream_ref && !voice_streams.length) return null;
+          return {
+            title: label,
+            info: '',
+            quality: '',
+            voice_name: label,
+            file: '',
+            streams: voice_streams,
+            player_title: movie_title + (label ? ' / ' + label : ''),
+            stream_ref: voice_stream_ref
+          };
+        }).filter(Boolean);
+        if (voice_items.length) return voice_items;
         return [{
           title: movie_title,
           info: '',
@@ -560,16 +589,52 @@
           stream_ref: json.stream_ref || null
         }];
       }
+      function parsePackedStreamUrl(value) {
+        var text = (value || '').toString().trim();
+        if (!text) return [];
+        if (text.indexOf('[') === -1 || text.indexOf(']') === -1) return [];
+        var items = [];
+        text.split(',').forEach(function (part) {
+          var match = part.match(/^\s*\[([^\]]+)\]\s*(.+)\s*$/);
+          if (!match) return;
+          var quality = (match[1] || '').toString().trim();
+          var url = (match[2] || '').toString().trim();
+          if (!url) return;
+          items.push({
+            title: quality || 'auto',
+            quality: quality || 'auto',
+            url: url
+          });
+        });
+        return items;
+      }
       function prepareStreams(streams) {
         var qualitys = {};
         var first = null;
         if (Array.isArray(streams)) {
           streams.forEach(function (stream, index) {
-            var label = stream.title || stream.quality || 'stream-' + (index + 1);
-            var url = normalizeStreamUrl(stream && stream.url);
-            if (url) qualitys[label] = url;
-            if (!first && url) first = Object.assign({}, stream, {
-              url: url
+            var variants = [];
+            if (stream && stream.url) {
+              var packed = parsePackedStreamUrl(stream.url);
+              if (packed.length) {
+                variants = packed.map(function (item) {
+                  var next = {};
+                  Lampa.Arrays.extend(next, stream, true);
+                  next.title = item.title || stream.title || stream.quality;
+                  next.quality = item.quality || stream.quality;
+                  next.url = item.url;
+                  return next;
+                });
+              }
+            }
+            if (!variants.length) variants = [stream];
+            variants.forEach(function (variant, variant_index) {
+              var label = variant.title || variant.quality || 'stream-' + (index + 1) + '-' + (variant_index + 1);
+              var url = normalizeStreamUrl(variant && variant.url);
+              if (url) qualitys[label] = url;
+              if (!first && url) first = Object.assign({}, variant, {
+                url: url
+              });
             });
           });
         }
@@ -728,6 +793,7 @@
       filmix: createV2('filmix'),
       bambooua: createV2('bambooua'),
       animeon: createV2('animeon'),
+      moonanime: createV2('moonanime'),
       starlight: createV2('starlight'),
       mikai: createV2('mikai'),
       midnight: createV2('midnight'),
@@ -742,6 +808,7 @@
       filmix: 'Filmix',
       bambooua: 'BambooUA',
       animeon: 'AnimeON',
+      moonanime: 'MoonAnime',
       starlight: 'StarLight',
       mikai: 'Mikai',
       midnight: 'Midnight',
@@ -806,10 +873,11 @@
       if (include_anime) {
         if (sources.indexOf('bambooua') === -1) sources.push('bambooua');
         if (sources.indexOf('animeon') === -1) sources.push('animeon');
+        if (sources.indexOf('moonanime') === -1) sources.push('moonanime');
         if (sources.indexOf('mikai') === -1) sources.push('mikai');
       } else {
         sources = sources.filter(function (name) {
-          return name !== 'bambooua' && name !== 'animeon' && name !== 'mikai';
+          return name !== 'bambooua' && name !== 'animeon' && name !== 'moonanime' && name !== 'mikai';
         });
       }
       if (include_starlight) {
@@ -831,7 +899,7 @@
       if (!sources.length) {
         sources = ['uatut', 'uaflix', 'kurwaborz', 'makhno', 'filmix', 'uakino', 'ashdibase'];
         if (include_anime) {
-          sources.push('bambooua', 'animeon');
+          sources.push('bambooua', 'animeon', 'moonanime');
           sources.push('mikai');
         }
         if (include_starlight) {
@@ -1146,7 +1214,10 @@
           _this2.extendChoice();
           var kinopoisk_id = elem.kp_id || elem.filmId;
           var mal_id = elem.mal_id || elem.malId;
-          if (kinopoisk_id && source.searchByKinopoisk) {
+          var has_aggregated_ref = elem.ref && Array.isArray(elem.ref.seasons) && elem.ref.seasons.length;
+          if (has_aggregated_ref && source.search) {
+            source.search(object, [elem]);
+          } else if (kinopoisk_id && source.searchByKinopoisk) {
             source.searchByKinopoisk(object, kinopoisk_id);
           } else if (mal_id && source.searchByMalId) {
             source.searchByMalId(object, mal_id);
