@@ -486,6 +486,7 @@
     return {
       id: anime.slug,
       mal_id: anime.mal_id,
+      kinopoisk_id: anime.kinopoisk_id || anime.mal_id,
       title: anime.title_ua || anime.title_en || anime.title_ja,
       name: anime.media_type !== 'movie' ? anime.title_ua || anime.title_en || anime.title_ja : undefined,
       original_title: anime.title_en || anime.title_ja || anime.title_ua,
@@ -525,6 +526,7 @@
     var card = {
       id: details && details.slug,
       mal_id: details && details.mal_id,
+      kinopoisk_id: details && (details.kinopoisk_id || details.mal_id),
       title: title_ua || title_en || title_ja,
       name: mediaType !== 'movie' ? title_ua || title_en || title_ja : undefined,
       original_title: title_ja || title_en || title_ua,
@@ -2311,6 +2313,7 @@
       id: safe.slug || 'hikka_schedule_card_' + index,
       hikka_slug: safe.slug || undefined,
       mal_id: safe.mal_id,
+      kinopoisk_id: safe.kinopoisk_id || safe.mal_id,
       title: title,
       name: mediaType !== 'movie' ? title : undefined,
       original_title: safe.title_en || safe.title_ja || safe.title_ua || title,
