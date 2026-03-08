@@ -2228,6 +2228,17 @@
             };
           }
         },
+        onEmpty: function onEmpty() {
+          if (type !== 'watchlist' || !object || typeof object.onHead !== 'function') return;
+          if (!this.empty_class || typeof this.empty_class.use !== 'function') return;
+          this.empty_class.use({
+            onController: function onController(controller) {
+              controller.up = function () {
+                if (Navigator.canmove('up')) Navigator.move('up');else object.onHead();
+              };
+            }
+          });
+        },
         onInstance: function onInstance(card, element) {
           card.use({
             onCreate: function onCreate() {
