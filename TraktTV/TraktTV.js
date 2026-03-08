@@ -6865,6 +6865,24 @@
       episode: episode
     };
   }
+  function collectTitleCandidates() {
+    var seen = new Set();
+    var candidates = [];
+    for (var _len2 = arguments.length, sources = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+      sources[_key2] = arguments[_key2];
+    }
+    sources.forEach(function (source) {
+      if (!source || _typeof(source) !== 'object') return;
+      [source.original_name, source.original_title, source.name, source.title].forEach(function (value) {
+        if (typeof value !== 'string') return;
+        var title = value.trim();
+        if (!title || seen.has(title)) return;
+        seen.add(title);
+        candidates.push(title);
+      });
+    });
+    return candidates;
+  }
 
   /**
    * Build idempotency key for media card or episode
@@ -7282,7 +7300,7 @@
             }
             doFinish = /*#__PURE__*/function () {
               var _ref9 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
-                var type, tmdbId, search, e, traktId, res, _tmdbId, _search, _e, traktShowId, season, episode, seasons, _e2, last, originalName, found, _iterator3, _step3, s, _iterator4, _step4, ep, epHash, _e3, _res, _t2, _t3;
+                var type, tmdbId, search, e, traktId, res, _tmdbId, _search, _e, traktShowId, season, episode, seasons, _e2, last, titleCandidates, found, _iterator3, _step3, s, _iterator4, _step4, ep, _iterator5, _step5, title, epHash, _e3, _res, _t2, _t3, _t4;
                 return _regenerator().w(function (_context4) {
                   while (1) switch (_context4.n) {
                     case 0:
@@ -7311,9 +7329,9 @@
                       return api$1.addToHistory({
                         method: 'movie',
                         id: tmdbId,
-                        ids: _objectSpread2({
+                        ids: _objectSpread2(_objectSpread2({}, media.ids || {}), {}, {
                           trakt: traktId
-                        }, media.ids || {})
+                        })
                       });
                     case 3:
                       res = _context4.v;
@@ -7340,7 +7358,7 @@
                       season = media.season_number || media.season || media.seasonNumber;
                       episode = media.episode_number || media.episode || media.episodeNumber;
                       if (!(!season || !episode)) {
-                        _context4.n = 23;
+                        _context4.n = 30;
                         break;
                       }
                       _context4.n = 7;
@@ -7355,15 +7373,15 @@
                       _e2.status = 404;
                       throw _e2;
                     case 8:
-                      // try map by stored last timeline hash + title
+                      // Try map by timeline hash using all known title variants.
                       last = Lampa.Storage.get('trakt_last_card', media) || media;
-                      originalName = last.original_name || last.name || last.original_title || last.title || '';
+                      titleCandidates = collectTitleCandidates(media, last);
                       _iterator3 = _createForOfIteratorHelper(seasons);
                       _context4.p = 9;
                       _iterator3.s();
                     case 10:
                       if ((_step3 = _iterator3.n()).done) {
-                        _context4.n = 20;
+                        _context4.n = 27;
                         break;
                       }
                       s = _step3.value;
@@ -7371,92 +7389,129 @@
                         _context4.n = 11;
                         break;
                       }
-                      return _context4.a(3, 19);
+                      return _context4.a(3, 26);
                     case 11:
                       _iterator4 = _createForOfIteratorHelper(s.episodes);
                       _context4.p = 12;
                       _iterator4.s();
                     case 13:
                       if ((_step4 = _iterator4.n()).done) {
-                        _context4.n = 15;
+                        _context4.n = 22;
                         break;
                       }
                       ep = _step4.value;
-                      epHash = Lampa.Utils.hash([s.number, s.number > 10 ? ':' : '', ep.number, originalName].join(''));
+                      _iterator5 = _createForOfIteratorHelper(titleCandidates);
+                      _context4.p = 14;
+                      _iterator5.s();
+                    case 15:
+                      if ((_step5 = _iterator5.n()).done) {
+                        _context4.n = 17;
+                        break;
+                      }
+                      title = _step5.value;
+                      epHash = Lampa.Utils.hash([s.number, s.number > 10 ? ':' : '', ep.number, title].join(''));
                       if (!(media.hash && epHash === media.hash)) {
-                        _context4.n = 14;
+                        _context4.n = 16;
                         break;
                       }
                       season = s.number;
                       episode = ep.number;
                       found = true;
-                      return _context4.a(3, 15);
-                    case 14:
+                      return _context4.a(3, 17);
+                    case 16:
+                      _context4.n = 15;
+                      break;
+                    case 17:
+                      _context4.n = 19;
+                      break;
+                    case 18:
+                      _context4.p = 18;
+                      _t2 = _context4.v;
+                      _iterator5.e(_t2);
+                    case 19:
+                      _context4.p = 19;
+                      _iterator5.f();
+                      return _context4.f(19);
+                    case 20:
+                      if (!found) {
+                        _context4.n = 21;
+                        break;
+                      }
+                      return _context4.a(3, 22);
+                    case 21:
                       _context4.n = 13;
                       break;
-                    case 15:
-                      _context4.n = 17;
+                    case 22:
+                      _context4.n = 24;
                       break;
-                    case 16:
-                      _context4.p = 16;
-                      _t2 = _context4.v;
-                      _iterator4.e(_t2);
-                    case 17:
-                      _context4.p = 17;
+                    case 23:
+                      _context4.p = 23;
+                      _t3 = _context4.v;
+                      _iterator4.e(_t3);
+                    case 24:
+                      _context4.p = 24;
                       _iterator4.f();
-                      return _context4.f(17);
-                    case 18:
+                      return _context4.f(24);
+                    case 25:
                       if (!found) {
-                        _context4.n = 19;
+                        _context4.n = 26;
                         break;
                       }
-                      return _context4.a(3, 20);
-                    case 19:
+                      return _context4.a(3, 27);
+                    case 26:
                       _context4.n = 10;
                       break;
-                    case 20:
-                      _context4.n = 22;
+                    case 27:
+                      _context4.n = 29;
                       break;
-                    case 21:
-                      _context4.p = 21;
-                      _t3 = _context4.v;
-                      _iterator3.e(_t3);
-                    case 22:
-                      _context4.p = 22;
+                    case 28:
+                      _context4.p = 28;
+                      _t4 = _context4.v;
+                      _iterator3.e(_t4);
+                    case 29:
+                      _context4.p = 29;
                       _iterator3.f();
-                      return _context4.f(22);
-                    case 23:
+                      return _context4.f(29);
+                    case 30:
                       if (!(!season || !episode)) {
-                        _context4.n = 24;
+                        _context4.n = 31;
                         break;
                       }
+                      slog('Episode index not resolved', {
+                        tmdbId: _tmdbId,
+                        traktShowId: traktShowId,
+                        hash: media.hash,
+                        mediaTitles: collectTitleCandidates(media),
+                        lastCardTitles: collectTitleCandidates(Lampa.Storage.get('trakt_last_card', null)),
+                        hasMediaIds: !!(media && media.ids)
+                      });
                       _e3 = new Error('Episode index not resolved');
                       _e3.status = 422;
                       throw _e3;
-                    case 24:
-                      _context4.n = 25;
+                    case 31:
+                      _context4.n = 32;
                       return api$1.addToHistory({
                         method: 'show',
                         id: _tmdbId,
-                        ids: _objectSpread2({
+                        ids: _objectSpread2(_objectSpread2({}, media.ids || {}), {}, {
                           trakt: traktShowId
-                        }, media.ids || {}),
+                        }),
                         season_number: season,
                         episodes: [{
                           number: episode,
                           watched_at: new Date().toISOString()
                         }]
                       });
-                    case 25:
+                    case 32:
                       _res = _context4.v;
                       return _context4.a(2, {
                         status: 200,
                         data: _res
                       });
-                    case 26:
+                    case 33:
                       return _context4.a(2);
                   }
-                }, _callee4, null, [[12, 16, 17, 18], [9, 21, 22, 23]]);
+                }, _callee4, null, [[14, 18, 19, 20], [12, 23, 24, 25], [9, 28, 29, 30]]);
               }));
               return function doFinish() {
                 return _ref9.apply(this, arguments);
@@ -7655,12 +7710,23 @@
       }
       if (card && hash) {
         var se = extractSeasonEpisode(card);
+        var cachedMeta = meta || getHashMeta(hash);
+        var seasonValue = se.season || cachedMeta && cachedMeta.season;
+        var episodeValue = se.episode || cachedMeta && cachedMeta.episode;
+        var idsValue = card.ids || cachedMeta && cachedMeta.ids;
         setHashMeta(hash, {
           card: card,
-          season: se.season,
-          episode: se.episode,
-          ids: card.ids
+          season: seasonValue,
+          episode: episodeValue,
+          ids: idsValue
         });
+        if (this.isLoggingEnabled() && (!se.season || !se.episode) && cachedMeta && (cachedMeta.season || cachedMeta.episode)) {
+          slog('Hash meta preserved season/episode from cache', {
+            hash: hash,
+            season: seasonValue,
+            episode: episodeValue
+          });
+        }
       }
       slog('Card from getCurrentCard:', card);
       if (!card) {
