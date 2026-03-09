@@ -426,6 +426,23 @@
     }
     return true;
   }
+  function readBooleanStorage$1(name) {
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+    var value = Lampa.Storage.field(name);
+    if (typeof value === 'boolean') return value;
+    if (value === 1 || value === '1' || value === 'true') return true;
+    if (value === 0 || value === '0' || value === 'false') return false;
+    return fallback;
+  }
+  function buildRecommendationsUrl$1(type, limit) {
+    var query = new URLSearchParams({
+      extended: 'full,images',
+      limit: String(Math.max(1, parseInt(limit, 10) || 36)),
+      ignore_watched: readBooleanStorage$1('trakt_source_ignore_watched', false) ? 'true' : 'false',
+      ignore_watchlisted: readBooleanStorage$1('trakt_source_ignore_watchlisted', false) ? 'true' : 'false'
+    });
+    return "/recommendations/".concat(type, "?").concat(query.toString());
+  }
   function getImageUrl(media) {
     var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'poster';
     var imageSet = media.images && media.images[type];
@@ -1153,8 +1170,8 @@
     var lastEpisode = progress.last_episode || null;
     var id = ids.tmdb || ids.trakt;
     if (!id) return null;
-    var watched = toNonNegativeInt(progress.completed) !== null ? toNonNegativeInt(progress.completed) : toNonNegativeInt(progress && progress.stats && progress.stats.play_count) || 0;
-    var aired = toNonNegativeInt(progress.aired) !== null ? toNonNegativeInt(progress.aired) : toNonNegativeInt(show.aired_episodes) !== null ? toNonNegativeInt(show.aired_episodes) : toNonNegativeInt(item.cached_aired_episode_count) || 0;
+    var watched = toNonNegativeInt$1(progress.completed) !== null ? toNonNegativeInt$1(progress.completed) : toNonNegativeInt$1(progress && progress.stats && progress.stats.play_count) || 0;
+    var aired = toNonNegativeInt$1(progress.aired) !== null ? toNonNegativeInt$1(progress.aired) : toNonNegativeInt$1(show.aired_episodes) !== null ? toNonNegativeInt$1(show.aired_episodes) : toNonNegativeInt$1(item.cached_aired_episode_count) || 0;
     var progressTotal = aired > 0 ? aired : watched;
     var releaseDate = nextEpisode && nextEpisode.first_aired ? nextEpisode.first_aired : show.first_aired || (show.year ? String(show.year) : '');
     return {
@@ -1177,11 +1194,11 @@
       trakt_upnext_total: progressTotal,
       trakt_upnext_progress: "".concat(watched, "/").concat(progressTotal),
       trakt_upnext_last_watched_at: progress.last_watched_at || null,
-      trakt_upnext_hidden: toNonNegativeInt(progress.hidden) || 0,
+      trakt_upnext_hidden: toNonNegativeInt$1(progress.hidden) || 0,
       trakt_upnext_reset_at: progress.reset_at || null,
       trakt_upnext_next_episode: nextEpisode,
       trakt_upnext_last_episode: lastEpisode,
-      total_count: toNonNegativeInt(item.total_count)
+      total_count: toNonNegativeInt$1(item.total_count)
     };
   }
 
@@ -1387,24 +1404,24 @@
     });
     return headers;
   }
-  function toPositiveInt(value) {
+  function toPositiveInt$1(value) {
     var parsed = parseInt(value, 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
-  function toNonNegativeInt(value) {
+  function toNonNegativeInt$1(value) {
     var parsed = parseInt(value, 10);
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
   }
   function resolvePaginationFromHeaders() {
     var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var fallbackPage = toPositiveInt(fallback.page) || 1;
-    var fallbackLimit = toPositiveInt(fallback.limit) || 1;
-    var fallbackTotal = toNonNegativeInt(fallback.total) || 0;
-    var page = toPositiveInt(headers['x-pagination-page']) || fallbackPage;
-    var limit = toPositiveInt(headers['x-pagination-limit']) || fallbackLimit;
-    var total = toNonNegativeInt(headers['x-pagination-item-count']);
-    var pageCount = toPositiveInt(headers['x-pagination-page-count']);
+    var fallbackPage = toPositiveInt$1(fallback.page) || 1;
+    var fallbackLimit = toPositiveInt$1(fallback.limit) || 1;
+    var fallbackTotal = toNonNegativeInt$1(fallback.total) || 0;
+    var page = toPositiveInt$1(headers['x-pagination-page']) || fallbackPage;
+    var limit = toPositiveInt$1(headers['x-pagination-limit']) || fallbackLimit;
+    var total = toNonNegativeInt$1(headers['x-pagination-item-count']);
+    var pageCount = toPositiveInt$1(headers['x-pagination-page-count']);
     var safeTotal = total !== null ? total : fallbackTotal;
     var safePageCount = pageCount || Math.max(1, Math.ceil(safeTotal / limit));
     return {
@@ -1435,7 +1452,7 @@
     var items = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
     var page = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
     var limit = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 36;
-    var hasHeaderPagination = !!(toPositiveInt(headers['x-pagination-page']) || toPositiveInt(headers['x-pagination-limit']) || toPositiveInt(headers['x-pagination-page-count']) || toNonNegativeInt(headers['x-pagination-item-count']) !== null);
+    var hasHeaderPagination = !!(toPositiveInt$1(headers['x-pagination-page']) || toPositiveInt$1(headers['x-pagination-limit']) || toPositiveInt$1(headers['x-pagination-page-count']) || toNonNegativeInt$1(headers['x-pagination-item-count']) !== null);
     if (hasHeaderPagination) {
       return resolvePaginationFromHeaders(headers, {
         page: page,
@@ -1514,8 +1531,8 @@
       var page = options.page || 1;
       var fetchLimit = limit * 5;
       var logging = Lampa.Storage.field('trakt_enable_logging');
-      var moviesRequest = requestApi('GET', "/recommendations/movies?extended=full,images&ignore_collected=true&ignore_watchlisted=true&limit=".concat(fetchLimit));
-      var showsRequest = requestApi('GET', "/recommendations/shows?extended=full,images&ignore_collected=true&ignore_watchlisted=true&limit=".concat(fetchLimit));
+      var moviesRequest = requestApi('GET', buildRecommendationsUrl$1('movies', fetchLimit));
+      var showsRequest = requestApi('GET', buildRecommendationsUrl$1('shows', fetchLimit));
       return Promise.allSettled([moviesRequest, showsRequest]).then(function (responses) {
         var moviesState = responses[0];
         var showsState = responses[1];
@@ -1633,7 +1650,7 @@
         var payload = response && Array.isArray(response.data) ? response.data : [];
         var headers = response && response.headers ? response.headers : {};
         var mapped = payload.map(mapUpNextNitroItem).filter(Boolean);
-        var bodyTotal = toNonNegativeInt(payload && payload[0] && payload[0].total_count);
+        var bodyTotal = toNonNegativeInt$1(payload && payload[0] && payload[0].total_count);
         var fallbackTotal = bodyTotal !== null ? bodyTotal : (requestedPage - 1) * requestedLimit + mapped.length;
         var pagination = resolvePaginationFromHeaders(headers, {
           page: requestedPage,
@@ -2479,7 +2496,7 @@
     }
     return comp;
   }
-  function t$2(key) {
+  function t$3(key) {
     var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     try {
       var translated = Lampa.Lang.translate(key);
@@ -2507,7 +2524,7 @@
     var hasCount = typeof itemCount === 'number' && itemCount >= 0;
     if (safeName && hasCount) return "".concat(safeName, " (").concat(itemCount, ")");
     if (safeName) return safeName;
-    return t$2('trakt_list_detail', 'List Content');
+    return t$3('trakt_list_detail', 'List Content');
   }
   function refreshActivity(object, component) {
     if (!Lampa || !Lampa.Activity || typeof Lampa.Activity.replace !== 'function') return;
@@ -2593,8 +2610,8 @@
   function showApiError(error) {
     var fallbackKey = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'trakt_list_action_error';
     var status = error && error.status;
-    var message = t$2(fallbackKey, 'Trakt request failed');
-    if (status === 420) message = t$2('trakt_list_limit_reached', 'List limit reached');else if (status === 409) message = t$2('trakt_list_conflict', 'Conflict while updating list');else if (status === 401 || status === 403) message = t$2('trakttvAuthMissed', 'Not logged');
+    var message = t$3(fallbackKey, 'Trakt request failed');
+    if (status === 420) message = t$3('trakt_list_limit_reached', 'List limit reached');else if (status === 409) message = t$3('trakt_list_conflict', 'Conflict while updating list');else if (status === 401 || status === 403) message = t$3('trakttvAuthMissed', 'Not logged');
     notify$1(message);
     if (Lampa.Storage.field('trakt_enable_logging')) {
       console.error('TraktTV', 'List API error', status, error);
@@ -2603,7 +2620,7 @@
   function buildCreateListCard() {
     return {
       id: '__trakt_create_list__',
-      title: t$2('trakt_list_create_short', 'Create'),
+      title: t$3('trakt_list_create_short', 'Create'),
       description: '',
       overview: '',
       method: 'list',
@@ -2651,7 +2668,7 @@
     var defaultDescription = source.description || '';
     var defaultPrivacy = source.privacy || 'private';
     Lampa.Input.edit({
-      title: t$2('trakt_list_name_input', 'List name'),
+      title: t$3('trakt_list_name_input', 'List name'),
       value: defaultName,
       free: true,
       nosave: true,
@@ -2660,7 +2677,7 @@
       restoreContentController();
       var name = (nameValue || '').trim();
       if (!name) {
-        notify$1(t$2('trakt_list_name_required', 'List name is required'));
+        notify$1(t$3('trakt_list_name_required', 'List name is required'));
         return;
       }
       onSubmit({
@@ -2676,7 +2693,7 @@
     if (!Api$2) return;
     openListEditor({}, function (payload) {
       Api$2.createList(payload).then(function (createdList) {
-        notify$1(t$2('trakt_list_created', 'List created'));
+        notify$1(t$3('trakt_list_created', 'List created'));
         refreshMyListsAfterCreate(activityObject, createdList);
       })["catch"](function (error) {
         return showApiError(error, 'trakt_list_create_error');
@@ -2690,7 +2707,7 @@
         listId: element.id,
         payload: payload
       }).then(function () {
-        notify$1(t$2('trakt_list_updated', 'List updated'));
+        notify$1(t$3('trakt_list_updated', 'List updated'));
         refreshActivity(activityObject, 'trakt_my_lists');
       })["catch"](function (error) {
         return showApiError(error, 'trakt_list_edit_error');
@@ -2700,12 +2717,12 @@
   function deleteMyList(activityObject, element) {
     if (!Api$2 || !element || !element.id) return;
     Lampa.Select.show({
-      title: t$2('trakt_list_confirm_delete', 'Delete this list?'),
+      title: t$3('trakt_list_confirm_delete', 'Delete this list?'),
       items: [{
-        title: t$2('trakt_list_delete_confirm_action', 'Delete'),
+        title: t$3('trakt_list_delete_confirm_action', 'Delete'),
         confirm: true
       }, {
-        title: t$2('cancel', 'Cancel')
+        title: t$3('cancel', 'Cancel')
       }],
       onSelect: function onSelect(item) {
         if (!item.confirm) {
@@ -2715,7 +2732,7 @@
         Api$2.deleteList({
           listId: element.id
         }).then(function () {
-          notify$1(t$2('trakt_list_deleted', 'List deleted'));
+          notify$1(t$3('trakt_list_deleted', 'List deleted'));
           refreshMyListsAfterDelete(activityObject, element.id);
         })["catch"](function (error) {
           return showApiError(error, 'trakt_list_delete_error');
@@ -2733,15 +2750,15 @@
       return;
     }
     Lampa.Select.show({
-      title: t$2('title_action', 'Action'),
+      title: t$3('title_action', 'Action'),
       items: [{
-        title: t$2('trakt_list_open', 'Open list'),
+        title: t$3('trakt_list_open', 'Open list'),
         action: 'open'
       }, {
-        title: t$2('trakt_list_edit', 'Edit list'),
+        title: t$3('trakt_list_edit', 'Edit list'),
         action: 'edit'
       }, {
-        title: t$2('trakt_list_delete', 'Delete list'),
+        title: t$3('trakt_list_delete', 'Delete list'),
         action: 'delete'
       }],
       onSelect: function onSelect(item) {
@@ -2757,9 +2774,9 @@
   function openMyListItemActions(object, element) {
     if (!Api$2 || !object || !object.id || !element) return;
     Lampa.Select.show({
-      title: t$2('title_action', 'Action'),
+      title: t$3('title_action', 'Action'),
       items: [{
-        title: t$2('trakt_remove_from_list', 'Remove from this list'),
+        title: t$3('trakt_remove_from_list', 'Remove from this list'),
         action: 'remove'
       }],
       onSelect: function onSelect(item) {
@@ -2768,7 +2785,7 @@
           listId: object.id,
           item: element
         }).then(function () {
-          notify$1(t$2('trakt_item_removed_from_list', 'Item removed from list'));
+          notify$1(t$3('trakt_item_removed_from_list', 'Item removed from list'));
           refreshActivity(object, 'trakt_my_list_detail');
         })["catch"](function (error) {
           return showApiError(error, 'trakt_remove_from_list_error');
@@ -3025,7 +3042,7 @@
     var field = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
     var key = (field || '').toString().trim().toLowerCase();
     var known = WATCHLIST_SORT_LABELS[key];
-    if (known) return t$2(known.key, known.fallback);
+    if (known) return t$3(known.key, known.fallback);
     return key.split('_').filter(Boolean).map(function (part) {
       return part.charAt(0).toUpperCase() + part.slice(1);
     }).join(' ');
@@ -3042,8 +3059,8 @@
     return 'movies';
   }
   function buildWatchlistTabTitle(tabId) {
-    if (tabId === 'shows') return t$2('trakttv_watchlist_tab_shows', 'Shows');
-    return t$2('trakttv_watchlist_tab_movies', 'Movies');
+    if (tabId === 'shows') return t$3('trakttv_watchlist_tab_shows', 'Shows');
+    return t$3('trakttv_watchlist_tab_movies', 'Movies');
   }
   function watchlistHub() {
     var object = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -3126,7 +3143,7 @@
         sortNavigation.append(button);
       });
       if (hiddenSortFields.length) {
-        moreSortButton = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__sort trakt-watchlist__sort--more\" data-sort-field=\"__more__\">" + "<div class=\"trakt-watchlist__sort-label\">".concat(t$2('trakttv_watchlist_sort_more', 'More'), "</div>") + "<div class=\"trakt-watchlist__sort-state\"></div>" + "</div>");
+        moreSortButton = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__sort trakt-watchlist__sort--more\" data-sort-field=\"__more__\">" + "<div class=\"trakt-watchlist__sort-label\">".concat(t$3('trakttv_watchlist_sort_more', 'More'), "</div>") + "<div class=\"trakt-watchlist__sort-state\"></div>" + "</div>");
         moreSortButton.on('hover:focus', function () {
           rememberControlsFocus(moreSortButton);
         });
@@ -3151,7 +3168,7 @@
         if (isMoreButton) {
           var hiddenActive = isHiddenSortField(activeSortField);
           var activeHiddenVip = hiddenActive && isWatchlistVipSortField(activeSortField);
-          label.text(hiddenActive ? formatWatchlistSortLabel(activeSortField) : t$2('trakttv_watchlist_sort_more', 'More'));
+          label.text(hiddenActive ? formatWatchlistSortLabel(activeSortField) : t$3('trakttv_watchlist_sort_more', 'More'));
           if (activeHiddenVip) button.addClass('trakt-watchlist__sort--vip');
           if (hiddenActive) {
             button.addClass('active trakt-watchlist__sort--active');
@@ -3179,7 +3196,7 @@
         var arrow = isActive ? " ".concat(formatWatchlistSortArrow(activeSortOrder)) : '';
         return {
           title: "".concat(formatWatchlistSortLabel(field)).concat(arrow),
-          subtitle: vipOnly ? t$2('trakttv_vip_status', 'VIP') : '',
+          subtitle: vipOnly ? t$3('trakttv_vip_status', 'VIP') : '',
           selected: isActive,
           ghost: vipOnly && !vipEnabled,
           field: field
@@ -3271,7 +3288,7 @@
         vipEnabled = !!status;
         updateSorts();
         if (!vipEnabled) {
-          notify$1(t$2('trakttv_watchlist_sort_vip_required', 'This sort is available only for Trakt VIP users'));
+          notify$1(t$3('trakttv_watchlist_sort_vip_required', 'This sort is available only for Trakt VIP users'));
           return false;
         }
         applySort(field, nextOrder);
@@ -3279,7 +3296,7 @@
       })["catch"](function () {
         vipEnabled = getTraktVipStatusCached();
         updateSorts();
-        notify$1(t$2('trakttv_watchlist_sort_vip_required', 'This sort is available only for Trakt VIP users'));
+        notify$1(t$3('trakttv_watchlist_sort_vip_required', 'This sort is available only for Trakt VIP users'));
         return false;
       });
     }
@@ -3289,7 +3306,7 @@
         return;
       }
       Lampa.Select.show({
-        title: t$2('trakttv_watchlist_sort_more_title', 'More sorting'),
+        title: t$3('trakttv_watchlist_sort_more_title', 'More sorting'),
         items: buildMoreSortItems(),
         onSelect: function onSelect(item) {
           if (!item || !item.field) {
@@ -3694,6 +3711,66 @@
         ru: "Показывать рекомендации TraktTV на главной",
         en: "Show TraktTV recommendations on main page",
         uk: "Показувати рекомендації TraktTV на головній сторінці"
+      },
+      trakttv_source_trending: {
+        ru: "В тренде",
+        en: "Trending",
+        uk: "У тренді"
+      },
+      trakttv_source_anticipated: {
+        ru: "Ожидаемые",
+        en: "Anticipated",
+        uk: "Очікувані"
+      },
+      trakttv_source_popular: {
+        ru: "Популярные",
+        en: "Popular",
+        uk: "Популярні"
+      },
+      trakttv_source_recommendations_movies: {
+        ru: "Рекомендации: фильмы",
+        en: "Recommendations: Movies",
+        uk: "Рекомендації: фільми"
+      },
+      trakttv_source_recommendations_shows: {
+        ru: "Рекомендации: сериалы",
+        en: "Recommendations: Shows",
+        uk: "Рекомендації: серіали"
+      },
+      trakttv_source_section: {
+        ru: "Фильтры источника TraktTV",
+        en: "TraktTV source filters",
+        uk: "Фільтри джерела TraktTV"
+      },
+      trakttv_source_ignore_watched: {
+        ru: "Источник: скрывать просмотренное",
+        en: "Source: ignore watched",
+        uk: "Джерело: приховувати переглянуте"
+      },
+      trakttv_source_ignore_watched_descr: {
+        ru: "Применяется ко всем лентам TraktTV (категории, рекомендации, поиск)",
+        en: "Applies to all TraktTV source feeds (categories, recommendations, search)",
+        uk: "Застосовується до всіх стрічок TraktTV (категорії, рекомендації, пошук)"
+      },
+      trakttv_source_ignore_watchlisted: {
+        ru: "Источник: скрывать watchlist",
+        en: "Source: ignore watchlisted",
+        uk: "Джерело: приховувати watchlist"
+      },
+      trakttv_source_ignore_watchlisted_descr: {
+        ru: "Применяется ко всем лентам TraktTV (категории, рекомендации, поиск)",
+        en: "Applies to all TraktTV source feeds (categories, recommendations, search)",
+        uk: "Застосовується до всіх стрічок TraktTV (категорії, рекомендації, пошук)"
+      },
+      trakt_source_search_lists: {
+        ru: "Списки",
+        en: "Lists",
+        uk: "Списки"
+      },
+      trakt_source_search_lists_more_hint: {
+        ru: "Открывайте списки напрямую из результатов поиска",
+        en: "Open lists directly from search results",
+        uk: "Відкривайте списки напряму з результатів пошуку"
       },
       trakt_progress_section: {
         ru: "Настройки прогресса",
@@ -4702,7 +4779,7 @@
     createLineTitle: createLineTitle
   };
 
-  function t$1(key) {
+  function t$2(key) {
     var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     try {
       var translated = Lampa.Lang.translate(key);
@@ -4756,14 +4833,14 @@
   function buildManagerItems(watchlistState, lists) {
     var items = [];
     items.push({
-      title: watchlistState ? t$1('trakt_watchlist_remove', 'Remove from watchlist') : t$1('trakt_watchlist_add', 'Add to watchlist'),
+      title: watchlistState ? t$2('trakt_watchlist_remove', 'Remove from watchlist') : t$2('trakt_watchlist_add', 'Add to watchlist'),
       target: 'watchlist',
       inList: !!watchlistState
     });
     (lists || []).forEach(function (list) {
       var listName = (list.list_title || list.title || '').trim();
       if (!listName) return;
-      var actionTitle = list.inList ? t$1('trakt_remove_from_list_action', 'Remove from list') : t$1('trakt_add_to_list_action', 'Add to list');
+      var actionTitle = list.inList ? t$2('trakt_remove_from_list_action', 'Remove from list') : t$2('trakt_add_to_list_action', 'Add to list');
       items.push({
         title: "".concat(listName, " \xB7 ").concat(actionTitle),
         target: 'list',
@@ -4778,11 +4855,11 @@
     if (isAdded) {
       button.classList.add('added');
       button.style.color = '#37ff54';
-      if (textNode) textNode.textContent = t$1('trakt_lists_button_in_watchlist', 'In watchlist');
+      if (textNode) textNode.textContent = t$2('trakt_lists_button_in_watchlist', 'In watchlist');
     } else {
       button.classList.remove('added');
       button.style.color = '';
-      if (textNode) textNode.textContent = t$1('trakt_lists_button', 'Manage lists');
+      if (textNode) textNode.textContent = t$2('trakt_lists_button', 'Manage lists');
     }
   }
   function refreshButtonState(button, textNode, params) {
@@ -4796,10 +4873,10 @@
     if (item.target === 'watchlist') {
       var request = item.inList ? api$1.removeFromWatchlist(params) : api$1.addToWatchlist(params);
       request.then(function () {
-        notify(item.inList ? t$1('trakt_watchlist_remove', 'Removed from watchlist') : t$1('trakt_watchlist_add', 'Added to watchlist'));
+        notify(item.inList ? t$2('trakt_watchlist_remove', 'Removed from watchlist') : t$2('trakt_watchlist_add', 'Added to watchlist'));
         if (onDone) onDone();
       })["catch"](function () {
-        return notify(t$1('trakt_watchlist_action_error', 'Watchlist action failed'));
+        return notify(t$2('trakt_watchlist_action_error', 'Watchlist action failed'));
       });
       return;
     }
@@ -4812,14 +4889,14 @@
         item: params
       });
       _request.then(function () {
-        notify(item.inList ? t$1('trakt_item_removed_from_list', 'Item removed from list') : t$1('trakt_item_added_to_list', 'Item added to list'));
+        notify(item.inList ? t$2('trakt_item_removed_from_list', 'Item removed from list') : t$2('trakt_item_added_to_list', 'Item added to list'));
         if (onDone) onDone();
       })["catch"](function (error) {
         if (error && error.status === 409) {
-          notify(t$1('trakt_list_conflict', 'Item is already in this list'));
+          notify(t$2('trakt_list_conflict', 'Item is already in this list'));
           return;
         }
-        notify(t$1('trakt_list_action_error', 'List action failed'));
+        notify(t$2('trakt_list_action_error', 'List action failed'));
       });
     }
   }
@@ -4844,7 +4921,7 @@
       var lists = myListsResponse && Array.isArray(myListsResponse.results) ? myListsResponse.results : [];
       loadMyListsMembership(params, lists).then(function (withMembership) {
         Lampa.Select.show({
-          title: t$1('trakt_manage_lists_title', 'Manage lists'),
+          title: t$2('trakt_manage_lists_title', 'Manage lists'),
           items: buildManagerItems(!!watchlistState, withMembership),
           onSelect: function onSelect(item) {
             handleSelectAction(item, params, function () {
@@ -4855,19 +4932,19 @@
         });
       });
     })["catch"](function () {
-      notify(t$1('trakt_list_action_error', 'List action failed'));
+      notify(t$2('trakt_list_action_error', 'List action failed'));
     });
   }
   function openManagerByCard(cardData) {
     var _params$ids, _params$ids2, _params$ids3;
     var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     if (!Lampa.Storage.get('trakt_token')) {
-      notify(t$1('trakt_login', 'Login to Trakt.TV'));
+      notify(t$2('trakt_login', 'Login to Trakt.TV'));
       return false;
     }
     var params = normalizeCardParams(cardData);
     if (!params || !params.id && !(params !== null && params !== void 0 && (_params$ids = params.ids) !== null && _params$ids !== void 0 && _params$ids.tmdb) && !(params !== null && params !== void 0 && (_params$ids2 = params.ids) !== null && _params$ids2 !== void 0 && _params$ids2.trakt) && !(params !== null && params !== void 0 && (_params$ids3 = params.ids) !== null && _params$ids3 !== void 0 && _params$ids3.imdb)) {
-      notify(t$1('trakt_list_action_error', 'List action failed'));
+      notify(t$2('trakt_list_action_error', 'List action failed'));
       return false;
     }
     openListManager(params, null, null, options);
@@ -4876,7 +4953,7 @@
   function addWatchlistButton(card) {
     var button = document.createElement('div');
     button.className = 'full-start__button selector watchlist-button trakt-list-manager-button';
-    button.innerHTML = "\n        ".concat(icons.WATCHLIST_ICON, "\n        <span>").concat(t$1('trakt_lists_button', 'Manage lists'), "</span>\n    ");
+    button.innerHTML = "\n        ".concat(icons.WATCHLIST_ICON, "\n        <span>").concat(t$2('trakt_lists_button', 'Manage lists'), "</span>\n    ");
     var textNode = button.querySelector('span');
     var params = normalizeCardParams(card);
     refreshButtonState(button, textNode, params);
@@ -6113,7 +6190,7 @@
       },
       onRender: function onRender(item) {
         item.empty();
-        item.append("<div class=\"settings-param__name\"><b>".concat(t('trakt_bookmarks_sync_section', 'Bookmarks sync'), "</b></div>"));
+        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakt_bookmarks_sync_section', 'Bookmarks sync'), "</b></div>"));
       }
     });
     Lampa.SettingsApi.addParam({
@@ -6123,12 +6200,12 @@
         type: 'select',
         "default": 'watchlist',
         values: {
-          watchlist: t('trakt_bookmarks_mode_watchlist', 'Watchlist'),
-          my_lists: t('trakt_bookmarks_mode_my_lists', 'My Lists')
+          watchlist: t$1('trakt_bookmarks_mode_watchlist', 'Watchlist'),
+          my_lists: t$1('trakt_bookmarks_mode_my_lists', 'My Lists')
         }
       },
       field: {
-        name: t('trakt_bookmarks_mode', 'Sync mode')
+        name: t$1('trakt_bookmarks_mode', 'Sync mode')
       }
     });
     Lampa.SettingsApi.addParam({
@@ -6140,8 +6217,8 @@
         values: getBookmarksFavoriteTypeValues()
       },
       field: {
-        name: t('trakt_bookmarks_local_type', 'Local Lampa list'),
-        description: t('trakt_bookmarks_local_type_description', 'Choose which local Lampa list to sync')
+        name: t$1('trakt_bookmarks_local_type', 'Local Lampa list'),
+        description: t$1('trakt_bookmarks_local_type_description', 'Choose which local Lampa list to sync')
       }
     });
     Lampa.SettingsApi.addParam({
@@ -6151,7 +6228,7 @@
         type: 'button'
       },
       field: {
-        name: t('trakt_bookmarks_import_button', 'Import bookmarks from Trakt')
+        name: t$1('trakt_bookmarks_import_button', 'Import bookmarks from Trakt')
       },
       onRender: function onRender(item) {
         if (Lampa.Storage.get('trakt_token')) item.show();else item.hide();
@@ -6167,7 +6244,7 @@
         type: 'button'
       },
       field: {
-        name: t('trakt_bookmarks_export_button', 'Export bookmarks to Trakt')
+        name: t$1('trakt_bookmarks_export_button', 'Export bookmarks to Trakt')
       },
       onRender: function onRender(item) {
         if (Lampa.Storage.get('trakt_token')) item.show();else item.hide();
@@ -6187,7 +6264,45 @@
       },
       onRender: function onRender(item) {
         item.empty();
-        item.append("<div class=\"settings-param__name\"><b>".concat(t('trakt_progress_section', 'Progress configuration'), "</b></div>"));
+        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakt_progress_section', 'Progress configuration'), "</b></div>"));
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_source_section',
+        type: 'static'
+      },
+      field: {
+        name: ''
+      },
+      onRender: function onRender(item) {
+        item.empty();
+        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakttv_source_section', 'TraktTV source filters'), "</b></div>"));
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_source_ignore_watched',
+        type: 'trigger',
+        "default": false
+      },
+      field: {
+        name: t$1('trakttv_source_ignore_watched', 'Source: ignore watched'),
+        description: t$1('trakttv_source_ignore_watched_descr', 'Applies to all TraktTV source feeds (categories, recommendations, search)')
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_source_ignore_watchlisted',
+        type: 'trigger',
+        "default": false
+      },
+      field: {
+        name: t$1('trakttv_source_ignore_watchlisted', 'Source: ignore watchlisted'),
+        description: t$1('trakttv_source_ignore_watchlisted_descr', 'Applies to all TraktTV source feeds (categories, recommendations, search)')
       }
     });
     Lampa.SettingsApi.addParam({
@@ -6268,7 +6383,7 @@
       }
     });
   }
-  function t(key, fallback) {
+  function t$1(key, fallback) {
     if (typeof Lampa === 'undefined' || !Lampa || !Lampa.Lang || typeof Lampa.Lang.translate !== 'function') {
       return fallback || key;
     }
@@ -6281,20 +6396,20 @@
   function ensureBookmarksSyncAvailable() {
     if (!Lampa.Storage.get('trakt_token')) {
       Lampa.Bell.push({
-        text: t('trakt_bookmarks_auth_required', 'Login to Trakt.TV first')
+        text: t$1('trakt_bookmarks_auth_required', 'Login to Trakt.TV first')
       });
       return false;
     }
     if (!Api$1) {
       log('Api missing in plugins/TraktTV/config.js');
       Lampa.Bell.push({
-        text: t('trakt_bookmarks_sync_failed', 'Bookmarks sync failed')
+        text: t$1('trakt_bookmarks_sync_failed', 'Bookmarks sync failed')
       });
       return false;
     }
     if (!Lampa.Favorite) {
       Lampa.Bell.push({
-        text: t('trakt_bookmarks_local_unavailable', 'Local bookmarks are unavailable')
+        text: t$1('trakt_bookmarks_local_unavailable', 'Local bookmarks are unavailable')
       });
       return false;
     }
@@ -6310,7 +6425,7 @@
   }
   function getFavoriteTypeTitle() {
     var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'book';
-    return t("title_".concat(type), type);
+    return t$1("title_".concat(type), type);
   }
   function getBookmarksFavoriteTypeValues() {
     var values = {};
@@ -6339,19 +6454,19 @@
     var phaseText = '';
     switch (payload.phase) {
       case 'loading_source':
-        phaseText = t('trakt_bookmarks_progress_loading_source', 'Loading source') + " (p".concat(payload.page || 1, ")");
+        phaseText = t$1('trakt_bookmarks_progress_loading_source', 'Loading source') + " (p".concat(payload.page || 1, ")");
         break;
       case 'loading_target':
-        phaseText = t('trakt_bookmarks_progress_loading_target', 'Loading target') + " (p".concat(payload.page || 1, ")");
+        phaseText = t$1('trakt_bookmarks_progress_loading_target', 'Loading target') + " (p".concat(payload.page || 1, ")");
         break;
       case 'processing_import':
-        phaseText = t('trakt_bookmarks_progress_import', 'Importing');
+        phaseText = t$1('trakt_bookmarks_progress_import', 'Importing');
         break;
       case 'processing_export':
-        phaseText = t('trakt_bookmarks_progress_export', 'Exporting');
+        phaseText = t$1('trakt_bookmarks_progress_export', 'Exporting');
         break;
       default:
-        phaseText = t('trakt_bookmarks_progress_prepare', 'Preparing');
+        phaseText = t$1('trakt_bookmarks_progress_prepare', 'Preparing');
         break;
     }
     var counter = '';
@@ -6363,9 +6478,9 @@
   function formatSyncSummary(operation) {
     var summary = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var favoriteType = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'book';
-    var prefix = operation === 'import' ? t('trakt_bookmarks_import_done', 'Import completed') : t('trakt_bookmarks_export_done', 'Export completed');
+    var prefix = operation === 'import' ? t$1('trakt_bookmarks_import_done', 'Import completed') : t$1('trakt_bookmarks_export_done', 'Export completed');
     var favoriteTypeTitle = getFavoriteTypeTitle(summary.favorite_type || favoriteType);
-    return "".concat(prefix, " (").concat(favoriteTypeTitle, "): ").concat(t('trakt_bookmarks_added', 'Added'), " ").concat(summary.added || 0, ", ").concat(t('trakt_bookmarks_duplicates', 'Duplicates'), " ").concat(summary.duplicates || 0, ", ").concat(t('trakt_bookmarks_skipped_unsupported', 'Skipped'), " ").concat(summary.skipped_unsupported || 0, ", ").concat(t('trakt_bookmarks_failed', 'Failed'), " ").concat(summary.failed || 0);
+    return "".concat(prefix, " (").concat(favoriteTypeTitle, "): ").concat(t$1('trakt_bookmarks_added', 'Added'), " ").concat(summary.added || 0, ", ").concat(t$1('trakt_bookmarks_duplicates', 'Duplicates'), " ").concat(summary.duplicates || 0, ", ").concat(t$1('trakt_bookmarks_skipped_unsupported', 'Skipped'), " ").concat(summary.skipped_unsupported || 0, ", ").concat(t$1('trakt_bookmarks_failed', 'Failed'), " ").concat(summary.failed || 0);
   }
   function selectMyList(title, _onSelect) {
     if (!Api$1) return;
@@ -6378,7 +6493,7 @@
       }) : [];
       if (!lists.length) {
         Lampa.Bell.push({
-          text: t('trakt_bookmarks_no_lists', 'No personal lists found')
+          text: t$1('trakt_bookmarks_no_lists', 'No personal lists found')
         });
         return;
       }
@@ -6392,7 +6507,7 @@
         };
       });
       items.push({
-        title: t('cancel', 'Cancel'),
+        title: t$1('cancel', 'Cancel'),
         cancel: true
       });
       Lampa.Select.show({
@@ -6412,7 +6527,7 @@
       });
     })["catch"](function () {
       Lampa.Bell.push({
-        text: t('trakt_bookmarks_lists_load_error', 'Failed to load personal lists')
+        text: t$1('trakt_bookmarks_lists_load_error', 'Failed to load personal lists')
       });
     });
   }
@@ -6454,7 +6569,7 @@
               break;
             }
             Lampa.Bell.push({
-              text: t('trakt_bookmarks_operation_in_progress', 'Bookmarks sync already in progress')
+              text: t$1('trakt_bookmarks_operation_in_progress', 'Bookmarks sync already in progress')
             });
             return _context.a(2);
           case 2:
@@ -6462,7 +6577,7 @@
             favoriteTypeTitle = getFavoriteTypeTitle(resolvedFavoriteType);
             isBookmarksSyncRunning = true;
             isCanceled = false;
-            startActionText = operation === 'import' ? t('trakt_bookmarks_import_start', 'Starting import') : t('trakt_bookmarks_export_start', 'Starting export');
+            startActionText = operation === 'import' ? t$1('trakt_bookmarks_import_start', 'Starting import') : t$1('trakt_bookmarks_export_start', 'Starting export');
             startText = "".concat(startActionText, ": ").concat(favoriteTypeTitle);
             Lampa.Loading.start(function () {
               isCanceled = true;
@@ -6520,11 +6635,11 @@
             _t2 = _context.v;
             if (_t2 && _t2.code === 'canceled') {
               Lampa.Bell.push({
-                text: t('trakt_bookmarks_canceled', 'Operation canceled')
+                text: t$1('trakt_bookmarks_canceled', 'Operation canceled')
               });
             } else {
               Lampa.Bell.push({
-                text: t('trakt_bookmarks_sync_failed', 'Bookmarks sync failed')
+                text: t$1('trakt_bookmarks_sync_failed', 'Bookmarks sync failed')
               });
               log('bookmarks-sync-error', operation, _t2);
             }
@@ -6545,7 +6660,7 @@
     var favoriteType = getBookmarksFavoriteType();
     var favoriteTypeTitle = getFavoriteTypeTitle(favoriteType);
     if (getBookmarksSyncMode() === 'my_lists') {
-      selectMyList("".concat(t('trakt_bookmarks_import_select_list', 'Select source list'), ": ").concat(favoriteTypeTitle), function (item) {
+      selectMyList("".concat(t$1('trakt_bookmarks_import_select_list', 'Select source list'), ": ").concat(favoriteTypeTitle), function (item) {
         runBookmarksSyncOperation('import', {
           source: 'my_list',
           listId: item.listId,
@@ -6564,7 +6679,7 @@
     var favoriteType = getBookmarksFavoriteType();
     var favoriteTypeTitle = getFavoriteTypeTitle(favoriteType);
     if (getBookmarksSyncMode() === 'my_lists') {
-      selectMyList("".concat(t('trakt_bookmarks_export_select_list', 'Select target list'), ": ").concat(favoriteTypeTitle), function (item) {
+      selectMyList("".concat(t$1('trakt_bookmarks_export_select_list', 'Select target list'), ": ").concat(favoriteTypeTitle), function (item) {
         runBookmarksSyncOperation('export', {
           target: 'my_list',
           listId: item.listId,
@@ -8964,13 +9079,676 @@
     });
   }
 
-  /**
-   * LampaJS plugin for Trakt.TV (Lampa 3.0+ only)
-   * Global API bridge:
-   * - Exposes api on window.TraktTV.api inside startPlugin() to support non-ESM runtime usage (dev bundle)
-   * - Adds a local helper getter getGlobalApi() (not exported)
-   * - Idempotent and guarded; no throws if window/Lampa missing
-   */
+  var SOURCE_KEY = 'trakttv';
+  var DEFAULT_LIMIT = 20;
+  var DEFAULT_CHUNK = 3;
+  function t(key) {
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+    try {
+      var translated = Lampa.Lang.translate(key);
+      return translated || fallback || key;
+    } catch (e) {
+      return fallback || key;
+    }
+  }
+  function decodeQuery(value) {
+    var source = String(value || '').trim();
+    if (!source) return '';
+    try {
+      return decodeURIComponent(source);
+    } catch (e) {
+      return source;
+    }
+  }
+  function toPositiveInt(value) {
+    var parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+  function toNonNegativeInt(value) {
+    var parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+  function readBooleanStorage(name) {
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+    var value = Lampa.Storage.field(name);
+    if (typeof value === 'boolean') return value;
+    if (value === 1 || value === '1' || value === 'true') return true;
+    if (value === 0 || value === '0' || value === 'false') return false;
+    return fallback;
+  }
+  function resolvePagination() {
+    var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var limit = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
+    var count = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+    var fallbackPage = toPositiveInt(page) || 1;
+    var fallbackLimit = toPositiveInt(limit) || DEFAULT_LIMIT;
+    var safeCount = Math.max(0, parseInt(count, 10) || 0);
+    var headerPage = toPositiveInt(headers['x-pagination-page']) || fallbackPage;
+    var headerLimit = toPositiveInt(headers['x-pagination-limit']) || fallbackLimit;
+    var headerTotal = toNonNegativeInt(headers['x-pagination-item-count']);
+    var headerPageCount = toPositiveInt(headers['x-pagination-page-count']);
+    var total = headerTotal !== null ? headerTotal : (Math.max(1, headerPage) - 1) * Math.max(1, headerLimit) + safeCount;
+    var totalPages = headerPageCount || (safeCount >= headerLimit ? headerPage + 1 : Math.max(1, headerPage));
+    return {
+      page: headerPage,
+      limit: headerLimit,
+      total: total,
+      total_pages: totalPages
+    };
+  }
+  function normalizeSearchType() {
+    var rawType = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+    var value = String(rawType || '').trim().toLowerCase();
+    if (value === 'movie' || value === 'movies') return 'movie';
+    if (value === 'tv' || value === 'show' || value === 'shows' || value === 'series') return 'show';
+    if (value === 'list' || value === 'lists') return 'list';
+    return '';
+  }
+  function normalizePath() {
+    var path = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+    return String(path || '').trim().replace(/^\/+/, '');
+  }
+  function applyQueryParams(query) {
+    var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    if (!params || _typeof(params) !== 'object') return query;
+    Object.keys(params).forEach(function (key) {
+      var value = params[key];
+      if (value === undefined || value === null || value === '') return;
+      query.set(String(key), String(value));
+    });
+    return query;
+  }
+  function applySourceFilters(query) {
+    query.set('ignore_watched', readBooleanStorage('trakt_source_ignore_watched', false) ? 'true' : 'false');
+    query.set('ignore_watchlisted', readBooleanStorage('trakt_source_ignore_watchlisted', false) ? 'true' : 'false');
+    return query;
+  }
+  function buildFeedUrl(path) {
+    var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var limit = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
+    var queryParams = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+    var query = applyQueryParams(applySourceFilters(new URLSearchParams({
+      extended: 'full,images',
+      page: String(Math.max(1, parseInt(page, 10) || 1)),
+      limit: String(Math.max(1, parseInt(limit, 10) || DEFAULT_LIMIT))
+    })), queryParams);
+    return "/".concat(normalizePath(path), "?").concat(query.toString());
+  }
+  function buildRecommendationsUrl(type) {
+    var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var limit = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
+    var queryParams = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+    var normalizedType = normalizePath(type).replace(/^recommendations\//, '');
+    var query = applyQueryParams(applySourceFilters(new URLSearchParams({
+      extended: 'full,images',
+      page: String(Math.max(1, parseInt(page, 10) || 1)),
+      limit: String(Math.max(1, parseInt(limit, 10) || DEFAULT_LIMIT))
+    })), queryParams);
+    return "/recommendations/".concat(normalizedType, "?").concat(query.toString());
+  }
+  function buildSearchUrl(type, query) {
+    var page = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var limit = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : DEFAULT_LIMIT;
+    var queryParams = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+    var finalParams = applyQueryParams(applySourceFilters(new URLSearchParams({
+      query: String(query || ''),
+      extended: 'full,images',
+      page: String(Math.max(1, parseInt(page, 10) || 1)),
+      limit: String(Math.max(1, parseInt(limit, 10) || DEFAULT_LIMIT))
+    })), queryParams);
+    return "/search/".concat(normalizePath(type), "?").concat(finalParams.toString());
+  }
+  function resolveTraktGenreFilter() {
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var raw = params ? params.genres : null;
+    if (raw === undefined || raw === null || raw === '') return '';
+    var values = Array.isArray(raw) ? raw : String(raw).split(',');
+    var hasAnimation = values.map(function (value) {
+      return String(value).trim().toLowerCase();
+    }).some(function (value) {
+      return value === '16' || value === 'animation';
+    });
+    return hasAnimation ? 'animation' : '';
+  }
+  function detectMediaType(entry) {
+    var typeHint = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+    var normalizedHint = String(typeHint || '').toLowerCase();
+    if (normalizedHint === 'movie' || normalizedHint === 'movies') return 'movie';
+    if (normalizedHint === 'show' || normalizedHint === 'shows' || normalizedHint === 'tv') return 'tv';
+    if (entry && _typeof(entry) === 'object') {
+      if (entry.movie) return 'movie';
+      if (entry.show) return 'tv';
+      if (entry.type === 'movie') return 'movie';
+      if (entry.type === 'show' || entry.type === 'tv') return 'tv';
+      if (entry.first_aired || entry.aired_episodes !== undefined) return 'tv';
+    }
+    return 'movie';
+  }
+  function mapMediaCard(entry) {
+    var typeHint = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+    if (!entry || _typeof(entry) !== 'object') return null;
+    var media = entry.movie || entry.show || entry;
+    if (!media || _typeof(media) !== 'object') return null;
+    var ids = media.ids && _typeof(media.ids) === 'object' ? _objectSpread2({}, media.ids) : {};
+    var mediaType = detectMediaType(entry, typeHint);
+    var id = ids.tmdb || null;
+    if (!id) return null;
+    var title = media.title || media.name || media.original_title || '';
+    var releaseDate = mediaType === 'movie' ? media.released || (media.year ? String(media.year) : '') : media.first_aired || (media.year ? String(media.year) : '');
+    var poster = getImageUrl(media, 'poster') || getImageUrl(media, 'thumb') || getImageUrl(media, 'fanart') || textToImage(title || 'No image');
+    var fanart = getImageUrl(media, 'fanart') || getImageUrl(media, 'thumb') || poster;
+    var card = {
+      component: 'full',
+      source: 'tmdb',
+      id: id,
+      ids: ids,
+      title: title,
+      original_title: media.original_title || title,
+      release_date: releaseDate ? String(releaseDate) : '',
+      vote_average: Number(media.rating || 0),
+      vote_count: Number(media.votes || 0),
+      overview: media.overview || '',
+      poster: poster,
+      image: fanart,
+      method: mediaType === 'movie' ? 'movie' : 'tv',
+      card_type: mediaType === 'movie' ? 'movie' : 'tv'
+    };
+    if (mediaType === 'movie') {
+      card.type = 'movie';
+    } else {
+      card.type = 'tv';
+      card.name = title;
+      card.original_name = media.original_title || title;
+    }
+    if (ids.imdb) card.imdb_id = ids.imdb;
+    if (media.runtime) card.runtime = Number(media.runtime) || 0;
+    if (media.year) card.release_year = String(media.year);
+    return card;
+  }
+  function mapListCard(entry) {
+    if (!entry || _typeof(entry) !== 'object') return null;
+    var list = entry.list || entry;
+    var ids = list.ids && _typeof(list.ids) === 'object' ? _objectSpread2({}, list.ids) : {};
+    var listId = ids.trakt || list.id;
+    if (!listId) return null;
+    var title = (list.name || list.title || list.slug || "List ".concat(listId)).toString().trim();
+    return {
+      component: 'full',
+      source: SOURCE_KEY,
+      id: "trakt_list_".concat(listId),
+      title: title,
+      original_title: title,
+      release_date: '',
+      vote_average: 0,
+      poster: getImageUrl(list, 'poster') || textToImage(title || 'List'),
+      image: getImageUrl(list, 'fanart'),
+      method: 'list',
+      card_type: 'list',
+      trakt_search_type: 'list',
+      trakt_list_id: listId,
+      list_id: listId,
+      ids: ids
+    };
+  }
+  function mapCards(items) {
+    var typeHint = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+    var source = Array.isArray(items) ? items : [];
+    var normalizedHint = String(typeHint || '').toLowerCase();
+    if (normalizedHint === 'list') {
+      return source.map(mapListCard).filter(Boolean);
+    }
+    return source.map(function (entry) {
+      return mapMediaCard(entry, normalizedHint);
+    }).filter(Boolean);
+  }
+  function fetchWithMeta(url) {
+    return requestApi('GET', url, {}, false, 0, {
+      withMeta: true
+    }).then(function (response) {
+      var data = response && Array.isArray(response.data) ? response.data : [];
+      var headers = response && response.headers ? response.headers : {};
+      return {
+        data: data,
+        headers: headers
+      };
+    });
+  }
+  function createLinePayload(_ref) {
+    var title = _ref.title,
+      path = _ref.path,
+      items = _ref.items,
+      headers = _ref.headers,
+      page = _ref.page,
+      limit = _ref.limit,
+      typeHint = _ref.typeHint;
+    var results = mapCards(items, typeHint);
+    var pagination = resolvePagination(headers, page, limit, Array.isArray(items) ? items.length : 0);
+    return {
+      title: title,
+      url: normalizePath(path),
+      source: SOURCE_KEY,
+      page: pagination.page,
+      total: pagination.total,
+      total_pages: pagination.total_pages,
+      results: results
+    };
+  }
+  function loadFeedLine(_ref2) {
+    var path = _ref2.path,
+      title = _ref2.title,
+      _ref2$typeHint = _ref2.typeHint,
+      typeHint = _ref2$typeHint === void 0 ? 'media' : _ref2$typeHint,
+      _ref2$recommendations = _ref2.recommendations,
+      recommendations = _ref2$recommendations === void 0 ? false : _ref2$recommendations,
+      _ref2$query = _ref2.query,
+      query = _ref2$query === void 0 ? {} : _ref2$query;
+    var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var limit = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
+    var endpoint = recommendations ? buildRecommendationsUrl(path, page, limit, query) : buildFeedUrl(path, page, limit, query);
+    return fetchWithMeta(endpoint).then(function (_ref3) {
+      var data = _ref3.data,
+        headers = _ref3.headers;
+      return createLinePayload({
+        title: title,
+        path: path,
+        items: data,
+        headers: headers,
+        page: page,
+        limit: limit,
+        typeHint: typeHint
+      });
+    });
+  }
+  function loadSearchLine(type, query) {
+    var page = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var limit = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : DEFAULT_LIMIT;
+    var extraQuery = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+    var normalizedType = normalizeSearchType(type);
+    if (!normalizedType) return Promise.resolve(null);
+    var endpoint = buildSearchUrl(normalizedType, query, page, limit, extraQuery);
+    return fetchWithMeta(endpoint).then(function (_ref4) {
+      var data = _ref4.data,
+        headers = _ref4.headers;
+      var title = normalizedType === 'movie' ? t('menu_movies', 'Movies') : normalizedType === 'show' ? t('menu_tv', 'TV') : t('trakt_source_search_lists', 'Lists');
+      var typeHint = normalizedType === 'list' ? 'list' : normalizedType === 'show' ? 'show' : 'movie';
+      var line = createLinePayload({
+        title: title,
+        path: "search/".concat(normalizedType),
+        items: data,
+        headers: headers,
+        page: page,
+        limit: limit,
+        typeHint: typeHint
+      });
+      line.type = normalizedType === 'show' ? 'tv' : normalizedType;
+      line.search_type = normalizedType;
+      line.query = query;
+      return line;
+    });
+  }
+  function buildMainDefinitions() {
+    var defs = [{
+      path: 'media/trending',
+      title: t('trakttv_source_trending', 'Trending'),
+      typeHint: 'media'
+    }, {
+      path: 'media/anticipated',
+      title: t('trakttv_source_anticipated', 'Anticipated'),
+      typeHint: 'media'
+    }, {
+      path: 'media/popular',
+      title: t('trakttv_source_popular', 'Popular'),
+      typeHint: 'media'
+    }];
+    if (Lampa.Storage.get('trakt_token')) {
+      defs.push({
+        path: 'recommendations/movies',
+        title: t('trakttv_source_recommendations_movies', 'Recommendations: Movies'),
+        typeHint: 'movie',
+        recommendations: true
+      });
+      defs.push({
+        path: 'recommendations/shows',
+        title: t('trakttv_source_recommendations_shows', 'Recommendations: Shows'),
+        typeHint: 'show',
+        recommendations: true
+      });
+    }
+    return defs;
+  }
+  function buildCategoryDefinitions() {
+    var section = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'movies';
+    var traktGenre = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+    var isShows = section === 'shows';
+    var query = traktGenre ? {
+      genres: traktGenre
+    } : {};
+    var defs = [{
+      path: "".concat(section, "/trending"),
+      title: t('trakttv_source_trending', 'Trending'),
+      typeHint: isShows ? 'show' : 'movie',
+      query: query
+    }, {
+      path: "".concat(section, "/anticipated"),
+      title: t('trakttv_source_anticipated', 'Anticipated'),
+      typeHint: isShows ? 'show' : 'movie',
+      query: query
+    }, {
+      path: "".concat(section, "/popular"),
+      title: t('trakttv_source_popular', 'Popular'),
+      typeHint: isShows ? 'show' : 'movie',
+      query: query
+    }];
+    if (Lampa.Storage.get('trakt_token')) {
+      defs.push({
+        path: isShows ? 'recommendations/shows' : 'recommendations/movies',
+        title: t('trakttv_recommendations', 'Recommendations'),
+        typeHint: isShows ? 'show' : 'movie',
+        recommendations: true,
+        query: query
+      });
+    }
+    return defs;
+  }
+  function createPart(definition) {
+    var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    return function (call) {
+      var page = Math.max(1, parseInt(params.page, 10) || 1);
+      var limit = Math.max(1, parseInt(params.limit, 10) || DEFAULT_LIMIT);
+      loadFeedLine(definition, page, limit).then(function (line) {
+        return call(line && line.results && line.results.length ? line : null);
+      })["catch"](function () {
+        return call(null);
+      });
+    };
+  }
+  function nextParts() {
+    var parts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+    var limit = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_CHUNK;
+    var loaded = arguments.length > 2 ? arguments[2] : undefined;
+    var empty = arguments.length > 3 ? arguments[3] : undefined;
+    var chunk = parts.filter(Boolean).slice(0, Math.max(1, parseInt(limit, 10) || DEFAULT_CHUNK));
+    if (!chunk.length) {
+      if (empty) empty();
+      return;
+    }
+    var pending = chunk.length;
+    var collected = [];
+    chunk.forEach(function (fn) {
+      fn(function (line) {
+        var index = parts.indexOf(fn);
+        if (index > -1) parts[index] = null;
+        if (line && Array.isArray(line.results) && line.results.length) {
+          collected.push(line);
+        }
+        pending -= 1;
+        if (pending > 0) return;
+        if (collected.length) {
+          if (loaded) loaded(collected);
+        } else {
+          nextParts(parts, limit, loaded, empty);
+        }
+      });
+    });
+  }
+  function createPartsLoader() {
+    var definitions = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+    var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var oncomplite = arguments.length > 2 ? arguments[2] : undefined;
+    var onerror = arguments.length > 3 ? arguments[3] : undefined;
+    var parts = definitions.map(function (definition) {
+      return createPart(definition, params);
+    });
+    var load = function load(resolve, reject) {
+      nextParts(parts, DEFAULT_CHUNK, resolve, reject);
+    };
+    load(oncomplite, onerror);
+    return load;
+  }
+  function resolveListPath() {
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var urlPath = normalizePath(params.url);
+    var idPath = typeof params.id === 'string' ? normalizePath(params.id) : '';
+    var genresPath = typeof params.genres === 'string' ? normalizePath(params.genres) : '';
+    if (idPath.indexOf('/') > -1) return idPath;
+    if (genresPath.indexOf('/') > -1) return genresPath;
+    if (urlPath.indexOf('/') > -1) return urlPath;
+    if (urlPath === 'tv' || urlPath === 'show' || urlPath === 'shows') return 'shows/popular';
+    if (urlPath === 'movie' || urlPath === 'movies') return 'movies/popular';
+    return 'media/popular';
+  }
+  function openSearchListDetail() {
+    var element = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var listId = element.trakt_list_id || element.list_id;
+    if (!listId) return;
+    Lampa.Activity.push({
+      url: '',
+      title: element.title || t('trakt_list_detail', 'List Content'),
+      component: 'trakt_list_detail',
+      id: listId,
+      list_id: listId,
+      page: 1,
+      source: 'tmdb'
+    });
+  }
+  function delegateToTmdb(method, args) {
+    try {
+      var tmdb = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb;
+      if (tmdb && typeof tmdb[method] === 'function') {
+        tmdb[method].apply(tmdb, args);
+        return true;
+      }
+    } catch (e) {
+      return false;
+    }
+    return false;
+  }
+  var TraktSourceProvider = {
+    main: function main() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      return createPartsLoader(buildMainDefinitions(), params, oncomplite, onerror);
+    },
+    category: function category() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      var section = (params.url || '').toString().toLowerCase() === 'tv' ? 'shows' : 'movies';
+      var traktGenre = resolveTraktGenreFilter(params);
+      return createPartsLoader(buildCategoryDefinitions(section, traktGenre), params, oncomplite, onerror);
+    },
+    list: function list() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      var page = Math.max(1, parseInt(params.page, 10) || 1);
+      var limit = Math.max(1, parseInt(params.limit, 10) || DEFAULT_LIMIT);
+      var query = decodeQuery(params.query).trim();
+      var traktGenre = resolveTraktGenreFilter(params);
+      var extraQuery = traktGenre ? {
+        genres: traktGenre
+      } : {};
+      var searchType = normalizeSearchType(params.search_type || (normalizePath(params.url).startsWith('search/') ? normalizePath(params.url).split('/')[1] : ''));
+      if (query && searchType) {
+        loadSearchLine(searchType, query, page, limit, extraQuery).then(function (line) {
+          if (!line || !line.results.length) {
+            if (onerror) onerror();
+            return;
+          }
+          line.title = params.title || line.title;
+          oncomplite(line);
+        })["catch"](function () {
+          if (onerror) onerror();
+        });
+        return;
+      }
+      var path = resolveListPath(params);
+      var typeHint = path.indexOf('shows/') === 0 || path === 'shows' ? 'show' : path.indexOf('movies/') === 0 || path === 'movies' ? 'movie' : path.indexOf('recommendations/shows') === 0 ? 'show' : path.indexOf('recommendations/movies') === 0 ? 'movie' : 'media';
+      var recommendations = path.indexOf('recommendations/') === 0;
+      loadFeedLine({
+        path: path,
+        title: params.title || t('title_popular', 'Popular'),
+        typeHint: typeHint,
+        recommendations: recommendations,
+        query: extraQuery
+      }, page, limit).then(function (line) {
+        if (!line || !line.results.length) {
+          if (onerror) onerror();
+          return;
+        }
+        oncomplite(line);
+      })["catch"](function () {
+        if (onerror) onerror();
+      });
+    },
+    menu: function menu() {
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var items = [{
+        title: "".concat(t('menu_movies', 'Movies'), ": ").concat(t('trakttv_source_trending', 'Trending')),
+        id: 'movies/trending'
+      }, {
+        title: "".concat(t('menu_movies', 'Movies'), ": ").concat(t('trakttv_source_anticipated', 'Anticipated')),
+        id: 'movies/anticipated'
+      }, {
+        title: "".concat(t('menu_movies', 'Movies'), ": ").concat(t('trakttv_source_popular', 'Popular')),
+        id: 'movies/popular'
+      }, {
+        title: "".concat(t('menu_tv', 'TV'), ": ").concat(t('trakttv_source_trending', 'Trending')),
+        id: 'shows/trending'
+      }, {
+        title: "".concat(t('menu_tv', 'TV'), ": ").concat(t('trakttv_source_anticipated', 'Anticipated')),
+        id: 'shows/anticipated'
+      }, {
+        title: "".concat(t('menu_tv', 'TV'), ": ").concat(t('trakttv_source_popular', 'Popular')),
+        id: 'shows/popular'
+      }];
+      oncomplite(items);
+    },
+    menuCategory: function menuCategory() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var action = (params.action || '').toString().toLowerCase();
+      var section = action === 'tv' ? 'shows' : 'movies';
+      var items = [{
+        title: t('trakttv_source_trending', 'Trending'),
+        url: "".concat(section, "/trending")
+      }, {
+        title: t('trakttv_source_anticipated', 'Anticipated'),
+        url: "".concat(section, "/anticipated")
+      }, {
+        title: t('trakttv_source_popular', 'Popular'),
+        url: "".concat(section, "/popular")
+      }];
+      if (Lampa.Storage.get('trakt_token')) {
+        items.push({
+          title: t('trakttv_recommendations', 'Recommendations'),
+          url: "recommendations/".concat(section)
+        });
+      }
+      oncomplite(items);
+    },
+    full: function full() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      if (delegateToTmdb('full', [_objectSpread2(_objectSpread2({}, params), {}, {
+        source: 'tmdb'
+      }), oncomplite, onerror])) return;
+      if (onerror) onerror();
+    },
+    person: function person() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      if (delegateToTmdb('person', [params, oncomplite, onerror])) return;
+      if (onerror) onerror();
+    },
+    company: function company() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      if (delegateToTmdb('company', [params, oncomplite, onerror])) return;
+      if (onerror) onerror();
+    },
+    seasons: function seasons() {
+      var tv = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var from = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+      var oncomplite = arguments.length > 2 ? arguments[2] : undefined;
+      if (delegateToTmdb('seasons', [tv, from, oncomplite])) return;
+      oncomplite && oncomplite({});
+    },
+    collections: function collections() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
+      if (delegateToTmdb('collections', [params, oncomplite, onerror])) return;
+      if (onerror) onerror();
+    },
+    discovery: function discovery() {
+      return {
+        title: 'TraktTV',
+        params: {
+          save: true
+        },
+        search: function search(params, oncomplite) {
+          var query = decodeQuery(params && params.query).trim();
+          if (!query) {
+            oncomplite([]);
+            return;
+          }
+          Promise.allSettled([loadSearchLine('movie', query, 1, DEFAULT_LIMIT), loadSearchLine('show', query, 1, DEFAULT_LIMIT), loadSearchLine('list', query, 1, DEFAULT_LIMIT)]).then(function (responses) {
+            var rows = responses.filter(function (state) {
+              return state && state.status === 'fulfilled' && state.value && Array.isArray(state.value.results) && state.value.results.length;
+            }).map(function (state) {
+              return state.value;
+            });
+            oncomplite(rows);
+          })["catch"](function () {
+            oncomplite([]);
+          });
+        },
+        onSelect: function onSelect(params, close) {
+          var element = params && (params.element || params.item_data) ? params.element || params.item_data : {};
+          var isList = element && (element.trakt_search_type === 'list' || element.method === 'list');
+          close && close();
+          if (isList) {
+            openSearchListDetail(element);
+            return;
+          }
+          Lampa.Activity.push(_objectSpread2(_objectSpread2({}, element), {}, {
+            component: 'full',
+            source: 'tmdb'
+          }));
+        },
+        onMore: function onMore(params, close) {
+          var query = decodeQuery(params && params.query).trim();
+          var row = params && params.data ? params.data : {};
+          var searchType = normalizeSearchType(row.search_type || row.type);
+          close && close();
+          if (!query || !searchType) return;
+          if (searchType === 'list') {
+            Lampa.Bell.push({
+              text: t('trakt_source_search_lists_more_hint', 'Open lists directly from search results')
+            });
+            return;
+          }
+          Lampa.Activity.push({
+            url: "search/".concat(searchType),
+            title: "".concat(t('search', 'Search'), " - ").concat(query),
+            component: 'category_full',
+            page: 2,
+            source: SOURCE_KEY,
+            query: encodeURIComponent(query),
+            search_type: searchType
+          });
+        },
+        onCancel: function onCancel() {}
+      };
+    },
+    clear: function clear() {}
+  };
 
   // Helper getter: prefer module api, fallback to global bridge
   function getGlobalApi() {
@@ -8983,6 +9761,25 @@
       }
     } catch (e) {/* noop */}
     return null;
+  }
+  function registerSourceSelectorOption() {
+    try {
+      if (!Lampa || !Lampa.Params || typeof Lampa.Params.select !== 'function') return;
+      var baseValues = Lampa.Params.values && _typeof(Lampa.Params.values.source) === 'object' ? Lampa.Params.values.source : {
+        tmdb: 'TMDB',
+        cub: 'CUB'
+      };
+      var sourceValues = _objectSpread2(_objectSpread2({}, baseValues), {}, {
+        trakttv: 'TraktTV'
+      });
+      var paramsDefault = Lampa.Params.defaults && Lampa.Params.defaults.source ? Lampa.Params.defaults.source : 'tmdb';
+      var defaultValue = sourceValues[paramsDefault] ? paramsDefault : sourceValues.tmdb ? 'tmdb' : Object.keys(sourceValues)[0];
+      var storedSource = Lampa.Storage && typeof Lampa.Storage.field === 'function' ? Lampa.Storage.field('source') : '';
+      var safeDefault = storedSource && sourceValues[storedSource] ? storedSource : defaultValue || 'tmdb';
+      Lampa.Params.select('source', sourceValues, safeDefault);
+    } catch (error) {
+      console.error('TraktTV', 'Source selector registration failed:', error);
+    }
   }
   function startPlugin() {
     window.plugin_trakt_ready = true;
@@ -9050,6 +9847,21 @@
     Lampa.Component.add('trakt_watchlist', function (object) {
       return new Catalog.watchlist(object);
     });
+
+    // Реєстрація source-провайдера TraktTV для Main/Category/List/Search discovery
+    try {
+      if (Lampa.Api) {
+        Lampa.Api.sources = Lampa.Api.sources || {};
+        if (!Lampa.Api.sources.trakttv) {
+          Lampa.Api.sources.trakttv = TraktSourceProvider;
+        }
+        if (Lampa.Api.sources.trakttv) {
+          registerSourceSelectorOption();
+        }
+      }
+    } catch (error) {
+      console.error('TraktTV', 'Source provider registration failed:', error);
+    }
     Lampa.Component.add('trakt_upnext', function (object) {
       return new Catalog.upnext(object);
     });
