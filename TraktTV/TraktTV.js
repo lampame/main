@@ -1135,7 +1135,7 @@
           title: media.title,
           original_title: media.title,
           release_date: media.year ? String(media.year) : '',
-          vote_average: media.rating || 0,
+          vote_average: Number(media.rating || 0),
           poster: getImageUrl(media, 'poster'),
           image: getImageUrl(media, 'fanart'),
           method: item.movie ? 'movie' : 'tv',
@@ -1463,7 +1463,7 @@
       limit = _ref4$limit === void 0 ? 36 : _ref4$limit,
       uncollected = _ref4.uncollected;
     var query = new URLSearchParams({
-      extended: 'images',
+      extended: 'full,images',
       page: String(page),
       limit: String(limit)
     });
@@ -1886,7 +1886,7 @@
       var page = params.page || 1;
       var limit = params.limit || 36;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
-      var url = withNoCache("/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=images&page=").concat(page, "&limit=").concat(limit));
+      var url = withNoCache("/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=full,images&page=").concat(page, "&limit=").concat(limit));
       return requestApi('GET', url).then(function (response) {
         var raw = Array.isArray(response) ? response : [];
         var formatted = formatTraktResults(raw);
@@ -1934,7 +1934,7 @@
       if (!listId) {
         return Promise.reject(new Error('List ID is missing'));
       }
-      var url = withNoCache("/lists/".concat(encodeURIComponent(listId), "/items?extended=images&page=").concat(page, "&limit=").concat(limit));
+      var url = withNoCache("/lists/".concat(encodeURIComponent(listId), "/items?extended=full,images&page=").concat(page, "&limit=").concat(limit));
       return requestApi('GET', url).then(function (response) {
         var raw = Array.isArray(response) ? response : [];
         var formatted = formatTraktResults(raw);
