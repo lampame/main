@@ -521,6 +521,12 @@
     var title_ja = details && details.title_ja;
     var year = details && details.year;
     var image = details && details.image;
+    var rawBackdrop = String(details && details.backdrop || '').trim();
+    var normalizedBackdrop = rawBackdrop && rawBackdrop !== 'null' && rawBackdrop !== 'undefined' ? rawBackdrop : '';
+    var hasBackdrop = !!normalizedBackdrop;
+    var isBackdropUrl = /^(https?:)?\/\//i.test(normalizedBackdrop) || /^data:image\//i.test(normalizedBackdrop);
+    var backdropPath = hasBackdrop && normalizedBackdrop.charAt(0) === '/' ? normalizedBackdrop : null;
+    var backgroundImage = hasBackdrop && !backdropPath && isBackdropUrl ? normalizedBackdrop : null;
     // Для Full потрібно передавати стандартизований ключ статусу
     var statusKey = details ? STATUS_STD_MAP[details.status] || details.status : undefined;
     var card = {
@@ -536,7 +542,8 @@
       overview: markdownToHtml(details && (details.synopsis_ua || details.synopsis_en) || ''),
       poster_path: image,
       img: image,
-      backdrop_path: details && details.backdrop || image,
+      backdrop_path: backdropPath,
+      background_image: backgroundImage,
       vote_average: details && (details.score || details.native_score) || 0,
       status: statusKey,
       release_date: year ? year + '-01-01' : undefined,
@@ -3281,6 +3288,108 @@
       episodes: mapped
     };
   }
+  function normalizeEpisodeSeasonNumber(episode, details, fallbackSeasonNumber) {
+    var directSeason = Number(episode && (episode.season || episode.season_number) || 0);
+    if (directSeason > 0) return directSeason;
+    var candidates = [episode && episode.title_ua, episode && episode.title_en, episode && episode.title_ja, episode && episode.name, episode && episode.slug];
+    for (var i = 0; i < candidates.length; i++) {
+      var parsed = extractSeasonNumberFromText(candidates[i]);
+      if (parsed > 0) return parsed;
+    }
+    var inferred = inferSeasonNumber(details);
+    if (inferred > 0) return inferred;
+    return Number(fallbackSeasonNumber || 1);
+  }
+  function createSeasonPayload(seasonNumber, seasonsCount) {
+    var safeSeason = Number(seasonNumber || 1) || 1;
+    var safeCount = Math.max(Number(seasonsCount || 0), safeSeason);
+    return {
+      id: 'hikka_season_' + safeSeason,
+      name: 'Season ' + safeSeason,
+      season_number: safeSeason,
+      overview: '',
+      air_date: '',
+      vote_average: 0,
+      episodes: [],
+      seasons_count: safeCount
+    };
+  }
+  function buildSeasonsPayloadFromEpisodes(episodes, details, image) {
+    var source = Array.isArray(episodes) ? episodes : [];
+    var fallbackSeasonNumber = inferSeasonNumber(details);
+    var bySeason = {};
+    source.forEach(function (entry, index) {
+      var episodeNumber = normalizeEpisodeIndex(entry, index);
+      if (!episodeNumber) return;
+      var seasonNumber = normalizeEpisodeSeasonNumber(entry, details, fallbackSeasonNumber);
+      if (!bySeason[seasonNumber]) bySeason[seasonNumber] = {};
+      if (bySeason[seasonNumber][episodeNumber]) return;
+      var imageFields = normalizeEpisodeImageFields(entry, image);
+      bySeason[seasonNumber][episodeNumber] = {
+        id: 'hikka_ep_' + seasonNumber + '_' + episodeNumber,
+        episode_number: episodeNumber,
+        season_number: seasonNumber,
+        air_date: normalizeEpisodeDate(entry),
+        name: normalizeEpisodeTitle(entry, episodeNumber),
+        overview: String(entry && (entry.synopsis_ua || entry.synopsis_en || entry.overview) || ''),
+        still_path: imageFields.still_path,
+        img: imageFields.img
+      };
+    });
+    var seasonNumbers = Object.keys(bySeason).map(function (key) {
+      return Number(key);
+    }).filter(function (number) {
+      return number > 0;
+    }).sort(function (a, b) {
+      return a - b;
+    });
+    var detailsSeasonsCount = Number(details && details.seasons_count) || 0;
+    var seasonsCount = Math.max(detailsSeasonsCount, seasonNumbers.length, fallbackSeasonNumber || 1);
+    var map = {};
+    seasonNumbers.forEach(function (seasonNumber) {
+      var episodesMap = bySeason[seasonNumber] || {};
+      var episodesList = Object.keys(episodesMap).map(function (key) {
+        return episodesMap[key];
+      }).sort(function (a, b) {
+        return Number(a.episode_number || 0) - Number(b.episode_number || 0);
+      });
+      var seasonPayload = createSeasonPayload(seasonNumber, seasonsCount);
+      seasonPayload.episodes = episodesList;
+      map[seasonNumber] = seasonPayload;
+    });
+    return {
+      map: map,
+      seasonNumbers: seasonNumbers,
+      seasonsCount: seasonsCount
+    };
+  }
+  function buildRequestedSeasonsPayload(from, grouped, details, tv) {
+    var requested = Array.isArray(from) && from.length ? from : [0];
+    var groupedMap = grouped && grouped.map ? grouped.map : {};
+    var groupedSeasonNumbers = grouped && Array.isArray(grouped.seasonNumbers) ? grouped.seasonNumbers : [];
+    var groupedSeasonsCount = Number(grouped && grouped.seasonsCount) || 0;
+    var detailsSeasonsCount = Number(details && details.seasons_count) || 0;
+    var cardSeasonsCount = Number(tv && tv.number_of_seasons) || 0;
+    var inferredSeason = inferSeasonNumber(details) || 1;
+    var availableLastSeason = groupedSeasonNumbers.length ? groupedSeasonNumbers[groupedSeasonNumbers.length - 1] : 0;
+    var fallbackSeason = availableLastSeason || detailsSeasonsCount || cardSeasonsCount || inferredSeason || 1;
+    var seasonsCount = Math.max(groupedSeasonsCount, groupedSeasonNumbers.length, detailsSeasonsCount, cardSeasonsCount, fallbackSeason);
+    var result = {};
+    requested.forEach(function (value) {
+      var numericRequest = Number(value);
+      var requestedSeason = numericRequest > 0 ? numericRequest : fallbackSeason;
+      var payload = groupedMap[requestedSeason] ? _objectSpread2(_objectSpread2({}, groupedMap[requestedSeason]), {}, {
+        seasons_count: seasonsCount
+      }) : createSeasonPayload(requestedSeason, seasonsCount);
+      var requestKey = String(value);
+      var seasonKey = String(requestedSeason);
+      result[requestKey] = payload;
+      if (requestKey !== seasonKey && !result[seasonKey]) {
+        result[seasonKey] = payload;
+      }
+    });
+    return result;
+  }
   function applyEpisodesStatsToCard(card, episodesPayload) {
     if (!card || !episodesPayload || !Array.isArray(episodesPayload.episodes)) return;
     var list = episodesPayload.episodes;
@@ -4104,6 +4213,68 @@
       }
     },
     /**
+     * Seasons data for Episodes component
+     * Signature: seasons(tv, from, oncomplite)
+     */
+    seasons: function seasons() {
+      var tv = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var from = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+      var oncomplite = arguments.length > 2 ? arguments[2] : undefined;
+      var finish = function finish(payload) {
+        oncomplite && oncomplite(payload && _typeof(payload) === 'object' ? payload : {});
+      };
+      try {
+        var slug = tv && (tv.hikka_slug || tv.id || tv.slug) || null;
+        if (!slug) {
+          finish({});
+          return;
+        }
+        var requested = Array.isArray(from) && from.length ? from : [0];
+        var completeWith = function completeWith(details, episodesList) {
+          var image = details && details.image || tv && (tv.img || tv.poster || tv.poster_path) || null;
+          var grouped = buildSeasonsPayloadFromEpisodes(episodesList, details, image);
+          finish(buildRequestedSeasonsPayload(requested, grouped, details, tv));
+        };
+        Api.getAnimeDetails(slug, function (details) {
+          var detailsEpisodes = Array.isArray(details && details.episodes) ? details.episodes : [];
+          var detailsSeasonsCount = Number(details && details.seasons_count) || 0;
+          var shouldLoadAllEpisodes = detailsSeasonsCount > 1 || !detailsEpisodes.length;
+          if (!shouldLoadAllEpisodes) {
+            completeWith(details, detailsEpisodes);
+            return;
+          }
+          loadAllAnimeEpisodes(slug, function (allEpisodes) {
+            if (Array.isArray(allEpisodes) && allEpisodes.length) {
+              completeWith(details, allEpisodes);
+              return;
+            }
+            completeWith(details, detailsEpisodes);
+          }, function () {
+            completeWith(details, detailsEpisodes);
+          });
+        }, function () {
+          var fallbackDetails = {
+            slug: slug,
+            season_number: Number(tv && tv.number_of_seasons) || 1,
+            seasons_count: Number(tv && tv.number_of_seasons) || 0
+          };
+          loadAllAnimeEpisodes(slug, function (allEpisodes) {
+            completeWith(fallbackDetails, allEpisodes);
+          }, function () {
+            var emptyGrouped = {
+              map: {},
+              seasonNumbers: [],
+              seasonsCount: Number(tv && tv.number_of_seasons) || 0
+            };
+            finish(buildRequestedSeasonsPayload(requested, emptyGrouped, fallbackDetails, tv));
+          });
+        });
+      } catch (e) {
+        console.log('[Hikka] seasons exception:', e);
+        finish({});
+      }
+    },
+    /**
      * Lazy-load comments for Discuss component
      * Signature: discussGet(params, oncomplite, onerror)
      * params: { id|slug|object, page }
@@ -4922,6 +5093,20 @@
     function setHikkaFullState(active) {
       document.body.classList.toggle('hikka-full-active', active);
     }
+    function hasBackdropImage(movie) {
+      if (!movie || _typeof(movie) !== 'object') return false;
+      return !!(String(movie.backdrop_path || '').trim() || String(movie.background_image || '').trim());
+    }
+    function applyDarkBackgroundFallback(movie) {
+      if (hasBackdropImage(movie)) return;
+      if (!Lampa || !Lampa.Background || typeof Lampa.Background.theme !== 'function') return;
+      Lampa.Background.theme('black');
+    }
+    function restoreBackgroundTheme() {
+      if (!Lampa || !Lampa.Background || typeof Lampa.Background.theme !== 'function') return;
+      var isBlackStyle = !!(Lampa.Storage && typeof Lampa.Storage.field === 'function' && Lampa.Storage.field('black_style'));
+      Lampa.Background.theme(isBlackStyle ? 'black' : 'reset');
+    }
 
     // Хелпер для перев’язки чипів жанрів/студій на наш компонент
     function rebindChips(movie) {
@@ -5042,6 +5227,7 @@
         setTimeout(cleanupHikkaFullUI, 1000);
         try {
           var movie = e.data && e.data.movie ? e.data.movie : null;
+          applyDarkBackgroundFallback(movie);
           rebindChips(movie);
           _updateEpisodesHeader(movie);
           updateTypeBadge(movie);
@@ -5075,6 +5261,7 @@
         lazyStaffWaiters.clear();
         lazyCastWaiters.clear();
         setHikkaFullState(false);
+        restoreBackgroundTheme();
       }
     });
   }
@@ -5337,6 +5524,18 @@
     initialized = true;
   }
 
+  function htmlToPlainText(value) {
+    var source = String(value || '').trim();
+    if (!source) return '';
+    if (source.indexOf('<') === -1) return source;
+    var prepared = source.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|blockquote|ul|ol|h[1-6])>/gi, '\n');
+    if (typeof document === 'undefined') {
+      return prepared.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+    var holder = document.createElement('div');
+    holder.innerHTML = prepared;
+    return String(holder.textContent || holder.innerText || '').replace(/\u00A0/g, ' ').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
   function init() {
     // Додаємо стилі для плагіну через шаблонну систему
     Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card .card__quality{text-transform:none}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-character{padding:2em 1.5em}.hikka-character__body{max-width:48em;margin:0 auto}.hikka-character__content{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.hikka-character__image{width:12em;height:12em;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%;-webkit-box-shadow:0 .6em 1.4em rgba(0,0,0,0.35);box-shadow:0 .6em 1.4em rgba(0,0,0,0.35)}.hikka-character__name{font-size:1.8em;font-weight:700;color:rgba(255,255,255,0.8)}.hikka-character__role{font-size:1.1em;color:rgba(255,255,255,0.6)}.hikka-character__meta{display:grid;gap:.4em;padding:.8em 1em;-webkit-border-radius:.8em;border-radius:.8em;background:rgba(255,255,255,0.06)}.hikka-character__meta-row{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:.95em}.hikka-character__meta-label{color:rgba(255,255,255,0.6)}.hikka-character__meta-value{color:rgba(255,255,255,0.8)}.hikka-character__description{max-width:40em;line-height:1.6;color:rgba(255,255,255,0.8)}.hikka-full-active .full-descr__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .full-descr__text .hikka-md-list{margin:.3em 0 .35em 1.25em;padding:0}.hikka-full-active .full-descr__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .full-review-add,.hikka-full-active .full-review__footer,.hikka-full-active .full-review__like,.hikka-full-active .full-review__like-icon{display:none !important}.hikka-full-active .mapping--line>.hikka-comment-card{min-width:17em;max-width:21em;padding:.9em;-webkit-border-radius:.9em;border-radius:.9em;background:-webkit-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:-o-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:linear-gradient(160deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));border:1px solid rgba(255,255,255,0.16);-webkit-box-shadow:0 10px 24px rgba(0,0,0,0.28);box-shadow:0 10px 24px rgba(0,0,0,0.28);gap:.6em}.hikka-full-active .hikka-comment-card.focus{border-color:rgba(255,255,255,0.52);background:rgba(20,24,31,0.97);-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-card.focus .hikka-comment-card__text,.hikka-full-active .hikka-comment-card.focus .hikka-comment-chip{color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-card__footer{margin-top:auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-chip{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;height:1.75em;padding:0 .58em;-webkit-border-radius:.55em;border-radius:.55em;font-size:.88em;font-weight:500;background:rgba(255,255,255,0.12);color:rgba(240,245,255,0.92);border:1px solid rgba(255,255,255,0.16);letter-spacing:.01em}.hikka-full-active .hikka-comment-chip--author{background:rgba(255,255,255,0.18)}.hikka-full-active .hikka-comment-chip--date,.hikka-full-active .hikka-comment-chip--score,.hikka-full-active .hikka-comment-chip--replies,.hikka-full-active .hikka-comment-chip--level,.hikka-full-active .hikka-comment-chip--continuation{background:rgba(255,255,255,0.12)}.hikka-full-active .hikka-comment-chip--continuation{opacity:.82}.hikka-full-active .hikka-comment-card__text{font-size:1.02em;line-height:1.33;margin:0;-webkit-line-clamp:5;line-clamp:5;color:rgba(236,242,255,0.92)}.hikka-full-active .hikka-comment-sidebar{-webkit-border-radius:.9em;border-radius:.9em;padding:.85em;margin-bottom:.75em;border:1px solid rgba(255,255,255,0.14);background:rgba(15,19,26,0.82)}.hikka-full-active .hikka-comment-sidebar__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em;margin-bottom:.25em}.hikka-full-active .hikka-thread-item{background:transparent !important;padding:.65em 1.15em !important;border-bottom:1px solid rgba(255,255,255,0.08)}.hikka-full-active .hikka-thread-item.focus{background:rgba(255,255,255,0.06) !important}.hikka-full-active .hikka-thread-entry{border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.74em;border-radius:.74em;background:rgba(9,11,16,0.72);padding:.72em .8em}.hikka-full-active .hikka-thread-entry__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.4em;margin-bottom:.5em}.hikka-full-active .hikka-thread-entry__text{white-space:pre-wrap;word-wrap:break-word;color:rgba(240,245,255,0.93);font-size:1.06em;line-height:1.36}.hikka-full-active .hikka-comment-card__text strong,.hikka-full-active .hikka-thread-entry__text strong{font-weight:700;color:rgba(255,255,255,0.98)}.hikka-full-active .hikka-comment-card__text em,.hikka-full-active .hikka-thread-entry__text em{font-style:italic}.hikka-full-active .hikka-comment-card__text code,.hikka-full-active .hikka-thread-entry__text code{font-family:monospace;font-size:.92em;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.36em;border-radius:.36em;padding:.05em .35em}.hikka-full-active .hikka-comment-card__text .hikka-md-link,.hikka-full-active .hikka-thread-entry__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .hikka-comment-card__text .hikka-md-list,.hikka-full-active .hikka-thread-entry__text .hikka-md-list{margin:.25em 0 .3em 1.1em;padding:0}.hikka-full-active .hikka-comment-card__text .hikka-md-quote,.hikka-full-active .hikka-thread-entry__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .hikka-comment-sidebar__content{margin:0;white-space:pre-wrap;word-wrap:break-word;font-size:1.02em;line-height:1.36;color:rgba(242,247,255,0.92);font-family:inherit}\n        </style>\n    ");
@@ -5381,6 +5580,19 @@
         Lampa.Activity.push = function (obj) {
           try {
             var source = obj && (obj.source || obj.card && obj.card.source || obj.movie && obj.movie.source);
+            if (obj && source === 'hikka' && obj.component === 'episodes' && obj.card) {
+              var card = _objectSpread2({}, obj.card);
+
+              // Explorer пріоритетно читає poster_path через TMDB.img,
+              // тому для Hikka примусово використовуємо прямий card.img.
+              if (card.img) card.poster_path = null;
+              if (typeof card.overview === 'string' && card.overview.indexOf('<') !== -1) {
+                card.overview = htmlToPlainText(card.overview);
+              }
+              return __origPush(_objectSpread2(_objectSpread2({}, obj), {}, {
+                card: card
+              }));
+            }
             if (obj && source === 'hikka' && obj.component === 'company') {
               var studios = obj.id ? [obj.id] : [];
               return __origPush({
