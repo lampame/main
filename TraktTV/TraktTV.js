@@ -347,7 +347,7 @@
     return canvas.toDataURL('image/png');
   }
 
-  var API_URL = 'https://apx.lme.isroot.in/trakt/';
+  var API_URL = 'https://apx.lme.isroot.in/trakt';
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
   var DEVICE_AUTH_STALE_MS = 20 * 60 * 1000;
   function getStorageNumber(name) {
@@ -9698,12 +9698,66 @@
             oncomplite([]);
             return;
           }
-          Promise.allSettled([loadSearchLine('movie', query, 1, DEFAULT_LIMIT), loadSearchLine('show', query, 1, DEFAULT_LIMIT), loadSearchLine('list', query, 1, DEFAULT_LIMIT)]).then(function (responses) {
-            var rows = responses.filter(function (state) {
-              return state && state.status === 'fulfilled' && state.value && Array.isArray(state.value.results) && state.value.results.length;
-            }).map(function (state) {
-              return state.value;
+          var endpoint = buildSearchUrl('movie,show,list', query, 1, DEFAULT_LIMIT * 3);
+          fetchWithMeta(endpoint).then(function (_ref5) {
+            var data = _ref5.data,
+              headers = _ref5.headers;
+            var items = data || [];
+            var movies = items.filter(function (e) {
+              return e.type === 'movie';
             });
+            var shows = items.filter(function (e) {
+              return e.type === 'show';
+            });
+            var lists = items.filter(function (e) {
+              return e.type === 'list';
+            });
+            var rows = [];
+            if (movies.length) {
+              var line = createLinePayload({
+                title: t('menu_movies', 'Movies'),
+                path: 'search/movie',
+                items: movies,
+                headers: headers,
+                page: 1,
+                limit: DEFAULT_LIMIT,
+                typeHint: 'movie'
+              });
+              line.type = 'movie';
+              line.search_type = 'movie';
+              line.query = query;
+              rows.push(line);
+            }
+            if (shows.length) {
+              var _line = createLinePayload({
+                title: t('menu_tv', 'TV'),
+                path: 'search/show',
+                items: shows,
+                headers: headers,
+                page: 1,
+                limit: DEFAULT_LIMIT,
+                typeHint: 'show'
+              });
+              _line.type = 'tv';
+              _line.search_type = 'show';
+              _line.query = query;
+              rows.push(_line);
+            }
+            if (lists.length) {
+              var _line2 = createLinePayload({
+                title: t('trakt_source_search_lists', 'Lists'),
+                path: 'search/list',
+                items: lists,
+                headers: headers,
+                page: 1,
+                limit: DEFAULT_LIMIT,
+                typeHint: 'list'
+              });
+              _line2.type = 'list';
+              _line2.search_type = 'list';
+              _line2.query = query;
+              rows.push(_line2);
+            }
             oncomplite(rows);
           })["catch"](function () {
             oncomplite([]);
@@ -9738,7 +9792,7 @@
             url: "search/".concat(searchType),
             title: "".concat(t('search', 'Search'), " - ").concat(query),
             component: 'category_full',
-            page: 2,
+            page: 1,
             source: SOURCE_KEY,
             query: encodeURIComponent(query),
             search_type: searchType
