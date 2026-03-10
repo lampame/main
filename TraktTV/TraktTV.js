@@ -4403,6 +4403,16 @@
         ru: "Отсканируйте QR-код",
         en: "Scan QR code",
         uk: "Відскануйте QR-код"
+      },
+      trakttv_settings_thanks: {
+        ru: "Подяка",
+        en: "Thanks",
+        uk: "Подяка"
+      },
+      trakttv_settings_thanks_description: {
+        ru: "Поддержка развития TraktTV-плагина добровольная. Спасибо за вклад.",
+        en: "Support for TraktTV plugin development is voluntary. Thank you for your contribution.",
+        uk: "Підтримка розвитку плагіна TraktTV добровільна. Дякуємо за внесок."
       }
     });
   }
@@ -5971,6 +5981,38 @@
     supportedFavoriteTypes: SUPPORTED_FAVORITE_TYPES.slice()
   };
 
+  var UKRAINIAN_THANKS_URL = 'https://lampame.donatik.me/';
+  var DEFAULT_THANKS_URL = 'https://t.me/tribute/app?startapp=d5WS';
+  function getCurrentLanguage() {
+    return String(Lampa.Storage.get('language', 'ru') || 'ru').toLowerCase();
+  }
+  function getThanksUrlByLanguage() {
+    return getCurrentLanguage() === 'uk' ? UKRAINIAN_THANKS_URL : DEFAULT_THANKS_URL;
+  }
+  function openThanksModal() {
+    var thanksUrl = getThanksUrlByLanguage();
+    var html = Lampa.Template.get('modal_qr', {
+      title: Lampa.Lang.translate('trakttv_settings_thanks'),
+      text: Lampa.Lang.translate('trakttv_settings_thanks_description'),
+      qr_text: "<a href=\"".concat(thanksUrl, "\">").concat(thanksUrl, "</a>")
+    });
+    var qrElement = html.find('.account-modal-split__qr-code');
+    var enabledController = Lampa.Controller.enabled().name;
+    Lampa.Utils.qrcode(thanksUrl, qrElement, function (error) {
+      console.error('TraktTV', 'Unable to generate thanks QR code', error);
+      qrElement.text(thanksUrl);
+    });
+    Lampa.Modal.open({
+      title: '',
+      html: html,
+      size: 'medium',
+      onBack: function onBack() {
+        Lampa.Modal.close();
+        Lampa.Controller.toggle(enabledController);
+      }
+    });
+  }
+
   // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
   var Api$1 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
   var isBookmarksSyncRunning = false;
@@ -5985,6 +6027,20 @@
       component: 'trakt',
       name: 'Trakt.TV',
       icon: icons.TRAKT_ICON
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakttv_thanks',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttv_settings_thanks'),
+        description: Lampa.Lang.translate('trakttv_settings_thanks_description')
+      },
+      onChange: function onChange() {
+        openThanksModal();
+      }
     });
 
     // Користувацька інфа

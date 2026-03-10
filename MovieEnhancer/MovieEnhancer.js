@@ -122,6 +122,16 @@
           ru: "Добавляет рейтинги от различных сервисов (IMDb, Metacritic, TMDB, Rotten Tomatoes и др.)",
           en: "Adds ratings from various services (IMDb, Metacritic, TMDB, Rotten Tomatoes, etc.)",
           uk: "Додає рейтинги від різних сервісів (IMDb, Metacritic, TMDB, Rotten Tomatoes тощо)"
+        },
+        lme_settings_thanks: {
+          ru: "Подяка",
+          en: "Thanks",
+          uk: "Подяка"
+        },
+        lme_settings_thanks_description: {
+          ru: "Поддержка развития Movie Enhancer добровольная. Спасибо за вклад.",
+          en: "Support for Movie Enhancer development is voluntary. Thank you for your contribution.",
+          uk: "Підтримка розвитку Movie Enhancer добровільна. Дякуємо за внесок."
         }
       });
     }
@@ -413,11 +423,57 @@
       openEditorFromSettings: openEditorFromSettings
     };
 
+    var UKRAINIAN_THANKS_URL = "https://lampame.donatik.me/";
+    var DEFAULT_THANKS_URL = "https://t.me/tribute/app?startapp=d5WS";
+    function getCurrentLanguage() {
+      return String(Lampa.Storage.get("language", "ru") || "ru").toLowerCase();
+    }
+    function getThanksUrlByLanguage() {
+      return getCurrentLanguage() === "uk" ? UKRAINIAN_THANKS_URL : DEFAULT_THANKS_URL;
+    }
+    function openThanksModal() {
+      var thanksUrl = getThanksUrlByLanguage();
+      var html = Lampa.Template.get("modal_qr", {
+        title: Lampa.Lang.translate("lme_settings_thanks"),
+        text: Lampa.Lang.translate("lme_settings_thanks_description"),
+        qr_text: "<a href=\"".concat(thanksUrl, "\">").concat(thanksUrl, "</a>")
+      });
+      var qrElement = html.find(".account-modal-split__qr-code");
+      var enabledController = Lampa.Controller.enabled().name;
+      Lampa.Utils.qrcode(thanksUrl, qrElement, function (error) {
+        console.error("LME", "Unable to generate thanks QR code", error);
+        qrElement.text(thanksUrl);
+      });
+      Lampa.Modal.open({
+        title: "",
+        html: html,
+        size: "medium",
+        onBack: function onBack() {
+          Lampa.Modal.close();
+          Lampa.Controller.toggle(enabledController);
+        }
+      });
+    }
+
     function main$6() {
       Lampa.SettingsApi.addComponent({
         component: "lme",
         name: Lampa.Lang.translate('lme_title'),
         icon: '<svg height="200px" width="200px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 431.661 431.661" xml:space="preserve" fill="#000000"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <path style="fill:#ffffff;" d="M180.355,213.668l40.079,40.085L42.526,431.661L2.446,391.576L180.355,213.668z M228.877,245.316 l-40.079-40.085l68.905-68.911l40.091,40.079L228.877,245.316z"></path> <polygon style="fill:#ffffff;" points="380.066,218.525 391.999,218.519 391.999,181.309 429.215,181.309 429.215,169.376 391.999,169.376 391.999,132.166 380.066,132.166 380.066,169.376 342.862,169.376 342.862,181.309 380.066,181.309 "></polygon> <polygon style="fill:#ffffff;" points="393.282,260.424 393.282,248.49 356.073,248.49 356.073,211.281 344.145,211.281 344.145,248.49 306.93,248.49 306.93,260.424 344.145,260.424 344.145,297.633 356.073,297.633 356.073,260.424 "></polygon> <polygon style="fill:#ffffff;" points="302.956,37.209 265.741,37.209 265.741,0 253.807,0 253.807,37.209 216.603,37.209 216.603,49.143 253.807,49.143 253.807,86.353 265.741,86.353 265.741,49.143 302.956,49.143 "></polygon> <polygon style="fill:#ffffff;" points="223.853,73.148 186.638,73.148 186.638,35.932 174.71,35.932 174.71,73.148 137.495,73.148 137.495,85.076 174.71,85.076 174.71,122.291 186.638,122.291 186.638,85.076 223.853,85.076 "></polygon> </g> </g></svg>'
+      });
+      Lampa.SettingsApi.addParam({
+        component: "lme",
+        param: {
+          name: "lme_thanks",
+          type: "button"
+        },
+        field: {
+          name: Lampa.Lang.translate("lme_settings_thanks"),
+          description: Lampa.Lang.translate("lme_settings_thanks_description")
+        },
+        onChange: function onChange() {
+          openThanksModal();
+        }
       });
       //Quality Watchmode
       Lampa.SettingsApi.addParam({

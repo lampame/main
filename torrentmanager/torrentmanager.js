@@ -669,6 +669,16 @@
         ru: "Парсить все",
         uk: "Парсити все"
       },
+      torrentmanager_settings_thanks: {
+        en: "Thanks",
+        ru: "Благодарность",
+        uk: "Подяка"
+      },
+      torrentmanager_settings_thanks_description: {
+        en: "Support for Torrent Manager development is voluntary. Thank you for your contribution.",
+        ru: "Поддержка развития Torrent Manager добровольная. Спасибо за вклад.",
+        uk: "Підтримка розвитку Torrent Manager добровільна. Дякуємо за внесок."
+      },
       selectResult: {
         en: "Select result",
         ru: "Выберите результат",
@@ -4541,12 +4551,57 @@
     };
   }
 
+  var UKRAINIAN_THANKS_URL = 'https://lampame.donatik.me/';
+  var DEFAULT_THANKS_URL = 'https://t.me/tribute/app?startapp=d5WS';
+  function getCurrentLanguage() {
+    return String(Lampa.Storage.get('language', 'ru') || 'ru').toLowerCase();
+  }
+  function getThanksUrlByLanguage() {
+    return getCurrentLanguage() === 'uk' ? UKRAINIAN_THANKS_URL : DEFAULT_THANKS_URL;
+  }
+  function openThanksModal() {
+    var thanksUrl = getThanksUrlByLanguage();
+    var html = Lampa.Template.get('modal_qr', {
+      title: Lampa.Lang.translate('torrentmanager_settings_thanks'),
+      text: Lampa.Lang.translate('torrentmanager_settings_thanks_description'),
+      qr_text: "<a href=\"".concat(thanksUrl, "\">").concat(thanksUrl, "</a>")
+    });
+    var qrElement = html.find('.account-modal-split__qr-code');
+    var enabledController = Lampa.Controller.enabled().name;
+    Lampa.Utils.qrcode(thanksUrl, qrElement, function (error) {
+      console.error('TDM', 'Unable to generate thanks QR code', error);
+      qrElement.text(thanksUrl);
+    });
+    Lampa.Modal.open({
+      title: '',
+      html: html,
+      size: 'medium',
+      onBack: function onBack() {
+        Lampa.Modal.close();
+        Lampa.Controller.toggle(enabledController);
+      }
+    });
+  }
+
   function Main$1(manifest) {
     //Создание пункта меню
     Lampa.SettingsApi.addComponent({
       component: manifest.component,
       name: manifest.name,
       icon: manifest.icon
+    });
+    Lampa.SettingsApi.addParam({
+      component: manifest.component,
+      param: {
+        name: manifest.component + 'Thanks',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('torrentmanager_settings_thanks')
+      },
+      onChange: function onChange() {
+        openThanksModal();
+      }
     });
     function hasSecretValue(value) {
       return Boolean(String(value || "").trim());
