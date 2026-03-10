@@ -9475,9 +9475,25 @@
     }
     var pending = chunk.length;
     var collected = [];
-    chunk.forEach(function (fn) {
-      fn(function (line) {
-        var index = parts.indexOf(fn);
+    chunk.forEach(function (part) {
+      if (typeof part !== 'function') {
+        var index = parts.indexOf(part);
+        if (index > -1) parts[index] = null;
+        if (part && Array.isArray(part.results) && part.results.length) {
+          collected.push(part);
+        }
+        pending -= 1;
+        if (pending === 0) {
+          if (collected.length) {
+            if (loaded) loaded(collected);
+          } else {
+            nextParts(parts, limit, loaded, empty);
+          }
+        }
+        return;
+      }
+      part(function (line) {
+        var index = parts.indexOf(part);
         if (index > -1) parts[index] = null;
         if (line && Array.isArray(line.results) && line.results.length) {
           collected.push(line);
@@ -9492,15 +9508,33 @@
       });
     });
   }
+  function injectContentRows() {
+    var screen = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'main';
+    var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var parts = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+    try {
+      if (Lampa.ContentRows && typeof Lampa.ContentRows.call === 'function') {
+        Lampa.ContentRows.call(screen, params, parts);
+      }
+    } catch (error) {
+      console.error('TraktTV', 'ContentRows injection failed:', error);
+    }
+  }
   function createPartsLoader() {
     var definitions = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
     var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var oncomplite = arguments.length > 2 ? arguments[2] : undefined;
     var onerror = arguments.length > 3 ? arguments[3] : undefined;
+    var screen = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 'main';
     var parts = definitions.map(function (definition) {
       return createPart(definition, params);
     });
+    injectContentRows(screen, params, parts);
     var load = function load(resolve, reject) {
+      if (Lampa.Api && typeof Lampa.Api.partNext === 'function') {
+        Lampa.Api.partNext(parts, DEFAULT_CHUNK, resolve, reject);
+        return;
+      }
       nextParts(parts, DEFAULT_CHUNK, resolve, reject);
     };
     load(oncomplite, onerror);
@@ -9549,7 +9583,7 @@
       var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
       var onerror = arguments.length > 2 ? arguments[2] : undefined;
-      return createPartsLoader(buildMainDefinitions(), params, oncomplite, onerror);
+      return createPartsLoader(buildMainDefinitions(), params, oncomplite, onerror, 'main');
     },
     category: function category() {
       var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -9557,7 +9591,7 @@
       var onerror = arguments.length > 2 ? arguments[2] : undefined;
       var section = (params.url || '').toString().toLowerCase() === 'tv' ? 'shows' : 'movies';
       var traktGenre = resolveTraktGenreFilter(params);
-      return createPartsLoader(buildCategoryDefinitions(section, traktGenre), params, oncomplite, onerror);
+      return createPartsLoader(buildCategoryDefinitions(section, traktGenre), params, oncomplite, onerror, 'category');
     },
     list: function list() {
       var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
