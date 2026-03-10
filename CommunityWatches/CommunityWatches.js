@@ -876,7 +876,7 @@
       query: {
         period: '7d',
         top: 'asc',
-        min_rating: 6
+        min_rating: 7
       }
     }, {
       name: 'CommunityWatchesMainWeeklyTop',
@@ -899,7 +899,7 @@
         period: '7d',
         top: 'asc',
         type: 'movie',
-        min_rating: 6
+        min_rating: 7
       }
     }, {
       name: 'CommunityWatchesMovieWeeklyTop',
@@ -924,7 +924,7 @@
         period: '7d',
         top: 'asc',
         type: 'tv',
-        min_rating: 6
+        min_rating: 7
       }
     }, {
       name: 'CommunityWatchesTvWeeklyTop',
