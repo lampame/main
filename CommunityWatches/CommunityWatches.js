@@ -659,10 +659,7 @@
             perPage = _args7.length > 1 && _args7[1] !== undefined ? _args7[1] : NATIVE_PER_PAGE;
             safePerPage = normalizePerPage(perPage);
             _context7.n = 1;
-            return fetchTopCardsPageCached(_objectSpread2(_objectSpread2({}, params), {}, {
-              page: 1,
-              per_page: safePerPage
-            }));
+            return fetchLogicalPage(params, 1, safePerPage);
           case 1:
             pageData = _context7.v;
             return _context7.a(2, {
