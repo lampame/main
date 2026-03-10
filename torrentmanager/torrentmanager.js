@@ -378,6 +378,12 @@
 
   function Component$1() {
     Lampa.Lang.add({
+      clientChoose: {
+        ru: "Выбор клиента",
+        en: "Select client",
+        uk: "Вибір клієнта",
+        zh: "选择客户端"
+      },
       pathMovie: {
         "ru": "Путь сохранения фильмов",
         "en": "Path to save movies",
@@ -4607,7 +4613,7 @@
         }
       },
       field: {
-        name: "Выбор клиента"
+        name: Lampa.Lang.translate('clientChoose')
       },
       onChange: function onChange(value) {
         Lampa.Settings.update();
