@@ -347,6 +347,50 @@
     return canvas.toDataURL('image/png');
   }
 
+  var PREFIX = 'TraktTV';
+  var onceKeys = new Set();
+  function isDebugEnabled() {
+    try {
+      return !!(typeof Lampa !== 'undefined' && Lampa && Lampa.Storage && typeof Lampa.Storage.field === 'function' && Lampa.Storage.field('trakt_enable_logging'));
+    } catch (e) {
+      return false;
+    }
+  }
+  function write(level, message, meta) {
+    var targetLevel = level === 'error' || level === 'warn' || level === 'log' ? level : 'log';
+    var writer = typeof console !== 'undefined' && typeof console[targetLevel] === 'function' ? console[targetLevel].bind(console) : typeof console !== 'undefined' && typeof console.log === 'function' ? console.log.bind(console) : null;
+    if (!writer) return;
+    if (typeof meta === 'undefined') writer(PREFIX, message);else writer(PREFIX, message, meta);
+  }
+  function debugEnabled() {
+    return isDebugEnabled();
+  }
+  function logWarn(message, meta) {
+    var _ref2 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+      _ref2$debugOnly = _ref2.debugOnly,
+      debugOnly = _ref2$debugOnly === void 0 ? true : _ref2$debugOnly;
+    if (debugOnly && !isDebugEnabled()) return;
+    write('warn', message, meta);
+  }
+  function logError(message, meta) {
+    var _ref3 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+      _ref3$debugOnly = _ref3.debugOnly,
+      debugOnly = _ref3$debugOnly === void 0 ? false : _ref3$debugOnly;
+    if (debugOnly && !isDebugEnabled()) return;
+    write('error', message, meta);
+  }
+  function logDebug(message, meta) {
+    if (!isDebugEnabled()) return;
+    write('log', message, meta);
+  }
+  function logDebugOnce(key, message, meta) {
+    if (!isDebugEnabled()) return;
+    if (!key) return logDebug(message, meta);
+    if (onceKeys.has(key)) return;
+    onceKeys.add(key);
+    write('log', message, meta);
+  }
+
   var API_URL = 'https://apx.lme.isroot.in/trakt';
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
   var DEVICE_AUTH_STALE_MS = 20 * 60 * 1000;
@@ -419,9 +463,9 @@
     if (isStale) {
       Lampa.Storage.set('trakt_active_device_auth', false);
       Lampa.Storage.set('trakt_active_device_auth_started_at', null);
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.warn('TraktTV', 'Device auth flag was stale and has been reset.');
-      }
+      logWarn('Device auth flag was stale and reset', undefined, {
+        debugOnly: true
+      });
       return false;
     }
     return true;
@@ -840,9 +884,7 @@
               _context.n = 1;
               break;
             }
-            if (logging) {
-              console.error('TraktTV', 'refreshTokens: No refresh_token found.');
-            }
+            if (logging) logDebug('refreshTokens skipped: no refresh token');
             return _context.a(2, Promise.reject(Object.assign(new Error('No refresh_token'), {
               status: 0,
               code: 'no_refresh_token'
@@ -852,21 +894,14 @@
               _context.n = 2;
               break;
             }
-            if (logging) {
-              console.warn('TraktTV', 'refreshTokens: skipped because device auth is active', {
-                reason: reason
-              });
-            }
+            if (logging) logDebug('refreshTokens skipped: device auth active', {
+              reason: reason
+            });
             return _context.a(2, Promise.reject(Object.assign(new Error('Device auth is active'), {
               status: 423,
               code: 'device_auth_active'
             })));
           case 2:
-            if (logging) {
-              console.log('TraktTV', 'refreshTokens:start', {
-                reason: reason
-              });
-            }
             return _context.a(2, _performRequest('POST', '/oauth/token', {
               refresh_token: refresh_token,
               redirect_uri: redirect_uri || '',
@@ -874,20 +909,18 @@
             }, true).then(function (res) {
               if (res && res.access_token) {
                 saveTokens(res);
-                if (logging) {
-                  console.log('TraktTV', 'refreshTokens: Token refreshed successfully.', {
-                    reason: reason
-                  });
-                }
               }
               return res;
             })["catch"](function (error) {
               if (error && (error.status === 400 || error.status === 401)) {
                 clearAuthStorage();
               }
-              if (logging) {
-                console.error('TraktTV', 'refreshTokens: Failed to refresh token:', error);
-              }
+              if (logging) logWarn('refreshTokens failed', {
+                reason: reason,
+                error: error
+              }, {
+                debugOnly: true
+              });
               throw error;
             }));
         }
@@ -1010,10 +1043,12 @@
             throw _t;
           case 5:
             if (logging) {
-              console.warn('TraktTV', 'requestApi: preflight refresh failed, continue with existing token', {
+              logWarn('Preflight token refresh failed, using current token', {
                 method: method,
                 url: url,
                 status: _t && _t.status
+              }, {
+                debugOnly: true
               });
             }
           case 6:
@@ -1030,7 +1065,9 @@
               break;
             }
             if (logging) {
-              console.log('TraktTV', "401 Unauthorized for ".concat(url, ". Attempting token refresh and retry."), {
+              logDebug('401 received, try refresh and retry', {
+                method: method,
+                url: url,
                 retryCount: retryCount
               });
             }
@@ -1057,7 +1094,6 @@
       var headers = ensureHeaders({
         unauthorized: unauthorized
       });
-      var logging = Lampa.Storage.field('trakt_enable_logging');
       var withMeta = !!(requestOptions && requestOptions.withMeta);
       var reqUrl = API_URL + url;
       var ajaxParams = {
@@ -1073,19 +1109,9 @@
         ajaxParams.contentType = 'application/json';
         ajaxParams.processData = false;
       }
-      if (logging) {
-        try {
-          console.log('TraktTV', 'request', method, url);
-        } catch (e) {}
-      }
       $.ajax(ajaxParams).done(function (data, _textStatus, jqXHR) {
         var status = jqXHR && typeof jqXHR.status === 'number' ? jqXHR.status : 200;
         var responseHeaders = parseResponseHeaders(jqXHR);
-        if (logging) {
-          try {
-            console.log('TraktTV', 'response', method, url, status);
-          } catch (e) {}
-        }
         if (withMeta) {
           resolve({
             data: data,
@@ -1098,11 +1124,6 @@
       }).fail(function (jqXHR) {
         var status = jqXHR && jqXHR.status ? jqXHR.status : 0;
         var responseHeaders = parseResponseHeaders(jqXHR);
-        if (logging) {
-          try {
-            console.log('TraktTV', 'response', method, url, status, 'Error details:', jqXHR);
-          } catch (e) {}
-        }
         reject(Object.assign(new Error('TraktTV API Error'), {
           status: status,
           headers: responseHeaders,
@@ -1530,7 +1551,6 @@
       var limit = options.limit || 36;
       var page = options.page || 1;
       var fetchLimit = limit * 5;
-      var logging = Lampa.Storage.field('trakt_enable_logging');
       var moviesRequest = requestApi('GET', buildRecommendationsUrl$1('movies', fetchLimit));
       var showsRequest = requestApi('GET', buildRecommendationsUrl$1('shows', fetchLimit));
       return Promise.allSettled([moviesRequest, showsRequest]).then(function (responses) {
@@ -1538,13 +1558,15 @@
         var showsState = responses[1];
         var moviesResponse = moviesState && moviesState.status === 'fulfilled' && Array.isArray(moviesState.value) ? moviesState.value : [];
         var showsResponse = showsState && showsState.status === 'fulfilled' && Array.isArray(showsState.value) ? showsState.value : [];
-        if (logging) {
-          if (moviesState && moviesState.status === 'rejected') {
-            console.warn('TraktTV', 'recommendations movies request failed', moviesState.reason);
-          }
-          if (showsState && showsState.status === 'rejected') {
-            console.warn('TraktTV', 'recommendations shows request failed', showsState.reason);
-          }
+        if (moviesState && moviesState.status === 'rejected') {
+          logWarn('recommendations: movies request failed', moviesState.reason, {
+            debugOnly: true
+          });
+        }
+        if (showsState && showsState.status === 'rejected') {
+          logWarn('recommendations: shows request failed', showsState.reason, {
+            debugOnly: true
+          });
         }
         var formattedMovies = moviesResponse.map(function (movie) {
           return {
@@ -1636,7 +1658,6 @@
       });
     },
     upnext: function upnext(params) {
-      var logging = Lampa.Storage.field('trakt_enable_logging');
       var requestedPage = Math.max(1, parseInt(params && params.page, 10) || 1);
       var requestedLimit = Math.max(1, parseInt(params && params.limit, 10) || 36);
       var query = new URLSearchParams({
@@ -1657,17 +1678,6 @@
           limit: requestedLimit,
           total: fallbackTotal
         });
-        if (logging) {
-          console.log('TraktTV', 'upnext_nitro mapped result', {
-            requestedPage: requestedPage,
-            requestedLimit: requestedLimit,
-            page: pagination.page,
-            limit: pagination.limit,
-            total: pagination.total,
-            total_pages: pagination.total_pages,
-            resultLength: mapped.length
-          });
-        }
         return {
           results: mapped,
           total: pagination.total,
@@ -2006,17 +2016,12 @@
     }
   };
 
-  // Глобальний обробник Unhandled Promise Rejection для діагностики
-  if (typeof window !== 'undefined') {
-    window.addEventListener('unhandledrejection', function (event) {
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.error('TraktTV', 'Unhandled promise rejection:', event.reason);
-      }
-    });
-  }
-
   // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
   var Api$2 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
+  var API_MISSING_LOG_KEY$2 = 'component-main:api-missing';
+  function logApiMissing$1() {
+    logDebugOnce(API_MISSING_LOG_KEY$2, 'API bridge is unavailable in component/main');
+  }
 
   // Version check for Lampa 3.0+ modular system
   var isLampa3 = window.Lampa && window.Lampa.Manifest && window.Lampa.Manifest.app_digital >= 300;
@@ -2189,8 +2194,7 @@
           params.limit = 36;
           params.page = params.page || 1;
           if (!Api$2) {
-            var _Lampa;
-            if ((_Lampa = Lampa) !== null && _Lampa !== void 0 && (_Lampa = _Lampa.Storage) !== null && _Lampa !== void 0 && _Lampa.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+            logApiMissing$1();
             this.empty();
             return;
           }
@@ -2292,8 +2296,7 @@
         params.limit = 36;
         params.page = params.page || 1;
         if (!Api$2) {
-          var _Lampa2;
-          if ((_Lampa2 = Lampa) !== null && _Lampa2 !== void 0 && (_Lampa2 = _Lampa2.Storage) !== null && _Lampa2 !== void 0 && _Lampa2.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+          logApiMissing$1();
           return;
         }
         Api$2[type](params).then(function (data) {
@@ -2324,8 +2327,7 @@
           }
           params.limit = 36;
           if (!Api$2) {
-            var _Lampa3;
-            if ((_Lampa3 = Lampa) !== null && _Lampa3 !== void 0 && (_Lampa3 = _Lampa3.Storage) !== null && _Lampa3 !== void 0 && _Lampa3.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+            logApiMissing$1();
             return;
           }
           Api$2[type](params).then(function (data) {
@@ -2368,8 +2370,7 @@
           params.limit = 36;
           params.page = params.page || 1;
           if (!Api$2) {
-            var _Lampa4;
-            if ((_Lampa4 = Lampa) !== null && _Lampa4 !== void 0 && (_Lampa4 = _Lampa4.Storage) !== null && _Lampa4 !== void 0 && _Lampa4.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+            logApiMissing$1();
             this.empty();
             return;
           }
@@ -2438,8 +2439,7 @@
         params.limit = 36;
         params.page = params.page || 1;
         if (!Api$2) {
-          var _Lampa5;
-          if ((_Lampa5 = Lampa) !== null && _Lampa5 !== void 0 && (_Lampa5 = _Lampa5.Storage) !== null && _Lampa5 !== void 0 && _Lampa5.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+          logApiMissing$1();
           return;
         }
         Api$2.recommendations(params).then(function (recommendations) {
@@ -2465,8 +2465,7 @@
           var params = _objectSpread2({}, object);
           params.limit = 36;
           if (!Api$2) {
-            var _Lampa6;
-            if ((_Lampa6 = Lampa) !== null && _Lampa6 !== void 0 && (_Lampa6 = _Lampa6.Storage) !== null && _Lampa6 !== void 0 && _Lampa6.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing');
+            logApiMissing$1();
             return;
           }
           Api$2.recommendations(params).then(function (data) {
@@ -2613,9 +2612,12 @@
     var message = t$3(fallbackKey, 'Trakt request failed');
     if (status === 420) message = t$3('trakt_list_limit_reached', 'List limit reached');else if (status === 409) message = t$3('trakt_list_conflict', 'Conflict while updating list');else if (status === 401 || status === 403) message = t$3('trakttvAuthMissed', 'Not logged');
     notify$1(message);
-    if (Lampa.Storage.field('trakt_enable_logging')) {
-      console.error('TraktTV', 'List API error', status, error);
-    }
+    logError('List API request failed', {
+      status: status,
+      error: error
+    }, {
+      debugOnly: true
+    });
   }
   function buildCreateListCard() {
     return {
@@ -5038,9 +5040,9 @@
             }
           }
         })["catch"](function (error) {
-          if (Lampa.Storage.field('trakt_enable_logging')) {
-            console.error('TraktTV', 'Error getting show history:', error);
-          }
+          logWarn('Failed to load show history for progress badge', error, {
+            debugOnly: true
+          });
         });
       }
     },
@@ -5973,6 +5975,10 @@
   var Api$1 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
   var isBookmarksSyncRunning = false;
   var DEFAULT_BOOKMARKS_SYNC_TYPES = ['book', 'like', 'wath', 'look', 'viewed', 'scheduled', 'continued', 'thrown'];
+  var API_MISSING_LOG_KEY$1 = 'config:api-missing';
+  function logApiMissing() {
+    logDebugOnce(API_MISSING_LOG_KEY$1, 'API bridge is unavailable in config');
+  }
   function main() {
     // Додаємо компонент Trakt.TV у налаштування
     Lampa.SettingsApi.addComponent({
@@ -6002,8 +6008,7 @@
         var loading = $("<div class=\"settings-param__value\">".concat(Lampa.Lang.translate('loading'), "</div>"));
         item.append(loading);
         if (!Api$1) {
-          var _Lampa;
-          if ((_Lampa = Lampa) !== null && _Lampa !== void 0 && (_Lampa = _Lampa.Storage) !== null && _Lampa !== void 0 && _Lampa.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/config.js');
+          logApiMissing();
           return;
         }
         Api$1.get('/users/me').then(function (user) {
@@ -6046,8 +6051,7 @@
 
         // Device OAuth only
         if (!Api$1) {
-          var _Lampa2;
-          if ((_Lampa2 = Lampa) !== null && _Lampa2 !== void 0 && (_Lampa2 = _Lampa2.Storage) !== null && _Lampa2 !== void 0 && _Lampa2.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/config.js');
+          logApiMissing();
           return;
         }
         (Api$1 && Api$1.auth.device.login()).then(function (data) {
@@ -6096,7 +6100,7 @@
               Lampa.Storage.set('trakt_active_device_auth', false);
               Lampa.Storage.set('trakt_active_device_auth_started_at', null);
             } else {
-              log('already-active-skip-start');
+              logDebug('Device auth already active, skip duplicate start');
               return;
             }
           }
@@ -6106,7 +6110,9 @@
           Lampa.Storage.set('trakt_active_device_auth_started_at', Date.now());
           pollAuth(data, Lampa.Modal); // Pass Lampa.Modal to pollAuth for direct control
         })["catch"](function (error) {
-          log('login-init-error', error);
+          logError('Device auth init failed', error, {
+            debugOnly: true
+          });
           Lampa.Bell.push({
             text: Lampa.Lang.translate('trakttvAuthError')
           });
@@ -6133,8 +6139,7 @@
       },
       onChange: function onChange() {
         if (!Api$1) {
-          var _Lampa3;
-          if ((_Lampa3 = Lampa) !== null && _Lampa3 !== void 0 && (_Lampa3 = _Lampa3.Storage) !== null && _Lampa3 !== void 0 && _Lampa3.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/config.js');
+          logApiMissing();
           return;
         }
         Api$1 && Api$1.auth.logout();
@@ -6401,7 +6406,7 @@
       return false;
     }
     if (!Api$1) {
-      log('Api missing in plugins/TraktTV/config.js');
+      logApiMissing();
       Lampa.Bell.push({
         text: t$1('trakt_bookmarks_sync_failed', 'Bookmarks sync failed')
       });
@@ -6627,7 +6632,10 @@
             Lampa.Bell.push({
               text: formatSyncSummary(operation, summary, resolvedFavoriteType)
             });
-            log('bookmarks-sync-summary', operation, summary);
+            logDebug('Bookmarks sync summary', {
+              operation: operation,
+              summary: summary
+            });
             _context.n = 9;
             break;
           case 8:
@@ -6641,7 +6649,12 @@
               Lampa.Bell.push({
                 text: t$1('trakt_bookmarks_sync_failed', 'Bookmarks sync failed')
               });
-              log('bookmarks-sync-error', operation, _t2);
+              logError('Bookmarks sync failed', {
+                operation: operation,
+                error: _t2
+              }, {
+                debugOnly: true
+              });
             }
           case 9:
             _context.p = 9;
@@ -6693,23 +6706,16 @@
       favoriteType: favoriteType
     });
   }
-
-  // Helper for logging
-  function log(message) {
-    if (Lampa.Storage.field('trakt_enable_logging')) {
-      var _console;
-      for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-        args[_key - 1] = arguments[_key];
-      }
-      (_console = console).log.apply(_console, ['TraktTV', message].concat(args));
-    }
-  }
   var currentPollTimeoutId = null; // Змінна для зберігання ідентифікатора таймауту опитування
 
   // Centralized error handling and polling stop
   function handlePollingError(modalInstance, messageKey, defaultMessage, code) {
     var stop = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : true;
-    log('error-stop', code);
+    logWarn('Device auth polling stopped', {
+      code: code
+    }, {
+      debugOnly: true
+    });
     if (stop) {
       if (currentPollTimeoutId) {
         clearTimeout(currentPollTimeoutId);
@@ -6728,7 +6734,7 @@
 
   // Function to handle successful authentication
   function handleAuthSuccess(modalInstance, response) {
-    log('success', 200);
+    logDebug('Device auth succeeded');
     if (currentPollTimeoutId) {
       clearTimeout(currentPollTimeoutId);
       currentPollTimeoutId = null;
@@ -6761,8 +6767,8 @@
       return;
     }
     var startTime = Date.now();
-    log('start-polling', {
-      currentPollingStepMs: currentPollingStepMs,
+    logDebug('Device auth polling started', {
+      stepMs: currentPollingStepMs,
       expiresMs: expiresMs
     });
 
@@ -6774,13 +6780,16 @@
     var _executePoll = function executePoll() {
       // Check for timeout BEFORE making the API call
       if (Date.now() - startTime >= expiresMs) {
-        log('timeout');
+        logWarn('Device auth polling timeout', {
+          expiresMs: expiresMs
+        }, {
+          debugOnly: true
+        });
         handlePollingError(modalInstance, 'trakttvExpired', 'Expired, please restart', 'timeout');
         return; // Stop polling
       }
-      log('tick');
       if (!Api$1) {
-        log('Api missing in plugins/TraktTV/config.js');
+        logApiMissing();
         handlePollingError(modalInstance, 'trakttvAuthError', 'Authentication error', 'api-missing');
         return;
       }
@@ -6789,11 +6798,9 @@
         handleAuthSuccess(modalInstance, response);
       })["catch"](function (error) {
         var status = error && error.status;
-        log('poll-error', status);
         switch (status) {
           case 400:
             // authorization_pending, do not stop polling
-            log('pending-400');
             // Schedule next poll with currentPollingStepMs
             currentPollTimeoutId = setTimeout(_executePoll, currentPollingStepMs);
             break;
@@ -6818,13 +6825,20 @@
             // Increase polling step, but cap it to avoid excessively long delays
             currentPollingStepMs = Math.min(currentPollingStepMs * 2, 60 * 1000); // Double, max 60 seconds
             var jitter = Math.random() * 1000; // Add random jitter up to 1 second
-            log('slow_down', {
-              newPollingStep: currentPollingStepMs + jitter
+            logWarn('Device auth polling slowed down by server', {
+              nextStepMs: currentPollingStepMs + jitter
+            }, {
+              debugOnly: true
             });
             currentPollTimeoutId = setTimeout(_executePoll, currentPollingStepMs + jitter);
             break;
           default:
             // Any other error
+            logWarn('Device auth poll returned unexpected status', {
+              status: status
+            }, {
+              debugOnly: true
+            });
             handlePollingError(modalInstance, 'trakttvAuthError', 'Authentication error', status || 'unknown-error');
             break;
         }
@@ -6874,12 +6888,31 @@
   function logEnabled() {
     return Lampa.Storage.field('trakt_enable_logging');
   }
+  function shouldEmitDebugLog() {
+    var args = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+    var first = typeof args[0] === 'string' ? args[0] : '';
+    var second = typeof args[1] === 'string' ? args[1] : '';
+    if (first === 'watching.init called while already initialized, skipping') return true;
+    if (first === 'Request for key is already in progress, skipping.') return true;
+    if (first === 'Episode index not resolved') return true;
+    if (first === 'finish error') return true;
+    if (first === 'addShowToWatching called while already adding, skipping') return true;
+    if (first === 'finish') {
+      if (second.indexOf('retry attempt') === 0) return true;
+      if (second === 'abort on client error') return true;
+      if (second === '409 conflict -> treat as finished, no retries') return true;
+    }
+    return false;
+  }
   function slog() {
-    var _console;
     for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
       args[_key] = arguments[_key];
     }
-    if (logEnabled()) (_console = console).log.apply(_console, ['TraktTV'].concat(args));
+    if (!logEnabled() || !shouldEmitDebugLog(args)) return;
+    if (!args.length) return;
+    var message = args[0];
+    var rest = args.slice(1);
+    if (!rest.length) logDebug(message);else if (rest.length === 1) logDebug(message, rest[0]);else logDebug(message, rest);
   }
   function normalizeCardForCache(card) {
     if (!card) return null;
@@ -8031,7 +8064,9 @@
           slog('No show found or no traktId in response');
         }
       })["catch"](function (error) {
-        console.error('TraktTV', 'Error adding show to watching', error);
+        logWarn('Failed to add show to watching', error, {
+          debugOnly: true
+        });
       })["finally"](function () {
         // Скидаємо стан після виконання запиту
         isAddingShowToWatching = false;
@@ -8112,6 +8147,7 @@
   };
 
   var isInitialized = false;
+  var API_MISSING_LOG_KEY = 'events:api-missing';
   function resolveUpnextProgress() {
     var data = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var watched = Number(data.trakt_upnext_watched);
@@ -8181,9 +8217,7 @@
     init: function init() {
       var _this = this;
       if (isInitialized) {
-        if (Lampa.Storage.field('trakt_enable_logging')) {
-          console.log('TraktTV', 'events.init called while already initialized, skipping');
-        }
+        logDebugOnce('events:init-repeat', 'events.init skipped: already initialized');
         return;
       }
       isInitialized = true;
@@ -8229,31 +8263,9 @@
               if (!media.episode_number && meta.episode) media.episode_number = meta.episode;
               if (!media.ids && meta.ids) media.ids = meta.ids;
             }
-
-            // DEBUG: Log media object and hash source
-            if (Lampa.Storage.field('trakt_enable_logging')) {
-              console.log('TraktTV', 'DEBUG - Event route media:', {
-                cardId: card.id,
-                cardType: card.first_air_date ? 'show' : 'movie',
-                eventId: evt && evt.type,
-                lastTimelineHash: lastTimeline.hash,
-                currentMediaHash: media.hash
-              });
-            }
             var key = watching && typeof watching.getCompletionKey === 'function' ? watching.getCompletionKey(media) : null;
             if (key && watching && typeof watching.markFinishIntent === 'function') {
-              // DEBUG: Log intent marking
-              if (Lampa.Storage.field('trakt_enable_logging')) {
-                console.log('TraktTV', 'DEBUG - Event route markFinishIntent called:', {
-                  key: key,
-                  eventId: evt && evt.type,
-                  timestamp: new Date().toISOString()
-                });
-              }
               watching.markFinishIntent(key);
-              if (Lampa.Storage.field('trakt_enable_logging')) {
-                console.log('TraktTV', 'Finish intent marked from event', evt && evt.type, key);
-              }
             }
 
             // Primary finish route is timeline update.
@@ -8265,35 +8277,20 @@
               var episode = media.episode_number || media.episode || media.episodeNumber;
               var canFinishSafely = contentType === 'movie' || season && episode || media.hash;
               if (canFinishSafely) {
-                if (Lampa.Storage.field('trakt_enable_logging')) {
-                  console.log('TraktTV', 'Fallback finish from event route', {
-                    eventType: evt && evt.type,
-                    contentType: contentType,
-                    hasHash: !!media.hash,
-                    season: season,
-                    episode: episode
-                  });
-                }
                 watching.finish(media)["catch"](function (e) {
-                  if (Lampa.Storage.field('trakt_enable_logging')) {
-                    console.log('TraktTV', 'Finish error from event route', e);
-                  }
-                });
-              } else if (Lampa.Storage.field('trakt_enable_logging')) {
-                console.log('TraktTV', 'Skip fallback finish from event route: insufficient episode context', {
-                  eventType: evt && evt.type,
-                  contentType: contentType,
-                  hasHash: !!media.hash,
-                  season: season,
-                  episode: episode
+                  logWarn('Fallback finish failed', {
+                    eventType: evt && evt.type,
+                    error: e
+                  }, {
+                    debugOnly: true
+                  });
                 });
               }
             }
           } catch (e) {
-            // swallow
-            if (Lampa.Storage.field('trakt_enable_logging')) {
-              console.log('TraktTV', 'DEBUG - Event route error:', e);
-            }
+            logWarn('Event finish route failed', e, {
+              debugOnly: true
+            });
           }
         };
         Lampa.Player.listener.follow('ended', routeFinishIntent);
@@ -8321,28 +8318,18 @@
      */
     addRelatedListsBlock: function addRelatedListsBlock(e) {
       var _e$object;
-      // Перевіряємо наявність об'єкта події
-      if (!e) {
-        console.error('TraktTV', 'Cannot add related lists block - event object is missing');
-        return;
-      }
+      if (!e) return;
 
       // Перевірка чи вже додано (дедуплікація)
       if (e.object && e.object.activity && typeof e.object.activity.render === 'function') {
         if (e.object.activity.render().find('.tag-count.trakttv-lists').length > 0) {
-          if (Lampa.Storage.field('trakt_enable_logging')) {
-            console.log('TraktTV', 'Related lists block already exists, skipping');
-          }
           return;
         }
       }
 
       // Перевіряємо наявність даних картки
       var card = e.data;
-      if (!card) {
-        console.error('TraktTV', 'Cannot add related lists block - missing card data');
-        return;
-      }
+      if (!card) return;
 
       // Визначаємо тип контенту - e.object.method є primary джерело
       var method = (_e$object = e.object) === null || _e$object === void 0 ? void 0 : _e$object.method; // 'tv' or 'movie'
@@ -8356,16 +8343,9 @@
       if (!method && card) {
         method = card.method || card.card_type || (card.first_air_date || card.name ? 'tv' : 'movie');
       }
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        var _e$object2;
-        console.log('TraktTV', 'addRelatedListsBlock method:', method, 'from e.object.method:', (_e$object2 = e.object) === null || _e$object2 === void 0 ? void 0 : _e$object2.method);
-      }
 
       // Перевіряємо наявність ID
-      if (!card.id && (!card.external_ids || !card.external_ids.trakt_id)) {
-        console.error('TraktTV', 'Cannot add related lists block - missing card ID');
-        return;
-      }
+      if (!card.id && (!card.external_ids || !card.external_ids.trakt_id)) return;
 
       // Параметри для запиту
       // Trakt API використовує 'show' замість 'tv'
@@ -8385,8 +8365,7 @@
       // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
       var Api = typeof api !== 'undefined' && api || window.TraktTV && window.TraktTV.api || null;
       if (!Api) {
-        var _Lampa;
-        if ((_Lampa = Lampa) !== null && _Lampa !== void 0 && (_Lampa = _Lampa.Storage) !== null && _Lampa !== void 0 && _Lampa.field('trakt_enable_logging')) console.log('TraktTV', 'Api missing in', 'plugins/TraktTV/plugins/events.js');
+        logDebugOnce(API_MISSING_LOG_KEY, 'API bridge is unavailable in events');
         return;
       }
       Promise.all([Api && Api.getMediaLists(params), Api && Api.likesLists({
@@ -8467,7 +8446,11 @@
 
         // Додаємо елемент в кінець блоку з тегами
         tagsBlock.append(listsCountElement);
-      })["catch"](function (error) {});
+      })["catch"](function (error) {
+        logWarn('Related lists loading failed', error, {
+          debugOnly: true
+        });
+      });
     },
     /**
      * Обробник події готовності картки фільму/серіалу
@@ -8477,18 +8460,6 @@
       // Перевіряємо наявність необхідних даних
       if (!e || !e.data) {
         return;
-      }
-
-      // Логування для дебагу
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        var _e$object3, _e$data, _e$data2, _e$data3, _e$data4;
-        console.log('TraktTV', 'onFullCardReady:', {
-          'e.object.method': (_e$object3 = e.object) === null || _e$object3 === void 0 ? void 0 : _e$object3.method,
-          'e.data.movie.name': (_e$data = e.data) === null || _e$data === void 0 || (_e$data = _e$data.movie) === null || _e$data === void 0 ? void 0 : _e$data.name,
-          'e.data.movie.first_air_date': (_e$data2 = e.data) === null || _e$data2 === void 0 || (_e$data2 = _e$data2.movie) === null || _e$data2 === void 0 ? void 0 : _e$data2.first_air_date,
-          'card.id': (_e$data3 = e.data) === null || _e$data3 === void 0 ? void 0 : _e$data3.id,
-          'card.ids': (_e$data4 = e.data) === null || _e$data4 === void 0 ? void 0 : _e$data4.ids
-        });
       }
 
       // Перевіряємо наявність activity
@@ -8633,22 +8604,11 @@
       normalized.params = {
         emit: {
           onlyEnter: function onlyEnter() {
-            var _this$data3;
+            var _this$data;
             // Use normalized.method (fixed at creation time) instead of getContentType(this.data)
             var fixedMethod = normalized.method || normalized.card_type || normalized.type;
-            if (Lampa.Storage.field('trakt_enable_logging')) {
-              var _this$data, _this$data2;
-              console.log('TraktTV', 'onEnter called:', {
-                'normalized.method': normalized.method,
-                'normalized.id': normalized.id,
-                'normalized.title': normalized.title || normalized.name,
-                'this.data.method': (_this$data = this.data) === null || _this$data === void 0 ? void 0 : _this$data.method,
-                'this.data.id': (_this$data2 = this.data) === null || _this$data2 === void 0 ? void 0 : _this$data2.id,
-                'fixedMethod': fixedMethod
-              });
-            }
             Lampa.Activity.push({
-              url: ((_this$data3 = this.data) === null || _this$data3 === void 0 ? void 0 : _this$data3.url) || normalized.url,
+              url: ((_this$data = this.data) === null || _this$data === void 0 ? void 0 : _this$data.url) || normalized.url,
               component: 'full',
               id: normalized.id,
               // Use normalized.id (fixed)
@@ -8703,9 +8663,9 @@
     try {
       if (enabled) localStorage.setItem(CUSTOM_KEY, 'true');else localStorage.removeItem(CUSTOM_KEY);
     } catch (error) {
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.error('TraktTV', 'TopShelf custom flag update failed:', error);
-      }
+      logWarn('TopShelf custom flag update failed', error, {
+        debugOnly: true
+      });
     }
   }
   function isRowEnabled(key) {
@@ -8778,9 +8738,9 @@
         window.location.assign('lampa://topshelfupdate');
       }
     } catch (error) {
-      if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.error('TraktTV', 'TopShelf update failed:', error);
-      }
+      logWarn('TopShelf payload update failed', error, {
+        debugOnly: true
+      });
     }
   }
   function bindTopshelfListeners() {
@@ -8856,7 +8816,9 @@
         line: toCacheLine(line)
       });
     } catch (error) {
-      console.warn('TraktTV', 'rows cache save error', error);
+      logWarn('Rows cache save failed', error, {
+        debugOnly: true
+      });
     }
   }
   function clearRowCache(cacheKey) {
@@ -8864,7 +8826,9 @@
     try {
       Lampa.Storage.set(cacheKey, null);
     } catch (error) {
-      console.warn('TraktTV', 'rows cache clear error', error);
+      logWarn('Rows cache clear failed', error, {
+        debugOnly: true
+      });
     }
   }
   function loadRowFromCache(cacheKey) {
@@ -8877,7 +8841,9 @@
       if (Date.now() - time > STALE_CACHE_TTL_MS) return null;
       return line;
     } catch (error) {
-      console.warn('TraktTV', 'rows cache load error', error);
+      logWarn('Rows cache load failed', error, {
+        debugOnly: true
+      });
       return null;
     }
   }
@@ -8946,7 +8912,9 @@
           });
         }
       } catch (error) {
-        console.error('TraktTV', 'Line title decorate error:', error);
+        logError('Line title decorate failed', error, {
+          debugOnly: true
+        });
       }
     });
   }
@@ -8958,7 +8926,11 @@
       var rowDisplayLimit = Math.max(1, parseInt(config.displayLimit, 10) || 0);
       return function (call) {
         if (!Api || typeof Api[config.apiMethod] !== 'function') {
-          console.error('TraktTV', 'Api not available for row', config.name);
+          logWarn('Row API method unavailable', {
+            row: config.name
+          }, {
+            debugOnly: true
+          });
           return call();
         }
         var cacheKey = buildRowCacheKey(config, params, screen);
@@ -8995,7 +8967,12 @@
           saveRowToCache(cacheKey, line);
           if (!done) finish(attachOnMore(line, config));
         })["catch"](function (error) {
-          console.error('TraktTV', "Row load error (".concat(config.name, "):"), error);
+          logWarn('Row load failed', {
+            row: config.name,
+            error: error
+          }, {
+            debugOnly: true
+          });
           if (!done) finish(staleLine);
         });
       };
@@ -9421,33 +9398,53 @@
     var section = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'movies';
     var traktGenre = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     var isShows = section === 'shows';
+    var useMediaForAnimation = !isShows && traktGenre === 'animation';
+    var basePath = useMediaForAnimation ? 'media' : section;
+    var baseTypeHint = useMediaForAnimation ? 'media' : isShows ? 'show' : 'movie';
     var query = traktGenre ? {
       genres: traktGenre
     } : {};
     var defs = [{
-      path: "".concat(section, "/trending"),
+      path: "".concat(basePath, "/trending"),
       title: t('trakttv_source_trending', 'Trending'),
-      typeHint: isShows ? 'show' : 'movie',
+      typeHint: baseTypeHint,
       query: query
     }, {
-      path: "".concat(section, "/anticipated"),
+      path: "".concat(basePath, "/anticipated"),
       title: t('trakttv_source_anticipated', 'Anticipated'),
-      typeHint: isShows ? 'show' : 'movie',
+      typeHint: baseTypeHint,
       query: query
     }, {
-      path: "".concat(section, "/popular"),
+      path: "".concat(basePath, "/popular"),
       title: t('trakttv_source_popular', 'Popular'),
-      typeHint: isShows ? 'show' : 'movie',
+      typeHint: baseTypeHint,
       query: query
     }];
     if (Lampa.Storage.get('trakt_token')) {
-      defs.push({
-        path: isShows ? 'recommendations/shows' : 'recommendations/movies',
-        title: t('trakttv_recommendations', 'Recommendations'),
-        typeHint: isShows ? 'show' : 'movie',
-        recommendations: true,
-        query: query
-      });
+      if (useMediaForAnimation) {
+        defs.push({
+          path: 'recommendations/movies',
+          title: t('trakttv_source_recommendations_movies', 'Recommendations: Movies'),
+          typeHint: 'movie',
+          recommendations: true,
+          query: query
+        });
+        defs.push({
+          path: 'recommendations/shows',
+          title: t('trakttv_source_recommendations_shows', 'Recommendations: Shows'),
+          typeHint: 'show',
+          recommendations: true,
+          query: query
+        });
+      } else {
+        defs.push({
+          path: isShows ? 'recommendations/shows' : 'recommendations/movies',
+          title: t('trakttv_recommendations', 'Recommendations'),
+          typeHint: isShows ? 'show' : 'movie',
+          recommendations: true,
+          query: query
+        });
+      }
     }
     return defs;
   }
@@ -9517,7 +9514,9 @@
         Lampa.ContentRows.call(screen, params, parts);
       }
     } catch (error) {
-      console.error('TraktTV', 'ContentRows injection failed:', error);
+      logWarn('ContentRows injection failed', error, {
+        debugOnly: true
+      });
     }
   }
   function createPartsLoader() {
@@ -9545,10 +9544,12 @@
     var urlPath = normalizePath(params.url);
     var idPath = typeof params.id === 'string' ? normalizePath(params.id) : '';
     var genresPath = typeof params.genres === 'string' ? normalizePath(params.genres) : '';
+    var traktGenre = resolveTraktGenreFilter(params);
     if (idPath.indexOf('/') > -1) return idPath;
     if (genresPath.indexOf('/') > -1) return genresPath;
     if (urlPath.indexOf('/') > -1) return urlPath;
     if (urlPath === 'tv' || urlPath === 'show' || urlPath === 'shows') return 'shows/popular';
+    if ((urlPath === 'movie' || urlPath === 'movies') && traktGenre === 'animation') return 'media/popular';
     if (urlPath === 'movie' || urlPath === 'movies') return 'movies/popular';
     return 'media/popular';
   }
@@ -9866,7 +9867,7 @@
       var safeDefault = storedSource && sourceValues[storedSource] ? storedSource : defaultValue || 'tmdb';
       Lampa.Params.select('source', sourceValues, safeDefault);
     } catch (error) {
-      console.error('TraktTV', 'Source selector registration failed:', error);
+      logError('Source selector registration failed', error);
     }
   }
   function startPlugin() {
@@ -9883,19 +9884,11 @@
         if (!existing || existing !== current) {
           window.TraktTV.api = current || existing || null;
         }
-
-        // Optional guarded logging
-        try {
-          if (typeof Lampa !== 'undefined' && Lampa && Lampa.Storage && typeof Lampa.Storage.field === 'function') {
-            if (Lampa.Storage.field('trakt_enable_logging')) {
-              console.log('TraktTV', {
-                hasModuleApi: !!current,
-                hadExisting: !!existing,
-                finalHas: !!window.TraktTV.api
-              });
-            }
-          }
-        } catch (e) {/* noop */}
+        logDebug('API bridge ready', {
+          hasModuleApi: !!current,
+          hadExisting: !!existing,
+          finalHas: !!window.TraktTV.api
+        });
       }
     } catch (e) {/* noop */}
 
@@ -9911,20 +9904,20 @@
         authApi.ensureValid({
           reason: 'startup'
         })["catch"](function (error) {
-          if (Lampa.Storage.field('trakt_enable_logging')) {
-            console.error('TraktTV', 'Startup token validation failed:', error);
-          }
+          logError('Startup token validation failed', error, {
+            debugOnly: true
+          });
         });
       } else if (authApi && typeof authApi.refresh === 'function') {
         authApi.refresh({
           reason: 'startup-fallback'
         })["catch"](function (error) {
-          if (Lampa.Storage.field('trakt_enable_logging')) {
-            console.error('TraktTV', 'Startup token refresh fallback failed:', error);
-          }
+          logError('Startup token refresh fallback failed', error, {
+            debugOnly: true
+          });
         });
-      } else if (Lampa.Storage.field('trakt_enable_logging')) {
-        console.error('TraktTV', 'Auth API is not available for startup token validation.', {
+      } else if (debugEnabled()) {
+        logDebug('Auth API unavailable for startup token validation', {
           authApi: !!authApi
         });
       }
@@ -9948,7 +9941,7 @@
         }
       }
     } catch (error) {
-      console.error('TraktTV', 'Source provider registration failed:', error);
+      logError('Source provider registration failed', error);
     }
     Lampa.Component.add('trakt_upnext', function (object) {
       return new Catalog.upnext(object);
@@ -9975,7 +9968,7 @@
     try {
       initContentRows();
     } catch (error) {
-      console.error('TraktTV', 'ContentRows initialization failed:', error);
+      logError('ContentRows initialization failed', error);
     }
     if (window.appready) {
       initTraktHeadButton();
@@ -10076,7 +10069,9 @@
   if (!window.plugin_trakt_ready) {
     // Додаємо глобальний обробник unhandledrejection на самому початку
     window.addEventListener('unhandledrejection', function (event) {
-      console.error('TraktTV', 'Unhandled promise rejection:', event.reason);
+      logError('Unhandled promise rejection', event.reason, {
+        debugOnly: true
+      });
     });
     startPlugin();
   }
