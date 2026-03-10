@@ -448,21 +448,93 @@ body.is-modal-open{overflow:hidden}
 .details__urlrow .copy{flex:0 0 auto; min-width:96px}
 
 .gallery{
-  display:grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap:10px;
-  margin-top:12px;
+  margin: 8px 0 12px 0;
   width:100%;
 }
 .gallery.is-hidden{display:none}
 
-.shot{
-  width:100%;
-  height:auto;
-  border-radius:18px;
+.carousel{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+.carousel__stage{
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:20px;
   border:1px solid rgba(255,255,255,.10);
   background: rgba(0,0,0,.18);
   box-shadow: var(--shadow2);
+  padding:10px;
+  overflow:hidden;
+}
+
+.carousel__nav{
+  width:40px;
+  height:40px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color:rgba(233,236,243,.9);
+  font-size:24px;
+  line-height:1;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:.15s ease;
+}
+.carousel__nav:hover{border-color:rgba(255,255,255,.24)}
+.carousel__nav:disabled{
+  opacity:.35;
+  cursor:default;
+}
+
+.carousel__meta{
+  margin-top:8px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.carousel__dots{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+}
+
+.carousel__dot{
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  border:0;
+  padding:0;
+  background: rgba(233,236,243,.35);
+  cursor:pointer;
+}
+.carousel__dot.is-active{
+  background: rgba(43,212,255,.95);
+}
+
+.carousel__count{
+  font-size:12px;
+  color:var(--muted2);
+  font-weight:700;
+}
+
+.shot{
+  width:100%;
+  max-height:min(52vh, 420px);
+  object-fit:contain;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.22);
   cursor: zoom-in;
   transition: .15s ease;
   display:block;
@@ -672,7 +744,15 @@ body.is-modal-open{overflow:hidden}
     min-width:0;
   }
 
-  .gallery{grid-template-columns: 1fr}
+  .carousel{gap:8px}
+  .carousel__stage{padding:8px}
+  .carousel__nav{
+    width:36px;
+    height:36px;
+    border-radius:12px;
+  }
+  .shot{max-height:min(42vh, 320px)}
+  .carousel__meta{margin-top:6px}
 
   .modal{
     padding:12px;

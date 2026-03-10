@@ -20,6 +20,7 @@
     q: "",
     activeId: null,
     detailsPlugin: null,
+    detailsCarouselIndex: 0,
     imgIndex: 0
   };
 
@@ -80,7 +81,9 @@
       details: "Детальніше",
       copy: "Copy",
       copied: "Copied",
-      openOriginal: "Відкрити"
+      openOriginal: "Відкрити",
+      prevImage: "Попереднє зображення",
+      nextImage: "Наступне зображення"
     },
     en: {
       subtitle: "Lampa plugins catalog • quick search • easy copy",
@@ -100,7 +103,9 @@
       details: "Details",
       copy: "Copy",
       copied: "Copied",
-      openOriginal: "Open"
+      openOriginal: "Open",
+      prevImage: "Previous image",
+      nextImage: "Next image"
     },
     ru: {
       subtitle: "Каталог плагинов для Lampa • быстрый поиск • удобное копирование",
@@ -120,7 +125,9 @@
       details: "Подробнее",
       copy: "Copy",
       copied: "Copied",
-      openOriginal: "Открыть"
+      openOriginal: "Открыть",
+      prevImage: "Предыдущее изображение",
+      nextImage: "Следующее изображение"
     }
   };
 
@@ -186,9 +193,40 @@
     return p.langs.includes(state.lang);
   }
 
-  function getScreens(p) {
-    if (Array.isArray(p.screens)) return p.screens.filter(Boolean);
+  function parseImageList(value) {
+    if (Array.isArray(value)) {
+      return value
+        .map(item => String(item || ""))
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+
+    if (typeof value === "string") {
+      return value
+        .split(",")
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+
     return [];
+  }
+
+  function getScreens(p) {
+    const seen = new Set();
+    const result = [];
+    const sourceItems = [
+      ...parseImageList(p.images),
+      ...parseImageList(p.screens)
+    ];
+
+    for (const item of sourceItems) {
+      const src = absUrl(item);
+      if (!src || seen.has(src)) continue;
+      seen.add(src);
+      result.push(src);
+    }
+
+    return result;
   }
 
   function matches(p, q) {
@@ -353,8 +391,122 @@
   }
 
   // ---------- DETAILS ----------
+  function renderDetailsCarousel(p, shots) {
+    el.gallery.innerHTML = "";
+    el.gallery.classList.toggle("is-hidden", shots.length === 0);
+    if (!shots.length) return;
+
+    state.detailsCarouselIndex = Math.max(
+      0,
+      Math.min(state.detailsCarouselIndex, shots.length - 1)
+    );
+
+    const frame = document.createElement("div");
+    frame.className = "carousel";
+
+    const prevBtn = document.createElement("button");
+    prevBtn.className = "carousel__nav carousel__nav--left";
+    prevBtn.type = "button";
+    prevBtn.textContent = "‹";
+    prevBtn.setAttribute("aria-label", t("prevImage"));
+    prevBtn.title = t("prevImage");
+
+    const nextBtn = document.createElement("button");
+    nextBtn.className = "carousel__nav carousel__nav--right";
+    nextBtn.type = "button";
+    nextBtn.textContent = "›";
+    nextBtn.setAttribute("aria-label", t("nextImage"));
+    nextBtn.title = t("nextImage");
+
+    const stage = document.createElement("div");
+    stage.className = "carousel__stage";
+
+    const img = document.createElement("img");
+    img.className = "shot";
+    img.loading = "lazy";
+    img.addEventListener("click", () => openImage(state.detailsCarouselIndex));
+    stage.appendChild(img);
+
+    frame.appendChild(prevBtn);
+    frame.appendChild(stage);
+    frame.appendChild(nextBtn);
+
+    const meta = document.createElement("div");
+    meta.className = "carousel__meta";
+
+    const dots = document.createElement("div");
+    dots.className = "carousel__dots";
+
+    const counter = document.createElement("div");
+    counter.className = "carousel__count";
+
+    shots.forEach((_, idx) => {
+      const dot = document.createElement("button");
+      dot.className = "carousel__dot";
+      dot.type = "button";
+      dot.setAttribute("aria-label", `${idx + 1}`);
+      dot.addEventListener("click", () => {
+        state.detailsCarouselIndex = idx;
+        syncCarousel();
+      });
+      dots.appendChild(dot);
+    });
+
+    meta.appendChild(dots);
+    meta.appendChild(counter);
+
+    el.gallery.appendChild(frame);
+    el.gallery.appendChild(meta);
+
+    let touchStartX = 0;
+    stage.addEventListener("touchstart", (e) => {
+      touchStartX = e.changedTouches[0].clientX;
+    }, { passive: true });
+    stage.addEventListener("touchend", (e) => {
+      const deltaX = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(deltaX) < 40) return;
+
+      if (deltaX < 0 && state.detailsCarouselIndex < shots.length - 1) {
+        state.detailsCarouselIndex += 1;
+        syncCarousel();
+      } else if (deltaX > 0 && state.detailsCarouselIndex > 0) {
+        state.detailsCarouselIndex -= 1;
+        syncCarousel();
+      }
+    }, { passive: true });
+
+    prevBtn.addEventListener("click", () => {
+      if (state.detailsCarouselIndex === 0) return;
+      state.detailsCarouselIndex -= 1;
+      syncCarousel();
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (state.detailsCarouselIndex >= shots.length - 1) return;
+      state.detailsCarouselIndex += 1;
+      syncCarousel();
+    });
+
+    function syncCarousel() {
+      const idx = state.detailsCarouselIndex;
+      img.src = shots[idx];
+      img.alt = `${p.title || "Plugin"} screenshot ${idx + 1}`;
+
+      prevBtn.disabled = idx === 0;
+      nextBtn.disabled = idx === shots.length - 1;
+      counter.textContent = `${idx + 1}/${shots.length}`;
+
+      $$(".carousel__dot", dots).forEach((dot, dotIdx) => {
+        dot.classList.toggle("is-active", dotIdx === idx);
+      });
+    }
+
+    syncCarousel();
+  }
+
   function openDetails(p) {
     state.detailsPlugin = p;
+    state.detailsCarouselIndex = 0;
 
     const url = absUrl(p.file);
 
@@ -391,18 +543,7 @@
     }
 
     const shots = getScreens(p);
-    el.gallery.innerHTML = "";
-    el.gallery.classList.toggle("is-hidden", shots.length === 0);
-
-    shots.forEach((src, idx) => {
-      const img = document.createElement("img");
-      img.className = "shot";
-      img.loading = "lazy";
-      img.alt = `${p.title || "Plugin"} screenshot ${idx + 1}`;
-      img.src = src;
-      img.addEventListener("click", () => openImage(idx));
-      el.gallery.appendChild(img);
-    });
+    renderDetailsCarousel(p, shots);
 
     openModal(el.detailsModal);
   }
