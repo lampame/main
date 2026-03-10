@@ -1,6 +1,14 @@
 (function () {
   'use strict';
 
+  function _arrayLikeToArray(r, a) {
+    (null == a || a > r.length) && (a = r.length);
+    for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
+    return n;
+  }
+  function _arrayWithoutHoles(r) {
+    if (Array.isArray(r)) return _arrayLikeToArray(r);
+  }
   function _classCallCheck(a, n) {
     if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function");
   }
@@ -23,6 +31,12 @@
       writable: !0
     }) : e[r] = t, e;
   }
+  function _iterableToArray(r) {
+    if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r);
+  }
+  function _nonIterableSpread() {
+    throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
   function ownKeys(e, r) {
     var t = Object.keys(e);
     if (Object.getOwnPropertySymbols) {
@@ -43,6 +57,9 @@
       });
     }
     return e;
+  }
+  function _toConsumableArray(r) {
+    return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread();
   }
   function _toPrimitive(t, r) {
     if ("object" != typeof t || !t) return t;
@@ -66,6 +83,13 @@
     } : function (o) {
       return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
     }, _typeof(o);
+  }
+  function _unsupportedIterableToArray(r, a) {
+    if (r) {
+      if ("string" == typeof r) return _arrayLikeToArray(r, a);
+      var t = {}.toString.call(r).slice(8, -1);
+      return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;
+    }
   }
 
   var API_BASE = 'https://apx.lme.isroot.in/hikka/';
@@ -544,12 +568,30 @@
       img: image,
       backdrop_path: backdropPath,
       background_image: backgroundImage,
+      images: {
+        // Applecation fallback: блокуємо TMDB /images для Hikka-карток.
+        logos: [{
+          iso_639_1: 'uk',
+          file_path: '__hikka_skip_logo__'
+        }, {
+          iso_639_1: 'ru',
+          file_path: '__hikka_skip_logo__'
+        }, {
+          iso_639_1: 'en',
+          file_path: '__hikka_skip_logo__'
+        }, {
+          iso_639_1: null,
+          file_path: '__hikka_skip_logo__'
+        }]
+      },
       vote_average: details && (details.score || details.native_score) || 0,
       status: statusKey,
       release_date: year ? year + '-01-01' : undefined,
       first_air_date: mediaType !== 'movie' && year ? year + '-01-01' : undefined,
       // runtime for movies (duration in minutes from Hikka)
       runtime: details && typeof details.duration === 'number' ? details.duration : undefined,
+      // Applecation нативно читає runtime серій з episode_run_time[0].
+      episode_run_time: mediaType !== 'movie' && details && typeof details.duration === 'number' ? [details.duration] : undefined,
       // Ensure countries arrays to avoid join errors in Full
       production_countries: Array.isArray(details && details.countries) ? details.countries.map(function (c) {
         if (typeof c === 'string') return {
@@ -4641,6 +4683,10 @@
     var tagsObserver = null;
     var uiObserver = null;
     var cleanupBusy = false;
+    var currentMovie = null;
+    var currentFullBody = null;
+    var lastApplecationApplyAt = 0;
+    var applecationApplyLock = false;
     var lazyDiscussCache = new Map();
     var lazyDiscussWaiters = new Map();
     var lazyFranchiseCache = new Map();
@@ -4651,6 +4697,12 @@
     var lazyCastWaiters = new Map();
     function getSourceFromObject(obj) {
       return obj && (obj.source || obj.card && obj.card.source || obj.movie && obj.movie.source);
+    }
+    function resolveElement(ref) {
+      if (!ref) return null;
+      if (typeof HTMLElement !== 'undefined' && ref instanceof HTMLElement) return ref;
+      if (ref[0] && typeof HTMLElement !== 'undefined' && ref[0] instanceof HTMLElement) return ref[0];
+      return null;
     }
     function getHikkaProvider() {
       if (Lampa && Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.hikka) return Lampa.Api.sources.hikka;
@@ -5029,7 +5081,7 @@
       }
     }
     function cleanupHikkaFullUI() {
-      if (!document.body.classList.contains('hikka-full-active')) return;
+      if (!isActiveHikkaFullContext()) return;
       if (cleanupBusy) return;
       cleanupBusy = true;
       try {
@@ -5066,6 +5118,7 @@
     function startUiObserver() {
       if (uiObserver) return;
       uiObserver = new MutationObserver(function (mutations) {
+        if (!isActiveHikkaFullContext()) return;
         var needCleanup = false;
         for (var i = 0; i < mutations.length; i++) {
           if (mutations[i].addedNodes && mutations[i].addedNodes.length) {
@@ -5073,7 +5126,13 @@
             break;
           }
         }
-        if (needCleanup) cleanupHikkaFullUI();
+        if (needCleanup) {
+          cleanupHikkaFullUI();
+          if (currentMovie) {
+            var now = Date.now();
+            if (now - lastApplecationApplyAt > 350) applyApplecationIntegration(currentMovie, 0, currentFullBody);
+          }
+        }
       });
       uiObserver.observe(document.body, {
         childList: true,
@@ -5093,6 +5152,39 @@
     function setHikkaFullState(active) {
       document.body.classList.toggle('hikka-full-active', active);
     }
+    function resolveActiveFullHost(bodyHint) {
+      var hinted = resolveElement(bodyHint);
+      if (hinted) return hinted;
+      var activeSlide = document.querySelector('.activity--active');
+      if (activeSlide) {
+        var activeFull = activeSlide.querySelector('.full');
+        if (activeFull) return activeFull;
+      }
+      return document.querySelector('.full');
+    }
+    function resolveApplecationRoot(bodyHint) {
+      var host = resolveActiveFullHost(bodyHint);
+      if (!host) return null;
+      if (host.matches && host.matches('.full-start-new.applecation')) return host;
+      return host.querySelector('.full-start-new.applecation');
+    }
+    function isActiveHikkaFullContext() {
+      if (!document.body.classList.contains('hikka-full-active')) return false;
+      if (!Lampa || !Lampa.Activity || typeof Lampa.Activity.active !== 'function') return true;
+      var active = Lampa.Activity.active();
+      if (!active || active.component !== 'full') return false;
+      return getSourceFromObject(active) === 'hikka';
+    }
+    function resetHikkaFullContext() {
+      var restoreTheme = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+      cleanupObservers();
+      currentMovie = null;
+      currentFullBody = null;
+      applecationApplyLock = false;
+      lastApplecationApplyAt = 0;
+      setHikkaFullState(false);
+      if (restoreTheme) restoreBackgroundTheme();
+    }
     function hasBackdropImage(movie) {
       if (!movie || _typeof(movie) !== 'object') return false;
       return !!(String(movie.backdrop_path || '').trim() || String(movie.background_image || '').trim());
@@ -5106,6 +5198,414 @@
       if (!Lampa || !Lampa.Background || typeof Lampa.Background.theme !== 'function') return;
       var isBlackStyle = !!(Lampa.Storage && typeof Lampa.Storage.field === 'function' && Lampa.Storage.field('black_style'));
       Lampa.Background.theme(isBlackStyle ? 'black' : 'reset');
+    }
+    function escapeHtml(value) {
+      return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function decodeHtmlEntities(value) {
+      var text = String(value || '');
+      if (!text || typeof document === 'undefined') return text;
+      var holder = document.createElement('textarea');
+      holder.innerHTML = text;
+      return String(holder.value || '');
+    }
+    function normalizeDescriptionHtml(value) {
+      var text = String(value || '').trim();
+      if (!text) return 'Опис відсутній';
+      if (text.indexOf('<') !== -1) return text;
+      var decoded = decodeHtmlEntities(text).trim();
+      if (decoded.indexOf('<') !== -1) return decoded;
+      return escapeHtml(decoded || text).replace(/\r\n/g, '\n').replace(/\n/g, '<br>');
+    }
+    function resolveStatusLabel(movie) {
+      var status = String(movie && movie.status || '').trim().toLowerCase();
+      if (!status) return '';
+      if (Lampa && Lampa.Lang && typeof Lampa.Lang.translate === 'function') {
+        var key = 'tv_status_' + status.replace(/\s+/g, '_');
+        var translated = Lampa.Lang.translate(key);
+        if (translated && translated !== key) return translated;
+      }
+      var labels = {
+        returning_series: 'Виходить',
+        ended: 'Завершено',
+        planned: 'Анонсовано',
+        in_production: 'У виробництві',
+        canceled: 'Скасовано',
+        pilot: 'Пілот'
+      };
+      return labels[status] || '';
+    }
+    function resolveEpisodesLabel(movie) {
+      var total = Number(movie && (movie.episodes_total || movie.number_of_episodes) || 0);
+      var released = Number(movie && movie.episodes_released || 0);
+      if (!total || !released || released >= total) return '';
+      return released + '/' + total;
+    }
+    function getCurrentLang() {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
+        return String(Lampa.Storage.get('language', 'ru') || 'ru').toLowerCase();
+      }
+      return 'ru';
+    }
+    function translateLabel(key, fallback) {
+      if (Lampa && Lampa.Lang && typeof Lampa.Lang.translate === 'function') {
+        var value = Lampa.Lang.translate(key);
+        if (value && value !== key) return String(value).replace(/\./g, '').trim();
+      }
+      return fallback;
+    }
+    function isSeriesCard(movie) {
+      if (!movie || _typeof(movie) !== 'object') return false;
+      return !!(movie.name || movie.original_name || movie.media_type === 'tv');
+    }
+    function resolveApplecationTypeLabel(movie) {
+      var lang = getCurrentLang();
+      var isSeries = isSeriesCard(movie);
+      var map = {
+        ru: {
+          series: 'Сериал',
+          movie: 'Фильм'
+        },
+        uk: {
+          series: 'Серіал',
+          movie: 'Фільм'
+        },
+        en: {
+          series: 'TV Series',
+          movie: 'Movie'
+        },
+        be: {
+          series: 'Серыял',
+          movie: 'Фільм'
+        },
+        bg: {
+          series: 'Сериал',
+          movie: 'Филм'
+        },
+        cs: {
+          series: 'Seriál',
+          movie: 'Film'
+        },
+        pt: {
+          series: 'Série',
+          movie: 'Filme'
+        },
+        he: {
+          series: 'סדרה',
+          movie: 'סרט'
+        },
+        zh: {
+          series: '剧集',
+          movie: '电影'
+        }
+      };
+      var dict = map[lang] || map.ru;
+      return isSeries ? dict.series : dict.movie;
+    }
+    function resolvePrimaryMetaText(movie) {
+      var parts = [resolveApplecationTypeLabel(movie)];
+      var genres = Array.isArray(movie && movie.genres) ? movie.genres.map(function (genre) {
+        return String(genre && genre.name || '').trim();
+      }).filter(Boolean) : [];
+      if (genres.length) parts.push.apply(parts, _toConsumableArray(genres));
+      return parts.filter(Boolean).join(' · ');
+    }
+    function resolveRuntimeForSeries(movie) {
+      if (Array.isArray(movie && movie.episode_run_time) && movie.episode_run_time.length) {
+        var _value = Number(movie.episode_run_time[0] || 0);
+        if (_value > 0) return _value;
+      }
+      var value = Number(movie && (movie.duration || movie.runtime) || 0);
+      return value > 0 ? value : 0;
+    }
+    function resolvePrimaryInfoText(movie) {
+      var parts = [];
+      var date = String(movie && (movie.release_date || movie.first_air_date) || '').trim();
+      if (date) {
+        var year = date.split('-')[0];
+        if (year) parts.push(year);
+      } else if (movie && movie.year) {
+        parts.push(String(movie.year));
+      }
+      if (isSeriesCard(movie)) {
+        var runtime = resolveRuntimeForSeries(movie);
+        if (runtime > 0) {
+          parts.push(runtime + ' ' + translateLabel('time_m', 'хв'));
+        }
+      } else {
+        var _runtime = Number(movie && (movie.runtime || movie.duration) || 0);
+        if (_runtime > 0) {
+          var hours = Math.floor(_runtime / 60);
+          var minutes = _runtime % 60;
+          var hLabel = translateLabel('time_h', 'h');
+          var mLabel = translateLabel('time_m', 'm');
+          if (hours > 0 && minutes > 0) parts.push(hours + ' ' + hLabel + ' ' + minutes + ' ' + mLabel);else if (hours > 0) parts.push(hours + ' ' + hLabel);else parts.push(minutes + ' ' + mLabel);
+        }
+      }
+      return parts.join(' · ');
+    }
+    function renderApplecationPrimaryInfo(movie, root) {
+      if (!root || !movie) return;
+      var metaTextNode = root.querySelector('.applecation__meta-text');
+      if (metaTextNode) {
+        var currentMeta = String(metaTextNode.textContent || '').trim();
+        if (!currentMeta) metaTextNode.textContent = resolvePrimaryMetaText(movie);
+      }
+      var infoNode = root.querySelector('.applecation__info');
+      if (!infoNode) return;
+      var fallbackInfo = resolvePrimaryInfoText(movie);
+      var badgesNode = infoNode.querySelector('.applecation__quality-badges');
+      var currentText = String(infoNode.textContent || '').replace(/\s+/g, ' ').trim();
+      var badgesText = String(badgesNode && badgesNode.textContent || '').replace(/\s+/g, ' ').trim();
+      var hasInfoText = currentText && (!badgesText || currentText !== badgesText);
+      if (!hasInfoText && fallbackInfo) {
+        var badgesClone = badgesNode ? badgesNode.cloneNode(true) : null;
+        infoNode.innerHTML = '';
+        var textNode = document.createElement('span');
+        textNode.textContent = fallbackInfo;
+        infoNode.appendChild(textNode);
+        if (badgesClone) infoNode.appendChild(badgesClone);else {
+          var emptyBadges = document.createElement('span');
+          emptyBadges.className = 'applecation__quality-badges';
+          infoNode.appendChild(emptyBadges);
+        }
+      }
+    }
+    function buildApplecationMetaItems(movie) {
+      var list = [];
+      if (!movie || _typeof(movie) !== 'object') return list;
+      var rating = Number(movie.vote_average || 0);
+      if (rating > 0) list.push({
+        text: '★ ' + rating.toFixed(1),
+        mod: 'rating'
+      });
+      var status = resolveStatusLabel(movie);
+      if (status) list.push({
+        text: status,
+        mod: 'status'
+      });
+      var episodes = resolveEpisodesLabel(movie);
+      if (episodes) list.push({
+        text: 'Епізоди: ' + episodes,
+        mod: 'episodes'
+      });
+      var unique = [];
+      var seen = new Set();
+      list.forEach(function (item) {
+        var text = item && item.text ? String(item.text).trim() : '';
+        if (!text || seen.has(text)) return;
+        seen.add(text);
+        unique.push(item);
+      });
+      return unique.slice(0, 7);
+    }
+    function renderApplecationMeta(movie, root) {
+      if (!root || !movie) return;
+      var wrapper = root.querySelector('.applecation__content-wrapper');
+      var anchor = wrapper && (wrapper.querySelector('.applecation__meta') || wrapper.firstChild);
+      if (!wrapper || !anchor) return;
+      var items = buildApplecationMetaItems(movie);
+      var signature = items.map(function (item) {
+        return (item && item.mod || '') + ':' + (item && item.text || '');
+      }).join('|');
+      var containers = Array.from(wrapper.querySelectorAll('.hikka-applecation-meta'));
+      if (containers.length > 1) {
+        containers.slice(1).forEach(function (node) {
+          return node.remove();
+        });
+      }
+      var container = containers[0] || null;
+      if (!items.length) {
+        if (container) container.remove();
+        return;
+      }
+      if (!container) {
+        container = document.createElement('div');
+        container.className = 'hikka-applecation-meta';
+        if (anchor.nextSibling) wrapper.insertBefore(container, anchor.nextSibling);else wrapper.appendChild(container);
+      }
+      if (container.dataset.signature === signature) return;
+      container.innerHTML = '';
+      container.dataset.signature = signature;
+      items.forEach(function (item) {
+        if (!item || !item.text) return;
+        var chip = document.createElement('span');
+        chip.className = 'hikka-applecation-meta__item' + (item.mod ? ' hikka-applecation-meta__item--' + item.mod : '');
+        chip.textContent = item.text;
+        container.appendChild(chip);
+      });
+    }
+    function ensureApplecationVisibility(root) {
+      if (!root) return;
+      var showSelectors = ['.applecation__meta', '.applecation__ratings', '.applecation__description-wrapper', '.applecation__info'];
+      showSelectors.forEach(function (selector) {
+        var node = root.querySelector(selector);
+        if (!node) return;
+        node.classList.add('show');
+        node.style.opacity = '1';
+        node.style.transform = 'translateY(0)';
+        node.style.visibility = 'visible';
+      });
+    }
+    function closeApplecationOverlay() {
+      var overlay = document.querySelector('.applecation-description-overlay');
+      if (!overlay) return;
+      overlay.classList.remove('show');
+      setTimeout(function () {
+        if (Lampa && Lampa.Controller && typeof Lampa.Controller.toggle === 'function') {
+          Lampa.Controller.toggle('content');
+        }
+      }, 260);
+    }
+    function openApplecationOverlay(movie, root, bodyHint) {
+      var title = String(movie && (movie.title || movie.name || movie.original_title) || '').trim();
+      var textHtml = normalizeDescriptionHtml(movie && movie.overview);
+      var overlay = document.querySelector('.applecation-description-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'applecation-description-overlay';
+        overlay.innerHTML = '' + '<div class="applecation-description-overlay__bg"></div>' + '<div class="applecation-description-overlay__content selector">' + '<div class="applecation-description-overlay__logo" style="display:none;"></div>' + '<div class="applecation-description-overlay__title"></div>' + '<div class="applecation-description-overlay__text"></div>' + '</div>';
+        document.body.appendChild(overlay);
+        var bg = overlay.querySelector('.applecation-description-overlay__bg');
+        if (bg) bg.addEventListener('click', closeApplecationOverlay);
+      }
+      var host = resolveActiveFullHost(bodyHint) || root;
+      var overlayTitle = host && host.querySelector('.applecation-description-overlay__title') || overlay.querySelector('.applecation-description-overlay__title');
+      var overlayText = host && host.querySelector('.applecation-description-overlay__text') || overlay.querySelector('.applecation-description-overlay__text');
+      if (overlayTitle) {
+        overlayTitle.textContent = title;
+        overlayTitle.style.display = title ? '' : 'none';
+      }
+      if (overlayText) {
+        overlayText.classList.add('hikka-applecation-description');
+        overlayText.innerHTML = textHtml;
+      }
+      setTimeout(function () {
+        return overlay.classList.add('show');
+      }, 10);
+      if (Lampa && Lampa.Controller) {
+        if (!overlay.dataset.hikkaControllerCreated && typeof Lampa.Controller.add === 'function') {
+          Lampa.Controller.add('hikka_applecation_description', {
+            toggle: function toggle() {
+              if (typeof Lampa.Controller.collectionSet === 'function') Lampa.Controller.collectionSet($(overlay));
+              if (typeof Lampa.Controller.collectionFocus === 'function') {
+                Lampa.Controller.collectionFocus($(overlay).find('.applecation-description-overlay__content'), $(overlay));
+              }
+            },
+            back: closeApplecationOverlay
+          });
+          overlay.dataset.hikkaControllerCreated = '1';
+        }
+        if (typeof Lampa.Controller.toggle === 'function') {
+          Lampa.Controller.toggle('hikka_applecation_description');
+        }
+      }
+    }
+    function ensureApplecationDescriptionInteraction(movie, root, bodyHint) {
+      if (!root) return;
+      var wrapper = root.querySelector('.applecation__description-wrapper');
+      if (!wrapper) return;
+      wrapper.classList.add('selector');
+      if (Lampa && Lampa.Controller && typeof Lampa.Controller.collectionAppend === 'function') {
+        var lastAppend = Number(wrapper.dataset.hikkaCollectionAppendAt || 0);
+        var now = Date.now();
+        if (!lastAppend || now - lastAppend > 240) {
+          wrapper.dataset.hikkaCollectionAppendAt = String(now);
+          Lampa.Controller.collectionAppend($(wrapper));
+        }
+      }
+      $(wrapper).off('hover:enter.hikka_applecation').on('hover:enter.hikka_applecation', function () {
+        openApplecationOverlay(movie, root, bodyHint);
+      });
+    }
+    function renderApplecationDescription(movie, root, bodyHint) {
+      if (!root) return;
+      var html = normalizeDescriptionHtml(movie && movie.overview);
+      var signature = String(html.length) + ':' + html.slice(0, 140);
+      var description = root.querySelector('.applecation__description');
+      if (description) {
+        description.classList.add('hikka-applecation-description');
+        if (description.dataset.hikkaSignature !== signature) {
+          description.innerHTML = html;
+          description.dataset.hikkaSignature = signature;
+        }
+        if (!description.innerHTML.trim()) description.innerHTML = 'Опис відсутній';
+      }
+      var host = resolveActiveFullHost(bodyHint) || root;
+      var overlayText = host && host.querySelector('.applecation-description-overlay__text') || document.querySelector('.applecation-description-overlay__text');
+      if (overlayText) {
+        overlayText.classList.add('hikka-applecation-description');
+        if (overlayText.dataset.hikkaSignature !== signature) {
+          overlayText.innerHTML = html;
+          overlayText.dataset.hikkaSignature = signature;
+        }
+      }
+    }
+    function ensureApplecationTitle(movie, root, bodyHint) {
+      if (!root || !movie) return;
+      var title = String(movie.title || movie.name || movie.original_title || '').trim();
+      var titleNode = root.querySelector('.full-start-new__title');
+      if (titleNode && title) {
+        if (titleNode.textContent !== title) titleNode.textContent = title;
+        titleNode.style.display = '';
+        titleNode.classList.remove('hide');
+      }
+      var logo = root.querySelector('.applecation__logo img');
+      if (logo) {
+        var src = String(logo.getAttribute('src') || '');
+        if (src.indexOf('R0lGODlhAQABAIAAAAAAAP///') !== -1 || src.indexOf('__hikka_skip_logo__') !== -1) {
+          var logoWrap = root.querySelector('.applecation__logo');
+          if (logoWrap) {
+            logoWrap.innerHTML = '';
+            logoWrap.classList.remove('loaded');
+          }
+        }
+      }
+      var host = resolveActiveFullHost(bodyHint) || root;
+      var overlayTitle = host && host.querySelector('.applecation-description-overlay__title') || document.querySelector('.applecation-description-overlay__title');
+      if (overlayTitle && title) {
+        overlayTitle.textContent = title;
+        overlayTitle.style.display = '';
+      }
+    }
+    function applyApplecationIntegration(movie) {
+      var attempt = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+      var bodyHint = arguments.length > 2 ? arguments[2] : undefined;
+      if (!movie) return;
+      if (getSourceFromObject(movie) !== 'hikka') return;
+      if (!isActiveHikkaFullContext()) return;
+      var now = Date.now();
+      if (applecationApplyLock && attempt === 0) return;
+      if (attempt === 0 && now - lastApplecationApplyAt < 140) return;
+      var targetBody = resolveElement(bodyHint) || currentFullBody;
+      var root = resolveApplecationRoot(targetBody);
+      if (!root) {
+        if (attempt < 10) {
+          setTimeout(function () {
+            return applyApplecationIntegration(movie, attempt + 1, targetBody);
+          }, 140);
+        }
+        return;
+      }
+      applecationApplyLock = true;
+      lastApplecationApplyAt = now;
+      try {
+        ensureApplecationTitle(movie, root, targetBody);
+        renderApplecationPrimaryInfo(movie, root);
+        ensureApplecationVisibility(root);
+        renderApplecationDescription(movie, root, targetBody);
+        ensureApplecationDescriptionInteraction(movie, root, targetBody);
+        renderApplecationMeta(movie, root);
+      } finally {
+        setTimeout(function () {
+          applecationApplyLock = false;
+        }, 0);
+      }
+      if (attempt < 3) {
+        setTimeout(function () {
+          return applyApplecationIntegration(movie, attempt + 1, targetBody);
+        }, 220);
+      }
     }
 
     // Хелпер для перев’язки чипів жанрів/студій на наш компонент
@@ -5164,7 +5664,14 @@
         handlePersonsLazyBuild(e);
         return;
       }
-      if (!e.object || getSourceFromObject(e.object) !== 'hikka') return;
+      var source = e.object ? getSourceFromObject(e.object) : null;
+      if (source !== 'hikka') {
+        if (e.type === 'start' || e.type === 'complite') resetHikkaFullContext(e.type === 'start');
+        return;
+      }
+      if (e.type === 'start') {
+        currentFullBody = resolveElement(e.body);
+      }
       if (e.type === 'complite') {
         // Хелпер для оновлення відображення епізодів у шапці (3/12 або 12)
         var _updateEpisodesHeader = function updateEpisodesHeader(movie) {
@@ -5220,6 +5727,7 @@
           if (typeEl) typeEl.textContent = label;
         }; // Первинна перев’язка чипів після complite
         cleanupObservers();
+        currentFullBody = resolveElement(e.body);
         setHikkaFullState(true);
         startUiObserver();
         cleanupHikkaFullUI();
@@ -5227,10 +5735,12 @@
         setTimeout(cleanupHikkaFullUI, 1000);
         try {
           var movie = e.data && e.data.movie ? e.data.movie : null;
+          currentMovie = movie;
           applyDarkBackgroundFallback(movie);
           rebindChips(movie);
           _updateEpisodesHeader(movie);
           updateTypeBadge(movie);
+          applyApplecationIntegration(movie, 0, currentFullBody);
         } catch (err) {
           console.log('[Hikka] Override chips error:', err);
         }
@@ -5254,12 +5764,18 @@
       }
     });
     Lampa.Listener.follow('activity', function (e) {
+      if (e.component === 'full' && e.type === 'start' && getSourceFromObject(e.object) !== 'hikka') {
+        resetHikkaFullContext(true);
+        return;
+      }
       if (e.type === 'destroy' && e.component === 'full' && getSourceFromObject(e.object) === 'hikka') {
         cleanupObservers();
         lazyDiscussWaiters.clear();
         lazyFranchiseWaiters.clear();
         lazyStaffWaiters.clear();
         lazyCastWaiters.clear();
+        currentMovie = null;
+        currentFullBody = null;
         setHikkaFullState(false);
         restoreBackgroundTheme();
       }
@@ -5538,9 +6054,52 @@
   }
   function init() {
     // Додаємо стилі для плагіну через шаблонну систему
-    Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card .card__quality{text-transform:none}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-character{padding:2em 1.5em}.hikka-character__body{max-width:48em;margin:0 auto}.hikka-character__content{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.hikka-character__image{width:12em;height:12em;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%;-webkit-box-shadow:0 .6em 1.4em rgba(0,0,0,0.35);box-shadow:0 .6em 1.4em rgba(0,0,0,0.35)}.hikka-character__name{font-size:1.8em;font-weight:700;color:rgba(255,255,255,0.8)}.hikka-character__role{font-size:1.1em;color:rgba(255,255,255,0.6)}.hikka-character__meta{display:grid;gap:.4em;padding:.8em 1em;-webkit-border-radius:.8em;border-radius:.8em;background:rgba(255,255,255,0.06)}.hikka-character__meta-row{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:.95em}.hikka-character__meta-label{color:rgba(255,255,255,0.6)}.hikka-character__meta-value{color:rgba(255,255,255,0.8)}.hikka-character__description{max-width:40em;line-height:1.6;color:rgba(255,255,255,0.8)}.hikka-full-active .full-descr__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .full-descr__text .hikka-md-list{margin:.3em 0 .35em 1.25em;padding:0}.hikka-full-active .full-descr__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .full-review-add,.hikka-full-active .full-review__footer,.hikka-full-active .full-review__like,.hikka-full-active .full-review__like-icon{display:none !important}.hikka-full-active .mapping--line>.hikka-comment-card{min-width:17em;max-width:21em;padding:.9em;-webkit-border-radius:.9em;border-radius:.9em;background:-webkit-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:-o-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:linear-gradient(160deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));border:1px solid rgba(255,255,255,0.16);-webkit-box-shadow:0 10px 24px rgba(0,0,0,0.28);box-shadow:0 10px 24px rgba(0,0,0,0.28);gap:.6em}.hikka-full-active .hikka-comment-card.focus{border-color:rgba(255,255,255,0.52);background:rgba(20,24,31,0.97);-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-card.focus .hikka-comment-card__text,.hikka-full-active .hikka-comment-card.focus .hikka-comment-chip{color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-card__footer{margin-top:auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-chip{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;height:1.75em;padding:0 .58em;-webkit-border-radius:.55em;border-radius:.55em;font-size:.88em;font-weight:500;background:rgba(255,255,255,0.12);color:rgba(240,245,255,0.92);border:1px solid rgba(255,255,255,0.16);letter-spacing:.01em}.hikka-full-active .hikka-comment-chip--author{background:rgba(255,255,255,0.18)}.hikka-full-active .hikka-comment-chip--date,.hikka-full-active .hikka-comment-chip--score,.hikka-full-active .hikka-comment-chip--replies,.hikka-full-active .hikka-comment-chip--level,.hikka-full-active .hikka-comment-chip--continuation{background:rgba(255,255,255,0.12)}.hikka-full-active .hikka-comment-chip--continuation{opacity:.82}.hikka-full-active .hikka-comment-card__text{font-size:1.02em;line-height:1.33;margin:0;-webkit-line-clamp:5;line-clamp:5;color:rgba(236,242,255,0.92)}.hikka-full-active .hikka-comment-sidebar{-webkit-border-radius:.9em;border-radius:.9em;padding:.85em;margin-bottom:.75em;border:1px solid rgba(255,255,255,0.14);background:rgba(15,19,26,0.82)}.hikka-full-active .hikka-comment-sidebar__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em;margin-bottom:.25em}.hikka-full-active .hikka-thread-item{background:transparent !important;padding:.65em 1.15em !important;border-bottom:1px solid rgba(255,255,255,0.08)}.hikka-full-active .hikka-thread-item.focus{background:rgba(255,255,255,0.06) !important}.hikka-full-active .hikka-thread-entry{border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.74em;border-radius:.74em;background:rgba(9,11,16,0.72);padding:.72em .8em}.hikka-full-active .hikka-thread-entry__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.4em;margin-bottom:.5em}.hikka-full-active .hikka-thread-entry__text{white-space:pre-wrap;word-wrap:break-word;color:rgba(240,245,255,0.93);font-size:1.06em;line-height:1.36}.hikka-full-active .hikka-comment-card__text strong,.hikka-full-active .hikka-thread-entry__text strong{font-weight:700;color:rgba(255,255,255,0.98)}.hikka-full-active .hikka-comment-card__text em,.hikka-full-active .hikka-thread-entry__text em{font-style:italic}.hikka-full-active .hikka-comment-card__text code,.hikka-full-active .hikka-thread-entry__text code{font-family:monospace;font-size:.92em;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.36em;border-radius:.36em;padding:.05em .35em}.hikka-full-active .hikka-comment-card__text .hikka-md-link,.hikka-full-active .hikka-thread-entry__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .hikka-comment-card__text .hikka-md-list,.hikka-full-active .hikka-thread-entry__text .hikka-md-list{margin:.25em 0 .3em 1.1em;padding:0}.hikka-full-active .hikka-comment-card__text .hikka-md-quote,.hikka-full-active .hikka-thread-entry__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .hikka-comment-sidebar__content{margin:0;white-space:pre-wrap;word-wrap:break-word;font-size:1.02em;line-height:1.36;color:rgba(242,247,255,0.92);font-family:inherit}\n        </style>\n    ");
+    Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card .card__quality{text-transform:none}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-character{padding:2em 1.5em}.hikka-character__body{max-width:48em;margin:0 auto}.hikka-character__content{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.hikka-character__image{width:12em;height:12em;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%;-webkit-box-shadow:0 .6em 1.4em rgba(0,0,0,0.35);box-shadow:0 .6em 1.4em rgba(0,0,0,0.35)}.hikka-character__name{font-size:1.8em;font-weight:700;color:rgba(255,255,255,0.8)}.hikka-character__role{font-size:1.1em;color:rgba(255,255,255,0.6)}.hikka-character__meta{display:grid;gap:.4em;padding:.8em 1em;-webkit-border-radius:.8em;border-radius:.8em;background:rgba(255,255,255,0.06)}.hikka-character__meta-row{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:.95em}.hikka-character__meta-label{color:rgba(255,255,255,0.6)}.hikka-character__meta-value{color:rgba(255,255,255,0.8)}.hikka-character__description{max-width:40em;line-height:1.6;color:rgba(255,255,255,0.8)}.hikka-full-active .full-descr__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .full-descr__text .hikka-md-list{margin:.3em 0 .35em 1.25em;padding:0}.hikka-full-active .full-descr__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em;margin:.45em 0 .55em}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;min-height:1.82em;padding:0 .62em;-webkit-border-radius:.62em;border-radius:.62em;font-size:.88em;line-height:1.2;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.1);color:rgba(243,247,255,0.9)}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item--rating{border-color:rgba(255,214,102,0.42);background:rgba(255,214,102,0.16);color:rgba(255,233,166,0.96)}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item--status{background:rgba(129,255,175,0.11)}.hikka-full-active .applecation .applecation__description.hikka-applecation-description,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description{white-space:normal;line-height:1.35;color:rgba(239,245,255,0.9)}.hikka-full-active .applecation .applecation__description.hikka-applecation-description>span,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description>span{display:block;margin:.03em 0 .2em}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-link,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-link{color:rgba(171,210,255,0.98);text-decoration:underline}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-list,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-list{margin:.22em 0 .34em 1.05em;padding:0}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-quote,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-quote{margin:.28em 0;padding:.28em .52em;border-left:.18em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.08);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .applecation .full-episode__name{line-height:1.22 !important;margin-bottom:.22em !important}.hikka-full-active .applecation .full-episode__overview{line-height:1.25 !important;min-height:0 !important;height:auto !important;margin-bottom:.3em !important}.hikka-full-active .applecation .full-episode__overview:empty{display:none !important;margin-bottom:0 !important}.hikka-full-active .applecation .full-episode__date{margin-top:0 !important;line-height:1.2 !important}.hikka-full-active .full-review-add,.hikka-full-active .full-review__footer,.hikka-full-active .full-review__like,.hikka-full-active .full-review__like-icon{display:none !important}.hikka-full-active .mapping--line>.hikka-comment-card{min-width:17em;max-width:21em;padding:.9em;-webkit-border-radius:.9em;border-radius:.9em;background:-webkit-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:-o-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:linear-gradient(160deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));border:1px solid rgba(255,255,255,0.16);-webkit-box-shadow:0 10px 24px rgba(0,0,0,0.28);box-shadow:0 10px 24px rgba(0,0,0,0.28);gap:.6em}.hikka-full-active .hikka-comment-card.focus{border-color:rgba(255,255,255,0.52);background:rgba(20,24,31,0.97);-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-card.focus .hikka-comment-card__text,.hikka-full-active .hikka-comment-card.focus .hikka-comment-chip{color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-card__footer{margin-top:auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-chip{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;height:1.75em;padding:0 .58em;-webkit-border-radius:.55em;border-radius:.55em;font-size:.88em;font-weight:500;background:rgba(255,255,255,0.12);color:rgba(240,245,255,0.92);border:1px solid rgba(255,255,255,0.16);letter-spacing:.01em}.hikka-full-active .hikka-comment-chip--author{background:rgba(255,255,255,0.18)}.hikka-full-active .hikka-comment-chip--date,.hikka-full-active .hikka-comment-chip--score,.hikka-full-active .hikka-comment-chip--replies,.hikka-full-active .hikka-comment-chip--level,.hikka-full-active .hikka-comment-chip--continuation{background:rgba(255,255,255,0.12)}.hikka-full-active .hikka-comment-chip--continuation{opacity:.82}.hikka-full-active .hikka-comment-card__text{font-size:1.02em;line-height:1.33;margin:0;-webkit-line-clamp:5;line-clamp:5;color:rgba(236,242,255,0.92)}.hikka-full-active .hikka-comment-sidebar{-webkit-border-radius:.9em;border-radius:.9em;padding:.85em;margin-bottom:.75em;border:1px solid rgba(255,255,255,0.14);background:rgba(15,19,26,0.82)}.hikka-full-active .hikka-comment-sidebar__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em;margin-bottom:.25em}.hikka-full-active .hikka-thread-item{background:transparent !important;padding:.65em 1.15em !important;border-bottom:1px solid rgba(255,255,255,0.08)}.hikka-full-active .hikka-thread-item.focus{background:rgba(255,255,255,0.06) !important}.hikka-full-active .hikka-thread-entry{border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.74em;border-radius:.74em;background:rgba(9,11,16,0.72);padding:.72em .8em}.hikka-full-active .hikka-thread-entry__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.4em;margin-bottom:.5em}.hikka-full-active .hikka-thread-entry__text{white-space:pre-wrap;word-wrap:break-word;color:rgba(240,245,255,0.93);font-size:1.06em;line-height:1.36}.hikka-full-active .hikka-comment-card__text strong,.hikka-full-active .hikka-thread-entry__text strong{font-weight:700;color:rgba(255,255,255,0.98)}.hikka-full-active .hikka-comment-card__text em,.hikka-full-active .hikka-thread-entry__text em{font-style:italic}.hikka-full-active .hikka-comment-card__text code,.hikka-full-active .hikka-thread-entry__text code{font-family:monospace;font-size:.92em;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.36em;border-radius:.36em;padding:.05em .35em}.hikka-full-active .hikka-comment-card__text .hikka-md-link,.hikka-full-active .hikka-thread-entry__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .hikka-comment-card__text .hikka-md-list,.hikka-full-active .hikka-thread-entry__text .hikka-md-list{margin:.25em 0 .3em 1.1em;padding:0}.hikka-full-active .hikka-comment-card__text .hikka-md-quote,.hikka-full-active .hikka-thread-entry__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .hikka-comment-sidebar__content{margin:0;white-space:pre-wrap;word-wrap:break-word;font-size:1.02em;line-height:1.36;color:rgba(242,247,255,0.92);font-family:inherit}.hikka-full-active .applecation .mapping--line>.hikka-comment-card{min-width:18em;max-width:22em;padding:.9em .92em;-webkit-border-radius:.85em;border-radius:.85em;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.08);-webkit-box-shadow:0 10px 26px rgba(0,0,0,0.24);box-shadow:0 10px 26px rgba(0,0,0,0.24);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}.hikka-full-active .applecation .hikka-comment-card.focus{border-color:rgba(255,255,255,0.38);background:rgba(255,255,255,0.14);-webkit-box-shadow:0 0 0 .14em rgba(255,255,255,0.14),0 16px 30px rgba(0,0,0,0.32);box-shadow:0 0 0 .14em rgba(255,255,255,0.14),0 16px 30px rgba(0,0,0,0.32)}.hikka-full-active .applecation .hikka-comment-chip{font-size:.84em;min-height:1.68em;-webkit-border-radius:.52em;border-radius:.52em;background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.16)}.hikka-full-active .applecation .hikka-comment-chip--author{background:rgba(255,255,255,0.2)}.hikka-full-active .applecation .hikka-comment-card__text{line-height:1.31;-webkit-line-clamp:4;line-clamp:4}.hikka-full-active .applecation .hikka-thread-entry{border-color:rgba(255,255,255,0.16);background:rgba(255,255,255,0.08)}\n        </style>\n    ");
     // Inject styles
     $('body').append(Lampa.Template.get('hikka_styles'));
+
+    // Локальний sentinel для сумісності з Applecation без TMDB images API.
+    try {
+      if (!Lampa.__hikkaPatchedTmdbImage && Lampa.TMDB && typeof Lampa.TMDB.image === 'function') {
+        var __origTmdbImage = Lampa.TMDB.image;
+        var EMPTY_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+        Lampa.TMDB.image = function (path) {
+          var value = String(path || '');
+          if (value.indexOf('__hikka_skip_logo__') !== -1) return EMPTY_PIXEL;
+          return __origTmdbImage.apply(this, arguments);
+        };
+        Lampa.__hikkaPatchedTmdbImage = true;
+      }
+    } catch (e) {
+      console.log('[Hikka] Failed to patch TMDB.image:', e);
+    }
+
+    // Захист від "битих" елементів у collection, які можуть ламати toggleClass у Controller.
+    try {
+      if (!Lampa.__hikkaPatchedNavigatorCollection && typeof Navigator !== 'undefined') {
+        var sanitizeCollection = function sanitizeCollection(collection) {
+          if (!Array.isArray(collection)) return [];
+          return collection.filter(function (item) {
+            return item && typeof item.toggleClass === 'function';
+          });
+        };
+        if (Navigator && typeof Navigator.setCollection === 'function') {
+          var __origSetCollection = Navigator.setCollection;
+          Navigator.setCollection = function (collection) {
+            return __origSetCollection.call(this, sanitizeCollection(collection));
+          };
+        }
+        if (Navigator && typeof Navigator.multiAdd === 'function') {
+          var __origMultiAdd = Navigator.multiAdd;
+          Navigator.multiAdd = function (collection) {
+            return __origMultiAdd.call(this, sanitizeCollection(collection));
+          };
+        }
+        Lampa.__hikkaPatchedNavigatorCollection = true;
+      }
+    } catch (e) {
+      console.log('[Hikka] Failed to patch Navigator collection:', e);
+    }
 
     // Додаємо пункт меню
     addMenuItem();
