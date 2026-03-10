@@ -367,6 +367,16 @@
       next();
     });
   }
+  function isBelowMinRating(card) {
+    var minRating = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+    if (minRating <= 0) return false;
+    var voteCount = Number(card && card.vote_count || 0);
+    var voteAverage = Number(card && card.vote_average || 0);
+
+    // Treat unrated titles as unknown quality, not below threshold.
+    if (voteCount <= 0) return false;
+    return voteAverage < minRating;
+  }
   function mapApiItemsToCards(_x) {
     return _mapApiItemsToCards.apply(this, arguments);
   }
@@ -411,7 +421,7 @@
                       }
                       return _context.a(2, null);
                     case 2:
-                      if (!(minRating > 0 && Number(card.vote_average || 0) < minRating)) {
+                      if (!isBelowMinRating(card, minRating)) {
                         _context.n = 3;
                         break;
                       }
@@ -715,10 +725,21 @@
   var iconCounter = 0;
   var UI_DEADLINE_MAIN_MS = 2200;
   var UI_DEADLINE_CATEGORY_MS = 3000;
+  var UI_DEADLINE_FILTERED_MAIN_MS = 7000;
+  var UI_DEADLINE_FILTERED_CATEGORY_MS = 9000;
   var STALE_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
-  var STORAGE_CACHE_PREFIX = 'community_watches_line_cache_v1_';
+  var STORAGE_CACHE_PREFIX = 'community_watches_line_cache_v2_';
+  function hasMinRatingFilter() {
+    var query = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    return Number(query && query.min_rating || 0) > 0;
+  }
   function getUiDeadline(screen) {
-    return screen === 'main' ? UI_DEADLINE_MAIN_MS : UI_DEADLINE_CATEGORY_MS;
+    var query = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var filtered = hasMinRatingFilter(query);
+    if (screen === 'main') {
+      return filtered ? UI_DEADLINE_FILTERED_MAIN_MS : UI_DEADLINE_MAIN_MS;
+    }
+    return filtered ? UI_DEADLINE_FILTERED_CATEGORY_MS : UI_DEADLINE_CATEGORY_MS;
   }
   function createQueryFingerprint() {
     var query = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -726,7 +747,8 @@
     var top = query.top || '';
     var type = query.type || '';
     var minRating = Number(query.min_rating || 0);
-    return [period, top, type, minRating].join('|');
+    var perPage = Number(query.per_page || 0);
+    return [period, top, type, minRating, perPage].join('|');
   }
   function buildRowCacheKey(config, screen) {
     return STORAGE_CACHE_PREFIX + [config && config.name ? config.name : 'unknown', screen || 'unknown', createQueryFingerprint(config && config.query ? config.query : {})].join('|');
@@ -814,7 +836,7 @@
     return function (params, screen) {
       if (config.category && screen == 'category' && params.url !== config.category) return;
       return function (call) {
-        var deadline = getUiDeadline(screen);
+        var deadline = getUiDeadline(screen, config.query);
         var cacheKey = buildRowCacheKey(config, screen);
         var staleLine = loadLineFromCache(cacheKey);
         var done = false;
