@@ -2620,10 +2620,10 @@
         en: 'Enabled'
       },
       bandera_online_sources_disabled: {
-        ru: 'Вимкнено',
-        uk: 'Вимкнено',
-        ua: 'Вимкнено',
-        en: 'Disabled'
+        ru: 'Мертвий',
+        uk: 'Мертвий',
+        ua: 'Мертвий',
+        en: 'Died'
       },
       bandera_online_sources_sync_success: {
         ru: 'Джерела синхронізовано',
