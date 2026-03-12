@@ -3730,7 +3730,7 @@
         ru: "TraktTV: Смотреть дальше",
         en: "TraktTV: Up Next",
         uk: "TraktTV: Дивитись далі",
-        ro: "TraktTV: Urmează la vizionare"
+        ro: "TraktTV: Progres vizionare"
       },
       trakttv_row_recommendations_main: {
         ru: "TraktTV: Рекомендации (главная)",
@@ -4384,7 +4384,7 @@
         ru: "Смотреть дальше",
         en: "Up Next",
         uk: "Дивитись далі",
-        ro: "Urmează la vizionare"
+        ro: "Progres vizionare"
       },
       trakttv_topshelf: {
         ru: "Top Shelf (Apple TV)",
