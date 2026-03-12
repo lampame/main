@@ -6,132 +6,158 @@
         lme_title: {
           ru: "Movie Enhancer",
           en: "Movie Enhancer",
-          uk: "Movie Enhancer"
+          uk: "Movie Enhancer",
+          ro: "Movie Enhancer"
         },
         lme_wmquality_name: {
           ru: "Качество через Watchmode",
           en: "Quality by Watchmode",
-          uk: "Якість через Watchmode"
+          uk: "Якість через Watchmode",
+          ro: "Calitate prin Watchmode"
         },
         lme_EngData_desc: {
           ru: "Добавляет английское название произведения, и заменяет описание если оно отсутсвует",
           en: "Adds the English title and replaces the description if it is missing",
-          uk: "Додає англійську назву твору та замінює опис, якщо він відсутній"
+          uk: "Додає англійську назву твору та замінює опис, якщо він відсутній",
+          ro: "Adaugă titlul în engleză și înlocuiește descrierea dacă aceasta lipsește"
         },
         lme_endata_name: {
           ru: "Английские данные",
           en: "English data",
-          uk: "Англійські дані"
+          uk: "Англійські дані",
+          ro: "Date în engleză"
         },
         lme_quality_desc: {
           ru: "Для источников кроме Cub, добавляет лейбл с качеством. Где это возможно",
           en: "For sources other than Cub, adds a quality label where possible",
-          uk: "Для джерел, окрім Cub, додає лейбл з якістю. Де це можливо"
+          uk: "Для джерел, окрім Cub, додає лейбл з якістю. Де це можливо",
+          ro: "Pentru alte surse decât Cub, adaugă o etichetă de calitate acolo unde este posibil"
         },
         lme_wmquality_desc: {
           ru: "Ключ нужно получить на сайте api.watchmode.com",
           en: "The key must be obtained on the api.watchmode.com website",
-          uk: "Ключ потрібно отримати на сайті api.watchmode.com"
+          uk: "Ключ потрібно отримати на сайті api.watchmode.com",
+          ro: "Cheia trebuie obținută de pe site-ul api.watchmode.com"
         },
         lme_averageRuntime_name: {
           ru: "Длительность серии",
           en: "Episode runtime",
-          uk: "Тривалість серії"
+          uk: "Тривалість серії",
+          ro: "Durata episodului"
         },
         lme_averageRuntime_desc: {
           ru: "Добавляет среднее время серии",
           en: "Adds average episode runtime",
-          uk: "Додає середній час серії"
+          uk: "Додає середній час серії",
+          ro: "Adaugă durata medie a episodului"
         },
         lme_streamingdiscovery_name: {
           ru: "Рейтинги Streaming Discovery",
           en: "Streaming Discovery ratings",
-          uk: "Рейтинги Streaming Discovery"
+          uk: "Рейтинги Streaming Discovery",
+          ro: "Rating-uri Streaming Discovery"
         },
         lme_switchsource_desc: {
           ru: "Добавляет переключение источников из шапки",
           en: "Adds source switcher",
-          uk: "Додає перемикач джерел у шапці"
+          uk: "Додає перемикач джерел у шапці",
+          ro: "Adaugă comutator de surse în antet"
         },
         lme_switchsource_name: {
           ru: "Переключение источников",
           en: "Source switch",
-          uk: "Перемикання джерел"
+          uk: "Перемикання джерел",
+          ro: "Comutare surse"
         },
         lme_switchsource_modss_desc: {
           ru: "При наличии Modss добавляет источники Filmix и KinoPub",
           en: "If install Modss add Filmix and KinoPub",
-          uk: "Якщо є Modss додає джерела Filmix та KinoPub"
+          uk: "Якщо є Modss додає джерела Filmix та KinoPub",
+          ro: "Dacă este instalat Modss, adaugă sursele Filmix și KinoPub"
         },
         lme_switchsource_modss_name: {
           ru: "Добавить источник Modss",
           en: "Add Modss source",
-          uk: "Додати джерело Modss"
+          uk: "Додати джерело Modss",
+          ro: "Adaugă sursa Modss"
         },
         lme_switchsource_lmenc_desc: {
           ru: "При наличии NewCategory добавляет источник TMDB Streaming",
           en: "If install Modss add TMDB Streaming",
-          uk: "Якщо є Modss додає джерелo TMDB Streaming"
+          uk: "Якщо є Modss додає джерелo TMDB Streaming",
+          ro: "Dacă este instalat Modss, adaugă TMDB Streaming"
         },
         lme_switchsource_lmenc_name: {
           ru: "Добавить источник TMDBs",
           en: "Add TMDBs source",
-          uk: "Додати джерело TMDBs"
+          uk: "Додати джерело TMDBs",
+          ro: "Adaugă sursa TMDBs"
         },
         lme_ratings_name: {
           ru: "Показать дополнительные рейтинги",
           en: "Show additional ratings",
-          uk: "Показати додаткові рейтинги"
+          uk: "Показати додаткові рейтинги",
+          ro: "Afișează rating-uri suplimentare"
         },
         lme_showbutton_desc: {
           ru: "Выводит все кнопки действий в карточке",
           en: "Show all action button in card",
-          uk: "Виводить усі кнопки дій у картці"
+          uk: "Виводить усі кнопки дій у картці",
+          ro: "Afișează toate butoanele de acțiune în card"
         },
         lme_showbutton_name: {
           ru: "Все кнопки в карточке",
           en: "All buttons in card",
-          uk: "Усі кнопки в картці"
+          uk: "Усі кнопки в картці",
+          ro: "Toate butoanele în card"
         },
         lme_showbuttonwn_desc: {
           ru: "Показивать только иконки",
           en: "Show only icon",
-          uk: "Відображати тільки іконки"
+          uk: "Відображати тільки іконки",
+          ro: "Afișează doar pictogramele"
         },
         lme_showbuttonwn_name: {
           ru: "Скрыть текст",
           en: "Hide text",
-          uk: "Приховати текст"
+          uk: "Приховати текст",
+          ro: "Ascunde textul"
         },
         lme_button_editor_name: {
           ru: "Редактировать кнопки",
           en: "Edit buttons",
-          uk: "Редагувати кнопки"
+          uk: "Редагувати кнопки",
+          ro: "Editare butoane"
         },
         lme_button_editor_desc: {
           ru: "Сортировка и скрытие кнопок карточки",
           en: "Reorder and hide card buttons",
-          uk: "Сортування та приховування кнопок картки"
+          uk: "Сортування та приховування кнопок картки",
+          ro: "Reordonarea și ascunderea butoanelor din card"
         },
         lme_ratings_desc: {
           ru: "Добавляет рейтинги от mdblist.com. Бесплатный ключ можно получить на сайте",
           en: "Adds ratings from mdblist.com. You can get a free key on the site",
-          uk: "Додає рейтинги від mdblist.com. Безкоштовний ключ можна отримати на сайті"
+          uk: "Додає рейтинги від mdblist.com. Безкоштовний ключ можна отримати на сайті",
+          ro: "Adaugă rating-uri de pe mdblist.com. Puteți obține o cheie gratuită pe site"
         },
         lme_streamingdiscovery_desc: {
           ru: "Добавляет рейтинги от различных сервисов (IMDb, Metacritic, TMDB, Rotten Tomatoes и др.)",
           en: "Adds ratings from various services (IMDb, Metacritic, TMDB, Rotten Tomatoes, etc.)",
-          uk: "Додає рейтинги від різних сервісів (IMDb, Metacritic, TMDB, Rotten Tomatoes тощо)"
+          uk: "Додає рейтинги від різних сервісів (IMDb, Metacritic, TMDB, Rotten Tomatoes тощо)",
+          ro: "Adaugă rating-uri din diverse servicii (IMDb, Metacritic, TMDB, Rotten Tomatoes etc.)"
         },
         lme_settings_thanks: {
           ru: "Подяка",
           en: "Thanks",
-          uk: "Подяка"
+          uk: "Подяка",
+          ro: "Mulțumesc"
         },
         lme_settings_thanks_description: {
           ru: "Поддержка развития Movie Enhancer добровольная. Спасибо за вклад.",
           en: "Support for Movie Enhancer development is voluntary. Thank you for your contribution.",
-          uk: "Підтримка розвитку Movie Enhancer добровільна. Дякуємо за внесок."
+          uk: "Підтримка розвитку Movie Enhancer добровільна. Дякуємо за внесок.",
+          ro: "Susținerea dezvoltării Movie Enhancer este voluntară. Vă mulțumim pentru contribuție."
         }
       });
     }
