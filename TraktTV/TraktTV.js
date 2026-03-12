@@ -4384,7 +4384,7 @@
         ru: "Смотреть дальше",
         en: "Up Next",
         uk: "Дивитись далі",
-        ro: "Urmează la vizionare"
+        ro: "Progres vizionare"
       },
       trakttv_topshelf: {
         ru: "Top Shelf (Apple TV)",
