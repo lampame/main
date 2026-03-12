@@ -3477,942 +3477,1130 @@
       trakttvAuthMissed: {
         ru: "Не авторизированы",
         en: "Not logged",
-        uk: "Не авторизовані"
+        uk: "Не авторизовані",
+        ro: "Neautorizat"
       },
       trakttvAuthOk: {
         ru: "Авторизированы",
         en: "Logged",
-        uk: "Авторизовані"
+        uk: "Авторизовані",
+        ro: "Autorizat"
       },
       trakttvAuthUpdated: {
         ru: "Авторизация обновлена",
         en: "Auth success updated",
-        uk: "Авторизацію оновлено"
+        uk: "Авторизацію оновлено",
+        ro: "Autorizare actualizată"
       },
       trakttvAuthError: {
         ru: "Ошибка авторизации",
         en: "Auth error",
-        uk: "Помилка авторизаці"
+        uk: "Помилка авторизаці",
+        ro: "Eroare de autorizare"
       },
       traktLampaRestart: {
         ru: "Перезагрузите приложение",
         en: "Please restart application",
-        uk: "Перезавантажте додаток"
+        uk: "Перезавантажте додаток",
+        ro: "Vă rugăm să reporniți aplicația"
       },
       trakttvLoading: {
         ru: "Загрузка, а пока сделай кофе",
         en: "Loading and go drink coffee",
-        uk: "Завантаження, а поки зроби собі кавусю"
+        uk: "Завантаження, а поки зроби собі кавусю",
+        ro: "Se încarcă, între timp fă o cafea"
       },
       trakttv_remove_from_collection: {
         ru: "Удалить из watchlist",
         en: "Remove from watchlist",
-        uk: "Видалити з watchlist"
+        uk: "Видалити з watchlist",
+        ro: "Elimină din watchlist"
       },
       trakttv_add_to_collection: {
         ru: "Добавить в watchlist",
         en: "Add to watchlist",
-        uk: "Додати в watchlist"
+        uk: "Додати в watchlist",
+        ro: "Adaugă în watchlist"
       },
       trakttv_WatchlistSort: {
         ru: "Сортировка watchlist",
         en: "Sort watchlist",
-        uk: "Сортування watchlist"
+        uk: "Сортування watchlist",
+        ro: "Sortare watchlist"
       },
       trakttvLogin: {
         ru: "Войти в Trakt.TV",
         en: "Login to Trakt.TV",
-        uk: "Увійти в Trakt.TV"
+        uk: "Увійти в Trakt.TV",
+        ro: "Autentificare pe Trakt.TV"
       },
       trakttvLogout: {
         ru: "Выйти из Trakt.TV",
         en: "Logout from Trakt.TV",
-        uk: "Вийти з Trakt.TV"
+        uk: "Вийти з Trakt.TV",
+        ro: "Deconectare de la Trakt.TV"
       },
       trakttvLogoutNoty: {
         ru: "Вы вышли из Trakt.TV",
         en: "You have logged out from Trakt.TV",
-        uk: "Ви вийшли з Trakt.TV"
+        uk: "Ви вийшли з Trakt.TV",
+        ro: "V-ați deconectat de la Trakt.TV"
       },
       trakttvKeyCleanered: {
         ru: "Ключ очищен",
         en: "Key cleaned",
-        uk: "Ключ очищено"
+        uk: "Ключ очищено",
+        ro: "Cheie ștearsă"
       },
       trakttvFullClearNoty: {
         ru: "Все очищено",
         en: "All cleared",
-        uk: "Все очищено"
+        uk: "Все очищено",
+        ro: "Totul a fost șters"
       },
       trakttvHumorMinutes: {
         ru: "Потрачено {time} минут на просмотр! Уже почти Netflix-чемпион",
         en: "Spent {time} minutes watching! Almost a Netflix champion",
-        uk: "Витрачено {time} хвилин на перегляд! Ти вже майже Netflix-чемпіон"
+        uk: "Витрачено {time} хвилин на перегляд! Ти вже майже Netflix-чемпіон",
+        ro: "Ai petrecut {time} minute vizionând! Ești aproape un campion Netflix"
       },
       trakttvStatPlays: {
         ru: "просмотров",
         en: "plays",
-        uk: "переглядів"
+        uk: "переглядів",
+        ro: "vizionări"
       },
       trakttvStatWatched: {
         ru: "просмотрено",
         en: "watched",
-        uk: "переглянуто"
+        uk: "переглянуто",
+        ro: "vizionat"
       },
       trakttvStatMinutes: {
         ru: "минут",
         en: "minutes",
-        uk: "хвилин"
+        uk: "хвилин",
+        ro: "minute"
       },
       trakttv_no_series: {
         ru: "Нет сериалов",
         en: "No series",
-        uk: "Немає серіалів"
+        uk: "Немає серіалів",
+        ro: "Niciun serial"
       },
       trakttv_episodes_on: {
         ru: "Серии на",
         en: "Episodes on",
-        uk: "Серії на"
+        uk: "Серії на",
+        ro: "Episoade pe"
       },
       trakttv_calendar_error: {
         ru: "Ошибка загрузки календаря Trakt",
         en: "Trakt Calendar load error",
-        uk: "Помилка завантаження календаря Trakt"
+        uk: "Помилка завантаження календаря Trakt",
+        ro: "Eroare la încărcarea calendarului Trakt"
       },
       trakttv_no_upcoming: {
         ru: "Нет предстоящих эпизодов",
         en: "No upcoming episodes",
-        uk: "Немає майбутніх епізодів"
+        uk: "Немає майбутніх епізодів",
+        ro: "Nu există episoade viitoare"
       },
       trakttvFullClear: {
         ru: "Очистить все ключи Trakt.TV",
         en: "Clear all Trakt.TV keys",
-        uk: "Очистити всі ключі Trakt.TV"
+        uk: "Очистити всі ключі Trakt.TV",
+        ro: "Șterge toate cheile Trakt.TV"
       },
       trakt_componentDisable: {
         ru: "Компонент отключен",
         en: "Component disabled",
-        uk: "Компонент вимкнено"
+        uk: "Компонент вимкнено",
+        ro: "Componentă dezactivată"
       },
       trakt_componentEnable: {
         ru: "Компонент включен",
         en: "Component enabled",
-        uk: "Компонент увімкнено"
+        uk: "Компонент увімкнено",
+        ro: "Componentă activată"
       },
       trakt_history_added: {
         ru: "Добавлено в историю просмотров",
         en: "Added to watch history",
-        uk: "Додано до історії переглядів"
+        uk: "Додано до історії переглядів",
+        ro: "Adăugat în istoricul vizionărilor"
       },
       trakt_history_addError: {
         ru: "Ошибка добавления в историю",
         en: "Error adding to history",
-        uk: "Помилка додавання до історії"
+        uk: "Помилка додавання до історії",
+        ro: "Eroare la adăugarea în istoric"
       },
       trakt_history_all: {
         ru: "Весь сериал",
         en: "Entire series",
-        uk: "Весь серіал"
+        uk: "Весь серіал",
+        ro: "Tot serialul"
       },
       trakt_history_season: {
         ru: "Последний сезон",
         en: "Last season",
-        uk: "Останній сезон"
+        uk: "Останній сезон",
+        ro: "Ultimul sezon"
       },
       trakt_history_episodes: {
         ru: "Последний эпизод",
         en: "Last episode",
-        uk: "Остання серія"
+        uk: "Остання серія",
+        ro: "Ultimul episod"
       },
       trakt_history_title: {
         ru: "Что отправить в историю?",
         en: "What to send to history?",
-        uk: "Що відправити до історії?"
+        uk: "Що відправити до історії?",
+        ro: "Ce doriți să trimiteți în istoric?"
       },
       trakt_history_removed: {
         ru: "Удалено из истории просмотров",
         en: "Removed from watch history",
-        uk: "Видалено з історії переглядів"
+        uk: "Видалено з історії переглядів",
+        ro: "Eliminat din istoricul vizionărilor"
       },
       trakt_history_button: {
         ru: "Добавить в историю",
         en: "Add to history",
-        uk: "Додати до історії"
+        uk: "Додати до історії",
+        ro: "Adaugă în istoric"
       },
       trakt_watchlist_button: {
         ru: "Добавить в watchlist",
         en: "Add to watchlist",
-        uk: "Додати до watchlist"
+        uk: "Додати до watchlist",
+        ro: "Adaugă în watchlist"
       },
       trakt_watchlist_remove: {
         ru: "Удалить из watchlist",
         en: "Remove from watchlist",
-        uk: "Видалити з watchlist"
+        uk: "Видалити з watchlist",
+        ro: "Elimină din watchlist"
       },
       trakt_watchlist_add: {
         ru: "Добавлено в watchlist",
         en: "Added to watchlist",
-        uk: "Додано до watchlist"
+        uk: "Додано до watchlist",
+        ro: "Adăugat în watchlist"
       },
       trakt_history_in: {
         ru: "В истории",
         en: "In history",
-        uk: "В історії"
+        uk: "В історії",
+        ro: "În istoric"
       },
       trakt_history_not_in: {
         ru: "Добавить в историю",
         en: "Add to history",
-        uk: "Додати до історії"
+        uk: "Додати до історії",
+        ro: "Adaugă în istoric"
       },
       trakttv_recommendations: {
         ru: "Рекомендации",
         en: "Recommendations",
-        uk: "Рекомендації"
+        uk: "Рекомендації",
+        ro: "Recomandări"
       },
       trakttv_watchlist: {
         ru: "Watchlist",
         en: "Watchlist",
-        uk: "Watchlist"
+        uk: "Watchlist",
+        ro: "Watchlist"
       },
       trakttv_calendar: {
         ru: "Календарь",
         en: "Calendar",
-        uk: "Календар"
+        uk: "Календар",
+        ro: "Calendar"
       },
       trakttv_menu_title: {
         ru: "TraktTV",
         en: "TraktTV",
-        uk: "TraktTV"
+        uk: "TraktTV",
+        ro: "TraktTV"
       },
       trakttv_row_upnext: {
         ru: "TraktTV: Смотреть дальше",
         en: "TraktTV: Up Next",
-        uk: "TraktTV: Дивитись далі"
+        uk: "TraktTV: Дивитись далі",
+        ro: "TraktTV: Urmează la vizionare"
       },
       trakttv_row_recommendations_main: {
         ru: "TraktTV: Рекомендации (главная)",
         en: "TraktTV: Recommendations (main)",
-        uk: "TraktTV: Рекомендації (головна)"
+        uk: "TraktTV: Рекомендації (головна)",
+        ro: "TraktTV: Recomandări (acasă)"
       },
       trakttv_row_recommendations_movie: {
         ru: "TraktTV: Рекомендации (фильмы)",
         en: "TraktTV: Recommendations (movies)",
-        uk: "TraktTV: Рекомендації (фільми)"
+        uk: "TraktTV: Рекомендації (фільми)",
+        ro: "TraktTV: Recomandări (filme)"
       },
       trakttv_row_recommendations_tv: {
         ru: "TraktTV: Рекомендации (серіалы)",
         en: "TraktTV: Recommendations (tv)",
-        uk: "TraktTV: Рекомендації (серіали)"
+        uk: "TraktTV: Рекомендації (серіали)",
+        ro: "TraktTV: Recomandări (seriale)"
       },
       trakttv_no_recommendations: {
         ru: "Нет рекомендаций",
         en: "No recommendations",
-        uk: "Немає рекомендацій"
+        uk: "Немає рекомендацій",
+        ro: "Nu există recomandări"
       },
       trakttv_show_recommendations: {
         ru: "Показывать рекомендации TraktTV на главной",
         en: "Show TraktTV recommendations on main page",
-        uk: "Показувати рекомендації TraktTV на головній сторінці"
+        uk: "Показувати рекомендації TraktTV на головній сторінці",
+        ro: "Afișează recomandările TraktTV pe pagina principală"
       },
       trakttv_source_trending: {
         ru: "В тренде",
         en: "Trending",
-        uk: "У тренді"
+        uk: "У тренді",
+        ro: "În tendințe"
       },
       trakttv_source_anticipated: {
         ru: "Ожидаемые",
         en: "Anticipated",
-        uk: "Очікувані"
+        uk: "Очікувані",
+        ro: "Anticipate"
       },
       trakttv_source_popular: {
         ru: "Популярные",
         en: "Popular",
-        uk: "Популярні"
+        uk: "Популярні",
+        ro: "Populare"
       },
       trakttv_source_recommendations_movies: {
         ru: "Рекомендации: фильмы",
         en: "Recommendations: Movies",
-        uk: "Рекомендації: фільми"
+        uk: "Рекомендації: фільми",
+        ro: "Recomandări: Filme"
       },
       trakttv_source_recommendations_shows: {
         ru: "Рекомендации: сериалы",
         en: "Recommendations: Shows",
-        uk: "Рекомендації: серіали"
+        uk: "Рекомендації: серіали",
+        ro: "Recomandări: Seriale"
       },
       trakttv_source_section: {
         ru: "Фильтры источника TraktTV",
         en: "TraktTV source filters",
-        uk: "Фільтри джерела TraktTV"
+        uk: "Фільтри джерела TraktTV",
+        ro: "Filtre sursă TraktTV"
       },
       trakttv_source_ignore_watched: {
         ru: "Источник: скрывать просмотренное",
         en: "Source: ignore watched",
-        uk: "Джерело: приховувати переглянуте"
+        uk: "Джерело: приховувати переглянуте",
+        ro: "Sursă: ascunde vizionate"
       },
       trakttv_source_ignore_watched_descr: {
         ru: "Применяется ко всем лентам TraktTV (категории, рекомендации, поиск)",
         en: "Applies to all TraktTV source feeds (categories, recommendations, search)",
-        uk: "Застосовується до всіх стрічок TraktTV (категорії, рекомендації, пошук)"
+        uk: "Застосовується до всіх стрічок TraktTV (категорії, рекомендації, пошук)",
+        ro: "Se aplică tuturor fluxurilor TraktTV (categorii, recomandări, căutare)"
       },
       trakttv_source_ignore_watchlisted: {
         ru: "Источник: скрывать watchlist",
         en: "Source: ignore watchlisted",
-        uk: "Джерело: приховувати watchlist"
+        uk: "Джерело: приховувати watchlist",
+        ro: "Sursă: ascunde watchlist"
       },
       trakttv_source_ignore_watchlisted_descr: {
         ru: "Применяется ко всем лентам TraktTV (категории, рекомендации, поиск)",
         en: "Applies to all TraktTV source feeds (categories, recommendations, search)",
-        uk: "Застосовується до всіх стрічок TraktTV (категорії, рекомендації, пошук)"
+        uk: "Застосовується до всіх стрічок TraktTV (категорії, рекомендації, пошук)",
+        ro: "Se aplică tuturor fluxurilor TraktTV (categorii, recomandări, căutare)"
       },
       trakt_source_search_lists: {
         ru: "Списки",
         en: "Lists",
-        uk: "Списки"
+        uk: "Списки",
+        ro: "Liste"
       },
       trakt_source_search_lists_more_hint: {
         ru: "Открывайте списки напрямую из результатов поиска",
         en: "Open lists directly from search results",
-        uk: "Відкривайте списки напряму з результатів пошуку"
+        uk: "Відкривайте списки напряму з результатів пошуку",
+        ro: "Deschideți listele direct din rezultatele căutării"
       },
       trakt_progress_section: {
         ru: "Настройки прогресса",
         en: "Progress settings",
-        uk: "Налаштування прогресу"
+        uk: "Налаштування прогресу",
+        ro: "Setări progres"
       },
       trakttv_show_tv_progress: {
         ru: "Показывать прогресс просмотра сериалов",
         en: "Show TV progress",
-        uk: "Показувати прогрес прогляду серіалів"
+        uk: "Показувати прогрес прогляду серіалів",
+        ro: "Afișează progresul serialelor"
       },
       trakttv_related_lists: {
         ru: "Связанные списки",
         en: "Related lists",
-        uk: "Пов'язані списки"
+        uk: "Пов'язані списки",
+        ro: "Liste corelate"
       },
       trakt_list_detail: {
         ru: "Содержимое списка",
         en: "List Content",
-        uk: "Вміст списку"
+        uk: "Вміст списку",
+        ro: "Conținut listă"
       },
       trakt_my_lists: {
         ru: "Мои списки",
         en: "My Lists",
-        uk: "Мої списки"
+        uk: "Мої списки",
+        ro: "Listele mele"
       },
       trakt_liked_lists: {
         ru: "Понравившиеся списки",
         en: "Liked Lists",
-        uk: "Вподобані списки"
+        uk: "Вподобані списки",
+        ro: "Liste apreciate"
       },
       trakt_no_lists: {
         ru: "Нет списков",
         en: "No lists",
-        uk: "Немає списків"
+        uk: "Немає списків",
+        ro: "Nicio listă"
       },
       trakt_list_items: {
         ru: "Элементы списка",
         en: "List Items",
-        uk: "Елементи списку"
+        uk: "Елементи списку",
+        ro: "Elemente listă"
       },
       trakt_list_items_short: {
         ru: "элем.",
         en: "items",
-        uk: "елем."
+        uk: "елем.",
+        ro: "elemente"
       },
       trakt_list_open: {
         ru: "Открыть список",
         en: "Open list",
-        uk: "Відкрити список"
+        uk: "Відкрити список",
+        ro: "Deschide lista"
       },
       trakt_list_create: {
         ru: "Создать список",
         en: "Create list",
-        uk: "Створити список"
+        uk: "Створити список",
+        ro: "Creează listă"
       },
       trakt_list_create_short: {
         ru: "Создать",
         en: "Create",
-        uk: "Створити"
+        uk: "Створити",
+        ro: "Creează"
       },
       trakt_list_create_hint: {
         ru: "Создайте новый список Trakt",
         en: "Create a new Trakt list",
-        uk: "Створіть новий список Trakt"
+        uk: "Створіть новий список Trakt",
+        ro: "Creează o listă nouă Trakt"
       },
       trakt_list_name_input: {
         ru: "Название списка",
         en: "List name",
-        uk: "Назва списку"
+        uk: "Назва списку",
+        ro: "Nume listă"
       },
       trakt_list_description_input: {
         ru: "Описание списка",
         en: "List description",
-        uk: "Опис списку"
+        uk: "Опис списку",
+        ro: "Descriere listă"
       },
       trakt_list_name_required: {
         ru: "Укажите название списка",
         en: "List name is required",
-        uk: "Вкажіть назву списку"
+        uk: "Вкажіть назву списку",
+        ro: "Numele listei este obligatoriu"
       },
       trakt_list_privacy: {
         ru: "Приватность списка",
         en: "List privacy",
-        uk: "Приватність списку"
+        uk: "Приватність списку",
+        ro: "Confidențialitate listă"
       },
       trakt_list_privacy_private: {
         ru: "Приватный",
         en: "Private",
-        uk: "Приватний"
+        uk: "Приватний",
+        ro: "Privat"
       },
       trakt_list_privacy_friends: {
         ru: "Для друзей",
         en: "Friends",
-        uk: "Для друзів"
+        uk: "Для друзів",
+        ro: "Prieteni"
       },
       trakt_list_privacy_public: {
         ru: "Публичный",
         en: "Public",
-        uk: "Публічний"
+        uk: "Публічний",
+        ro: "Public"
       },
       trakt_list_created: {
         ru: "Список создан",
         en: "List created",
-        uk: "Список створено"
+        uk: "Список створено",
+        ro: "Listă creată"
       },
       trakt_list_create_error: {
         ru: "Ошибка создания списка",
         en: "Failed to create list",
-        uk: "Помилка створення списку"
+        uk: "Помилка створення списку",
+        ro: "Eroare la crearea listei"
       },
       trakt_list_edit: {
         ru: "Редактировать список",
         en: "Edit list",
-        uk: "Редагувати список"
+        uk: "Редагувати список",
+        ro: "Editează lista"
       },
       trakt_list_updated: {
         ru: "Список обновлен",
         en: "List updated",
-        uk: "Список оновлено"
+        uk: "Список оновлено",
+        ro: "Listă actualizată"
       },
       trakt_list_edit_error: {
         ru: "Ошибка обновления списка",
         en: "Failed to update list",
-        uk: "Помилка оновлення списку"
+        uk: "Помилка оновлення списку",
+        ro: "Eroare la actualizarea listei"
       },
       trakt_list_delete: {
         ru: "Удалить список",
         en: "Delete list",
-        uk: "Видалити список"
+        uk: "Видалити список",
+        ro: "Șterge lista"
       },
       trakt_list_confirm_delete: {
         ru: "Удалить этот список?",
         en: "Delete this list?",
-        uk: "Видалити цей список?"
+        uk: "Видалити цей список?",
+        ro: "Ștergeți această listă?"
       },
       trakt_list_delete_confirm_action: {
         ru: "Удалить",
         en: "Delete",
-        uk: "Видалити"
+        uk: "Видалити",
+        ro: "Șterge"
       },
       trakt_list_deleted: {
         ru: "Список удален",
         en: "List deleted",
-        uk: "Список видалено"
+        uk: "Список видалено",
+        ro: "Listă ștearsă"
       },
       trakt_list_delete_error: {
         ru: "Ошибка удаления списка",
         en: "Failed to delete list",
-        uk: "Помилка видалення списку"
+        uk: "Помилка видалення списку",
+        ro: "Eroare la ștergerea listei"
       },
       trakt_add_to_list_action: {
         ru: "Добавить в список",
         en: "Add to list",
-        uk: "Додати до списку"
+        uk: "Додати до списку",
+        ro: "Adaugă în listă"
       },
       trakt_remove_from_list_action: {
         ru: "Удалить из списка",
         en: "Remove from list",
-        uk: "Прибрати зі списку"
+        uk: "Прибрати зі списку",
+        ro: "Elimină din listă"
       },
       trakt_remove_from_list: {
         ru: "Удалить из этого списка",
         en: "Remove from this list",
-        uk: "Прибрати з цього списку"
+        uk: "Прибрати з цього списку",
+        ro: "Elimină din această listă"
       },
       trakt_item_added_to_list: {
         ru: "Элемент добавлен в список",
         en: "Item added to list",
-        uk: "Елемент додано до списку"
+        uk: "Елемент додано до списку",
+        ro: "Element adăugat în listă"
       },
       trakt_item_removed_from_list: {
         ru: "Элемент удален из списка",
         en: "Item removed from list",
-        uk: "Елемент прибрано зі списку"
+        uk: "Елемент прибрано зі списку",
+        ro: "Element eliminat din listă"
       },
       trakt_remove_from_list_error: {
         ru: "Ошибка удаления элемента из списка",
         en: "Failed to remove item from list",
-        uk: "Помилка видалення елемента зі списку"
+        uk: "Помилка видалення елемента зі списку",
+        ro: "Eroare la eliminarea elementului"
       },
       trakt_list_action_error: {
         ru: "Ошибка операции со списком",
         en: "List action failed",
-        uk: "Помилка операції зі списком"
+        uk: "Помилка операції зі списком",
+        ro: "Eroare operațiune listă"
       },
       trakt_list_limit_reached: {
         ru: "Достигнут лимит списков Trakt",
         en: "Trakt lists limit reached",
-        uk: "Досягнуто ліміт списків Trakt"
+        uk: "Досягнуто ліміт списків Trakt",
+        ro: "Limita listelor Trakt a fost atinsă"
       },
       trakt_list_conflict: {
         ru: "Элемент уже есть в списке",
         en: "Item is already in this list",
-        uk: "Елемент уже є у цьому списку"
+        uk: "Елемент уже є у цьому списку",
+        ro: "Elementul este deja în listă"
       },
       trakt_lists_button: {
         ru: "TraktTV Списки",
         en: "TraktTV lists",
-        uk: "TraktTV Списки"
+        uk: "TraktTV Списки",
+        ro: "TraktTV Liste"
       },
       trakt_lists_button_in_watchlist: {
         ru: "В watchlist",
         en: "In watchlist",
-        uk: "У watchlist"
+        uk: "У watchlist",
+        ro: "În watchlist"
       },
       trakt_manage_lists_title: {
         ru: "Управление списками",
         en: "Manage lists",
-        uk: "Керування списками"
+        uk: "Керування списками",
+        ro: "Gestionare liste"
       },
       trakt_watchlist_action_error: {
         ru: "Ошибка операции с watchlist",
         en: "Watchlist action failed",
-        uk: "Помилка операції з watchlist"
+        uk: "Помилка операції з watchlist",
+        ro: "Eroare operațiune watchlist"
       },
       trakttv_user_info: {
         ru: "Пользователь Trakt.TV",
         en: "Trakt.TV User",
-        uk: "Користувач Trakt.TV"
+        uk: "Користувач Trakt.TV",
+        ro: "Utilizator Trakt.TV"
       },
       trakttv_username: {
         ru: "Имя пользователя",
         en: "Username",
-        uk: "Ім'я користувача"
+        uk: "Ім'я користувача",
+        ro: "Nume utilizator"
       },
       trakttv_vip_status: {
         ru: "VIP",
         en: "VIP",
-        uk: "VIP"
+        uk: "VIP",
+        ro: "VIP"
       },
       trakttv_vip_enabled: {
         ru: "Активирован",
         en: "Activated",
-        uk: "Активовано"
+        uk: "Активовано",
+        ro: "Activat"
       },
       trakttv_vip_disabled: {
         ru: "Не активирован",
         en: "Not activated",
-        uk: "Не активовано"
+        uk: "Не активовано",
+        ro: "Neactivat"
       },
       trakttv_movies: {
         ru: "Фильмы",
         en: "Movies",
-        uk: "Фільми"
+        uk: "Фільми",
+        ro: "Filme"
       },
       trakttv_watchlist_tab_movies: {
         ru: "Фильмы",
         en: "Movies",
-        uk: "Фільми"
+        uk: "Фільми",
+        ro: "Filme"
       },
       trakttv_watchlist_tab_shows: {
         ru: "Сериалы",
         en: "Shows",
-        uk: "Серіали"
+        uk: "Серіали",
+        ro: "Seriale"
       },
       trakttv_watchlist_sort_more: {
         ru: "Ещё",
         en: "More",
-        uk: "Ще"
+        uk: "Ще",
+        ro: "Mai mult"
       },
       trakttv_watchlist_sort_more_title: {
         ru: "Другие сортировки",
         en: "More sorting",
-        uk: "Інші сортування"
+        uk: "Інші сортування",
+        ro: "Mai multe sortări"
       },
       trakttv_watchlist_sort_rank: {
         ru: "Ранг",
         en: "Rank",
-        uk: "Ранг"
+        uk: "Ранг",
+        ro: "Rang"
       },
       trakttv_watchlist_sort_added: {
         ru: "Дата добавления",
         en: "Added",
-        uk: "Дата додавання"
+        uk: "Дата додавання",
+        ro: "Data adăugării"
       },
       trakttv_watchlist_sort_title: {
         ru: "Название",
         en: "Title",
-        uk: "Назва"
+        uk: "Назва",
+        ro: "Titlu"
       },
       trakttv_watchlist_sort_released: {
         ru: "Релиз",
         en: "Released",
-        uk: "Реліз"
+        uk: "Реліз",
+        ro: "Lansare"
       },
       trakttv_watchlist_sort_runtime: {
         ru: "Длительность",
         en: "Runtime",
-        uk: "Тривалість"
+        uk: "Тривалість",
+        ro: "Durată"
       },
       trakttv_watchlist_sort_popularity: {
         ru: "Популярность",
         en: "Popularity",
-        uk: "Популярність"
+        uk: "Популярність",
+        ro: "Popularitate"
       },
       trakttv_watchlist_sort_random: {
         ru: "Случайно",
         en: "Random",
-        uk: "Випадково"
+        uk: "Випадково",
+        ro: "Aleatoriu"
       },
       trakttv_watchlist_sort_percentage: {
         ru: "Процент",
         en: "Percentage",
-        uk: "Відсоток"
+        uk: "Відсоток",
+        ro: "Procent"
       },
       trakttv_watchlist_sort_imdb_rating: {
         ru: "Рейтинг IMDb",
         en: "IMDb rating",
-        uk: "Рейтинг IMDb"
+        uk: "Рейтинг IMDb",
+        ro: "Rating IMDb"
       },
       trakttv_watchlist_sort_tmdb_rating: {
         ru: "Рейтинг TMDB",
         en: "TMDB rating",
-        uk: "Рейтинг TMDB"
+        uk: "Рейтинг TMDB",
+        ro: "Rating TMDB"
       },
       trakttv_watchlist_sort_rt_tomatometer: {
         ru: "RT Tomatometer",
         en: "RT Tomatometer",
-        uk: "RT Tomatometer"
+        uk: "RT Tomatometer",
+        ro: "RT Tomatometer"
       },
       trakttv_watchlist_sort_rt_audience: {
         ru: "RT Audience",
         en: "RT Audience",
-        uk: "RT Audience"
+        uk: "RT Audience",
+        ro: "RT Audience"
       },
       trakttv_watchlist_sort_metascore: {
         ru: "Metascore",
         en: "Metascore",
-        uk: "Metascore"
+        uk: "Metascore",
+        ro: "Metascore"
       },
       trakttv_watchlist_sort_votes: {
         ru: "Голоса",
         en: "Votes",
-        uk: "Голоси"
+        uk: "Голоси",
+        ro: "Voturi"
       },
       trakttv_watchlist_sort_imdb_votes: {
         ru: "Голоса IMDb",
         en: "IMDb votes",
-        uk: "Голоси IMDb"
+        uk: "Голоси IMDb",
+        ro: "Voturi IMDb"
       },
       trakttv_watchlist_sort_tmdb_votes: {
         ru: "Голоса TMDB",
         en: "TMDB votes",
-        uk: "Голоси TMDB"
+        uk: "Голоси TMDB",
+        ro: "Voturi TMDB"
       },
       trakttv_watchlist_sort_my_rating: {
         ru: "Моя оценка",
         en: "My rating",
-        uk: "Моя оцінка"
+        uk: "Моя оцінка",
+        ro: "Evaluarea mea"
       },
       trakttv_watchlist_sort_watched: {
         ru: "Просмотрено",
         en: "Watched",
-        uk: "Переглянуто"
+        uk: "Переглянуто",
+        ro: "Vizionat"
       },
       trakttv_watchlist_sort_collected: {
         ru: "В коллекции",
         en: "Collected",
-        uk: "У колекції"
+        uk: "У колекції",
+        ro: "În colecție"
       },
       trakttv_watchlist_sort_vip_required: {
         ru: "Это сортирование доступно только для Trakt VIP",
         en: "This sorting is available only for Trakt VIP users",
-        uk: "Це сортування доступне лише для Trakt VIP"
+        uk: "Це сортування доступне лише для Trakt VIP",
+        ro: "Această sortare este disponibilă doar pentru Trakt VIP"
       },
       trakttv_episodes: {
         ru: "Эпизоды",
         en: "Episodes",
-        uk: "Епізоди"
+        uk: "Епізоди",
+        ro: "Episoade"
       },
       trakttv_code: {
         ru: "Код",
         en: "Code",
-        uk: "Код"
+        uk: "Код",
+        ro: "Cod"
       },
       trakttv_auth: {
         ru: "Авторизация Trakt",
         en: "Trakt Auth",
-        uk: "Авторизація Trakt"
+        uk: "Авторизація Trakt",
+        ro: "Autorizare Trakt"
       },
       trakttv_enable_watching: {
         ru: "Включить отслеживание просмотра",
         en: "Enable watch tracking",
-        uk: "Ввімкнути відстеження перегляду"
+        uk: "Ввімкнути відстеження перегляду",
+        ro: "Activare urmărire vizionare"
       },
       trakttv_enable_watching_descr: {
         ru: "Автоматически отмечать просмотренные эпизоды и добавлять сериалы в \"Смотрю\"",
         en: "Automatically mark watched episodes and add series to \"Watching\"",
-        uk: "Автоматично позначати переглянуті епізоди та додавати серіали в \"Дивлюся\""
+        uk: "Автоматично позначати переглянуті епізоди та додавати серіали в \"Дивлюся\"",
+        ro: "Marchează automat episoadele vizionate și adaugă serialele în „Vizionare”"
       },
       trakttv_min_progress_threshold: {
         ru: "Порог просмотра",
         en: "Viewing threshold",
-        uk: "Поріг перегляду"
+        uk: "Поріг перегляду",
+        ro: "Prag vizionare"
       },
       trakttv_min_progress_threshold_descr: {
         ru: "Минимальный процент просмотра для отметки эпизода на Trakt.TV",
         en: "Minimum percentage of viewing to mark an episode on Trakt.TV",
-        uk: "Мінімальний відсоток перегляду для позначення епізоду на Trakt.TV"
+        uk: "Мінімальний відсоток перегляду для позначення епізоду на Trakt.TV",
+        ro: "Procent minim de vizionare pentru a marca un episod pe Trakt.TV"
       },
       trakttv_enable_logging: {
         ru: "Включить логирование",
         en: "Enable logging",
-        uk: "Увімкнути логування"
+        uk: "Увімкнути логування",
+        ro: "Activare jurnal (logging)"
       },
       trakttv_enable_logging_descr: {
         ru: "Логирование для тестирования механизма отслеживания просмотра",
         en: "Logging for testing the watch tracking mechanism",
-        uk: "Логування для тестування механізму відстеження перегляду"
+        uk: "Логування для тестування механізму відстеження перегляду",
+        ro: "Loguri pentru testarea mecanismului de urmărire a vizionării"
       },
       trakttv_card_type_tv: {
         ru: "TV",
         en: "TV",
-        uk: "TV"
+        uk: "TV",
+        ro: "TV"
       },
       trakt_list_title_named: {
         ru: "Список - {name}",
         en: "List - {name}",
-        uk: "Список - {name}"
+        uk: "Список - {name}",
+        ro: "Listă - {name}"
       },
       trakttv_movie_id_missed: {
         ru: "Отсутствует ID фильма",
         en: "Movie ID is missing",
-        uk: "Відсутній ID фільму"
+        uk: "Відсутній ID фільму",
+        ro: "Lipsește ID-ul filmului"
       },
       trakttv_show_id_missed: {
         ru: "Отсутствует ID сериала",
         en: "Show ID is missing",
-        uk: "Відсутній ID серіалу"
+        uk: "Відсутній ID серіалу",
+        ro: "Lipsește ID-ul serialului"
       },
       trakttv_unknown_content: {
         ru: "Неизвестный тип контента",
         en: "Unknown content type",
-        uk: "Невідомий тип контенту"
+        uk: "Невідомий тип контенту",
+        ro: "Tip conținut necunoscut"
       },
       trakttv_show_not_found: {
         ru: "Сериал не найден в Trakt",
         en: "Show not found in Trakt",
-        uk: "Серіал не знайдено в Trakt"
+        uk: "Серіал не знайдено в Trakt",
+        ro: "Serialul nu a fost găsit pe Trakt"
       },
       trakttv_params_missed: {
         ru: "Отсутствуют параметры",
         en: "Params is missing",
-        uk: "Відсутні параметри"
+        uk: "Відсутні параметри",
+        ro: "Parametri lipsă"
       },
       trakttv_media_id_missed: {
         ru: "Отсутствует ID медиа",
         en: "Media ID is missing",
-        uk: "Відсутній ID медіа"
+        uk: "Відсутній ID медіа",
+        ro: "Lipsește ID-ul media"
       },
       trakttv_list_id_missed: {
         ru: "Отсутствует ID списка",
         en: "List ID is missing",
-        uk: "Відсутній ID списку"
+        uk: "Відсутній ID списку",
+        ro: "Lipsește ID-ul listei"
       },
       trakttv_upnext: {
         ru: "Смотреть дальше",
         en: "Up Next",
-        uk: "Дивитись далі"
+        uk: "Дивитись далі",
+        ro: "Urmează la vizionare"
       },
       trakttv_topshelf: {
         ru: "Top Shelf (Apple TV)",
         en: "Top Shelf (Apple TV)",
-        uk: "Top Shelf (Apple TV)"
+        uk: "Top Shelf (Apple TV)",
+        ro: "Top Shelf (Apple TV)"
       },
       trakttv_topshelf_descr: {
         ru: "Обновлять Top Shelf на Apple TV",
         en: "Update Top Shelf on Apple TV",
-        uk: "Оновлювати Top Shelf на Apple TV"
+        uk: "Оновлювати Top Shelf на Apple TV",
+        ro: "Actualizează Top Shelf pe Apple TV"
       },
       trakt_bookmarks_sync_section: {
         ru: "Синхронизация списков Lampa",
         en: "Lampa lists sync",
-        uk: "Синхронізація списків Lampa"
+        uk: "Синхронізація списків Lampa",
+        ro: "Sincronizare liste Lampa"
       },
       trakt_bookmarks_mode: {
         ru: "Режим синхронизации",
         en: "Sync mode",
-        uk: "Режим синхронізації"
+        uk: "Режим синхронізації",
+        ro: "Mod sincronizare"
       },
       trakt_bookmarks_mode_watchlist: {
         ru: "Watchlist",
         en: "Watchlist",
-        uk: "Watchlist"
+        uk: "Watchlist",
+        ro: "Watchlist"
       },
       trakt_bookmarks_mode_my_lists: {
         ru: "Мои списки",
         en: "My Lists",
-        uk: "Мої списки"
+        uk: "Мої списки",
+        ro: "Listele mele"
       },
       trakt_bookmarks_local_type: {
         ru: "Локальный список Lampa",
         en: "Local Lampa list",
-        uk: "Локальний список Lampa"
+        uk: "Локальний список Lampa",
+        ro: "Listă locală Lampa"
       },
       trakt_bookmarks_local_type_description: {
         ru: "Выберите локальный тип, который нужно импортировать или экспортировать",
         en: "Choose which local list type to import or export",
-        uk: "Оберіть локальний тип, який треба імпортувати або експортувати"
+        uk: "Оберіть локальний тип, який треба імпортувати або експортувати",
+        ro: "Alegeți tipul listei locale pentru import sau export"
       },
       trakt_bookmarks_import_button: {
         ru: "Импортировать выбранный список из Trakt",
         en: "Import selected list from Trakt",
-        uk: "Імпортувати вибраний список з Trakt"
+        uk: "Імпортувати вибраний список з Trakt",
+        ro: "Importă lista selectată din Trakt"
       },
       trakt_bookmarks_export_button: {
         ru: "Экспортировать выбранный список в Trakt",
         en: "Export selected list to Trakt",
-        uk: "Експортувати вибраний список у Trakt"
+        uk: "Експортувати вибраний список у Trakt",
+        ro: "Exportă lista selectată în Trakt"
       },
       trakt_bookmarks_auth_required: {
         ru: "Сначала войдите в Trakt.TV",
         en: "Login to Trakt.TV first",
-        uk: "Спочатку увійдіть у Trakt.TV"
+        uk: "Спочатку увійдіть у Trakt.TV",
+        ro: "Mai întâi autentificați-vă pe Trakt.TV"
       },
       trakt_bookmarks_local_unavailable: {
         ru: "Локальное избранное недоступно",
         en: "Local favorites are unavailable",
-        uk: "Локальне вибране недоступне"
+        uk: "Локальне вибране недоступне",
+        ro: "Favoritele locale sunt indisponibile"
       },
       trakt_bookmarks_operation_in_progress: {
         ru: "Синхронизация уже выполняется",
         en: "Sync is already running",
-        uk: "Синхронізація вже виконується"
+        uk: "Синхронізація вже виконується",
+        ro: "Sincronizarea este deja în curs"
       },
       trakt_bookmarks_import_start: {
         ru: "Запуск импорта списка",
         en: "Starting list import",
-        uk: "Запуск імпорту списку"
+        uk: "Запуск імпорту списку",
+        ro: "Pornire import listă"
       },
       trakt_bookmarks_export_start: {
         ru: "Запуск экспорта списка",
         en: "Starting list export",
-        uk: "Запуск експорту списку"
+        uk: "Запуск експорту списку",
+        ro: "Pornire export listă"
       },
       trakt_bookmarks_progress_prepare: {
         ru: "Подготовка",
         en: "Preparing",
-        uk: "Підготовка"
+        uk: "Підготовка",
+        ro: "Pregătire"
       },
       trakt_bookmarks_progress_loading_source: {
         ru: "Загрузка источника",
         en: "Loading source",
-        uk: "Завантаження джерела"
+        uk: "Завантаження джерела",
+        ro: "Încărcare sursă"
       },
       trakt_bookmarks_progress_loading_target: {
         ru: "Загрузка цели",
         en: "Loading target",
-        uk: "Завантаження цілі"
+        uk: "Завантаження цілі",
+        ro: "Încărcare destinație"
       },
       trakt_bookmarks_progress_import: {
         ru: "Импорт элементов",
         en: "Importing items",
-        uk: "Імпорт елементів"
+        uk: "Імпорт елементів",
+        ro: "Importare elemente"
       },
       trakt_bookmarks_progress_export: {
         ru: "Экспорт элементов",
         en: "Exporting items",
-        uk: "Експорт елементів"
+        uk: "Експорт елементів",
+        ro: "Exportare elemente"
       },
       trakt_bookmarks_import_select_list: {
         ru: "Выберите список для импорта",
         en: "Select list to import",
-        uk: "Оберіть список для імпорту"
+        uk: "Оберіть список для імпорту",
+        ro: "Selectați lista pentru import"
       },
       trakt_bookmarks_export_select_list: {
         ru: "Выберите список для экспорта",
         en: "Select list to export",
-        uk: "Оберіть список для експорту"
+        uk: "Оберіть список для експорту",
+        ro: "Selectați lista pentru export"
       },
       trakt_bookmarks_no_lists: {
         ru: "Нет персональных списков",
         en: "No personal lists found",
-        uk: "Немає персональних списків"
+        uk: "Немає персональних списків",
+        ro: "Nicio listă personală găsită"
       },
       trakt_bookmarks_lists_load_error: {
         ru: "Не удалось загрузить персональные списки",
         en: "Failed to load personal lists",
-        uk: "Не вдалося завантажити персональні списки"
+        uk: "Не вдалося завантажити персональні списки",
+        ro: "Eroare la încărcarea listelor personale"
       },
       trakt_bookmarks_added: {
         ru: "Добавлено",
         en: "Added",
-        uk: "Додано"
+        uk: "Додано",
+        ro: "Adăugat"
       },
       trakt_bookmarks_duplicates: {
         ru: "Дубликаты",
         en: "Duplicates",
-        uk: "Дублікати"
+        uk: "Дублікати",
+        ro: "Duplicate"
       },
       trakt_bookmarks_skipped_unsupported: {
         ru: "Пропущено (без TMDB)",
         en: "Skipped (no TMDB)",
-        uk: "Пропущено (без TMDB)"
+        uk: "Пропущено (без TMDB)",
+        ro: "Omis (fără TMDB)"
       },
       trakt_bookmarks_failed: {
         ru: "Ошибки",
         en: "Failed",
-        uk: "Помилки"
+        uk: "Помилки",
+        ro: "Eșuat"
       },
       trakt_bookmarks_import_done: {
         ru: "Импорт завершен",
         en: "Import completed",
-        uk: "Імпорт завершено"
+        uk: "Імпорт завершено",
+        ro: "Import finalizat"
       },
       trakt_bookmarks_export_done: {
         ru: "Экспорт завершен",
         en: "Export completed",
-        uk: "Експорт завершено"
+        uk: "Експорт завершено",
+        ro: "Export finalizat"
       },
       trakt_bookmarks_canceled: {
         ru: "Операция отменена",
         en: "Operation canceled",
-        uk: "Операцію скасовано"
+        uk: "Операцію скасовано",
+        ro: "Operațiune anulată"
       },
       trakt_bookmarks_sync_failed: {
         ru: "Ошибка синхронизации списка",
         en: "List sync failed",
-        uk: "Помилка синхронізації списку"
+        uk: "Помилка синхронізації списку",
+        ro: "Sincronizare listă eșuată"
       },
       trakttv_scan_qr_code: {
         ru: "Отсканируйте QR-код",
         en: "Scan QR code",
-        uk: "Відскануйте QR-код"
+        uk: "Відскануйте QR-код",
+        ro: "Scanați codul QR"
       },
       trakttv_scan_qr: {
         ru: "Отсканируйте QR-код",
         en: "Scan QR code",
-        uk: "Відскануйте QR-код"
+        uk: "Відскануйте QR-код",
+        ro: "Scanați codul QR"
       },
       trakttv_settings_thanks: {
         ru: "Подяка",
         en: "Thanks",
-        uk: "Подяка"
+        uk: "Подяка",
+        ro: "Mulțumesc"
       },
       trakttv_settings_thanks_description: {
         ru: "Поддержка развития TraktTV-плагина добровольная. Спасибо за вклад.",
         en: "Support for TraktTV plugin development is voluntary. Thank you for your contribution.",
-        uk: "Підтримка розвитку плагіна TraktTV добровільна. Дякуємо за внесок."
+        uk: "Підтримка розвитку плагіна TraktTV добровільна. Дякуємо за внесок.",
+        ro: "Susținerea dezvoltării plugin-ului TraktTV este voluntară. Vă mulțumim pentru contribuție."
       }
     });
   }
