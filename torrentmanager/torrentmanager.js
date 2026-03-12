@@ -381,308 +381,367 @@
       clientChoose: {
         ru: "Выбор клиента",
         en: "Select client",
-        uk: "Вибір клієнта",
-        zh: "选择客户端"
+        uk: "Вибір клієnta",
+        zh: "选择客户端",
+        ro: "Selectați clientul"
       },
       pathMovie: {
         "ru": "Путь сохранения фильмов",
         "en": "Path to save movies",
-        "uk": "Шлях збереження фільмів"
+        "uk": "Шлях збереження фільмів",
+        "ro": "Calea de salvare a filmelor"
       },
       pathTV: {
         "ru": "Путь сохранения сериалов",
         "en": "Path to save TV shows",
-        "uk": "Шлях збереження серіалів"
+        "uk": "Шлях збереження серіалів",
+        "ro": "Calea de salvare a serialelor"
       },
       pathMovieQbit: {
         "ru": "Категория/Метка для фильмов",
         "en": "Category/Label for movies",
-        "uk": "Категорія/Мітка для фільмів"
+        "uk": "Категорія/Мітка pentru фільмів",
+        "ro": "Categorie/Etichetă pentru filme"
       },
       pathTVQbit: {
         "ru": "Категория/Метка для сериалов",
         "en": "Category/Label for TV shows",
-        "uk": "Категорія/Мітка для серіалів"
+        "uk": "Категорія/Мітка pentru серіалів",
+        "ro": "Categorie/Etichetă pentru seriale"
       },
       universalAction: {
         ru: "Действие",
         en: "Action",
         uk: "Дія",
-        zh: "行动"
+        zh: "行动",
+        ro: "Acțiune"
       },
       openUniversal: {
         ru: "Открывать в клиенте",
         en: "Open in external client",
         uk: "Відкрити у застосунку",
-        zh: "在外部客户端打开"
+        zh: "在外部客户端打开",
+        ro: "Deschide în client extern"
       },
       copyUniversal: {
         ru: "Копировать ссылку",
         en: "Copy link",
         uk: "Скопіювати посилання",
-        zh: "复制到缓冲区"
+        zh: "复制到缓冲区",
+        ro: "Copiază link-ul"
       },
       tweak: {
         ru: "Tweak",
         en: "Tweak",
         uk: "Tweak",
-        zh: "高级设置"
+        zh: "高级设置",
+        ro: "Optimizare (Tweak)"
       },
       LMEProxy: {
         ru: "Прокси",
         en: "Proxy",
         uk: "Проксі",
-        zh: "Proxy"
+        zh: "Proxy",
+        ro: "Proxy"
       },
       LMEProxyDescription: {
         en: "The proxy service from the LME project can help when connecting through external addresses. For example, Keenetic or Synology DNS",
         ru: "Прокси сервис от проекта LME, может помочь при подключении через внешние адреса. Например Keenetic или Synology DNS",
-        uk: "Проксі-сервіс від проєкту LME може допомогти при підключенні через зовнішні адреси. Наприклад, Keenetic або Synology DNS"
+        uk: "Проксі-сервіс від проєкту LME може допомогти при підключенні через зовнішні адреси. Наприклад, Keenetic або Synology DNS",
+        ro: "Serviciul proxy din proiectul LME poate ajuta la conectarea prin adrese externe. De exemplu, Keenetic sau Synology DNS"
       },
       TransmissionRPCRoute: {
         ru: "RPC Path",
         en: "RPC Path",
         uk: "RPC Path",
-        zh: "RPC 路径"
+        zh: "RPC 路径",
+        ro: "Cale RPC"
       },
       TransmissionRPCRouteDescription: {
         ru: "Изменение пути API. Не трогать без необходимости, если используете KeenDNS указать /app/transmission/rpc",
         en: "Change api route. Do not change without need, if you use KeenDNS, specify /app/transmission/rpc",
         uk: "Змінити маршрут API. Не чіпати без нагальної потреби, якщо ви використовуєте KeenDNS, вкажіть /app/transmission/rpc",
-        zh: "更改API路径。如无必要，请勿更改, 如使用 KeenDNS，请指定 /app/transmission/rpc"
+        zh: "更改API路径。如无必要，请勿更改, 如使用 KeenDNS，请指定 /app/transmission/rpc",
+        ro: "Modifică ruta API. Nu schimbați fără necesitate, dacă folosiți KeenDNS, specificați /app/transmission/rpc"
       },
       //Auth
       AuthSuccess: {
         en: "Authentication successful",
         ru: "Аутентификация успешна",
-        uk: "Аутентифікація успішна"
+        uk: "Аутентифікація успішна",
+        ro: "Autentificare reușită"
       },
       AuthDenied: {
         en: "Authentication denied",
         ru: "Аутентификация отклонена",
-        uk: "Аутентифікацію відхилено"
+        uk: "Аутентифікацію відхилено",
+        ro: "Autentificare respinsă"
       },
       torrentmanager_auth_mode: {
         en: "Auth mode",
         ru: "Режим авторизации",
-        uk: "Режим авторизації"
+        uk: "Режим авторизації",
+        ro: "Mod autentificare"
       },
       torrentmanager_auth_mode_session: {
         en: "Session (qB <= 5.1)",
         ru: "Сессия (qB <= 5.1)",
-        uk: "Сесія (qB <= 5.1)"
+        uk: "Сесія (qB <= 5.1)",
+        ro: "Sesiune (qB <= 5.1)"
       },
       torrentmanager_auth_mode_apikey: {
         en: "API key (qB >= 5.2 beta)",
         ru: "API key (qB >= 5.2 beta)",
-        uk: "API key (qB >= 5.2 beta)"
+        uk: "API key (qB >= 5.2 beta)",
+        ro: "Cheie API (qB >= 5.2 beta)"
       },
       torrentmanager_api_key: {
         en: "API key",
         ru: "API key",
-        uk: "API key"
+        uk: "API key",
+        ro: "Cheie API"
       },
       torrentmanager_test_connection: {
         en: "Test connection",
         ru: "Проверить подключение",
-        uk: "Перевірити підключення"
+        uk: "Перевірити підключення",
+        ro: "Testează conexiunea"
       },
       torrentmanager_reauth_now: {
         en: "Re-auth now",
         ru: "Переавторизоваться",
-        uk: "Переавторизуватись"
+        uk: "Переавторизуватись",
+        ro: "Re-autentificare acum"
       },
       torrentmanager_retry: {
         en: "Retry",
         ru: "Повторить",
-        uk: "Повторити"
+        uk: "Повторити",
+        ro: "Reîncearcă"
       },
       torrentmanager_open_settings: {
         en: "Open settings",
         ru: "Открыть настройки",
-        uk: "Відкрити налаштування"
+        uk: "Відкрити налаштування",
+        ro: "Deschide setările"
       },
       torrentmanager_state_loading: {
         en: "Loading torrents",
         ru: "Загрузка торрентов",
-        uk: "Завантаження торрентів"
+        uk: "Завантаження торрентів",
+        ro: "Se încarcă torrentele"
       },
       torrentmanager_state_empty_title: {
         en: "No torrents found",
         ru: "Торренты не найдены",
-        uk: "Торрентів не знайдено"
+        uk: "Торрентів не знайдено",
+        ro: "Nu s-au găsit torrente"
       },
       torrentmanager_state_empty_description: {
         en: "The list is empty right now",
         ru: "Список сейчас пуст",
-        uk: "Список зараз порожній"
+        uk: "Список зараз порожній",
+        ro: "Lista este goală în acest moment"
       },
       torrentmanager_state_auth_title: {
         en: "Authorization required",
         ru: "Требуется авторизация",
-        uk: "Потрібна авторизація"
+        uk: "Потрібна авторизація",
+        ro: "Necesită autentificare"
       },
       torrentmanager_state_auth_description: {
         en: "Check credentials and reconnect to the torrent client",
         ru: "Проверьте учетные данные и повторите подключение к торрент-клиенту",
-        uk: "Перевірте облікові дані та повторіть підключення до торрент-клієнта"
+        uk: "Перевірте облікові дані та повторіть підключення до торрент-клієнта",
+        ro: "Verifică datele de acces și reconectează-te la clientul torrent"
       },
       torrentmanager_state_network_title: {
         en: "Connection error",
         ru: "Ошибка соединения",
-        uk: "Помилка з'єднання"
+        uk: "Помилка з'єднання",
+        ro: "Eroare de conexiune"
       },
       torrentmanager_state_network_description: {
         en: "Cannot reach torrent client. Check address, proxy, and network",
         ru: "Не удалось подключиться к торрент-клиенту. Проверьте адрес, прокси и сеть",
-        uk: "Не вдалося підключитися до торрент-клієнта. Перевірте адресу, проксі та мережу"
+        uk: "Не вдалося підключитися до торрент-клієнта. Перевірте адресу, проксі та мережу",
+        ro: "Clientul torrent nu poate fi accesat. Verifică adresa, proxy-ul și rețeaua"
       },
       torrentmanager_state_server_title: {
         en: "Server unavailable",
         ru: "Сервер недоступен",
-        uk: "Сервер недоступний"
+        uk: "Сервер недоступний",
+        ro: "Server indisponibil"
       },
       torrentmanager_state_server_description: {
         en: "Torrent client returned a server error",
         ru: "Торрент-клиент вернул серверную ошибку",
-        uk: "Торрент-клієнт повернув серверну помилку"
+        uk: "Торрент-клієнт повернув серверну помилку",
+        ro: "Clientul torrent a raportat o eroare de server"
       },
       torrentmanager_secret_set: {
         en: "saved",
         ru: "сохранен",
-        uk: "збережено"
+        uk: "збережено",
+        ro: "salvat"
       },
       torrentmanager_secret_not_set: {
         en: "not set",
         ru: "не задан",
-        uk: "не задано"
+        uk: "не задано",
+        ro: "nesetat"
       },
       torrentmanager_secret_saved: {
         en: "Secret updated",
         ru: "Секрет обновлен",
-        uk: "Секрет оновлено"
+        uk: "Секрет оновлено",
+        ro: "Secret actualizat"
       },
       //Panel
       clientNotClient: {
         en: "Either the client is not configured or the server is not responding, check the console, you might find the answer there",
         ru: "Или клиент не настроен или сервер не отвечает, узри консоль, возможно там найдешь ответ",
-        uk: "Або клієнт не налаштований, або сервер не відповідає, перевір консоль, можливо там знайдеш відповідь"
+        uk: "Або клієнт не налаштований, або сервер не відповідає, перевір консоль, можливо там знайдеш відповідь",
+        ro: "Clientul nu este configurat sau serverul nu răspunde, verifică consola pentru detalii"
       },
       somethingWentWrong: {
         en: "Something went wrong",
         ru: "Что-то пошло не так",
-        uk: "Щось пішло не так"
+        uk: "Щось пішло не так",
+        ro: "Ceva nu a mers bine"
       },
       //Panel action
       actionWithTorrent: {
         en: "Action with torrent",
         ru: "Действие с торрентом",
-        uk: "Дія з торрентом"
+        uk: "Дія з торрентом",
+        ro: "Acțiune cu torrentul"
       },
       resume: {
         en: "Resume",
         ru: "Возобновить",
-        uk: "Відновити"
+        uk: "Відновити",
+        ro: "Reia"
       },
       pause: {
         en: "Pause",
         ru: "Пауза",
-        uk: "Пауза"
+        uk: "Пауза",
+        ro: "Pauză"
       },
       "delete": {
         en: "Delete",
         ru: "Удалить",
-        uk: "Видалити"
+        uk: "Видалити",
+        ro: "Șterge"
       },
       fullDelete: {
         en: "Full delete",
         ru: "Полное удаление",
-        uk: "Повне видалення"
+        uk: "Повне видалення",
+        ro: "Ștergere completă"
       },
       actionSentSuccessfully: {
         "en": "Action sent successfully",
         "ru": "Действие успешно отправлено",
-        "uk": "Дію успішно надіслано"
+        "uk": "Дію успішно надіслано",
+        "ro": "Acțiune trimisă cu succes"
       },
       actionReturnedError: {
         en: "Action returned an error",
         ru: "Действие вернуло ошибку",
-        uk: "Дія повернула помилку"
+        uk: "Дія повернула помилку",
+        ro: "Acțiunea a returnat o eroare"
       },
       torrent_select_file: {
         en: "Select file to play",
         ru: "Выберите файл для воспроизведения",
-        uk: "Виберіть файл для відтворення"
+        uk: "Виберіть файл для відтворення",
+        ro: "Selectați fișierul pentru redare"
       },
       sort_by_name: {
         en: "Sort by name",
         ru: "Сортировать по имени",
-        uk: "Сортувати за назвою"
+        uk: "Сортувати за назвою",
+        ro: "Sortare după nume"
       },
       sort_by_size: {
         en: "Sort by size",
         ru: "Сортировать по размеру",
-        uk: "Сортувати за розміром"
+        uk: "Сортувати за розміром",
+        ro: "Sortare după mărime"
       },
       sort_by_progress: {
         en: "Sort by progress",
         ru: "Сортировать по прогрессу",
-        uk: "Сортувати за прогресом"
+        uk: "Сортувати за прогресом",
+        ro: "Sortare după progres"
       },
       openCard: {
         en: "Open",
         ru: "Открыть",
-        uk: "Відкрити"
+        uk: "Відкрити",
+        ro: "Deschide"
       },
       add_metadata: {
         en: "Add metadata",
         ru: "Добавить метаданные",
-        uk: "Додати метадані"
+        uk: "Додати метадані",
+        ro: "Adaugă metadate"
       },
       torrentmanager_nothing_found: {
         en: "Nothing found",
         ru: "Ничего не найдено",
-        uk: "Нічого не знайдено"
+        uk: "Нічого не знайдено",
+        ro: "Nu s-a găsit nimic"
       },
       torrentmanager_metadata_updated: {
         en: "Metadata updated",
         ru: "Метаданные обновлены",
-        uk: "Метадані оновлено"
+        uk: "Метадані оновлено",
+        ro: "Metadate actualizate"
       },
       torrentmanager_metadata_error: {
         en: "Metadata error",
         ru: "Ошибка метаданных",
-        uk: "Помилка метаданів"
+        uk: "Помилка метаданів",
+        ro: "Eroare metadate"
       },
       torrentmanager_metadata_updated_all: {
         en: "Metadata updated",
         ru: "Метаданные обновлены",
-        uk: "Метадані оновлено"
+        uk: "Метадані оновлено",
+        ro: "Metadate actualizate"
       },
       torrentmanager_metadata_added: {
         en: "Metadata added",
         ru: "Метаданные добавлены",
-        uk: "Метадані додано"
+        uk: "Метадані додано",
+        ro: "Metadate adăugate"
       },
       add_metadata_all: {
         en: "Parse all",
         ru: "Парсить все",
-        uk: "Парсити все"
+        uk: "Парсити все",
+        ro: "Procesează tot"
       },
       torrentmanager_settings_thanks: {
         en: "Thanks",
         ru: "Благодарность",
-        uk: "Подяка"
+        uk: "Подяка",
+        ro: "Mulțumesc"
       },
       torrentmanager_settings_thanks_description: {
         en: "Support for Torrent Manager development is voluntary. Thank you for your contribution.",
         ru: "Поддержка развития Torrent Manager добровольная. Спасибо за вклад.",
-        uk: "Підтримка розвитку Torrent Manager добровільна. Дякуємо за внесок."
+        uk: "Підтримка розвитку Torrent Manager добровільна. Дякуємо за внесок.",
+        ro: "Susținerea dezvoltării Torrent Manager este voluntară. Vă mulțumim pentru contribuție."
       },
       selectResult: {
         en: "Select result",
         ru: "Выберите результат",
-        uk: "Виберіть результат"
+        uk: "Виберіть результат",
+        ro: "Selectați rezultatul"
       }
     });
   }
