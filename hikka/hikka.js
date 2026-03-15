@@ -142,6 +142,12 @@
     MAL_API: function MAL_API(id) {
       return 'https://animeapi.my.id/myanimelist/' + id;
     },
+    JIKAN_ANIME_VIDEOS: function JIKAN_ANIME_VIDEOS(malId) {
+      return 'https://api.jikan.moe/v4/anime/' + encodeURIComponent(malId) + '/videos';
+    },
+    YT_RESOLVE: function YT_RESOLVE(videoId) {
+      return 'https://apx.lme.isroot.in/yt?videoId=' + encodeURIComponent(videoId);
+    },
     TRAKT_SEARCH: function TRAKT_SEARCH(id, type) {
       return 'https://api.trakt.tv/search/trakt/' + id + '?type=' + type;
     }
@@ -830,6 +836,8 @@
   var Cache$1 = new Cache();
 
   var network = new Lampa.Reguest();
+  var trailerVideoCache = new Map();
+  var trailerVideoPending = new Map();
   function isSeasonYearTuple(value) {
     return Array.isArray(value) && value.length === 2 && typeof value[0] === 'string' && (typeof value[1] === 'number' || typeof value[1] === 'string');
   }
@@ -846,6 +854,100 @@
     // Для сумісності дублюємо один елемент.
     if (normalized.length === 1) return [normalized[0], normalized[0]];
     return normalized;
+  }
+  function safeJsonParse(data) {
+    if (typeof data !== 'string') return data;
+    try {
+      return JSON.parse(data);
+    } catch (e) {
+      return null;
+    }
+  }
+  function normalizeYoutubeId(value) {
+    var id = String(value || '').trim();
+    if (!id) return '';
+    if (!/^[A-Za-z0-9_-]{6,20}$/.test(id)) return '';
+    return id;
+  }
+  function extractYoutubeIdFromEmbedUrl(url) {
+    var source = String(url || '').trim();
+    if (!source) return '';
+    var embedMatch = source.match(/\/embed\/([A-Za-z0-9_-]{6,20})/i);
+    if (embedMatch && embedMatch[1]) return normalizeYoutubeId(embedMatch[1]);
+    var watchMatch = source.match(/[?&]v=([A-Za-z0-9_-]{6,20})/i);
+    if (watchMatch && watchMatch[1]) return normalizeYoutubeId(watchMatch[1]);
+    return '';
+  }
+  function normalizeTrailerCandidate() {
+    var item = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+    var trailer = item && _typeof(item.trailer) === 'object' ? item.trailer : item;
+    var youtubeId = normalizeYoutubeId(trailer && trailer.youtube_id) || extractYoutubeIdFromEmbedUrl(trailer && trailer.embed_url) || extractYoutubeIdFromEmbedUrl(trailer && trailer.url);
+    return {
+      index: Number(index || 0),
+      title: String(item && item.title || '').trim(),
+      youtube_id: youtubeId
+    };
+  }
+  function parsePvOrder(title) {
+    var text = String(title || '');
+    if (!/\bpv\b/i.test(text)) return 9999;
+    var match = text.match(/\bpv[^0-9]*([0-9]{1,3})\b/i);
+    if (!match || !match[1]) return 9999;
+    var value = Number(match[1]);
+    return value > 0 ? value : 9999;
+  }
+  function pickTrailerCandidate(candidates) {
+    var list = Array.isArray(candidates) ? candidates.filter(function (item) {
+      return item && item.youtube_id;
+    }) : [];
+    if (!list.length) return null;
+    var announcement = list.find(function (item) {
+      return /announcement/i.test(String(item.title || ''));
+    });
+    if (announcement) return announcement;
+    var pvList = list.filter(function (item) {
+      return /\bpv\b/i.test(String(item.title || ''));
+    }).map(function (item) {
+      return _objectSpread2(_objectSpread2({}, item), {}, {
+        pv_order: parsePvOrder(item.title)
+      });
+    }).sort(function (a, b) {
+      var byOrder = Number(a.pv_order || 9999) - Number(b.pv_order || 9999);
+      if (byOrder !== 0) return byOrder;
+      return Number(a.index || 0) - Number(b.index || 0);
+    });
+    if (pvList.length) return pvList[0];
+    return list[0];
+  }
+  function resolveTrailerCandidateFromJikan(payload) {
+    var data = payload && payload.data ? payload.data : null;
+    if (!data || _typeof(data) !== 'object') return null;
+    var pools = [Array.isArray(data.promo) ? data.promo : [], Array.isArray(data.episodes) ? data.episodes : [], Array.isArray(data.music_videos) ? data.music_videos : []];
+    var candidates = [];
+    pools.forEach(function (items) {
+      items.forEach(function (item, index) {
+        var candidate = normalizeTrailerCandidate(item, index);
+        if (candidate.youtube_id) candidates.push(candidate);
+      });
+    });
+    return pickTrailerCandidate(candidates);
+  }
+  function flushTrailerVideoQueue(key, payload, reason) {
+    var waiters = trailerVideoPending.get(key) || [];
+    trailerVideoPending["delete"](key);
+    if (payload && payload.stream_link) {
+      trailerVideoCache.set(key, payload);
+    }
+    waiters.forEach(function (waiter) {
+      if (payload && typeof waiter.success === 'function') {
+        waiter.success(payload);
+        return;
+      }
+      if (!payload && typeof waiter.error === 'function') {
+        waiter.error(reason || 'Trailer resolve failed');
+      }
+    });
   }
   var Api = {
     buildFullPayloadFromDetails: buildFullPayloadFromDetails,
@@ -981,6 +1083,56 @@
       } catch (e) {
         console.log('[Hikka] cancelRequests error:', e);
       }
+    },
+    resolveTrailerBackgroundByMalId: function resolveTrailerBackgroundByMalId(malId, success, error) {
+      var numericMalId = Number(malId || 0);
+      if (!numericMalId) {
+        if (error) error('No mal_id');
+        return;
+      }
+      var key = String(numericMalId);
+      if (trailerVideoCache.has(key)) {
+        if (success) success(trailerVideoCache.get(key));
+        return;
+      }
+      var waiter = {
+        success: success,
+        error: error
+      };
+      if (trailerVideoPending.has(key)) {
+        trailerVideoPending.get(key).push(waiter);
+        return;
+      }
+      trailerVideoPending.set(key, [waiter]);
+      var fail = function fail(reason) {
+        flushTrailerVideoQueue(key, null, reason);
+      };
+      network.silent(ENDPOINTS.JIKAN_ANIME_VIDEOS(numericMalId), function (rawJikan) {
+        var jikanPayload = safeJsonParse(rawJikan);
+        var trailer = resolveTrailerCandidateFromJikan(jikanPayload);
+        if (!trailer || !trailer.youtube_id) {
+          fail('No trailer video id');
+          return;
+        }
+        network.silent(ENDPOINTS.YT_RESOLVE(trailer.youtube_id), function (rawYt) {
+          var ytPayload = safeJsonParse(rawYt);
+          var streamLink = String(ytPayload && ytPayload.link || '').trim();
+          if (!streamLink) {
+            fail('No trailer stream link');
+            return;
+          }
+          flushTrailerVideoQueue(key, {
+            mal_id: numericMalId,
+            youtube_id: trailer.youtube_id,
+            trailer_title: trailer.title || '',
+            stream_link: streamLink
+          });
+        }, function (ytError) {
+          fail(ytError || 'YT resolve failed');
+        });
+      }, function (jikanError) {
+        fail(jikanError || 'Jikan request failed');
+      });
     },
     getScheduleAnime: function getScheduleAnime(filters) {
       var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
@@ -1478,8 +1630,9 @@
           // КРИТИЧНО: спочатку оновлюємо скрол
           scroll.update(render[0]);
           var card_data = element;
-          if (card_data.img || card_data.poster) {
-            Lampa.Background.change(card_data.img || card_data.poster);
+          var image = card_data.img || card_data.poster;
+          if (image) {
+            Lampa.Background.change(image);
           }
         });
 
@@ -4679,12 +4832,175 @@
     }
   };
 
+  var root = null;
+  var video = null;
+  var hls = null;
+  var currentUrl = '';
+  var playToken = 0;
+  var listenerBound = false;
+  function teardownHls() {
+    if (!hls) return;
+    try {
+      if (typeof hls.destroy === 'function') hls.destroy();
+    } catch (e) {}
+    hls = null;
+  }
+  function ensureRoot() {
+    if (root) return;
+    root = document.createElement('div');
+    root.className = 'hikka-video-background';
+    root.innerHTML = '<video class="hikka-video-background__video" muted playsinline webkit-playsinline preload="auto" loop></video>';
+    video = root.querySelector('video');
+    if (video) {
+      video.muted = true;
+      video.volume = 0;
+      video.addEventListener('playing', function () {
+        if (!root) return;
+        root.classList.add('is-visible');
+      });
+    }
+    document.body.appendChild(root);
+  }
+  function bindGlobalCleanup() {
+    if (listenerBound) return;
+    listenerBound = true;
+    if (!Lampa || !Lampa.Listener || typeof Lampa.Listener.follow !== 'function') return;
+    Lampa.Listener.follow('activity', function (event) {
+      if (!event || event.type !== 'start') return;
+      stop();
+    });
+  }
+  function clearVideoSrc() {
+    if (!video) return;
+    try {
+      video.pause();
+    } catch (e) {}
+    try {
+      video.removeAttribute('src');
+      video.load();
+    } catch (e) {}
+  }
+  function stop() {
+    playToken += 1;
+    currentUrl = '';
+    teardownHls();
+    clearVideoSrc();
+    if (root) root.classList.remove('is-visible');
+  }
+  function playNative(url, token, onError) {
+    if (!video) return false;
+    var handled = false;
+    var fail = function fail(reason) {
+      if (handled) return;
+      handled = true;
+      if (token !== playToken) return;
+      stop();
+      if (typeof onError === 'function') onError(reason || 'native video error');
+    };
+    var runPlay = function runPlay() {
+      if (handled) return;
+      handled = true;
+      if (token !== playToken) return;
+      var playPromise = video.play();
+      if (playPromise && typeof playPromise["catch"] === 'function') {
+        playPromise["catch"](function () {
+          stop();
+          if (typeof onError === 'function') onError('native play failed');
+        });
+      }
+    };
+    video.addEventListener('error', function () {
+      return fail('native error');
+    }, {
+      once: true
+    });
+    video.src = url;
+    if (video.readyState >= 2) {
+      runPlay();
+    } else {
+      video.addEventListener('canplay', runPlay, {
+        once: true
+      });
+    }
+    return true;
+  }
+  function playHls(url, token, onError) {
+    var HlsClass = window.Hls;
+    if (!HlsClass || typeof HlsClass.isSupported !== 'function' || !HlsClass.isSupported()) {
+      return false;
+    }
+    try {
+      hls = new HlsClass();
+      hls.attachMedia(video);
+      hls.on(HlsClass.Events.MEDIA_ATTACHED, function () {
+        if (token !== playToken || !hls) return;
+        hls.loadSource(url);
+      });
+      hls.on(HlsClass.Events.MANIFEST_PARSED, function () {
+        if (token !== playToken) return;
+        var playPromise = video.play();
+        if (playPromise && typeof playPromise["catch"] === 'function') {
+          playPromise["catch"](function () {
+            stop();
+            if (typeof onError === 'function') onError('hls play failed');
+          });
+        }
+      });
+      hls.on(HlsClass.Events.ERROR, function (event, data) {
+        if (!data || !data.fatal) return;
+        if (token !== playToken) return;
+        stop();
+        if (typeof onError === 'function') onError(data.details || 'hls fatal error');
+      });
+      return true;
+    } catch (e) {
+      stop();
+      if (typeof onError === 'function') onError('hls init failed');
+      return false;
+    }
+  }
+  function play(url, onError) {
+    var source = String(url || '').trim();
+    if (!source) {
+      stop();
+      return false;
+    }
+    ensureRoot();
+    bindGlobalCleanup();
+    if (!video) return false;
+    if (source === currentUrl && root && root.classList.contains('is-visible')) {
+      return true;
+    }
+    playToken += 1;
+    var token = playToken;
+    currentUrl = source;
+    teardownHls();
+    clearVideoSrc();
+    if (root) root.classList.remove('is-visible');
+    var canPlayNativeHls = typeof video.canPlayType === 'function' && !!video.canPlayType('application/vnd.apple.mpegurl');
+    var isHlsUrl = /\.m3u8($|\?)/i.test(source);
+    if (!isHlsUrl || canPlayNativeHls) {
+      return playNative(source, token, onError);
+    }
+    if (playHls(source, token, onError)) return true;
+    if (typeof onError === 'function') onError('hls not supported');
+    return false;
+  }
+  var VideoBackground = {
+    play: play,
+    stop: stop,
+    current: function current() {
+      return currentUrl;
+    }
+  };
+
   function overrideFullChipsAndDiscuss() {
     var tagsObserver = null;
     var uiObserver = null;
     var cleanupBusy = false;
     var currentMovie = null;
     var currentFullBody = null;
+    var fullVideoRequestToken = 0;
     var lastApplecationApplyAt = 0;
     var applecationApplyLock = false;
     var lazyDiscussCache = new Map();
@@ -5182,6 +5498,8 @@
       currentFullBody = null;
       applecationApplyLock = false;
       lastApplecationApplyAt = 0;
+      fullVideoRequestToken += 1;
+      VideoBackground.stop();
       setHikkaFullState(false);
       if (restoreTheme) restoreBackgroundTheme();
     }
@@ -5193,6 +5511,25 @@
       if (hasBackdropImage(movie)) return;
       if (!Lampa || !Lampa.Background || typeof Lampa.Background.theme !== 'function') return;
       Lampa.Background.theme('black');
+    }
+    function resolveVideoBackgroundForFull(movie) {
+      if (!movie || hasBackdropImage(movie)) {
+        fullVideoRequestToken += 1;
+        VideoBackground.stop();
+        return;
+      }
+      var malId = Number(movie.mal_id || movie.kinopoisk_id || 0);
+      if (!malId) return;
+      var token = ++fullVideoRequestToken;
+      Api.resolveTrailerBackgroundByMalId(malId, function (payload) {
+        if (token !== fullVideoRequestToken) return;
+        var streamLink = String(payload && payload.stream_link || '').trim();
+        if (!streamLink) return;
+        VideoBackground.play(streamLink, function () {
+          if (token !== fullVideoRequestToken) return;
+          applyDarkBackgroundFallback(movie);
+        });
+      }, function () {});
     }
     function restoreBackgroundTheme() {
       if (!Lampa || !Lampa.Background || typeof Lampa.Background.theme !== 'function') return;
@@ -5737,6 +6074,7 @@
           var movie = e.data && e.data.movie ? e.data.movie : null;
           currentMovie = movie;
           applyDarkBackgroundFallback(movie);
+          resolveVideoBackgroundForFull(movie);
           rebindChips(movie);
           _updateEpisodesHeader(movie);
           updateTypeBadge(movie);
@@ -5776,6 +6114,8 @@
         lazyCastWaiters.clear();
         currentMovie = null;
         currentFullBody = null;
+        fullVideoRequestToken += 1;
+        VideoBackground.stop();
         setHikkaFullState(false);
         restoreBackgroundTheme();
       }
@@ -6054,7 +6394,7 @@
   }
   function init() {
     // Додаємо стилі для плагіну через шаблонну систему
-    Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card .card__quality{text-transform:none}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-character{padding:2em 1.5em}.hikka-character__body{max-width:48em;margin:0 auto}.hikka-character__content{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.hikka-character__image{width:12em;height:12em;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%;-webkit-box-shadow:0 .6em 1.4em rgba(0,0,0,0.35);box-shadow:0 .6em 1.4em rgba(0,0,0,0.35)}.hikka-character__name{font-size:1.8em;font-weight:700;color:rgba(255,255,255,0.8)}.hikka-character__role{font-size:1.1em;color:rgba(255,255,255,0.6)}.hikka-character__meta{display:grid;gap:.4em;padding:.8em 1em;-webkit-border-radius:.8em;border-radius:.8em;background:rgba(255,255,255,0.06)}.hikka-character__meta-row{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:.95em}.hikka-character__meta-label{color:rgba(255,255,255,0.6)}.hikka-character__meta-value{color:rgba(255,255,255,0.8)}.hikka-character__description{max-width:40em;line-height:1.6;color:rgba(255,255,255,0.8)}.hikka-full-active .full-descr__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .full-descr__text .hikka-md-list{margin:.3em 0 .35em 1.25em;padding:0}.hikka-full-active .full-descr__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em;margin:.45em 0 .55em}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;min-height:1.82em;padding:0 .62em;-webkit-border-radius:.62em;border-radius:.62em;font-size:.88em;line-height:1.2;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.1);color:rgba(243,247,255,0.9)}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item--rating{border-color:rgba(255,214,102,0.42);background:rgba(255,214,102,0.16);color:rgba(255,233,166,0.96)}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item--status{background:rgba(129,255,175,0.11)}.hikka-full-active .applecation .applecation__description.hikka-applecation-description,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description{white-space:normal;line-height:1.35;color:rgba(239,245,255,0.9)}.hikka-full-active .applecation .applecation__description.hikka-applecation-description>span,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description>span{display:block;margin:.03em 0 .2em}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-link,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-link{color:rgba(171,210,255,0.98);text-decoration:underline}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-list,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-list{margin:.22em 0 .34em 1.05em;padding:0}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-quote,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-quote{margin:.28em 0;padding:.28em .52em;border-left:.18em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.08);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .applecation .full-episode__name{line-height:1.22 !important;margin-bottom:.22em !important}.hikka-full-active .applecation .full-episode__overview{line-height:1.25 !important;min-height:0 !important;height:auto !important;margin-bottom:.3em !important}.hikka-full-active .applecation .full-episode__overview:empty{display:none !important;margin-bottom:0 !important}.hikka-full-active .applecation .full-episode__date{margin-top:0 !important;line-height:1.2 !important}.hikka-full-active .full-review-add,.hikka-full-active .full-review__footer,.hikka-full-active .full-review__like,.hikka-full-active .full-review__like-icon{display:none !important}.hikka-full-active .mapping--line>.hikka-comment-card{min-width:17em;max-width:21em;padding:.9em;-webkit-border-radius:.9em;border-radius:.9em;background:-webkit-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:-o-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:linear-gradient(160deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));border:1px solid rgba(255,255,255,0.16);-webkit-box-shadow:0 10px 24px rgba(0,0,0,0.28);box-shadow:0 10px 24px rgba(0,0,0,0.28);gap:.6em}.hikka-full-active .hikka-comment-card.focus{border-color:rgba(255,255,255,0.52);background:rgba(20,24,31,0.97);-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-card.focus .hikka-comment-card__text,.hikka-full-active .hikka-comment-card.focus .hikka-comment-chip{color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-card__footer{margin-top:auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-chip{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;height:1.75em;padding:0 .58em;-webkit-border-radius:.55em;border-radius:.55em;font-size:.88em;font-weight:500;background:rgba(255,255,255,0.12);color:rgba(240,245,255,0.92);border:1px solid rgba(255,255,255,0.16);letter-spacing:.01em}.hikka-full-active .hikka-comment-chip--author{background:rgba(255,255,255,0.18)}.hikka-full-active .hikka-comment-chip--date,.hikka-full-active .hikka-comment-chip--score,.hikka-full-active .hikka-comment-chip--replies,.hikka-full-active .hikka-comment-chip--level,.hikka-full-active .hikka-comment-chip--continuation{background:rgba(255,255,255,0.12)}.hikka-full-active .hikka-comment-chip--continuation{opacity:.82}.hikka-full-active .hikka-comment-card__text{font-size:1.02em;line-height:1.33;margin:0;-webkit-line-clamp:5;line-clamp:5;color:rgba(236,242,255,0.92)}.hikka-full-active .hikka-comment-sidebar{-webkit-border-radius:.9em;border-radius:.9em;padding:.85em;margin-bottom:.75em;border:1px solid rgba(255,255,255,0.14);background:rgba(15,19,26,0.82)}.hikka-full-active .hikka-comment-sidebar__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em;margin-bottom:.25em}.hikka-full-active .hikka-thread-item{background:transparent !important;padding:.65em 1.15em !important;border-bottom:1px solid rgba(255,255,255,0.08)}.hikka-full-active .hikka-thread-item.focus{background:rgba(255,255,255,0.06) !important}.hikka-full-active .hikka-thread-entry{border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.74em;border-radius:.74em;background:rgba(9,11,16,0.72);padding:.72em .8em}.hikka-full-active .hikka-thread-entry__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.4em;margin-bottom:.5em}.hikka-full-active .hikka-thread-entry__text{white-space:pre-wrap;word-wrap:break-word;color:rgba(240,245,255,0.93);font-size:1.06em;line-height:1.36}.hikka-full-active .hikka-comment-card__text strong,.hikka-full-active .hikka-thread-entry__text strong{font-weight:700;color:rgba(255,255,255,0.98)}.hikka-full-active .hikka-comment-card__text em,.hikka-full-active .hikka-thread-entry__text em{font-style:italic}.hikka-full-active .hikka-comment-card__text code,.hikka-full-active .hikka-thread-entry__text code{font-family:monospace;font-size:.92em;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.36em;border-radius:.36em;padding:.05em .35em}.hikka-full-active .hikka-comment-card__text .hikka-md-link,.hikka-full-active .hikka-thread-entry__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .hikka-comment-card__text .hikka-md-list,.hikka-full-active .hikka-thread-entry__text .hikka-md-list{margin:.25em 0 .3em 1.1em;padding:0}.hikka-full-active .hikka-comment-card__text .hikka-md-quote,.hikka-full-active .hikka-thread-entry__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .hikka-comment-sidebar__content{margin:0;white-space:pre-wrap;word-wrap:break-word;font-size:1.02em;line-height:1.36;color:rgba(242,247,255,0.92);font-family:inherit}.hikka-full-active .applecation .mapping--line>.hikka-comment-card{min-width:18em;max-width:22em;padding:.9em .92em;-webkit-border-radius:.85em;border-radius:.85em;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.08);-webkit-box-shadow:0 10px 26px rgba(0,0,0,0.24);box-shadow:0 10px 26px rgba(0,0,0,0.24);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}.hikka-full-active .applecation .hikka-comment-card.focus{border-color:rgba(255,255,255,0.38);background:rgba(255,255,255,0.14);-webkit-box-shadow:0 0 0 .14em rgba(255,255,255,0.14),0 16px 30px rgba(0,0,0,0.32);box-shadow:0 0 0 .14em rgba(255,255,255,0.14),0 16px 30px rgba(0,0,0,0.32)}.hikka-full-active .applecation .hikka-comment-chip{font-size:.84em;min-height:1.68em;-webkit-border-radius:.52em;border-radius:.52em;background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.16)}.hikka-full-active .applecation .hikka-comment-chip--author{background:rgba(255,255,255,0.2)}.hikka-full-active .applecation .hikka-comment-card__text{line-height:1.31;-webkit-line-clamp:4;line-clamp:4}.hikka-full-active .applecation .hikka-thread-entry{border-color:rgba(255,255,255,0.16);background:rgba(255,255,255,0.08)}\n        </style>\n    ");
+    Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card .card__quality{text-transform:none}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-video-background{position:fixed;inset:0;z-index:1;opacity:0;pointer-events:none;-webkit-transition:opacity .28s ease;-o-transition:opacity .28s ease;transition:opacity .28s ease;background:#000}.hikka-video-background.is-visible{opacity:1}.hikka-video-background::after{content:'';position:absolute;inset:0;background:-webkit-gradient(linear,left top,left bottom,from(rgba(0,0,0,0.15)),to(rgba(0,0,0,0.62)));background:-webkit-linear-gradient(top,rgba(0,0,0,0.15) 0,rgba(0,0,0,0.62) 100%);background:-o-linear-gradient(top,rgba(0,0,0,0.15) 0,rgba(0,0,0,0.62) 100%);background:linear-gradient(180deg,rgba(0,0,0,0.15) 0,rgba(0,0,0,0.62) 100%)}.hikka-video-background__video{width:100%;height:100%;-o-object-fit:cover;object-fit:cover}.hikka-character{padding:2em 1.5em}.hikka-character__body{max-width:48em;margin:0 auto}.hikka-character__content{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.hikka-character__image{width:12em;height:12em;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%;-webkit-box-shadow:0 .6em 1.4em rgba(0,0,0,0.35);box-shadow:0 .6em 1.4em rgba(0,0,0,0.35)}.hikka-character__name{font-size:1.8em;font-weight:700;color:rgba(255,255,255,0.8)}.hikka-character__role{font-size:1.1em;color:rgba(255,255,255,0.6)}.hikka-character__meta{display:grid;gap:.4em;padding:.8em 1em;-webkit-border-radius:.8em;border-radius:.8em;background:rgba(255,255,255,0.06)}.hikka-character__meta-row{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:.95em}.hikka-character__meta-label{color:rgba(255,255,255,0.6)}.hikka-character__meta-value{color:rgba(255,255,255,0.8)}.hikka-character__description{max-width:40em;line-height:1.6;color:rgba(255,255,255,0.8)}.hikka-full-active .full-descr__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .full-descr__text .hikka-md-list{margin:.3em 0 .35em 1.25em;padding:0}.hikka-full-active .full-descr__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em;margin:.45em 0 .55em}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;min-height:1.82em;padding:0 .62em;-webkit-border-radius:.62em;border-radius:.62em;font-size:.88em;line-height:1.2;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.1);color:rgba(243,247,255,0.9)}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item--rating{border-color:rgba(255,214,102,0.42);background:rgba(255,214,102,0.16);color:rgba(255,233,166,0.96)}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item--status{background:rgba(129,255,175,0.11)}.hikka-full-active .applecation .applecation__description.hikka-applecation-description,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description{white-space:normal;line-height:1.35;color:rgba(239,245,255,0.9)}.hikka-full-active .applecation .applecation__description.hikka-applecation-description>span,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description>span{display:block;margin:.03em 0 .2em}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-link,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-link{color:rgba(171,210,255,0.98);text-decoration:underline}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-list,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-list{margin:.22em 0 .34em 1.05em;padding:0}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-quote,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-quote{margin:.28em 0;padding:.28em .52em;border-left:.18em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.08);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .applecation .full-episode__name{line-height:1.22 !important;margin-bottom:.22em !important}.hikka-full-active .applecation .full-episode__overview{line-height:1.25 !important;min-height:0 !important;height:auto !important;margin-bottom:.3em !important}.hikka-full-active .applecation .full-episode__overview:empty{display:none !important;margin-bottom:0 !important}.hikka-full-active .applecation .full-episode__date{margin-top:0 !important;line-height:1.2 !important}.hikka-full-active .full-review-add,.hikka-full-active .full-review__footer,.hikka-full-active .full-review__like,.hikka-full-active .full-review__like-icon{display:none !important}.hikka-full-active .mapping--line>.hikka-comment-card{min-width:17em;max-width:21em;padding:.9em;-webkit-border-radius:.9em;border-radius:.9em;background:-webkit-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:-o-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:linear-gradient(160deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));border:1px solid rgba(255,255,255,0.16);-webkit-box-shadow:0 10px 24px rgba(0,0,0,0.28);box-shadow:0 10px 24px rgba(0,0,0,0.28);gap:.6em}.hikka-full-active .hikka-comment-card.focus{border-color:rgba(255,255,255,0.52);background:rgba(20,24,31,0.97);-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-card.focus .hikka-comment-card__text,.hikka-full-active .hikka-comment-card.focus .hikka-comment-chip{color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-card__footer{margin-top:auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-chip{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;height:1.75em;padding:0 .58em;-webkit-border-radius:.55em;border-radius:.55em;font-size:.88em;font-weight:500;background:rgba(255,255,255,0.12);color:rgba(240,245,255,0.92);border:1px solid rgba(255,255,255,0.16);letter-spacing:.01em}.hikka-full-active .hikka-comment-chip--author{background:rgba(255,255,255,0.18)}.hikka-full-active .hikka-comment-chip--date,.hikka-full-active .hikka-comment-chip--score,.hikka-full-active .hikka-comment-chip--replies,.hikka-full-active .hikka-comment-chip--level,.hikka-full-active .hikka-comment-chip--continuation{background:rgba(255,255,255,0.12)}.hikka-full-active .hikka-comment-chip--continuation{opacity:.82}.hikka-full-active .hikka-comment-card__text{font-size:1.02em;line-height:1.33;margin:0;-webkit-line-clamp:5;line-clamp:5;color:rgba(236,242,255,0.92)}.hikka-full-active .hikka-comment-sidebar{-webkit-border-radius:.9em;border-radius:.9em;padding:.85em;margin-bottom:.75em;border:1px solid rgba(255,255,255,0.14);background:rgba(15,19,26,0.82)}.hikka-full-active .hikka-comment-sidebar__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em;margin-bottom:.25em}.hikka-full-active .hikka-thread-item{background:transparent !important;padding:.65em 1.15em !important;border-bottom:1px solid rgba(255,255,255,0.08)}.hikka-full-active .hikka-thread-item.focus{background:rgba(255,255,255,0.06) !important}.hikka-full-active .hikka-thread-entry{border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.74em;border-radius:.74em;background:rgba(9,11,16,0.72);padding:.72em .8em}.hikka-full-active .hikka-thread-entry__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.4em;margin-bottom:.5em}.hikka-full-active .hikka-thread-entry__text{white-space:pre-wrap;word-wrap:break-word;color:rgba(240,245,255,0.93);font-size:1.06em;line-height:1.36}.hikka-full-active .hikka-comment-card__text strong,.hikka-full-active .hikka-thread-entry__text strong{font-weight:700;color:rgba(255,255,255,0.98)}.hikka-full-active .hikka-comment-card__text em,.hikka-full-active .hikka-thread-entry__text em{font-style:italic}.hikka-full-active .hikka-comment-card__text code,.hikka-full-active .hikka-thread-entry__text code{font-family:monospace;font-size:.92em;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.36em;border-radius:.36em;padding:.05em .35em}.hikka-full-active .hikka-comment-card__text .hikka-md-link,.hikka-full-active .hikka-thread-entry__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .hikka-comment-card__text .hikka-md-list,.hikka-full-active .hikka-thread-entry__text .hikka-md-list{margin:.25em 0 .3em 1.1em;padding:0}.hikka-full-active .hikka-comment-card__text .hikka-md-quote,.hikka-full-active .hikka-thread-entry__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .hikka-comment-sidebar__content{margin:0;white-space:pre-wrap;word-wrap:break-word;font-size:1.02em;line-height:1.36;color:rgba(242,247,255,0.92);font-family:inherit}.hikka-full-active .applecation .mapping--line>.hikka-comment-card{min-width:18em;max-width:22em;padding:.9em .92em;-webkit-border-radius:.85em;border-radius:.85em;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.08);-webkit-box-shadow:0 10px 26px rgba(0,0,0,0.24);box-shadow:0 10px 26px rgba(0,0,0,0.24);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}.hikka-full-active .applecation .hikka-comment-card.focus{border-color:rgba(255,255,255,0.38);background:rgba(255,255,255,0.14);-webkit-box-shadow:0 0 0 .14em rgba(255,255,255,0.14),0 16px 30px rgba(0,0,0,0.32);box-shadow:0 0 0 .14em rgba(255,255,255,0.14),0 16px 30px rgba(0,0,0,0.32)}.hikka-full-active .applecation .hikka-comment-chip{font-size:.84em;min-height:1.68em;-webkit-border-radius:.52em;border-radius:.52em;background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.16)}.hikka-full-active .applecation .hikka-comment-chip--author{background:rgba(255,255,255,0.2)}.hikka-full-active .applecation .hikka-comment-card__text{line-height:1.31;-webkit-line-clamp:4;line-clamp:4}.hikka-full-active .applecation .hikka-thread-entry{border-color:rgba(255,255,255,0.16);background:rgba(255,255,255,0.08)}\n        </style>\n    ");
     // Inject styles
     $('body').append(Lampa.Template.get('hikka_styles'));
 
