@@ -403,6 +403,17 @@
   var MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
   var inFlightRequests = new Map();
   var responseCache = new Map();
+  var AUTH_BLOCK_STORAGE_KEY = 'trakt_auth_blocked';
+  var authBlocked = false;
+  var authBlockedReason = '';
+  var authBlockedAt = 0;
+  var authBlockedNotified = false;
+  var authBlockedTokenFingerprint = '';
+  function getAccessTokenFingerprint() {
+    var token = String(Lampa.Storage.get('trakt_token') || '');
+    if (!token) return '';
+    return "".concat(token.length, ":").concat(token.slice(-12));
+  }
   function getStorageNumber(name) {
     var value = Number(Lampa.Storage.get(name));
     return Number.isFinite(value) ? value : null;
@@ -418,6 +429,74 @@
     clearTokenExpiryMeta();
     Lampa.Storage.set('trakt_active_device_auth', false);
     Lampa.Storage.set('trakt_active_device_auth_started_at', null);
+  }
+  function setAuthBlocked() {
+    var reason = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'reauth_required';
+    authBlocked = true;
+    authBlockedReason = String(reason || 'reauth_required');
+    authBlockedAt = Date.now();
+    authBlockedNotified = false;
+    authBlockedTokenFingerprint = getAccessTokenFingerprint();
+    try {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.set === 'function') {
+        Lampa.Storage.set(AUTH_BLOCK_STORAGE_KEY, true);
+      }
+    } catch (error) {/* noop */}
+  }
+  function clearAuthBlocked() {
+    authBlocked = false;
+    authBlockedReason = '';
+    authBlockedAt = 0;
+    authBlockedNotified = false;
+    authBlockedTokenFingerprint = '';
+    try {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.set === 'function') {
+        Lampa.Storage.set(AUTH_BLOCK_STORAGE_KEY, false);
+      }
+    } catch (error) {/* noop */}
+  }
+  function isAuthBlocked() {
+    if (authBlocked) return true;
+    try {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
+        return Lampa.Storage.get(AUTH_BLOCK_STORAGE_KEY) === true;
+      }
+    } catch (error) {
+      return authBlocked;
+    }
+    return authBlocked;
+  }
+  function buildAuthBlockedError() {
+    var reason = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'reauth_required';
+    return Object.assign(new Error('Trakt auth is blocked, reauthorization required'), {
+      status: 401,
+      code: 'reauth_required',
+      reason: reason || 'reauth_required',
+      blocked: true,
+      blockedAt: authBlockedAt || Date.now()
+    });
+  }
+  function notifyAuthBlockedOnce() {
+    if (authBlockedNotified) return;
+    authBlockedNotified = true;
+    try {
+      if (Lampa && Lampa.Bell && typeof Lampa.Bell.push === 'function') {
+        var text = Lampa.Lang && typeof Lampa.Lang.translate === 'function' ? Lampa.Lang.translate('trakttvAuthMissed') || 'Trakt authorization required' : 'Trakt authorization required';
+        Lampa.Bell.push({
+          text: text
+        });
+      }
+    } catch (error) {/* noop */}
+  }
+  function hasUsableAccessToken() {
+    var token = String(Lampa.Storage.get('trakt_token') || '');
+    return !!token;
+  }
+  function hasNewAccessTokenSinceBlock() {
+    var current = getAccessTokenFingerprint();
+    if (!current) return false;
+    if (!authBlockedTokenFingerprint) return true;
+    return current !== authBlockedTokenFingerprint;
   }
   function saveTokens() {
     var response = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -437,6 +516,9 @@
       Lampa.Storage.set('trakt_token_expires_at', expiresAt);
     } else if (response.access_token || response.refresh_token) {
       clearTokenExpiryMeta();
+    }
+    if (response.access_token) {
+      clearAuthBlocked();
     }
   }
   function getTokenExpiryMeta() {
@@ -908,6 +990,7 @@
               break;
             }
             if (logging) logDebug('refreshTokens skipped: no refresh token');
+            setAuthBlocked('no_refresh_token');
             return _context.a(2, Promise.reject(Object.assign(new Error('No refresh_token'), {
               status: 0,
               code: 'no_refresh_token'
@@ -936,6 +1019,7 @@
               return res;
             })["catch"](function (error) {
               if (error && (error.status === 400 || error.status === 401)) {
+                setAuthBlocked("refresh_failed_".concat(error.status));
                 clearAuthStorage();
               }
               if (logging) logWarn('refreshTokens failed', {
@@ -1354,27 +1438,55 @@
             normalizedMethod = String(method || 'GET').toUpperCase();
             normalizedEndpoint = normalizeRequestUrl(url).full;
             didRefreshAfter401 = false;
-            if (!(!unauthorized && Lampa.Storage.get('trakt_refresh_token'))) {
-              _context5.n = 5;
+
+            // If auth is blocked due to prior terminal auth failure, stop user-scoped traffic until new token appears.
+            if (!(!unauthorized && isAuthBlocked())) {
+              _context5.n = 2;
               break;
             }
-            _context5.p = 1;
+            if (!(hasUsableAccessToken() && hasNewAccessTokenSinceBlock())) {
+              _context5.n = 1;
+              break;
+            }
+            clearAuthBlocked();
             _context5.n = 2;
+            break;
+          case 1:
+            if (logging) {
+              logWarn('Auth blocked: user-scoped request rejected without network', {
+                endpoint: normalizedEndpoint,
+                method: normalizedMethod,
+                reason: authBlockedReason || 'reauth_required'
+              }, {
+                debugOnly: true
+              });
+            }
+            notifyAuthBlockedOnce();
+            throw buildAuthBlockedError(authBlockedReason || 'reauth_required');
+          case 2:
+            if (!(!unauthorized && Lampa.Storage.get('trakt_refresh_token'))) {
+              _context5.n = 7;
+              break;
+            }
+            _context5.p = 3;
+            _context5.n = 4;
             return ensureValidAccessToken({
               reason: "preflight:".concat(normalizedMethod, ":").concat(normalizedEndpoint)
             });
-          case 2:
-            _context5.n = 5;
+          case 4:
+            _context5.n = 7;
             break;
-          case 3:
-            _context5.p = 3;
+          case 5:
+            _context5.p = 5;
             _t2 = _context5.v;
             if (!(_t2 && (_t2.status === 400 || _t2.status === 401))) {
-              _context5.n = 4;
+              _context5.n = 6;
               break;
             }
+            setAuthBlocked("preflight_refresh_failed_".concat(_t2.status));
+            notifyAuthBlockedOnce();
             throw _t2;
-          case 4:
+          case 6:
             if (logging) {
               logWarn('Preflight token refresh failed, using current token', {
                 endpoint: normalizedEndpoint,
@@ -1384,17 +1496,17 @@
                 debugOnly: true
               });
             }
-          case 5:
-            _context5.p = 6;
-            _context5.n = 7;
-            return executeRequestWithPolicy(normalizedMethod, url, params, unauthorized, requestOptions);
           case 7:
-            return _context5.a(2, _context5.v);
-          case 8:
             _context5.p = 8;
+            _context5.n = 9;
+            return executeRequestWithPolicy(normalizedMethod, url, params, unauthorized, requestOptions);
+          case 9:
+            return _context5.a(2, _context5.v);
+          case 10:
+            _context5.p = 10;
             _t3 = _context5.v;
             if (!(!unauthorized && _t3 && _t3.status === 401 && !didRefreshAfter401)) {
-              _context5.n = 10;
+              _context5.n = 12;
               break;
             }
             didRefreshAfter401 = true;
@@ -1404,18 +1516,22 @@
                 method: normalizedMethod
               });
             }
-            _context5.n = 9;
+            _context5.n = 11;
             return runRefreshFlow({
               reason: "401:".concat(normalizedMethod, ":").concat(normalizedEndpoint)
             });
-          case 9:
-            return _context5.a(3, 5);
-          case 10:
-            throw _t3;
           case 11:
+            return _context5.a(3, 7);
+          case 12:
+            if (!unauthorized && _t3 && _t3.status === 401) {
+              setAuthBlocked('unauthorized_after_refresh');
+              notifyAuthBlockedOnce();
+            }
+            throw _t3;
+          case 13:
             return _context5.a(2);
         }
-      }, _callee5, null, [[6, 8], [1, 3]]);
+      }, _callee5, null, [[8, 10], [3, 5]]);
     }));
     return _requestApi.apply(this, arguments);
   }
@@ -2054,6 +2170,11 @@
             saveTokens(res);
           }
           return res;
+        })["catch"](function (error) {
+          if (error && error.status === 400) {
+            setAuthBlocked('oauth_exchange_failed_400');
+          }
+          throw error;
         });
       },
       /**
@@ -2076,6 +2197,7 @@
         return response;
       },
       clear: function clear() {
+        clearAuthBlocked();
         clearAuthStorage();
       },
       /**
@@ -2107,10 +2229,20 @@
               saveTokens(response);
             }
             return response;
+          })["catch"](function (error) {
+            if (error && error.status === 400) {
+              var payload = error && error.response;
+              var code = payload && _typeof(payload) === 'object' ? String(payload.error || payload.error_code || '').toLowerCase() : '';
+              if (code && code !== 'authorization_pending') {
+                setAuthBlocked("device_poll_failed_".concat(code));
+              }
+            }
+            throw error;
           });
         }
       },
       logout: function logout() {
+        clearAuthBlocked();
         clearAuthStorage();
       }
     },
