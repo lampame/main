@@ -9303,6 +9303,155 @@
   var SOURCE_KEY = 'trakttv';
   var DEFAULT_LIMIT = 20;
   var DEFAULT_CHUNK = 3;
+  var TRAKT_TRENDING_GENRES = [{
+    name: 'Action',
+    slug: 'action',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Adventure',
+    slug: 'adventure',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Animation',
+    slug: 'animation',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Anime',
+    slug: 'anime',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Biography',
+    slug: 'biography',
+    supported_types: ['shows']
+  }, {
+    name: 'Children',
+    slug: 'children',
+    supported_types: ['shows']
+  }, {
+    name: 'Comedy',
+    slug: 'comedy',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Crime',
+    slug: 'crime',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Documentary',
+    slug: 'documentary',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Donghua',
+    slug: 'donghua',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Drama',
+    slug: 'drama',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Family',
+    slug: 'family',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Fantasy',
+    slug: 'fantasy',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Game Show',
+    slug: 'game-show',
+    supported_types: ['shows']
+  }, {
+    name: 'History',
+    slug: 'history',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Holiday',
+    slug: 'holiday',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Home And Garden',
+    slug: 'home-and-garden',
+    supported_types: ['shows']
+  }, {
+    name: 'Horror',
+    slug: 'horror',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Mini Series',
+    slug: 'mini-series',
+    supported_types: ['shows']
+  }, {
+    name: 'Music',
+    slug: 'music',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Musical',
+    slug: 'musical',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Mystery',
+    slug: 'mystery',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'News',
+    slug: 'news',
+    supported_types: ['shows']
+  }, {
+    name: 'None',
+    slug: 'none',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Reality',
+    slug: 'reality',
+    supported_types: ['shows']
+  }, {
+    name: 'Romance',
+    slug: 'romance',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Science Fiction',
+    slug: 'science-fiction',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Short',
+    slug: 'short',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Soap',
+    slug: 'soap',
+    supported_types: ['shows']
+  }, {
+    name: 'Special Interest',
+    slug: 'special-interest',
+    supported_types: ['shows']
+  }, {
+    name: 'Sporting Event',
+    slug: 'sporting-event',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Superhero',
+    slug: 'superhero',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Suspense',
+    slug: 'suspense',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Talk Show',
+    slug: 'talk-show',
+    supported_types: ['shows']
+  }, {
+    name: 'Thriller',
+    slug: 'thriller',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'War',
+    slug: 'war',
+    supported_types: ['movies', 'shows']
+  }, {
+    name: 'Western',
+    slug: 'western',
+    supported_types: ['movies', 'shows']
+  }];
   function t(key) {
     var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     try {
@@ -9431,6 +9580,31 @@
       return value === '16' || value === 'animation';
     });
     return hasAnimation ? 'animation' : '';
+  }
+  function supportsAllGenreTypes() {
+    var genre = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var requiredTypes = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+    if (!Array.isArray(requiredTypes) || !requiredTypes.length) return true;
+    var supportedTypes = Array.isArray(genre.supported_types) ? genre.supported_types : [];
+    return requiredTypes.every(function (type) {
+      return supportedTypes.indexOf(type) > -1;
+    });
+  }
+  function buildTrendingGenreDefinitions(path, typeHint) {
+    var requiredTypes = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+    var trendingTitle = t('trakttv_source_trending', 'Trending');
+    return TRAKT_TRENDING_GENRES.filter(function (genre) {
+      return supportsAllGenreTypes(genre, requiredTypes);
+    }).map(function (genre) {
+      return {
+        path: path,
+        title: "".concat(trendingTitle, ": ").concat(genre.name),
+        typeHint: typeHint,
+        query: {
+          genres: genre.slug
+        }
+      };
+    });
   }
   function detectMediaType(entry) {
     var typeHint = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
@@ -9636,6 +9810,7 @@
         recommendations: true
       });
     }
+    defs.push.apply(defs, _toConsumableArray(buildTrendingGenreDefinitions('media/trending', 'media', ['movies', 'shows'])));
     return defs;
   }
   function buildCategoryDefinitions() {
@@ -9689,6 +9864,9 @@
           query: query
         });
       }
+    }
+    if (!traktGenre) {
+      defs.push.apply(defs, _toConsumableArray(buildTrendingGenreDefinitions("".concat(basePath, "/trending"), baseTypeHint, isShows ? ['shows'] : ['movies'])));
     }
     return defs;
   }
