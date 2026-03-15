@@ -394,6 +394,15 @@
   var API_URL = 'https://apx.lme.isroot.in/trakt';
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
   var DEVICE_AUTH_STALE_MS = 20 * 60 * 1000;
+  var MAX_RETRY_ATTEMPTS = 2; // 3 спроби загалом
+  var RETRY_BASE_DELAY_MS = 600;
+  var RETRY_MAX_DELAY_MS = 15000;
+  var HOT_CACHE_TTL_FEED_MS = 25 * 1000;
+  var HOT_CACHE_TTL_USER_MS = 45 * 1000;
+  var HOT_CACHE_TTL_REFERENCE_MS = 5 * 60 * 1000;
+  var MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+  var inFlightRequests = new Map();
+  var responseCache = new Map();
   function getStorageNumber(name) {
     var value = Number(Lampa.Storage.get(name));
     return Number.isFinite(value) ? value : null;
@@ -470,20 +479,34 @@
     }
     return true;
   }
-  function readBooleanStorage$1(name) {
+  function readBooleanStorage$2(name) {
     var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
-    var value = Lampa.Storage.field(name);
-    if (typeof value === 'boolean') return value;
-    if (value === 1 || value === '1' || value === 'true') return true;
-    if (value === 0 || value === '0' || value === 'false') return false;
+    var parse = function parse(value) {
+      if (typeof value === 'boolean') return value;
+      if (value === 1 || value === '1' || value === 'true') return true;
+      if (value === 0 || value === '0' || value === 'false') return false;
+      return null;
+    };
+    try {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
+        var direct = parse(Lampa.Storage.get(name));
+        if (direct !== null) return direct;
+      }
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.field === 'function') {
+        var fromField = parse(Lampa.Storage.field(name));
+        if (fromField !== null) return fromField;
+      }
+    } catch (error) {
+      return fallback;
+    }
     return fallback;
   }
   function buildRecommendationsUrl$1(type, limit) {
     var query = new URLSearchParams({
       extended: 'full,images',
       limit: String(Math.max(1, parseInt(limit, 10) || 36)),
-      ignore_watched: readBooleanStorage$1('trakt_source_ignore_watched', false) ? 'true' : 'false',
-      ignore_watchlisted: readBooleanStorage$1('trakt_source_ignore_watchlisted', false) ? 'true' : 'false'
+      ignore_watched: readBooleanStorage$2('trakt_source_ignore_watched', false) ? 'true' : 'false',
+      ignore_watchlisted: readBooleanStorage$2('trakt_source_ignore_watchlisted', false) ? 'true' : 'false'
     });
     return "/recommendations/".concat(type, "?").concat(query.toString());
   }
@@ -867,9 +890,9 @@
   }
   function _refreshTokens() {
     _refreshTokens = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-      var _ref12,
+      var _ref14,
         redirect_uri,
-        _ref12$reason,
+        _ref14$reason,
         reason,
         refresh_token,
         logging,
@@ -877,7 +900,7 @@
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
-            _ref12 = _args.length > 0 && _args[0] !== undefined ? _args[0] : {}, redirect_uri = _ref12.redirect_uri, _ref12$reason = _ref12.reason, reason = _ref12$reason === void 0 ? 'manual' : _ref12$reason;
+            _ref14 = _args.length > 0 && _args[0] !== undefined ? _args[0] : {}, redirect_uri = _ref14.redirect_uri, _ref14$reason = _ref14.reason, reason = _ref14$reason === void 0 ? 'manual' : _ref14$reason;
             refresh_token = Lampa.Storage.get('trakt_refresh_token');
             logging = Lampa.Storage.field('trakt_enable_logging');
             if (refresh_token) {
@@ -944,12 +967,12 @@
   }
   function _ensureValidAccessToken() {
     _ensureValidAccessToken = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-      var _ref13,
-        _ref13$reason,
+      var _ref15,
+        _ref15$reason,
         reason,
-        _ref13$force,
+        _ref15$force,
         force,
-        _ref13$skewMs,
+        _ref15$skewMs,
         skewMs,
         token,
         refreshToken,
@@ -959,7 +982,7 @@
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.n) {
           case 0:
-            _ref13 = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {}, _ref13$reason = _ref13.reason, reason = _ref13$reason === void 0 ? 'preflight' : _ref13$reason, _ref13$force = _ref13.force, force = _ref13$force === void 0 ? false : _ref13$force, _ref13$skewMs = _ref13.skewMs, skewMs = _ref13$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref13$skewMs;
+            _ref15 = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {}, _ref15$reason = _ref15.reason, reason = _ref15$reason === void 0 ? 'preflight' : _ref15$reason, _ref15$force = _ref15.force, force = _ref15$force === void 0 ? false : _ref15$force, _ref15$skewMs = _ref15.skewMs, skewMs = _ref15$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref15$skewMs;
             token = Lampa.Storage.get('trakt_token');
             refreshToken = Lampa.Storage.get('trakt_refresh_token');
             if (refreshToken) {
@@ -992,97 +1015,407 @@
     }));
     return _ensureValidAccessToken.apply(this, arguments);
   }
-  function requestApi(_x, _x2) {
-    return _requestApi.apply(this, arguments);
+  function sleep$1(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, Math.max(0, Number(ms) || 0));
+    });
   }
-  function _requestApi() {
-    _requestApi = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(method, url) {
+  function sortForStableSerialize(value) {
+    if (Array.isArray(value)) {
+      return value.map(sortForStableSerialize);
+    }
+    if (value && _typeof(value) === 'object') {
+      var normalized = {};
+      Object.keys(value).sort().forEach(function (key) {
+        if (typeof value[key] === 'undefined') return;
+        normalized[key] = sortForStableSerialize(value[key]);
+      });
+      return normalized;
+    }
+    return value;
+  }
+  function stableSerialize(value) {
+    try {
+      return JSON.stringify(sortForStableSerialize(value));
+    } catch (error) {
+      return String(value);
+    }
+  }
+  function normalizeQueryString() {
+    var query = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+    var source = String(query || '').replace(/^\?+/, '');
+    if (!source) return '';
+    try {
+      var parsed = new URLSearchParams(source);
+      var entries = [];
+      parsed.forEach(function (value, key) {
+        if (!key || key === '_') return;
+        entries.push([String(key), String(value)]);
+      });
+      entries.sort(function (left, right) {
+        if (left[0] === right[0]) {
+          if (left[1] === right[1]) return 0;
+          return left[1] > right[1] ? 1 : -1;
+        }
+        return left[0] > right[0] ? 1 : -1;
+      });
+      var normalized = new URLSearchParams();
+      entries.forEach(function (_ref2) {
+        var _ref3 = _slicedToArray(_ref2, 2),
+          key = _ref3[0],
+          value = _ref3[1];
+        return normalized.append(key, value);
+      });
+      return normalized.toString();
+    } catch (error) {
+      return source;
+    }
+  }
+  function normalizeRequestUrl() {
+    var url = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+    var source = String(url || '').trim();
+    if (source.indexOf(API_URL) === 0) {
+      source = source.slice(API_URL.length);
+    }
+    var queryIndex = source.indexOf('?');
+    var rawPath = queryIndex >= 0 ? source.slice(0, queryIndex) : source;
+    var rawQuery = queryIndex >= 0 ? source.slice(queryIndex + 1) : '';
+    var path = "/".concat(String(rawPath || '').replace(/^\/+/, '')).replace(/\/{2,}/g, '/');
+    var normalizedPath = path.length > 1 ? path.replace(/\/+$/, '') : path;
+    var query = normalizeQueryString(rawQuery);
+    var full = query ? "".concat(normalizedPath, "?").concat(query) : normalizedPath;
+    return {
+      path: normalizedPath,
+      query: query,
+      full: full
+    };
+  }
+  function buildAuthScope() {
+    var unauthorized = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+    if (unauthorized) return 'unauthorized';
+    var token = String(Lampa.Storage.get('trakt_token') || '');
+    if (!token) return 'anon';
+    return "token:".concat(token.length, ":").concat(token.slice(-8));
+  }
+  function buildRequestKey(method, url, params, unauthorized) {
+    var requestOptions = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+    var normalizedMethod = String(method || 'GET').toUpperCase();
+    var request = normalizeRequestUrl(url);
+    var authScope = buildAuthScope(unauthorized);
+    var mode = requestOptions && requestOptions.withMeta ? 'meta' : 'data';
+    var body = normalizedMethod === 'GET' ? '' : stableSerialize(params || {});
+    return [normalizedMethod, request.path, request.query, authScope, mode, body].join('|');
+  }
+  function buildCacheKey(method, url, unauthorized) {
+    var requestOptions = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+    var normalizedMethod = String(method || 'GET').toUpperCase();
+    var request = normalizeRequestUrl(url);
+    var authScope = buildAuthScope(unauthorized);
+    var mode = requestOptions && requestOptions.withMeta ? 'meta' : 'data';
+    return [normalizedMethod, request.path, request.query, authScope, mode].join('|');
+  }
+  function parseRetryAfterMs$1() {
+    var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var value = headers && headers['retry-after'];
+    if (!value) return null;
+    var numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric >= 0) {
+      return numeric * 1000;
+    }
+    var dateMs = Date.parse(value);
+    if (Number.isFinite(dateMs)) {
+      return Math.max(0, dateMs - Date.now());
+    }
+    return null;
+  }
+  function isRetryableStatus(status) {
+    return status === 429 || status === 504 || status >= 500 && status <= 599;
+  }
+  function resolveRetryDelayMs(status, attempt) {
+    var headers = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    var step = Math.max(1, Number(attempt) || 1);
+    var backoff = Math.min(RETRY_MAX_DELAY_MS, RETRY_BASE_DELAY_MS * Math.pow(2, step - 1));
+    var jitter = Math.floor(Math.random() * 250);
+    var backoffWithJitter = backoff + jitter;
+    if (status === 429) {
+      var retryAfterMs = parseRetryAfterMs$1(headers);
+      if (retryAfterMs !== null) {
+        return Math.max(retryAfterMs, backoffWithJitter);
+      }
+    }
+    return backoffWithJitter;
+  }
+  function cloneValue(value) {
+    if (!value || _typeof(value) !== 'object') return value;
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (error) {
+      return value;
+    }
+  }
+  function getCacheTtlMs(method, url) {
+    var requestOptions = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    var normalizedMethod = String(method || 'GET').toUpperCase();
+    if (normalizedMethod !== 'GET') return 0;
+    if (requestOptions && requestOptions.cache === false) return 0;
+    var request = normalizeRequestUrl(url);
+    var path = request.path || '';
+    if (!path) return 0;
+    if (/^\/(media|movies|shows)\/(trending|popular|anticipated)(\/|$)/.test(path)) {
+      return HOT_CACHE_TTL_FEED_MS;
+    }
+    if (/^\/recommendations(\/|$)/.test(path) || /^\/search(\/|$)/.test(path)) {
+      return HOT_CACHE_TTL_FEED_MS;
+    }
+    if (path === '/users/me' || /^\/users\/me\/lists(\/|$)/.test(path) || /^\/users\/me\/likes\/lists(\/|$)/.test(path)) {
+      return HOT_CACHE_TTL_USER_MS;
+    }
+    if (/^\/networks(\/|$)/.test(path)) {
+      return HOT_CACHE_TTL_REFERENCE_MS;
+    }
+    return 0;
+  }
+  function getCachedResponse(cacheKey) {
+    var cached = responseCache.get(cacheKey);
+    if (!cached) return null;
+    if ((Number(cached.expiresAt) || 0) <= Date.now()) {
+      responseCache["delete"](cacheKey);
+      return null;
+    }
+    return cloneValue(cached.value);
+  }
+  function setCachedResponse(cacheKey, value, ttlMs) {
+    if (!cacheKey || !ttlMs) return;
+    responseCache.set(cacheKey, {
+      expiresAt: Date.now() + ttlMs,
+      value: cloneValue(value)
+    });
+  }
+  function clearResponseCache() {
+    responseCache.clear();
+  }
+  function performRequestWithRetry(_x, _x2) {
+    return _performRequestWithRetry.apply(this, arguments);
+  }
+  function _performRequestWithRetry() {
+    _performRequestWithRetry = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(method, url) {
       var params,
         unauthorized,
-        retryCount,
         requestOptions,
-        MAX_RETRIES,
         logging,
+        maxRetriesRaw,
+        maxRetries,
+        attempt,
+        status,
+        delay,
         _args3 = arguments,
-        _t,
-        _t2;
+        _t;
       return _regenerator().w(function (_context3) {
         while (1) switch (_context3.n) {
           case 0:
             params = _args3.length > 2 && _args3[2] !== undefined ? _args3[2] : {};
             unauthorized = _args3.length > 3 && _args3[3] !== undefined ? _args3[3] : false;
-            retryCount = _args3.length > 4 && _args3[4] !== undefined ? _args3[4] : 0;
-            requestOptions = _args3.length > 5 && _args3[5] !== undefined ? _args3[5] : {};
-            MAX_RETRIES = 1; // Обмеження кількості повторних спроб
+            requestOptions = _args3.length > 4 && _args3[4] !== undefined ? _args3[4] : {};
             logging = Lampa.Storage.field('trakt_enable_logging');
-            if (!unauthorized) {
-              _context3.n = 1;
-              break;
-            }
-            return _context3.a(2, _performRequest(method, url, params, true, requestOptions));
+            maxRetriesRaw = Number(requestOptions && requestOptions.maxRetries);
+            maxRetries = Number.isFinite(maxRetriesRaw) ? Math.max(0, Math.min(5, maxRetriesRaw)) : MAX_RETRY_ATTEMPTS;
+            attempt = 0;
           case 1:
-            if (!Lampa.Storage.get('trakt_refresh_token')) {
-              _context3.n = 6;
-              break;
-            }
             _context3.p = 2;
             _context3.n = 3;
-            return ensureValidAccessToken({
-              reason: "preflight:".concat(method, ":").concat(url)
-            });
+            return _performRequest(method, url, params, unauthorized, requestOptions);
           case 3:
-            _context3.n = 6;
-            break;
+            return _context3.a(2, _context3.v);
           case 4:
             _context3.p = 4;
             _t = _context3.v;
-            if (!(_t && (_t.status === 400 || _t.status === 401))) {
+            status = Number(_t && _t.status) || 0;
+            if (!(!isRetryableStatus(status) || attempt >= maxRetries)) {
               _context3.n = 5;
               break;
             }
             throw _t;
           case 5:
+            attempt += 1;
+            delay = resolveRetryDelayMs(status, attempt, _t && _t.headers ? _t.headers : {});
             if (logging) {
-              logWarn('Preflight token refresh failed, using current token', {
-                method: method,
-                url: url,
-                status: _t && _t.status
+              logWarn('Trakt request retry scheduled', {
+                endpoint: normalizeRequestUrl(url).full,
+                method: String(method || 'GET').toUpperCase(),
+                status: status,
+                retryReason: status === 429 ? 'rate_limit' : 'server_error',
+                retryDelayMs: delay,
+                attempt: attempt,
+                maxRetries: maxRetries
               }, {
                 debugOnly: true
               });
             }
+            _context3.n = 6;
+            return sleep$1(delay);
           case 6:
-            _context3.p = 6;
-            _context3.n = 7;
-            return _performRequest(method, url, params, false, requestOptions);
+            _context3.n = 1;
+            break;
           case 7:
-            return _context3.a(2, _context3.v);
-          case 8:
-            _context3.p = 8;
-            _t2 = _context3.v;
-            if (!(_t2.status === 401 && retryCount < MAX_RETRIES)) {
-              _context3.n = 10;
-              break;
-            }
-            if (logging) {
-              logDebug('401 received, try refresh and retry', {
-                method: method,
-                url: url,
-                retryCount: retryCount
-              });
-            }
-            _context3.n = 9;
-            return runRefreshFlow({
-              reason: "401:".concat(method, ":").concat(url)
-            });
-          case 9:
-            return _context3.a(2, requestApi(method, url, params, false, retryCount + 1, requestOptions));
-          case 10:
-            throw _t2;
-          case 11:
             return _context3.a(2);
         }
-      }, _callee3, null, [[6, 8], [2, 4]]);
+      }, _callee3, null, [[2, 4]]);
+    }));
+    return _performRequestWithRetry.apply(this, arguments);
+  }
+  function executeRequestWithPolicy(_x3, _x4) {
+    return _executeRequestWithPolicy.apply(this, arguments);
+  }
+  function _executeRequestWithPolicy() {
+    _executeRequestWithPolicy = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(method, url) {
+      var params,
+        unauthorized,
+        requestOptions,
+        normalizedMethod,
+        ttlMs,
+        cacheKey,
+        useCache,
+        cached,
+        dedupEnabled,
+        requestKey,
+        promise,
+        _args4 = arguments;
+      return _regenerator().w(function (_context4) {
+        while (1) switch (_context4.n) {
+          case 0:
+            params = _args4.length > 2 && _args4[2] !== undefined ? _args4[2] : {};
+            unauthorized = _args4.length > 3 && _args4[3] !== undefined ? _args4[3] : false;
+            requestOptions = _args4.length > 4 && _args4[4] !== undefined ? _args4[4] : {};
+            normalizedMethod = String(method || 'GET').toUpperCase();
+            ttlMs = getCacheTtlMs(normalizedMethod, url, requestOptions);
+            cacheKey = ttlMs > 0 ? buildCacheKey(normalizedMethod, url, unauthorized, requestOptions) : '';
+            useCache = ttlMs > 0 && !(requestOptions && requestOptions.forceFresh);
+            if (!useCache) {
+              _context4.n = 1;
+              break;
+            }
+            cached = getCachedResponse(cacheKey);
+            if (!(cached !== null)) {
+              _context4.n = 1;
+              break;
+            }
+            return _context4.a(2, cached);
+          case 1:
+            dedupEnabled = !(requestOptions && requestOptions.dedup === false);
+            requestKey = dedupEnabled ? buildRequestKey(normalizedMethod, url, params, unauthorized, requestOptions) : '';
+            if (!(requestKey && inFlightRequests.has(requestKey))) {
+              _context4.n = 2;
+              break;
+            }
+            return _context4.a(2, inFlightRequests.get(requestKey));
+          case 2:
+            promise = performRequestWithRetry(normalizedMethod, url, params, unauthorized, requestOptions).then(function (result) {
+              if (useCache) {
+                setCachedResponse(cacheKey, result, ttlMs);
+              }
+              if (MUTATION_METHODS.has(normalizedMethod)) {
+                clearResponseCache();
+              }
+              return result;
+            })["finally"](function () {
+              if (requestKey) inFlightRequests["delete"](requestKey);
+            });
+            if (requestKey) {
+              inFlightRequests.set(requestKey, promise);
+            }
+            return _context4.a(2, promise);
+        }
+      }, _callee4);
+    }));
+    return _executeRequestWithPolicy.apply(this, arguments);
+  }
+  function requestApi(_x5, _x6) {
+    return _requestApi.apply(this, arguments);
+  }
+  function _requestApi() {
+    _requestApi = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(method, url) {
+      var params,
+        unauthorized,
+        requestOptions,
+        logging,
+        normalizedMethod,
+        normalizedEndpoint,
+        didRefreshAfter401,
+        _args5 = arguments,
+        _t2,
+        _t3;
+      return _regenerator().w(function (_context5) {
+        while (1) switch (_context5.n) {
+          case 0:
+            params = _args5.length > 2 && _args5[2] !== undefined ? _args5[2] : {};
+            unauthorized = _args5.length > 3 && _args5[3] !== undefined ? _args5[3] : false;
+            requestOptions = _args5.length > 5 && _args5[5] !== undefined ? _args5[5] : {};
+            logging = Lampa.Storage.field('trakt_enable_logging');
+            normalizedMethod = String(method || 'GET').toUpperCase();
+            normalizedEndpoint = normalizeRequestUrl(url).full;
+            didRefreshAfter401 = false;
+            if (!(!unauthorized && Lampa.Storage.get('trakt_refresh_token'))) {
+              _context5.n = 5;
+              break;
+            }
+            _context5.p = 1;
+            _context5.n = 2;
+            return ensureValidAccessToken({
+              reason: "preflight:".concat(normalizedMethod, ":").concat(normalizedEndpoint)
+            });
+          case 2:
+            _context5.n = 5;
+            break;
+          case 3:
+            _context5.p = 3;
+            _t2 = _context5.v;
+            if (!(_t2 && (_t2.status === 400 || _t2.status === 401))) {
+              _context5.n = 4;
+              break;
+            }
+            throw _t2;
+          case 4:
+            if (logging) {
+              logWarn('Preflight token refresh failed, using current token', {
+                endpoint: normalizedEndpoint,
+                method: normalizedMethod,
+                status: _t2 && _t2.status
+              }, {
+                debugOnly: true
+              });
+            }
+          case 5:
+            _context5.p = 6;
+            _context5.n = 7;
+            return executeRequestWithPolicy(normalizedMethod, url, params, unauthorized, requestOptions);
+          case 7:
+            return _context5.a(2, _context5.v);
+          case 8:
+            _context5.p = 8;
+            _t3 = _context5.v;
+            if (!(!unauthorized && _t3 && _t3.status === 401 && !didRefreshAfter401)) {
+              _context5.n = 10;
+              break;
+            }
+            didRefreshAfter401 = true;
+            if (logging) {
+              logDebug('401 received, run single refresh flow', {
+                endpoint: normalizedEndpoint,
+                method: normalizedMethod
+              });
+            }
+            _context5.n = 9;
+            return runRefreshFlow({
+              reason: "401:".concat(normalizedMethod, ":").concat(normalizedEndpoint)
+            });
+          case 9:
+            return _context5.a(3, 5);
+          case 10:
+            throw _t3;
+          case 11:
+            return _context5.a(2);
+        }
+      }, _callee5, null, [[6, 8], [1, 3]]);
     }));
     return _requestApi.apply(this, arguments);
   }
@@ -1145,10 +1478,10 @@
    * Signature: function ensureHeaders({ unauthorized } = { unauthorized: false })
    */
   function ensureHeaders() {
-    var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
+    var _ref4 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
         unauthorized: false
       },
-      unauthorized = _ref2.unauthorized;
+      unauthorized = _ref4.unauthorized;
     var headers = {
       'Content-Type': 'application/json',
       'trakt-api-version': '2',
@@ -1320,13 +1653,13 @@
     };
   }
   function normalizeListCardData(item) {
-    var _ref3 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-      _ref3$likedListIds = _ref3.likedListIds,
-      likedListIds = _ref3$likedListIds === void 0 ? [] : _ref3$likedListIds,
-      _ref3$wide = _ref3.wide,
-      wide = _ref3$wide === void 0 ? false : _ref3$wide,
-      _ref3$canManage = _ref3.canManage,
-      canManage = _ref3$canManage === void 0 ? false : _ref3$canManage;
+    var _ref5 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+      _ref5$likedListIds = _ref5.likedListIds,
+      likedListIds = _ref5$likedListIds === void 0 ? [] : _ref5$likedListIds,
+      _ref5$wide = _ref5.wide,
+      wide = _ref5$wide === void 0 ? false : _ref5$wide,
+      _ref5$canManage = _ref5.canManage,
+      canManage = _ref5$canManage === void 0 ? false : _ref5$canManage;
     var list = item && item.list ? item.list : item;
     if (!list) return null;
     var ids = list.ids || {};
@@ -1404,10 +1737,6 @@
       total_pages: total_pages,
       page: page
     };
-  }
-  function withNoCache(url) {
-    var separator = url.indexOf('?') >= 0 ? '&' : '?';
-    return "".concat(url).concat(separator, "_=").concat(Date.now());
   }
   function parseResponseHeaders(jqXHR) {
     var headers = {};
@@ -1490,16 +1819,16 @@
     };
   }
   function buildWatchlistUrl() {
-    var _ref4 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-      _ref4$mediaType = _ref4.mediaType,
-      mediaType = _ref4$mediaType === void 0 ? 'movies,shows' : _ref4$mediaType,
-      _ref4$sort = _ref4.sort,
-      sort = _ref4$sort === void 0 ? 'added/desc' : _ref4$sort,
-      _ref4$page = _ref4.page,
-      page = _ref4$page === void 0 ? 1 : _ref4$page,
-      _ref4$limit = _ref4.limit,
-      limit = _ref4$limit === void 0 ? 36 : _ref4$limit,
-      uncollected = _ref4.uncollected;
+    var _ref6 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      _ref6$mediaType = _ref6.mediaType,
+      mediaType = _ref6$mediaType === void 0 ? 'movies,shows' : _ref6$mediaType,
+      _ref6$sort = _ref6.sort,
+      sort = _ref6$sort === void 0 ? 'added/desc' : _ref6$sort,
+      _ref6$page = _ref6.page,
+      page = _ref6$page === void 0 ? 1 : _ref6$page,
+      _ref6$limit = _ref6.limit,
+      limit = _ref6$limit === void 0 ? 36 : _ref6$limit,
+      uncollected = _ref6.uncollected;
     var query = new URLSearchParams({
       extended: 'full,images',
       page: String(page),
@@ -1612,9 +1941,9 @@
         }
         for (var i = combinedResults.length - 1; i > 0; i--) {
           var j = Math.floor(Math.random() * (i + 1));
-          var _ref5 = [combinedResults[j], combinedResults[i]];
-          combinedResults[i] = _ref5[0];
-          combinedResults[j] = _ref5[1];
+          var _ref7 = [combinedResults[j], combinedResults[i]];
+          combinedResults[i] = _ref7[0];
+          combinedResults[j] = _ref7[1];
         }
         var total = combinedResults.length;
         var total_pages = Math.max(1, Math.ceil(total / limit));
@@ -1693,11 +2022,11 @@
        * params: { redirect_uri, state?, signup?, prompt? }
        */
       startStandardOAuth: function startStandardOAuth() {
-        var _ref6 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-          redirect_uri = _ref6.redirect_uri,
-          state = _ref6.state,
-          signup = _ref6.signup,
-          prompt = _ref6.prompt;
+        var _ref8 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+          redirect_uri = _ref8.redirect_uri,
+          state = _ref8.state,
+          signup = _ref8.signup,
+          prompt = _ref8.prompt;
         var base = "".concat(API_URL, "oauth/authorize");
         var qs = new URLSearchParams({
           redirect_uri: redirect_uri,
@@ -1713,9 +2042,9 @@
        * Body: { code, redirect_uri, grant_type: 'authorization_code' }
        * unauthorized = true
        */
-      exchangeCode: function exchangeCode(_ref7) {
-        var code = _ref7.code,
-          redirect_uri = _ref7.redirect_uri;
+      exchangeCode: function exchangeCode(_ref9) {
+        var code = _ref9.code,
+          redirect_uri = _ref9.redirect_uri;
         return requestApi('POST', '/oauth/token', {
           code: code,
           redirect_uri: redirect_uri,
@@ -1753,8 +2082,8 @@
        * Revoke token best-effort
        * unauthorized = true
        */
-      revoke: function revoke(_ref8) {
-        var token = _ref8.token;
+      revoke: function revoke(_ref0) {
+        var token = _ref0.token;
         return requestApi('POST', '/oauth/revoke', {
           token: token
         }, true);
@@ -1819,7 +2148,7 @@
       var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var page = params.page || 1;
       var limit = params.limit || 36;
-      return requestApi('GET', withNoCache("/users/me/likes/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images"))).then(function (response) {
+      return requestApi('GET', "/users/me/likes/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images")).then(function (response) {
         var raw = Array.isArray(response) ? response : [];
         var likedListIds = raw.map(function (item) {
           var _item$list;
@@ -1847,7 +2176,7 @@
       var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var page = params.page || 1;
       var limit = params.limit || 36;
-      return requestApi('GET', withNoCache("/users/me/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images"))).then(function (response) {
+      return requestApi('GET', "/users/me/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images")).then(function (response) {
         var raw = Array.isArray(response) ? response : [];
         var formatted = _this2.formatListsResults(raw, [], {
           wide: true,
@@ -1864,7 +2193,7 @@
       var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var listId = params.listId || params.id;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
-      return requestApi('GET', withNoCache("/users/me/lists/".concat(encodeURIComponent(listId), "?extended=images"))).then(function (response) {
+      return requestApi('GET', "/users/me/lists/".concat(encodeURIComponent(listId), "?extended=images")).then(function (response) {
         return normalizeListCardData(response, {
           wide: true,
           canManage: true
@@ -1879,31 +2208,31 @@
       return requestApi('POST', '/users/me/lists', body);
     },
     updateList: function updateList() {
-      var _ref9 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        listId = _ref9.listId,
-        payload = _ref9.payload;
+      var _ref1 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref1.listId,
+        payload = _ref1.payload;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       var body = sanitizeListPayload(payload);
       if (!body.name) return Promise.reject(new Error('List name is missing'));
       return requestApi('PUT', "/users/me/lists/".concat(encodeURIComponent(listId)), body);
     },
     deleteList: function deleteList() {
-      var _ref0 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        listId = _ref0.listId;
+      var _ref10 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref10.listId;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       return requestApi('DELETE', "/users/me/lists/".concat(encodeURIComponent(listId)));
     },
     addToList: function addToList() {
-      var _ref1 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        listId = _ref1.listId,
-        item = _ref1.item;
+      var _ref11 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref11.listId,
+        item = _ref11.item;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       return requestApi('POST', "/users/me/lists/".concat(encodeURIComponent(listId), "/items"), buildSyncPayload(item || {}));
     },
     removeFromList: function removeFromList() {
-      var _ref10 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        listId = _ref10.listId,
-        item = _ref10.item;
+      var _ref12 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref12.listId,
+        item = _ref12.item;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       return requestApi('POST', "/users/me/lists/".concat(encodeURIComponent(listId), "/items/remove"), buildSyncPayload(item || {}));
     },
@@ -1913,7 +2242,7 @@
       var page = params.page || 1;
       var limit = params.limit || 36;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
-      var url = withNoCache("/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=full,images&page=").concat(page, "&limit=").concat(limit));
+      var url = "/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=full,images&page=").concat(page, "&limit=").concat(limit);
       return requestApi('GET', url).then(function (response) {
         var raw = Array.isArray(response) ? response : [];
         var formatted = formatTraktResults(raw);
@@ -1925,19 +2254,19 @@
       });
     },
     inList: function inList() {
-      var _ref11 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        listId = _ref11.listId,
-        item = _ref11.item,
-        _ref11$limit = _ref11.limit,
-        limit = _ref11$limit === void 0 ? 100 : _ref11$limit,
-        _ref11$maxPages = _ref11.maxPages,
-        maxPages = _ref11$maxPages === void 0 ? 10 : _ref11$maxPages;
+      var _ref13 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        listId = _ref13.listId,
+        item = _ref13.item,
+        _ref13$limit = _ref13.limit,
+        limit = _ref13$limit === void 0 ? 100 : _ref13$limit,
+        _ref13$maxPages = _ref13.maxPages,
+        maxPages = _ref13$maxPages === void 0 ? 10 : _ref13$maxPages;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       var ids = resolveTraktIds(item || {});
       if (!Object.keys(ids).length) return Promise.resolve(false);
       var page = 1;
       var _checkPage = function checkPage() {
-        var url = withNoCache("/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=images&page=").concat(page, "&limit=").concat(limit));
+        var url = "/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=images&page=").concat(page, "&limit=").concat(limit);
         return requestApi('GET', url).then(function (response) {
           var raw = Array.isArray(response) ? response : [];
           var found = raw.some(function (entry) {
@@ -1961,7 +2290,7 @@
       if (!listId) {
         return Promise.reject(new Error('List ID is missing'));
       }
-      var url = withNoCache("/lists/".concat(encodeURIComponent(listId), "/items?extended=full,images&page=").concat(page, "&limit=").concat(limit));
+      var url = "/lists/".concat(encodeURIComponent(listId), "/items?extended=full,images&page=").concat(page, "&limit=").concat(limit);
       return requestApi('GET', url).then(function (response) {
         var raw = Array.isArray(response) ? response : [];
         var formatted = formatTraktResults(raw);
@@ -6999,6 +7328,38 @@
       text: Lampa.Lang.translate('trakttvAuthOk')
     });
   }
+  function extractPollingErrorCode(error) {
+    var payload = error && error.response;
+    if (!payload) return '';
+    if (_typeof(payload) === 'object') {
+      return String(payload.error || payload.error_code || '').trim().toLowerCase();
+    }
+    if (typeof payload === 'string') {
+      try {
+        var decoded = JSON.parse(payload);
+        if (decoded && _typeof(decoded) === 'object') {
+          return String(decoded.error || decoded.error_code || '').trim().toLowerCase();
+        }
+      } catch (e) {
+        return '';
+      }
+    }
+    return '';
+  }
+  function parseRetryAfterMs() {
+    var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var value = headers && headers['retry-after'];
+    if (!value) return null;
+    var numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric >= 0) {
+      return numeric * 1000;
+    }
+    var dateMs = Date.parse(value);
+    if (Number.isFinite(dateMs)) {
+      return Math.max(0, dateMs - Date.now());
+    }
+    return null;
+  }
 
   // Окрема функція для poll авторизації
   function pollAuth(data, modalInstance) {
@@ -7042,11 +7403,21 @@
         handleAuthSuccess(modalInstance, response);
       })["catch"](function (error) {
         var status = error && error.status;
+        var errorCode = extractPollingErrorCode(error);
         switch (status) {
           case 400:
-            // authorization_pending, do not stop polling
-            // Schedule next poll with currentPollingStepMs
-            currentPollTimeoutId = setTimeout(_executePoll, currentPollingStepMs);
+            // polling continues only for authorization_pending
+            if (errorCode === 'authorization_pending') {
+              currentPollTimeoutId = setTimeout(_executePoll, currentPollingStepMs);
+              break;
+            }
+            logWarn('Device auth poll returned invalid 400 state', {
+              status: status,
+              errorCode: errorCode
+            }, {
+              debugOnly: true
+            });
+            handlePollingError(modalInstance, 'trakttvAuthError', 'Authentication error', errorCode || status);
             break;
           case 404:
             // invalid_device_code
@@ -7069,12 +7440,14 @@
             // Increase polling step, but cap it to avoid excessively long delays
             currentPollingStepMs = Math.min(currentPollingStepMs * 2, 60 * 1000); // Double, max 60 seconds
             var jitter = Math.random() * 1000; // Add random jitter up to 1 second
+            var retryAfterMs = parseRetryAfterMs(error && error.headers ? error.headers : {});
+            var nextStepMs = Math.max(currentPollingStepMs + jitter, retryAfterMs || 0);
             logWarn('Device auth polling slowed down by server', {
-              nextStepMs: currentPollingStepMs + jitter
+              nextStepMs: nextStepMs
             }, {
               debugOnly: true
             });
-            currentPollTimeoutId = setTimeout(_executePoll, currentPollingStepMs + jitter);
+            currentPollTimeoutId = setTimeout(_executePoll, nextStepMs);
             break;
           default:
             // Any other error
@@ -9025,6 +9398,7 @@
   var UI_DEADLINE_CATEGORY_MS = 3200;
   var STALE_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
   var STORAGE_CACHE_PREFIX = 'trakttv_row_cache_v1_';
+  var SOURCE_FILTER_FIELDS = ['trakt_source_ignore_watched', 'trakt_source_ignore_watchlisted'];
   function getUiDeadline(screen) {
     return screen === 'main' ? UI_DEADLINE_MAIN_MS : UI_DEADLINE_CATEGORY_MS;
   }
@@ -9040,11 +9414,39 @@
       return 'anon';
     }
   }
+  function parseBooleanValue(value) {
+    if (typeof value === 'boolean') return value;
+    if (value === 1 || value === '1' || value === 'true') return true;
+    if (value === 0 || value === '0' || value === 'false') return false;
+    return null;
+  }
+  function readBooleanStorage$1(name) {
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+    try {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
+        var direct = parseBooleanValue(Lampa.Storage.get(name));
+        if (direct !== null) return direct;
+      }
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.field === 'function') {
+        var fromField = parseBooleanValue(Lampa.Storage.field(name));
+        if (fromField !== null) return fromField;
+      }
+    } catch (error) {
+      return fallback;
+    }
+    return fallback;
+  }
+  function getSourceFilterFingerprint() {
+    var ignoreWatched = readBooleanStorage$1('trakt_source_ignore_watched', false) ? '1' : '0';
+    var ignoreWatchlisted = readBooleanStorage$1('trakt_source_ignore_watchlisted', false) ? '1' : '0';
+    return "iw:".concat(ignoreWatched, "|iwl:").concat(ignoreWatchlisted);
+  }
   function buildRowCacheKey(config, params, screen) {
     var rowName = config && config.name ? config.name : 'unknown';
     var categoryContext = params && params.url ? String(params.url) : '';
     var authFingerprint = getAuthFingerprint();
-    return STORAGE_CACHE_PREFIX + [rowName, screen || 'unknown', categoryContext, authFingerprint].join('|');
+    var filtersFingerprint = getSourceFilterFingerprint();
+    return STORAGE_CACHE_PREFIX + [rowName, screen || 'unknown', categoryContext, authFingerprint, filtersFingerprint].join('|');
   }
   function toCacheLine(line) {
     var cached = Object.assign({}, line);
@@ -9091,6 +9493,20 @@
       return null;
     }
   }
+  function clearAllRowCaches() {
+    if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.set !== 'function') return;
+    try {
+      var keys = typeof localStorage !== 'undefined' ? Object.keys(localStorage) : [];
+      keys.forEach(function (key) {
+        if (String(key || '').indexOf(STORAGE_CACHE_PREFIX) !== 0) return;
+        Lampa.Storage.set(key, null);
+      });
+    } catch (error) {
+      logWarn('Rows cache bulk clear failed', error, {
+        debugOnly: true
+      });
+    }
+  }
   function createOnMoreHandler(config) {
     return function () {
       Lampa.Activity.push({
@@ -9133,8 +9549,18 @@
     // Cleanup deprecated cache keys
     Lampa.Storage.set('trakttv_cached_upnext', null);
     Lampa.Storage.set('trakttv_cached_recommendations', null);
+    clearAllRowCaches();
     registerLineTitleDecorator();
+    registerSourceFiltersCacheInvalidation();
     registerRows();
+  }
+  function registerSourceFiltersCacheInvalidation() {
+    if (!Lampa || !Lampa.Storage || !Lampa.Storage.listener || typeof Lampa.Storage.listener.follow !== 'function') return;
+    Lampa.Storage.listener.follow('change', function (event) {
+      var name = event && event.name ? String(event.name) : '';
+      if (!name || SOURCE_FILTER_FIELDS.indexOf(name) === -1) return;
+      clearAllRowCaches();
+    });
   }
   function registerLineTitleDecorator() {
     Lampa.Listener.follow('line', function (e) {
@@ -9462,12 +9888,18 @@
     }
   }
   function decodeQuery(value) {
+    if (value === undefined || value === null) return '';
+    if (_typeof(value) === 'object') return '';
     var source = String(value || '').trim();
     if (!source) return '';
+    if (source === '[object Object]') return '';
     try {
-      return decodeURIComponent(source);
+      var decoded = decodeURIComponent(source);
+      var normalized = String(decoded || '').trim();
+      if (!normalized || normalized === '[object Object]') return '';
+      return normalized;
     } catch (e) {
-      return source;
+      return source === '[object Object]' ? '' : source;
     }
   }
   function toPositiveInt(value) {
@@ -9480,10 +9912,24 @@
   }
   function readBooleanStorage(name) {
     var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
-    var value = Lampa.Storage.field(name);
-    if (typeof value === 'boolean') return value;
-    if (value === 1 || value === '1' || value === 'true') return true;
-    if (value === 0 || value === '0' || value === 'false') return false;
+    var parse = function parse(value) {
+      if (typeof value === 'boolean') return value;
+      if (value === 1 || value === '1' || value === 'true') return true;
+      if (value === 0 || value === '0' || value === 'false') return false;
+      return null;
+    };
+    try {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
+        var direct = parse(Lampa.Storage.get(name));
+        if (direct !== null) return direct;
+      }
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.field === 'function') {
+        var fromField = parse(Lampa.Storage.field(name));
+        if (fromField !== null) return fromField;
+      }
+    } catch (error) {
+      return fallback;
+    }
     return fallback;
   }
   function resolvePagination() {
@@ -9525,7 +9971,12 @@
     Object.keys(params).forEach(function (key) {
       var value = params[key];
       if (value === undefined || value === null || value === '') return;
-      query.set(String(key), String(value));
+      var normalizedKey = String(key || '').trim();
+      if (!normalizedKey || normalizedKey === '[object Object]') return;
+      if (_typeof(value) === 'object') return;
+      var normalizedValue = String(value).trim();
+      if (!normalizedValue || normalizedValue === '[object Object]') return;
+      query.set(normalizedKey, normalizedValue);
     });
     return query;
   }
@@ -9561,8 +10012,10 @@
     var page = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
     var limit = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : DEFAULT_LIMIT;
     var queryParams = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+    var normalizedQuery = decodeQuery(query);
+    if (!normalizedQuery) return '';
     var finalParams = applyQueryParams(applySourceFilters(new URLSearchParams({
-      query: String(query || ''),
+      query: normalizedQuery,
       extended: 'full,images',
       page: String(Math.max(1, parseInt(page, 10) || 1)),
       limit: String(Math.max(1, parseInt(limit, 10) || DEFAULT_LIMIT))
@@ -9760,8 +10213,10 @@
     var limit = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : DEFAULT_LIMIT;
     var extraQuery = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
     var normalizedType = normalizeSearchType(type);
-    if (!normalizedType) return Promise.resolve(null);
-    var endpoint = buildSearchUrl(normalizedType, query, page, limit, extraQuery);
+    var normalizedQuery = decodeQuery(query);
+    if (!normalizedType || !normalizedQuery) return Promise.resolve(null);
+    var endpoint = buildSearchUrl(normalizedType, normalizedQuery, page, limit, extraQuery);
+    if (!endpoint) return Promise.resolve(null);
     return fetchWithMeta(endpoint).then(function (_ref4) {
       var data = _ref4.data,
         headers = _ref4.headers;
@@ -9778,7 +10233,7 @@
       });
       line.type = normalizedType === 'show' ? 'tv' : normalizedType;
       line.search_type = normalizedType;
-      line.query = query;
+      line.query = normalizedQuery;
       return line;
     });
   }
@@ -10022,12 +10477,16 @@
       var onerror = arguments.length > 2 ? arguments[2] : undefined;
       var page = Math.max(1, parseInt(params.page, 10) || 1);
       var limit = Math.max(1, parseInt(params.limit, 10) || DEFAULT_LIMIT);
-      var query = decodeQuery(params.query).trim();
+      var query = decodeQuery(params.query);
       var traktGenre = resolveTraktGenreFilter(params);
       var extraQuery = traktGenre ? {
         genres: traktGenre
       } : {};
       var searchType = normalizeSearchType(params.search_type || (normalizePath(params.url).startsWith('search/') ? normalizePath(params.url).split('/')[1] : ''));
+      if (searchType && !query) {
+        if (onerror) onerror();
+        return;
+      }
       if (query && searchType) {
         loadSearchLine(searchType, query, page, limit, extraQuery).then(function (line) {
           if (!line || !line.results.length) {
