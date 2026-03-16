@@ -986,9 +986,6 @@
     }
     return headers;
   }
-  function isAuthError$1(error) {
-    return error && (error.status === 401 || error.status === 403);
-  }
   function normalizeError(error, fallback) {
     var message = error && (error.responseText || error.statusText || error.message) || fallback;
     var normalized = new Error(message);
@@ -1018,7 +1015,6 @@
   function _makeRequest() {
     _makeRequest = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(path) {
       var options,
-        retryOnAuthError,
         config,
         _args = arguments,
         _t;
@@ -1026,7 +1022,6 @@
         while (1) switch (_context.n) {
           case 0:
             options = _args.length > 1 && _args[1] !== undefined ? _args[1] : {};
-            retryOnAuthError = _args.length > 2 && _args[2] !== undefined ? _args[2] : true;
             config = getConfig$1();
             if (config.url) {
               _context.n = 1;
@@ -1042,17 +1037,8 @@
           case 3:
             _context.p = 3;
             _t = _context.v;
-            if (!(retryOnAuthError && !config.apiKey && isAuthError$1(_t))) {
-              _context.n = 5;
-              break;
-            }
-            _context.n = 4;
-            return auth$1(false);
-          case 4:
-            return _context.a(2, ajaxRequest(path, options));
-          case 5:
             throw normalizeError(_t, "qBittorrent request failed");
-          case 6:
+          case 4:
             return _context.a(2);
         }
       }, _callee, null, [[1, 3]]);
@@ -1695,6 +1681,14 @@
       }));
       return _makeRequest.apply(this, arguments);
     }
+    function normalizeRequestError(error, fallbackMessage) {
+      var message = error && (error.statusText || error.message) ? error.statusText || error.message : fallbackMessage;
+      var normalized = new Error(String(message || fallbackMessage));
+      if (error && typeof error.status !== "undefined") {
+        normalized.status = error.status;
+      }
+      return normalized;
+    }
     function setLabels(_x2, _x3) {
       return _setLabels.apply(this, arguments);
     }
@@ -1844,7 +1838,7 @@
               _context5.p = 2;
               _t0 = _context5.v;
               console.error("TDM", "".concat(clientName, " GetData error:"), _t0);
-              throw new Error("Failed to fetch torrent data: ".concat(_t0.statusText || _t0.message));
+              throw normalizeRequestError(_t0, "Failed to fetch torrent data");
             case 3:
               return _context5.a(2);
           }
@@ -1875,7 +1869,7 @@
               _context6.p = 2;
               _t1 = _context6.v;
               console.error("TDM", "".concat(clientName, " GetInfo error:"), _t1);
-              throw new Error("Failed to fetch session info: ".concat(_t1.statusText || _t1.message));
+              throw normalizeRequestError(_t1, "Failed to fetch session info");
             case 3:
               return _context6.a(2);
           }
@@ -3461,6 +3455,122 @@
     keenetic: Keenetic
   };
   var authInFlight = {};
+  var pollingCircuitState = {};
+  var POLLING_METHODS = {
+    GetData: true,
+    GetInfo: true
+  };
+  var BACKOFF_AFTER_FAILURES = 3;
+  var BACKOFF_STEPS_MS = [30000, 60000, 120000, 300000];
+  var BACKOFF_JITTER_RATIO = 0.15;
+  function getStatusCode(error) {
+    if (!error || typeof error.status === "undefined") {
+      return null;
+    }
+    var status = Number(error.status);
+    return Number.isNaN(status) ? null : status;
+  }
+  function isPollingMethod(methodName) {
+    return POLLING_METHODS[methodName] === true;
+  }
+  function getPollingKey(clientName, methodName) {
+    return "".concat(clientName, ":").concat(methodName);
+  }
+  function getPollingState(clientName, methodName) {
+    var key = getPollingKey(clientName, methodName);
+    if (!pollingCircuitState[key]) {
+      pollingCircuitState[key] = {
+        consecutiveFailures: 0,
+        blockedUntil: 0,
+        hardBlocked: false,
+        lastStatus: null,
+        lastMessage: "",
+        lastErrorAt: 0
+      };
+    }
+    return pollingCircuitState[key];
+  }
+  function resetPollingState(clientName, methodName) {
+    var state = getPollingState(clientName, methodName);
+    state.consecutiveFailures = 0;
+    state.blockedUntil = 0;
+    state.hardBlocked = false;
+    state.lastStatus = null;
+    state.lastMessage = "";
+    state.lastErrorAt = 0;
+  }
+  function isHardClientStatus(status) {
+    return status >= 400 && status < 500 && status !== 401 && status !== 403 && status !== 408 && status !== 409 && status !== 429;
+  }
+  function isBackoffCandidate(error) {
+    var status = getStatusCode(error);
+    if (status === null) {
+      var message = String(error && error.message || "").toLowerCase();
+      return message.indexOf("timeout") >= 0 || message.indexOf("network") >= 0 || message.indexOf("cors") >= 0;
+    }
+    if (status === 0 || status === 401 || status === 403 || status === 408 || status === 429) {
+      return true;
+    }
+    return status >= 500 && status < 600;
+  }
+  function createPollingBlockedError(clientName, methodName, state) {
+    var statusSuffix = state.lastStatus !== null ? " (HTTP ".concat(state.lastStatus, ")") : "";
+    if (state.hardBlocked) {
+      var hardError = new Error("".concat(clientName, " ").concat(methodName, " polling blocked after repeated client errors").concat(statusSuffix));
+      hardError.status = state.lastStatus;
+      hardError.client = clientName;
+      hardError.method = methodName;
+      hardError.isBackoffError = true;
+      hardError.isCircuitOpen = true;
+      hardError.isHardBlocked = true;
+      return hardError;
+    }
+    var retryAfterMs = Math.max(0, state.blockedUntil - Date.now());
+    var retryAfterSec = Math.ceil(retryAfterMs / 1000);
+    var softError = new Error("".concat(clientName, " ").concat(methodName, " polling paused for ").concat(retryAfterSec, "s").concat(statusSuffix));
+    softError.status = state.lastStatus;
+    softError.client = clientName;
+    softError.method = methodName;
+    softError.retryAfterMs = retryAfterMs;
+    softError.isBackoffError = true;
+    softError.isCircuitOpen = true;
+    softError.isHardBlocked = false;
+    return softError;
+  }
+  function getPollingBlockedError(clientName, methodName) {
+    var state = getPollingState(clientName, methodName);
+    if (state.hardBlocked) {
+      return createPollingBlockedError(clientName, methodName, state);
+    }
+    if (state.blockedUntil > Date.now()) {
+      return createPollingBlockedError(clientName, methodName, state);
+    }
+    if (state.blockedUntil > 0) {
+      state.blockedUntil = 0;
+    }
+    return null;
+  }
+  function registerPollingFailure(clientName, methodName, error) {
+    var state = getPollingState(clientName, methodName);
+    var status = getStatusCode(error);
+    state.consecutiveFailures += 1;
+    state.lastStatus = status;
+    state.lastMessage = String(error && error.message || "");
+    state.lastErrorAt = Date.now();
+    if (status !== null && isHardClientStatus(status) && state.consecutiveFailures >= BACKOFF_AFTER_FAILURES) {
+      state.hardBlocked = true;
+      state.blockedUntil = 0;
+      return;
+    }
+    if (!isBackoffCandidate(error) || state.consecutiveFailures < BACKOFF_AFTER_FAILURES) {
+      return;
+    }
+    var rawStep = state.consecutiveFailures - BACKOFF_AFTER_FAILURES;
+    var stepIndex = Math.min(rawStep, BACKOFF_STEPS_MS.length - 1);
+    var delayMs = BACKOFF_STEPS_MS[stepIndex];
+    var jitterMs = Math.round(delayMs * BACKOFF_JITTER_RATIO * Math.random());
+    state.blockedUntil = Date.now() + delayMs + jitterMs;
+  }
   function getClient(clientName) {
     return CLIENTS[clientName] || null;
   }
@@ -3554,7 +3664,12 @@
         client,
         retryAuth,
         silentAuth,
+        usePollingGuard,
+        blockedError,
+        result,
         normalized,
+        retryResult,
+        normalizedRetryError,
         _args2 = arguments,
         _t,
         _t2;
@@ -3578,11 +3693,27 @@
           case 2:
             retryAuth = options.retryAuth !== false;
             silentAuth = options.silentAuth !== false;
+            usePollingGuard = options.backgroundPolling === true && isPollingMethod(methodName);
+            if (!usePollingGuard) {
+              _context2.n = 3;
+              break;
+            }
+            blockedError = getPollingBlockedError(clientName, methodName);
+            if (!blockedError) {
+              _context2.n = 3;
+              break;
+            }
+            throw blockedError;
+          case 3:
             _context2.p = 3;
             _context2.n = 4;
             return client[methodName].apply(client, _toConsumableArray(args));
           case 4:
-            return _context2.a(2, _context2.v);
+            result = _context2.v;
+            if (isPollingMethod(methodName)) {
+              resetPollingState(clientName, methodName);
+            }
+            return _context2.a(2, result);
           case 5:
             _context2.p = 5;
             _t = _context2.v;
@@ -3598,12 +3729,23 @@
             _context2.n = 8;
             return client[methodName].apply(client, _toConsumableArray(args));
           case 8:
-            return _context2.a(2, _context2.v);
+            retryResult = _context2.v;
+            if (isPollingMethod(methodName)) {
+              resetPollingState(clientName, methodName);
+            }
+            return _context2.a(2, retryResult);
           case 9:
             _context2.p = 9;
             _t2 = _context2.v;
-            throw normalizeClientError(clientName, methodName, _t2);
+            normalizedRetryError = normalizeClientError(clientName, methodName, _t2);
+            if (usePollingGuard) {
+              registerPollingFailure(clientName, methodName, normalizedRetryError);
+            }
+            throw normalizedRetryError;
           case 10:
+            if (usePollingGuard) {
+              registerPollingFailure(clientName, methodName, normalized);
+            }
             throw normalized;
           case 11:
             return _context2.a(2);
@@ -4205,6 +4347,111 @@
     return _handleTorrentAction.apply(this, arguments);
   }
 
+  var TorrentStateManager = /*#__PURE__*/function () {
+    function TorrentStateManager() {
+      _classCallCheck(this, TorrentStateManager);
+      this.torrents = [];
+      this.timer = null;
+      this.listener = Lampa.Listener;
+      this.updateInProgress = false;
+    }
+    return _createClass(TorrentStateManager, [{
+      key: "start",
+      value: function start() {
+        if (this.timer) {
+          return;
+        }
+        this.timer = this.update.bind(this);
+        Lampa.Timer.add(15000, this.timer, true);
+      }
+    }, {
+      key: "stop",
+      value: function stop() {
+        if (this.timer) {
+          Lampa.Timer.remove(this.timer);
+          this.timer = null;
+        }
+      }
+    }, {
+      key: "update",
+      value: function () {
+        var _update = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+          var client_name, isUniversal, new_torrents, has_active_downloads_before, has_active_downloads_after;
+          return _regenerator().w(function (_context) {
+            while (1) switch (_context.n) {
+              case 0:
+                if (!this.updateInProgress) {
+                  _context.n = 1;
+                  break;
+                }
+                return _context.a(2);
+              case 1:
+                this.updateInProgress = true;
+                _context.p = 2;
+                client_name = Lampa.Storage.get('lmetorrentSelect');
+                isUniversal = client_name === 'universal' || client_name === 'universalClient';
+                if (!(isUniversal || !hasClient(client_name))) {
+                  _context.n = 3;
+                  break;
+                }
+                return _context.a(2);
+              case 3:
+                _context.n = 4;
+                return executeClientMethod(client_name, 'GetData', [], {
+                  silentAuth: true,
+                  backgroundPolling: true
+                });
+              case 4:
+                new_torrents = _context.v;
+                if (new_torrents) {
+                  has_active_downloads_before = this.hasActiveDownloads();
+                  this.torrents = new_torrents;
+                  has_active_downloads_after = this.hasActiveDownloads();
+                  this.listener.send('torrents:updated', {
+                    torrents: this.torrents
+                  });
+                  if (has_active_downloads_before !== has_active_downloads_after) {
+                    this.listener.send('torrents:status_changed', {
+                      active: has_active_downloads_after
+                    });
+                  }
+                }
+                _context.n = 6;
+                break;
+              case 5:
+                _context.p = 5;
+                _context.v;
+              case 6:
+                _context.p = 6;
+                this.updateInProgress = false;
+                return _context.f(6);
+              case 7:
+                return _context.a(2);
+            }
+          }, _callee, this, [[2, 5, 6, 7]]);
+        }));
+        function update() {
+          return _update.apply(this, arguments);
+        }
+        return update;
+      }()
+    }, {
+      key: "hasActiveDownloads",
+      value: function hasActiveDownloads() {
+        return this.torrents.some(function (torrent) {
+          var state = String(torrent && torrent.state || '').toLowerCase();
+          return state.indexOf('download') >= 0 || state.indexOf('check') >= 0;
+        });
+      }
+    }, {
+      key: "on",
+      value: function on(event, callback) {
+        this.listener.follow(event, callback);
+      }
+    }]);
+  }();
+  var TorrentStateManager$1 = new TorrentStateManager();
+
   var UPDATE_INTERVAL_MS = 15000;
   var ERROR_KIND = {
     AUTH: "auth",
@@ -4255,6 +4502,12 @@
         Lampa.Timer.remove(updateTick);
         updateTick = null;
       }
+    }
+    function pauseHeaderPolling() {
+      TorrentStateManager$1.stop();
+    }
+    function resumeHeaderPolling() {
+      TorrentStateManager$1.start();
     }
     function destroyAllItems() {
       Lampa.Arrays.destroy(items);
@@ -4416,6 +4669,7 @@
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
+            pauseHeaderPolling();
             stopAutoUpdate();
             this.activity.loader(true);
             self.renderLoadingState();
@@ -4497,7 +4751,8 @@
               _context3.p = 2;
               _context3.n = 3;
               return executeClientMethod(client, "GetData", [], {
-                silentAuth: true
+                silentAuth: true,
+                backgroundPolling: true
               });
             case 3:
               torrents = _context3.v;
@@ -4541,7 +4796,9 @@
             case 7:
               _context3.p = 7;
               _t2 = _context3.v;
-              console.error("TDM", "Auto update error:", _t2);
+              if (!_t2 || !_t2.isBackoffError) {
+                console.error("TDM", "Auto update error:", _t2);
+              }
             case 8:
               _context3.p = 8;
               updateInProgress = false;
@@ -4592,15 +4849,18 @@
     };
     this.pause = function () {
       stopAutoUpdate();
+      resumeHeaderPolling();
     };
     this.stop = function () {
       stopAutoUpdate();
+      resumeHeaderPolling();
     };
     this.render = function () {
       return html;
     };
     this.destroy = function () {
       stopAutoUpdate();
+      resumeHeaderPolling();
       network.clear();
       destroyAllItems();
       scroll.destroy();
@@ -5916,98 +6176,6 @@
       }
     });
   }
-
-  var TorrentStateManager = /*#__PURE__*/function () {
-    function TorrentStateManager() {
-      _classCallCheck(this, TorrentStateManager);
-      this.torrents = [];
-      this.timer = null;
-      this.listener = Lampa.Listener;
-    }
-    return _createClass(TorrentStateManager, [{
-      key: "start",
-      value: function start() {
-        if (this.timer) {
-          return;
-        }
-        this.timer = this.update.bind(this);
-        Lampa.Timer.add(15000, this.timer, true);
-      }
-    }, {
-      key: "stop",
-      value: function stop() {
-        if (this.timer) {
-          Lampa.Timer.remove(this.timer);
-          this.timer = null;
-        }
-      }
-    }, {
-      key: "update",
-      value: function () {
-        var _update = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-          var client_name, isUniversal, new_torrents, has_active_downloads_before, has_active_downloads_after;
-          return _regenerator().w(function (_context) {
-            while (1) switch (_context.n) {
-              case 0:
-                _context.p = 0;
-                client_name = Lampa.Storage.get('lmetorrentSelect');
-                isUniversal = client_name === 'universal' || client_name === 'universalClient';
-                if (!(isUniversal || !hasClient(client_name))) {
-                  _context.n = 1;
-                  break;
-                }
-                return _context.a(2);
-              case 1:
-                _context.n = 2;
-                return executeClientMethod(client_name, 'GetData', [], {
-                  silentAuth: true
-                });
-              case 2:
-                new_torrents = _context.v;
-                if (new_torrents) {
-                  has_active_downloads_before = this.hasActiveDownloads();
-                  this.torrents = new_torrents;
-                  has_active_downloads_after = this.hasActiveDownloads();
-                  this.listener.send('torrents:updated', {
-                    torrents: this.torrents
-                  });
-                  if (has_active_downloads_before !== has_active_downloads_after) {
-                    this.listener.send('torrents:status_changed', {
-                      active: has_active_downloads_after
-                    });
-                  }
-                }
-                _context.n = 4;
-                break;
-              case 3:
-                _context.p = 3;
-                _context.v;
-              case 4:
-                return _context.a(2);
-            }
-          }, _callee, this, [[0, 3]]);
-        }));
-        function update() {
-          return _update.apply(this, arguments);
-        }
-        return update;
-      }()
-    }, {
-      key: "hasActiveDownloads",
-      value: function hasActiveDownloads() {
-        return this.torrents.some(function (torrent) {
-          var state = String(torrent && torrent.state || '').toLowerCase();
-          return state.indexOf('download') >= 0 || state.indexOf('check') >= 0;
-        });
-      }
-    }, {
-      key: "on",
-      value: function on(event, callback) {
-        this.listener.follow(event, callback);
-      }
-    }]);
-  }();
-  var TorrentStateManager$1 = new TorrentStateManager();
 
   /**
    * Utility functions for Torrent Manager plugin
