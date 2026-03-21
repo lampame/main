@@ -438,6 +438,35 @@
       img: image
     };
   }
+  function normalizeCardImageFields(raw) {
+    var image = String(raw || '').trim();
+    if (!image) {
+      return {
+        poster_path: null,
+        poster: null,
+        img: null
+      };
+    }
+    if (/^(https?:)?\/\//i.test(image) || /^data:image\//i.test(image)) {
+      return {
+        poster_path: null,
+        poster: image,
+        img: image
+      };
+    }
+    if (image.charAt(0) === '/') {
+      return {
+        poster_path: image,
+        poster: null,
+        img: null
+      };
+    }
+    return {
+      poster_path: null,
+      poster: image,
+      img: image
+    };
+  }
   function extractScheduleEntries(details) {
     return Array.isArray(details && details.schedule) ? details.schedule : [];
   }
@@ -551,6 +580,7 @@
     var title_ja = details && details.title_ja;
     var year = details && details.year;
     var image = details && details.image;
+    var imageFields = normalizeCardImageFields(image);
     var rawBackdrop = String(details && details.backdrop || '').trim();
     var normalizedBackdrop = rawBackdrop && rawBackdrop !== 'null' && rawBackdrop !== 'undefined' ? rawBackdrop : '';
     var hasBackdrop = !!normalizedBackdrop;
@@ -570,8 +600,9 @@
       // Використати title_ja як tagline для відображення оригінальної назви
       tagline: title_ja || '',
       overview: markdownToHtml(details && (details.synopsis_ua || details.synopsis_en) || ''),
-      poster_path: image,
-      img: image,
+      poster_path: imageFields.poster_path,
+      poster: imageFields.poster,
+      img: imageFields.img,
       backdrop_path: backdropPath,
       background_image: backgroundImage,
       images: {
@@ -6392,11 +6423,101 @@
     holder.innerHTML = prepared;
     return String(holder.textContent || holder.innerText || '').replace(/\u00A0/g, ' ').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
   }
+  function isAbsoluteImageUrl(value) {
+    var image = String(value || '').trim();
+    if (!image) return false;
+    return /^(https?:)?\/\//i.test(image) || /^data:image\//i.test(image);
+  }
+  function isBrokenTmdbWrappedUrl(value) {
+    var image = String(value || '').trim();
+    if (!image) return false;
+    return /\/t\/p\/w\d{2,4}\/https?:\/\//i.test(image);
+  }
+  function normalizeHikkaFavoriteCard(card) {
+    if (!card || _typeof(card) !== 'object') return {
+      card: card,
+      changed: false
+    };
+    if (String(card.source || '') !== 'hikka') return {
+      card: card,
+      changed: false
+    };
+    var nextCard = _objectSpread2({}, card);
+    var posterPath = String(nextCard.poster_path || '').trim();
+    if (!isAbsoluteImageUrl(posterPath)) return {
+      card: card,
+      changed: false
+    };
+    var currentImg = String(nextCard.img || '').trim();
+    var currentPoster = String(nextCard.poster || '').trim();
+    if (!currentImg || isBrokenTmdbWrappedUrl(currentImg)) nextCard.img = posterPath;
+    if (!currentPoster || isBrokenTmdbWrappedUrl(currentPoster)) nextCard.poster = posterPath;
+    nextCard.poster_path = null;
+    return {
+      card: nextCard,
+      changed: true
+    };
+  }
+  function migrateHikkaFavoritePosters() {
+    if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.get !== 'function' || typeof Lampa.Storage.set !== 'function') return;
+    try {
+      var favorite = Lampa.Storage.get('favorite');
+      var cards = favorite && Array.isArray(favorite.card) ? favorite.card : null;
+      if (!cards || !cards.length) return;
+      var changed = false;
+      var nextCards = cards.map(function (card) {
+        var normalized = normalizeHikkaFavoriteCard(card);
+        if (normalized.changed) changed = true;
+        return normalized.card;
+      });
+      if (!changed) return;
+      Lampa.Storage.set('favorite', _objectSpread2(_objectSpread2({}, favorite || {}), {}, {
+        card: nextCards
+      }));
+      if (Lampa.Favorite && typeof Lampa.Favorite.read === 'function') {
+        Lampa.Favorite.read();
+      }
+      console.log('[Hikka] Favorite posters migration applied');
+    } catch (e) {
+      console.warn('[Hikka] Favorite posters migration error:', e);
+    }
+  }
+  function patchFavoriteApiImageNormalization() {
+    if (!Lampa || !Lampa.Api || typeof Lampa.Api.favorite !== 'function') return;
+    if (Lampa.__hikkaPatchedFavoriteApiImageNormalization) return;
+    var __origFavorite = Lampa.Api.favorite;
+    Lampa.Api.favorite = function (params, oncomplite, onerror) {
+      return __origFavorite.call(this, params, function (data) {
+        try {
+          if (data && Array.isArray(data.results)) {
+            var changed = false;
+            var results = data.results.map(function (card) {
+              var normalized = normalizeHikkaFavoriteCard(card);
+              if (normalized.changed) changed = true;
+              return normalized.card;
+            });
+            if (changed) data = _objectSpread2(_objectSpread2({}, data), {}, {
+              results: results
+            });
+          }
+        } catch (e) {
+          console.warn('[Hikka] Favorite API normalize error:', e);
+        }
+        if (typeof oncomplite === 'function') oncomplite(data);
+      }, onerror);
+    };
+    Lampa.__hikkaPatchedFavoriteApiImageNormalization = true;
+  }
   function init() {
     // Додаємо стилі для плагіну через шаблонну систему
     Lampa.Template.add('hikka_styles', "\n        <style>\n        .hikka-card .card__icons .icon--ua{background-image:url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='20' fill='%230052CC'/%3E%3Crect y='20' width='60' height='20' fill='%23FFDD00'/%3E%3C/svg%3E');background-size:contain;background-repeat:no-repeat;background-position:center}.hikka-card .card__quality{text-transform:none}.hikka-card .hikka-anime-card__rating,.hikka-card .hikka-anime-card__episodes,.hikka-card .hikka-anime-card__status{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}.hikka-card .hikka-anime-card__rating{color:#ffd700}.hikka-card .hikka-anime-card__status{color:#90ee90}.hikka-video-background{position:fixed;inset:0;z-index:1;opacity:0;pointer-events:none;-webkit-transition:opacity .28s ease;-o-transition:opacity .28s ease;transition:opacity .28s ease;background:#000}.hikka-video-background.is-visible{opacity:1}.hikka-video-background::after{content:'';position:absolute;inset:0;background:-webkit-gradient(linear,left top,left bottom,from(rgba(0,0,0,0.15)),to(rgba(0,0,0,0.62)));background:-webkit-linear-gradient(top,rgba(0,0,0,0.15) 0,rgba(0,0,0,0.62) 100%);background:-o-linear-gradient(top,rgba(0,0,0,0.15) 0,rgba(0,0,0,0.62) 100%);background:linear-gradient(180deg,rgba(0,0,0,0.15) 0,rgba(0,0,0,0.62) 100%)}.hikka-video-background__video{width:100%;height:100%;-o-object-fit:cover;object-fit:cover}.hikka-character{padding:2em 1.5em}.hikka-character__body{max-width:48em;margin:0 auto}.hikka-character__content{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:1em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.hikka-character__image{width:12em;height:12em;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%;-webkit-box-shadow:0 .6em 1.4em rgba(0,0,0,0.35);box-shadow:0 .6em 1.4em rgba(0,0,0,0.35)}.hikka-character__name{font-size:1.8em;font-weight:700;color:rgba(255,255,255,0.8)}.hikka-character__role{font-size:1.1em;color:rgba(255,255,255,0.6)}.hikka-character__meta{display:grid;gap:.4em;padding:.8em 1em;-webkit-border-radius:.8em;border-radius:.8em;background:rgba(255,255,255,0.06)}.hikka-character__meta-row{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;gap:1em;font-size:.95em}.hikka-character__meta-label{color:rgba(255,255,255,0.6)}.hikka-character__meta-value{color:rgba(255,255,255,0.8)}.hikka-character__description{max-width:40em;line-height:1.6;color:rgba(255,255,255,0.8)}.hikka-full-active .full-descr__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .full-descr__text .hikka-md-list{margin:.3em 0 .35em 1.25em;padding:0}.hikka-full-active .full-descr__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em;margin:.45em 0 .55em}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;min-height:1.82em;padding:0 .62em;-webkit-border-radius:.62em;border-radius:.62em;font-size:.88em;line-height:1.2;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.1);color:rgba(243,247,255,0.9)}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item--rating{border-color:rgba(255,214,102,0.42);background:rgba(255,214,102,0.16);color:rgba(255,233,166,0.96)}.hikka-full-active .full-start-new.applecation .hikka-applecation-meta__item--status{background:rgba(129,255,175,0.11)}.hikka-full-active .applecation .applecation__description.hikka-applecation-description,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description{white-space:normal;line-height:1.35;color:rgba(239,245,255,0.9)}.hikka-full-active .applecation .applecation__description.hikka-applecation-description>span,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description>span{display:block;margin:.03em 0 .2em}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-link,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-link{color:rgba(171,210,255,0.98);text-decoration:underline}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-list,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-list{margin:.22em 0 .34em 1.05em;padding:0}.hikka-full-active .applecation .applecation__description.hikka-applecation-description .hikka-md-quote,.hikka-full-active .applecation-description-overlay__text.hikka-applecation-description .hikka-md-quote{margin:.28em 0;padding:.28em .52em;border-left:.18em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.08);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .applecation .full-episode__name{line-height:1.22 !important;margin-bottom:.22em !important}.hikka-full-active .applecation .full-episode__overview{line-height:1.25 !important;min-height:0 !important;height:auto !important;margin-bottom:.3em !important}.hikka-full-active .applecation .full-episode__overview:empty{display:none !important;margin-bottom:0 !important}.hikka-full-active .applecation .full-episode__date{margin-top:0 !important;line-height:1.2 !important}.hikka-full-active .full-review-add,.hikka-full-active .full-review__footer,.hikka-full-active .full-review__like,.hikka-full-active .full-review__like-icon{display:none !important}.hikka-full-active .mapping--line>.hikka-comment-card{min-width:17em;max-width:21em;padding:.9em;-webkit-border-radius:.9em;border-radius:.9em;background:-webkit-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:-o-linear-gradient(290deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));background:linear-gradient(160deg,rgba(16,19,25,0.92),rgba(10,12,16,0.94));border:1px solid rgba(255,255,255,0.16);-webkit-box-shadow:0 10px 24px rgba(0,0,0,0.28);box-shadow:0 10px 24px rgba(0,0,0,0.28);gap:.6em}.hikka-full-active .hikka-comment-card.focus{border-color:rgba(255,255,255,0.52);background:rgba(20,24,31,0.97);-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);box-shadow:0 0 0 .2em rgba(255,255,255,0.12),0 16px 28px rgba(0,0,0,0.35);color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-card.focus .hikka-comment-card__text,.hikka-full-active .hikka-comment-card.focus .hikka-comment-chip{color:rgba(242,247,255,0.95)}.hikka-full-active .hikka-comment-meta{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-card__footer{margin-top:auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em}.hikka-full-active .hikka-comment-chip{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;height:1.75em;padding:0 .58em;-webkit-border-radius:.55em;border-radius:.55em;font-size:.88em;font-weight:500;background:rgba(255,255,255,0.12);color:rgba(240,245,255,0.92);border:1px solid rgba(255,255,255,0.16);letter-spacing:.01em}.hikka-full-active .hikka-comment-chip--author{background:rgba(255,255,255,0.18)}.hikka-full-active .hikka-comment-chip--date,.hikka-full-active .hikka-comment-chip--score,.hikka-full-active .hikka-comment-chip--replies,.hikka-full-active .hikka-comment-chip--level,.hikka-full-active .hikka-comment-chip--continuation{background:rgba(255,255,255,0.12)}.hikka-full-active .hikka-comment-chip--continuation{opacity:.82}.hikka-full-active .hikka-comment-card__text{font-size:1.02em;line-height:1.33;margin:0;-webkit-line-clamp:5;line-clamp:5;color:rgba(236,242,255,0.92)}.hikka-full-active .hikka-comment-sidebar{-webkit-border-radius:.9em;border-radius:.9em;padding:.85em;margin-bottom:.75em;border:1px solid rgba(255,255,255,0.14);background:rgba(15,19,26,0.82)}.hikka-full-active .hikka-comment-sidebar__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.45em;margin-bottom:.25em}.hikka-full-active .hikka-thread-item{background:transparent !important;padding:.65em 1.15em !important;border-bottom:1px solid rgba(255,255,255,0.08)}.hikka-full-active .hikka-thread-item.focus{background:rgba(255,255,255,0.06) !important}.hikka-full-active .hikka-thread-entry{border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.74em;border-radius:.74em;background:rgba(9,11,16,0.72);padding:.72em .8em}.hikka-full-active .hikka-thread-entry__head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.4em;margin-bottom:.5em}.hikka-full-active .hikka-thread-entry__text{white-space:pre-wrap;word-wrap:break-word;color:rgba(240,245,255,0.93);font-size:1.06em;line-height:1.36}.hikka-full-active .hikka-comment-card__text strong,.hikka-full-active .hikka-thread-entry__text strong{font-weight:700;color:rgba(255,255,255,0.98)}.hikka-full-active .hikka-comment-card__text em,.hikka-full-active .hikka-thread-entry__text em{font-style:italic}.hikka-full-active .hikka-comment-card__text code,.hikka-full-active .hikka-thread-entry__text code{font-family:monospace;font-size:.92em;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.14);-webkit-border-radius:.36em;border-radius:.36em;padding:.05em .35em}.hikka-full-active .hikka-comment-card__text .hikka-md-link,.hikka-full-active .hikka-thread-entry__text .hikka-md-link{color:rgba(178,211,255,0.98);text-decoration:underline}.hikka-full-active .hikka-comment-card__text .hikka-md-list,.hikka-full-active .hikka-thread-entry__text .hikka-md-list{margin:.25em 0 .3em 1.1em;padding:0}.hikka-full-active .hikka-comment-card__text .hikka-md-quote,.hikka-full-active .hikka-thread-entry__text .hikka-md-quote{margin:.3em 0;padding:.35em .55em;border-left:.2em solid rgba(255,255,255,0.34);background:rgba(255,255,255,0.06);-webkit-border-radius:.3em;border-radius:.3em}.hikka-full-active .hikka-comment-sidebar__content{margin:0;white-space:pre-wrap;word-wrap:break-word;font-size:1.02em;line-height:1.36;color:rgba(242,247,255,0.92);font-family:inherit}.hikka-full-active .applecation .mapping--line>.hikka-comment-card{min-width:18em;max-width:22em;padding:.9em .92em;-webkit-border-radius:.85em;border-radius:.85em;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.08);-webkit-box-shadow:0 10px 26px rgba(0,0,0,0.24);box-shadow:0 10px 26px rgba(0,0,0,0.24);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}.hikka-full-active .applecation .hikka-comment-card.focus{border-color:rgba(255,255,255,0.38);background:rgba(255,255,255,0.14);-webkit-box-shadow:0 0 0 .14em rgba(255,255,255,0.14),0 16px 30px rgba(0,0,0,0.32);box-shadow:0 0 0 .14em rgba(255,255,255,0.14),0 16px 30px rgba(0,0,0,0.32)}.hikka-full-active .applecation .hikka-comment-chip{font-size:.84em;min-height:1.68em;-webkit-border-radius:.52em;border-radius:.52em;background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.16)}.hikka-full-active .applecation .hikka-comment-chip--author{background:rgba(255,255,255,0.2)}.hikka-full-active .applecation .hikka-comment-card__text{line-height:1.31;-webkit-line-clamp:4;line-clamp:4}.hikka-full-active .applecation .hikka-thread-entry{border-color:rgba(255,255,255,0.16);background:rgba(255,255,255,0.08)}\n        </style>\n    ");
     // Inject styles
     $('body').append(Lampa.Template.get('hikka_styles'));
+
+    // Виправлення старих локальних Hikka-карток у favorite/history/bookmarks:
+    // якщо poster_path був абсолютним URL, переносимо його в img/poster і прибираємо poster_path.
+    migrateHikkaFavoritePosters();
+    patchFavoriteApiImageNormalization();
 
     // Локальний sentinel для сумісності з Applecation без TMDB images API.
     try {
