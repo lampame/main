@@ -7538,8 +7538,8 @@
         var errorCode = extractPollingErrorCode(error);
         switch (status) {
           case 400:
-            // polling continues only for authorization_pending
-            if (errorCode === 'authorization_pending') {
+            // polling continues for pending/unknown interim state
+            if (!errorCode || errorCode === 'authorization_pending') {
               currentPollTimeoutId = setTimeout(_executePoll, currentPollingStepMs);
               break;
             }
