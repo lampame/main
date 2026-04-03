@@ -567,6 +567,12 @@
         uk: "Не вдалося підключитися до торрент-клієнта. Перевірте адресу, проксі та мережу",
         ro: "Clientul torrent nu poate fi accesat. Verifică adresa, proxy-ul și rețeaua"
       },
+      torrentmanager_url_requires_protocol: {
+        en: "Address must start with http:// or https://",
+        ru: "Адрес должен начинаться с http:// или https://",
+        uk: "Адреса має починатися з http:// або https://",
+        ro: "Adresa trebuie să înceapă cu http:// sau https://"
+      },
       torrentmanager_state_server_title: {
         en: "Server unavailable",
         ru: "Сервер недоступен",
@@ -4969,6 +4975,47 @@
         return client.auth(true);
       })["catch"](function () {});
     }
+    function normalizeInputValue(value) {
+      if (typeof value === "string") {
+        return value.trim();
+      }
+      if (value === null || typeof value === "undefined") {
+        return "";
+      }
+      return String(value).trim();
+    }
+    function isAddressWithProtocol(value) {
+      return /^https?:\/\/\S+$/i.test(value);
+    }
+    function createAddressValidationHandler(storageKey) {
+      var lastValidValue = "";
+      var storedValue = normalizeInputValue(Lampa.Storage.field(storageKey));
+      if (isAddressWithProtocol(storedValue)) {
+        lastValidValue = storedValue;
+      }
+      return function (newValue) {
+        var normalizedValue = normalizeInputValue(newValue);
+        if (!normalizedValue) {
+          lastValidValue = "";
+          Lampa.Storage.set(storageKey, "");
+          Lampa.Settings.update();
+          return;
+        }
+        if (!isAddressWithProtocol(normalizedValue)) {
+          Lampa.Storage.set(storageKey, lastValidValue);
+          Lampa.Bell.push({
+            text: Lampa.Lang.translate('torrentmanager_url_requires_protocol')
+          });
+          Lampa.Settings.update();
+          return;
+        }
+        lastValidValue = normalizedValue;
+        if (newValue !== normalizedValue) {
+          Lampa.Storage.set(storageKey, normalizedValue);
+        }
+        Lampa.Settings.update();
+      };
+    }
 
     //Select Client
     Lampa.SettingsApi.addParam({
@@ -5064,9 +5111,7 @@
           item.show();
         } else item.hide();
       },
-      onChange: function onChange(item) {
-        Lampa.Settings.update();
-      }
+      onChange: createAddressValidationHandler(manifest.component + "qBittorentUrl")
     });
     // Lampa.SettingsApi.addParam({
     //     component: manifest.component,
@@ -5266,9 +5311,7 @@
           item.show();
         } else item.hide();
       },
-      onChange: function onChange(item) {
-        Lampa.Settings.update();
-      }
+      onChange: createAddressValidationHandler(manifest.component + "transmissionUrl")
     });
     Lampa.SettingsApi.addParam({
       component: manifest.component,
@@ -5516,9 +5559,7 @@
           item.show();
         } else item.hide();
       },
-      onChange: function onChange(item) {
-        Lampa.Settings.update();
-      }
+      onChange: createAddressValidationHandler(manifest.component + "synologyUrl")
     });
     Lampa.SettingsApi.addParam({
       component: manifest.component,
@@ -5683,9 +5724,7 @@
           item.show();
         } else item.hide();
       },
-      onChange: function onChange(item) {
-        Lampa.Settings.update();
-      }
+      onChange: createAddressValidationHandler(manifest.component + "keeneticUrl")
     });
     Lampa.SettingsApi.addParam({
       component: manifest.component,
@@ -5783,9 +5822,7 @@
           item.show();
         } else item.hide();
       },
-      onChange: function onChange(item) {
-        Lampa.Settings.update();
-      }
+      onChange: createAddressValidationHandler(manifest.component + "keeneticWebdavUrl")
     });
     Lampa.SettingsApi.addParam({
       component: manifest.component,
