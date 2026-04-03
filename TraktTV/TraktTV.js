@@ -584,11 +584,13 @@
     return fallback;
   }
   function buildRecommendationsUrl$1(type, limit) {
+    var ignoreWatchlisted = readBooleanStorage$2('trakt_source_ignore_watchlisted', false) ? 'true' : 'false';
     var query = new URLSearchParams({
       extended: 'full,images',
       limit: String(Math.max(1, parseInt(limit, 10) || 36)),
       ignore_watched: readBooleanStorage$2('trakt_source_ignore_watched', false) ? 'true' : 'false',
-      ignore_watchlisted: readBooleanStorage$2('trakt_source_ignore_watchlisted', false) ? 'true' : 'false'
+      ignore_watchlisted: ignoreWatchlisted,
+      ignore_collected: ignoreWatchlisted
     });
     return "/recommendations/".concat(type, "?").concat(query.toString());
   }
@@ -10162,6 +10164,7 @@
       page: String(Math.max(1, parseInt(page, 10) || 1)),
       limit: String(Math.max(1, parseInt(limit, 10) || DEFAULT_LIMIT))
     })), queryParams);
+    query.set('ignore_collected', readBooleanStorage('trakt_source_ignore_watchlisted', false) ? 'true' : 'false');
     return "/recommendations/".concat(normalizedType, "?").concat(query.toString());
   }
   function buildSearchUrl(type, query) {
