@@ -2676,7 +2676,7 @@
             reject.call(this);
             return;
           }
-          if (object.page < total_pages) {
+          if (object.page <= total_pages) {
             waitload = true;
             var params = _objectSpread2({}, object);
             if ((type === 'list' || type === 'myListItems') && object.id) {
@@ -2691,6 +2691,10 @@
               return;
             }
             Api$2[type](params).then(function (data) {
+              if (data && data.total_pages) {
+                total_pages = data.total_pages;
+                _this2.total_pages = data.total_pages;
+              }
               resolve.call(_this2, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
                 results: []
               });
@@ -2792,6 +2796,9 @@
             return;
           }
           Api$2[type](params).then(function (data) {
+            if (data && data.total_pages) {
+              total_pages = data.total_pages;
+            }
             _this4.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
               results: []
             });
@@ -2852,7 +2859,7 @@
             reject.call(this);
             return;
           }
-          if (object.page < total_pages) {
+          if (object.page <= total_pages) {
             waitload = true;
             var params = _objectSpread2({}, object);
             params.limit = 36;
@@ -2862,6 +2869,10 @@
               return;
             }
             Api$2.recommendations(params).then(function (data) {
+              if (data && data.total_pages) {
+                total_pages = data.total_pages;
+                _this6.total_pages = data.total_pages;
+              }
               resolve.call(_this6, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
                 results: []
               });
@@ -2930,6 +2941,9 @@
             return;
           }
           Api$2.recommendations(params).then(function (data) {
+            if (data && data.total_pages) {
+              total_pages = data.total_pages;
+            }
             _this8.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
               results: []
             });
@@ -3310,7 +3324,7 @@
             reject.call(this);
             return;
           }
-          if (object.page < total_pages) {
+          if (object.page <= total_pages) {
             waitload = true;
             var params = _objectSpread2({}, object);
             params.limit = 36;
@@ -3320,6 +3334,10 @@
               return;
             }
             Api$2[apiMethod](params).then(function (data) {
+              if (data && data.total_pages) {
+                total_pages = data.total_pages;
+                _this0.total_pages = data.total_pages;
+              }
               resolve.call(_this0, withActions(data, params.page));
               waitload = false;
             })["catch"](function () {
@@ -3373,6 +3391,9 @@
           params.limit = 36;
           if (!Api$2 || !Api$2[apiMethod]) return;
           Api$2[apiMethod](params).then(function (data) {
+            if (data && data.total_pages) {
+              total_pages = data.total_pages;
+            }
             _this10.append(withActions(data, params.page));
             waitload = false;
           })["catch"](function () {
@@ -10010,6 +10031,9 @@
     slug: 'western',
     supported_types: ['movies', 'shows']
   }];
+  var TRAKT_TRENDING_GENRE_SLUGS = new Set(TRAKT_TRENDING_GENRES.map(function (genre) {
+    return String(genre && genre.slug ? genre.slug : '').trim().toLowerCase();
+  }).filter(Boolean));
   function t(key) {
     var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     try {
@@ -10154,17 +10178,25 @@
     })), queryParams);
     return "/search/".concat(normalizePath(type), "?").concat(finalParams.toString());
   }
+  function normalizeTraktGenreValue(value) {
+    var normalized = String(value || '').trim().toLowerCase();
+    if (!normalized || normalized === '[object object]') return '';
+    if (normalized === '16') return 'animation';
+    if (/^\d+$/.test(normalized)) return '';
+    if (TRAKT_TRENDING_GENRE_SLUGS.has(normalized)) return normalized;
+    if (/^[a-z0-9-]+$/.test(normalized)) return normalized;
+    return '';
+  }
   function resolveTraktGenreFilter() {
     var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var raw = params ? params.genres : null;
     if (raw === undefined || raw === null || raw === '') return '';
     var values = Array.isArray(raw) ? raw : String(raw).split(',');
-    var hasAnimation = values.map(function (value) {
-      return String(value).trim().toLowerCase();
-    }).some(function (value) {
-      return value === '16' || value === 'animation';
-    });
-    return hasAnimation ? 'animation' : '';
+    var normalizedValues = values.map(function (value) {
+      return normalizeTraktGenreValue(value);
+    }).filter(Boolean);
+    if (!normalizedValues.length) return '';
+    return Array.from(new Set(normalizedValues)).join(',');
   }
   function supportsAllGenreTypes() {
     var genre = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -10301,10 +10333,12 @@
       headers = _ref.headers,
       page = _ref.page,
       limit = _ref.limit,
-      typeHint = _ref.typeHint;
+      typeHint = _ref.typeHint,
+      _ref$query = _ref.query,
+      query = _ref$query === void 0 ? {} : _ref$query;
     var results = mapCards(items, typeHint);
     var pagination = resolvePagination(headers, page, limit, Array.isArray(items) ? items.length : 0);
-    return {
+    var line = {
       title: title,
       url: normalizePath(path),
       source: SOURCE_KEY,
@@ -10313,6 +10347,9 @@
       total_pages: pagination.total_pages,
       results: results
     };
+    var genres = query && _typeof(query) === 'object' ? String(query.genres || '').trim() : '';
+    if (genres) line.genres = genres;
+    return line;
   }
   function loadFeedLine(_ref2) {
     var path = _ref2.path,
@@ -10336,7 +10373,8 @@
         headers: headers,
         page: page,
         limit: limit,
-        typeHint: typeHint
+        typeHint: typeHint,
+        query: query
       });
     });
   }
