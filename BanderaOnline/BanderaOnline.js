@@ -57,6 +57,8 @@
       var selected = null;
       var series = null;
       var episodes_cache = {};
+      var content_ref = null;
+      var lazy_state = createLazyState();
       var filter_items = {
         season: [],
         voice: []
@@ -162,6 +164,8 @@
         selected = null;
         series = null;
         episodes_cache = {};
+        content_ref = null;
+        lazy_state = createLazyState();
       };
       function apiBase() {
         if (api_base.indexOf('/api/v1') !== -1) return api_base.replace('/api/v1', '/api/v2');
@@ -261,6 +265,195 @@
         }
         return fallback;
       }
+      function createLazyState() {
+        return {
+          enabled: false,
+          season_numbers: [],
+          loaded: {},
+          pending: {}
+        };
+      }
+      function isSeriesObject() {
+        return !!(object && object.movie && object.movie.name);
+      }
+      function isUaflixLazyMode() {
+        return sourceKey == 'uaflix' && isSeriesObject();
+      }
+      function toPositiveInt(value) {
+        var parsed = parseInt(value, 10);
+        return isNaN(parsed) || parsed < 1 ? 0 : parsed;
+      }
+      function cloneRef(ref) {
+        var next = {};
+        if (ref && _typeof(ref) == 'object') Lampa.Arrays.extend(next, ref, true);
+        return next;
+      }
+      function sortSeasonNumbers(values) {
+        var map = {};
+        (values || []).forEach(function (value) {
+          var number = toPositiveInt(value);
+          if (number) map[number] = true;
+        });
+        return Object.keys(map).map(function (value) {
+          return parseInt(value, 10);
+        }).sort(function (a, b) {
+          return a - b;
+        });
+      }
+      function getRefSeasonNumber(ref) {
+        return toPositiveInt(ref && ref.season);
+      }
+      function getTmdbSeasonNumbers() {
+        var count = toPositiveInt(object && object.movie && object.movie.number_of_seasons);
+        var seasons = [];
+        for (var i = 1; i <= count; i++) {
+          seasons.push(i);
+        }
+        return seasons;
+      }
+      function collectVoiceSeasonNumbers(voice) {
+        var seasons = getVoiceSeasons(voice);
+        return sortSeasonNumbers(seasons.map(function (season, index) {
+          return getSeasonNumber(season.title || season.season || season.number, index + 1);
+        }));
+      }
+      function collectSeriesSeasonNumbers() {
+        if (!series || !Array.isArray(series.voices)) return [];
+        var seasons = [];
+        series.voices.forEach(function (voice) {
+          seasons = seasons.concat(collectVoiceSeasonNumbers(voice));
+        });
+        return sortSeasonNumbers(seasons);
+      }
+      function ensureLazySeasonNumbers(values) {
+        lazy_state.season_numbers = sortSeasonNumbers((lazy_state.season_numbers || []).concat(values || []));
+      }
+      function markLazySeasonLoaded(values) {
+        (values || []).forEach(function (value) {
+          var number = toPositiveInt(value);
+          if (number) lazy_state.loaded[number] = true;
+        });
+      }
+      function getSeasonNumbersForFilter(voice) {
+        if (lazy_state.enabled && lazy_state.season_numbers.length) return lazy_state.season_numbers.slice(0);
+        return collectVoiceSeasonNumbers(voice);
+      }
+      function getSeasonData(voice, season_number) {
+        var seasons = getVoiceSeasons(voice);
+        for (var i = 0; i < seasons.length; i++) {
+          var season = seasons[i];
+          var number = getSeasonNumber(season.title || season.season || season.number, i + 1);
+          if (number == season_number) return season;
+        }
+        return null;
+      }
+      function getSeasonEpisodes(voice, season_number) {
+        var season = getSeasonData(voice, season_number);
+        if (!season) return [];
+        return Array.isArray(season.episodes) ? season.episodes : [];
+      }
+      function findVoiceWithSeasonEpisodes(season_number) {
+        if (!series || !Array.isArray(series.voices)) return -1;
+        for (var i = 0; i < series.voices.length; i++) {
+          if (getSeasonEpisodes(series.voices[i], season_number).length) return i;
+        }
+        return -1;
+      }
+      function mergeSeriesSeasonData(next_series) {
+        if (!next_series || !Array.isArray(next_series.voices)) return;
+        if (!series || !Array.isArray(series.voices)) {
+          series = next_series;
+          return;
+        }
+        next_series.voices.forEach(function (next_voice) {
+          if (!next_voice) return;
+          var voice = series.voices.find(function (item) {
+            return item.id == next_voice.id;
+          });
+          if (!voice) {
+            series.voices.push(next_voice);
+            return;
+          }
+          if (next_voice.display_name) voice.display_name = next_voice.display_name;
+          var by_number = {};
+          getVoiceSeasons(voice).forEach(function (season, index) {
+            var number = getSeasonNumber(season.title || season.season || season.number, index + 1);
+            if (number) by_number[number] = season;
+          });
+          getVoiceSeasons(next_voice).forEach(function (season, index) {
+            var number = getSeasonNumber(season.title || season.season || season.number, index + 1);
+            if (number) by_number[number] = season;
+          });
+          voice.seasons = Object.keys(by_number).map(function (value) {
+            return parseInt(value, 10);
+          }).sort(function (a, b) {
+            return a - b;
+          }).map(function (number) {
+            return by_number[number];
+          });
+        });
+      }
+      function buildInitialLazySeasonNumbers(ref) {
+        var seasons = getTmdbSeasonNumbers();
+        var ref_season = getRefSeasonNumber(ref);
+        if (ref_season) seasons.push(ref_season);
+        return sortSeasonNumbers(seasons);
+      }
+      function initializeLazyState(ref) {
+        lazy_state = createLazyState();
+        if (!isUaflixLazyMode()) return;
+        lazy_state.enabled = true;
+        var loaded_seasons = collectSeriesSeasonNumbers();
+        var initial_seasons = buildInitialLazySeasonNumbers(ref);
+        ensureLazySeasonNumbers(initial_seasons);
+        ensureLazySeasonNumbers(loaded_seasons);
+        markLazySeasonLoaded(loaded_seasons);
+        if (!lazy_state.season_numbers.length) {
+          var fallback = getRefSeasonNumber(ref);
+          if (fallback) ensureLazySeasonNumbers([fallback]);
+        }
+      }
+      function loadLazySeason(season_number, done, fail) {
+        if (!lazy_state.enabled || !season_number || !content_ref) {
+          if (fail) fail();
+          return;
+        }
+        if (lazy_state.loaded[season_number]) {
+          if (done) done();
+          return;
+        }
+        if (lazy_state.pending[season_number]) return;
+        lazy_state.pending[season_number] = true;
+        component.loading(true);
+        var url = apiBase() + '/content';
+        var ref = cloneRef(content_ref);
+        ref.season = season_number;
+        postJson(url, {
+          source: sourceKey,
+          ref: extendRefWithAuth(ref),
+          full: true
+        }, function (json) {
+          delete lazy_state.pending[season_number];
+          if (!json || !json.ok || json.type != 'series') {
+            component.loading(false);
+            handleSourceError(json);
+            if (fail) fail(extractErrorText(json));
+            return;
+          }
+          var next_series = normalizeSeries(json);
+          mergeSeriesSeasonData(next_series);
+          var loaded_seasons = collectSeriesSeasonNumbers();
+          markLazySeasonLoaded(loaded_seasons);
+          markLazySeasonLoaded([season_number]);
+          ensureLazySeasonNumbers(loaded_seasons);
+          ensureLazySeasonNumbers([season_number]);
+          if (done) done();
+        }, function () {
+          delete lazy_state.pending[season_number];
+          component.loading(false);
+          if (fail) fail();
+        });
+      }
       function normalizeEpisodeTitle(episode, number) {
         return episode.title || episode.name || Lampa.Lang.translate('torrent_serial_episode') + ' ' + number;
       }
@@ -331,9 +524,26 @@
       }
       function loadContent(ref) {
         var url = apiBase() + '/content';
+        var request_ref = cloneRef(ref);
+        content_ref = cloneRef(ref);
+        if (isUaflixLazyMode()) {
+          delete content_ref.season;
+          var season_numbers = buildInitialLazySeasonNumbers(ref);
+          var ref_season = getRefSeasonNumber(ref);
+          var season_number = ref_season;
+          if (!season_number) {
+            if (choice.season >= season_numbers.length) choice.season = 0;
+            season_number = season_numbers[choice.season] || season_numbers[0] || 1;
+          } else {
+            var index = season_numbers.indexOf(ref_season);
+            if (index !== -1) choice.season = index;
+          }
+          request_ref = cloneRef(content_ref);
+          request_ref.season = season_number;
+        }
         postJson(url, {
           source: sourceKey,
-          ref: extendRefWithAuth(ref),
+          ref: extendRefWithAuth(request_ref),
           full: true
         }, function (json) {
           if (!json || !json.ok) {
@@ -342,9 +552,11 @@
           }
           if (json.type == 'series') {
             series = normalizeSeries(json);
+            initializeLazyState(ref);
             filter();
             buildEpisodes();
           } else {
+            lazy_state = createLazyState();
             drawMovie(json);
           }
         }, function () {
@@ -385,9 +597,8 @@
         }
         if (choice.voice >= filter_items.voice.length) choice.voice = 0;
         var voice = getCurrentVoice();
-        var seasons = getVoiceSeasons(voice);
-        filter_items.season = seasons.map(function (season, index) {
-          var season_num = getSeasonNumber(season.title || season.season || season.number, index + 1);
+        var season_numbers = getSeasonNumbersForFilter(voice);
+        filter_items.season = season_numbers.map(function (season_num) {
           return Lampa.Lang.translate('torrent_serial_season') + ' ' + season_num;
         });
         if (choice.season >= filter_items.season.length) choice.season = 0;
@@ -404,23 +615,40 @@
           component.loading(false);
           return component.doesNotAnswer();
         }
-        var seasons = getVoiceSeasons(voice);
-        if (!seasons.length) {
+        var season_numbers = getSeasonNumbersForFilter(voice);
+        if (!season_numbers.length) {
           component.loading(false);
           return component.doesNotAnswer();
         }
         var season_index = choice.season;
-        if (season_index >= seasons.length) season_index = 0;
+        if (season_index >= season_numbers.length) season_index = 0;
         choice.season = season_index;
-        var season = seasons[season_index];
-        var season_num = getSeasonNumber(season.title || season.season || season.number, season_index + 1);
+        var season_num = season_numbers[season_index];
         var cache_key = voice.id + ':' + season_num;
         choice.voice_name = voice.display_name || voice.id;
         if (episodes_cache[cache_key]) {
           renderEpisodes(episodes_cache[cache_key], season_num, voice);
           return;
         }
-        var episodes = Array.isArray(season.episodes) ? season.episodes : [];
+        var episodes = getSeasonEpisodes(voice, season_num);
+        if (!episodes.length && lazy_state.enabled) {
+          if (!lazy_state.loaded[season_num]) {
+            loadLazySeason(season_num, function () {
+              filter();
+              buildEpisodes();
+            }, function () {
+              component.doesNotAnswer();
+            });
+            return;
+          }
+          var voice_index = findVoiceWithSeasonEpisodes(season_num);
+          if (voice_index !== -1 && voice_index !== choice.voice) {
+            choice.voice = voice_index;
+            filter();
+            buildEpisodes();
+            return;
+          }
+        }
         if (!episodes.length) {
           component.loading(false);
           return component.doesNotAnswer();
