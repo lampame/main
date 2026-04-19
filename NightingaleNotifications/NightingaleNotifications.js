@@ -15,8 +15,7 @@
     var MENU_BUTTON_CLASS = 'nightingale-notifications-menu-button';
     var SERVICE_HOST = 'notifications.lme.isroot.in';
     var API_BASE = 'https://' + SERVICE_HOST;
-    var STORAGE_KEYS = {
-      enabled: 'nightingale_notifications_enabled',
+    var STORAGE_KEYS$1 = {
       syncUid: 'nightingale_notifications_sync_uid',
       autoImportLampa: 'nightingale_auto_import_lampa',
       autoImportTrakt: 'nightingale_auto_import_trakttv',
@@ -535,7 +534,7 @@
     }
 
     function isPluginEnabled() {
-      return Lampa.Storage.get(STORAGE_KEYS.enabled, false) === true;
+      return true;
     }
     function getLocalLampaUid() {
       var fromStorage = String(Lampa.Storage.get('lampa_uid', '') || '').trim();
@@ -550,7 +549,6 @@
       return getSyncUid() || getLocalLampaUid();
     }
     function isRuntimeAvailable() {
-      if (!isPluginEnabled()) return false;
       if (!getEffectiveUserId()) return false;
       return true;
     }
@@ -694,21 +692,6 @@
       settingsApi.addParam({
         component: SETTINGS_COMPONENT,
         param: {
-          name: STORAGE_KEYS.enabled,
-          type: 'trigger',
-          "default": false
-        },
-        field: {
-          name: t('nn_settings_enable_name'),
-          description: t('nn_settings_enable_descr')
-        },
-        onChange: function onChange() {
-          restartRuntime('settings_enabled');
-        }
-      });
-      settingsApi.addParam({
-        component: SETTINGS_COMPONENT,
-        param: {
           type: 'title'
         },
         field: {
@@ -736,7 +719,7 @@
       settingsApi.addParam({
         component: SETTINGS_COMPONENT,
         param: {
-          name: STORAGE_KEYS.syncUid,
+          name: STORAGE_KEYS$1.syncUid,
           type: 'input',
           "default": '',
           values: '',
@@ -764,7 +747,7 @@
           item.toggleClass('hide', !Boolean(getSyncUid()));
         },
         onChange: function onChange() {
-          Lampa.Storage.set(STORAGE_KEYS.syncUid, '');
+          Lampa.Storage.set(STORAGE_KEYS$1.syncUid, '');
           showBell(t('nn_noty_sync_uid_cleared'));
           restartRuntime('settings_clear_sync_uid');
           Lampa.Settings.update();
@@ -806,7 +789,7 @@
       settingsApi.addParam({
         component: SETTINGS_COMPONENT,
         param: {
-          name: STORAGE_KEYS.autoImportLampa,
+          name: STORAGE_KEYS$1.autoImportLampa,
           type: 'trigger',
           "default": false
         },
@@ -823,7 +806,7 @@
       settingsApi.addParam({
         component: SETTINGS_COMPONENT,
         param: {
-          name: STORAGE_KEYS.autoImportTrakt,
+          name: STORAGE_KEYS$1.autoImportTrakt,
           type: 'trigger',
           "default": false
         },
@@ -2383,7 +2366,7 @@
       }
       function onStorageChange(event) {
         if (!event || !event.name) return;
-        var watched = [STORAGE_KEYS.enabled, STORAGE_KEYS.syncUid, STORAGE_KEYS.autoImportLampa, STORAGE_KEYS.autoImportTrakt, 'lampa_uid', 'trakt_token'];
+        var watched = [STORAGE_KEYS$1.syncUid, STORAGE_KEYS$1.autoImportLampa, STORAGE_KEYS$1.autoImportTrakt, 'lampa_uid', 'trakt_token'];
         if (watched.indexOf(event.name) >= 0) {
           restartAutoImports('storage_change:' + event.name);
         }
@@ -2443,11 +2426,11 @@
       }
       function isAutoImportLampaEnabled() {
         if (!isRuntimeAvailable()) return false;
-        return Lampa.Storage.get(STORAGE_KEYS.autoImportLampa, false) === true;
+        return Lampa.Storage.get(STORAGE_KEYS$1.autoImportLampa, false) === true;
       }
       function isAutoImportTraktEnabled() {
         if (!isRuntimeAvailable()) return false;
-        return Lampa.Storage.get(STORAGE_KEYS.autoImportTrakt, false) === true;
+        return Lampa.Storage.get(STORAGE_KEYS$1.autoImportTrakt, false) === true;
       }
       function clearHistoryAutoImportTimer() {
         clearTimeout(state.historyAutoImportTimer);
@@ -2503,7 +2486,7 @@
         });
       }
       function getTraktBackoffUntil() {
-        var fromStorage = parseInt(Lampa.Storage.get(STORAGE_KEYS.traktBackoffUntil, 0), 10) || 0;
+        var fromStorage = parseInt(Lampa.Storage.get(STORAGE_KEYS$1.traktBackoffUntil, 0), 10) || 0;
         var fromState = parseInt(state.traktAutoBackoffUntil || 0, 10) || 0;
         var value = Math.max(fromStorage, fromState);
         state.traktAutoBackoffUntil = value;
@@ -2515,13 +2498,13 @@
         var delay = Math.min(TRAKT_AUTO_IMPORT_BACKOFF_MIN * factor, TRAKT_AUTO_IMPORT_BACKOFF_MAX);
         var until = Date.now() + delay;
         state.traktAutoBackoffUntil = until;
-        Lampa.Storage.set(STORAGE_KEYS.traktBackoffUntil, until);
+        Lampa.Storage.set(STORAGE_KEYS$1.traktBackoffUntil, until);
       }
       function clearTraktBackoff() {
         state.traktAutoFailureCount = 0;
         state.traktAutoBackoffUntil = 0;
-        var current = parseInt(Lampa.Storage.get(STORAGE_KEYS.traktBackoffUntil, 0), 10) || 0;
-        if (current) Lampa.Storage.set(STORAGE_KEYS.traktBackoffUntil, 0);
+        var current = parseInt(Lampa.Storage.get(STORAGE_KEYS$1.traktBackoffUntil, 0), 10) || 0;
+        if (current) Lampa.Storage.set(STORAGE_KEYS$1.traktBackoffUntil, 0);
       }
       function importFromHistory(options) {
         var settings = options || {};
@@ -2579,7 +2562,7 @@
       }
       function updateLastRunAt() {
         var now = Date.now();
-        Lampa.Storage.set(STORAGE_KEYS.integrationLastRunAt, now);
+        Lampa.Storage.set(STORAGE_KEYS$1.integrationLastRunAt, now);
       }
       function ensureSubscriptionsFresh() {
         if (typeof loadSubscriptions !== 'function') return Promise.resolve([]);
@@ -2992,7 +2975,7 @@
       if (integrationsController && typeof integrationsController.onStorageChange === 'function') {
         integrationsController.onStorageChange(event);
       }
-      var watched = [STORAGE_KEYS.enabled, STORAGE_KEYS.syncUid, 'lampa_uid'];
+      var watched = [STORAGE_KEYS$1.syncUid, 'lampa_uid'];
       if (watched.indexOf(event.name) >= 0) restartRuntime('storage_change');
     }
     function restartRuntime(reason) {
