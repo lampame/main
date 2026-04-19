@@ -276,6 +276,21 @@
           uk: 'Доступне оновлення серіалу',
           ru: 'Доступно обновление сериала'
         },
+        nn_notice_translation_update: {
+          en: 'Translation studios updated',
+          uk: 'Оновився перелік студій перекладу',
+          ru: 'Обновился список студий перевода'
+        },
+        nn_notice_studios_label: {
+          en: 'Studios',
+          uk: 'Студії',
+          ru: 'Студии'
+        },
+        nn_notice_added_studios_label: {
+          en: 'Added',
+          uk: 'Додано',
+          ru: 'Добавлено'
+        },
         nn_series_name: {
           en: 'Series',
           uk: 'Серіал',
@@ -957,6 +972,62 @@
           resolve(false);
         });
       });
+    }
+    function upsertNoticeByEpisode(notice) {
+      return new Promise(function (resolve) {
+        if (!notice || _typeof(notice) !== 'object') {
+          resolve(false);
+          return;
+        }
+        var meta = notice.nightingaleMeta;
+        var key = resolveEpisodeKey(meta);
+        if (!key || !Lampa.Notice || !Lampa.Notice.classes || !Lampa.Notice.classes[NOTICE_CHANNEL]) {
+          pushNotice(notice).then(resolve);
+          return;
+        }
+        var channel = Lampa.Notice.classes[NOTICE_CHANNEL];
+        if (!Array.isArray(channel.notices)) {
+          pushNotice(notice).then(resolve);
+          return;
+        }
+        var existing = channel.notices.find(function (item) {
+          if (!item || item.from !== NOTICE_CHANNEL) return false;
+          return resolveEpisodeKey(item.nightingaleMeta) === key;
+        });
+        if (!existing || !existing.id) {
+          pushNotice(notice).then(resolve);
+          return;
+        }
+        var updated = Object.assign({}, existing, {
+          time: notice.time,
+          title: notice.title,
+          text: notice.text,
+          poster: notice.poster,
+          nightingaleCard: notice.nightingaleCard,
+          labels: notice.labels,
+          nightingaleMeta: notice.nightingaleMeta
+        });
+        var index = channel.notices.indexOf(existing);
+        if (index >= 0) channel.notices[index] = updated;
+        if (!channel.db || typeof channel.db.rewriteData !== 'function') {
+          resolve(true);
+          return;
+        }
+        channel.db.rewriteData('all', existing.id, updated).then(function () {
+          if (typeof channel.update === 'function') channel.update();
+          resolve(true);
+        })["catch"](function () {
+          resolve(false);
+        });
+      });
+    }
+    function resolveEpisodeKey(meta) {
+      if (!meta || _typeof(meta) !== 'object') return '';
+      var contentId = String(meta.contentId || '').trim();
+      var season = parseInt(meta.season, 10) || 0;
+      var episode = parseInt(meta.episode, 10) || 0;
+      if (!contentId || season < 1 || episode < 1) return '';
+      return contentId + ':' + season + ':' + episode;
     }
 
     var BUTTON_CLASS = 'button--nightingale-subscribe';
@@ -1862,6 +1933,7 @@
       var isRuntimeAvailable = params.isRuntimeAvailable;
       var getEffectiveUserId = params.getEffectiveUserId;
       var pushNotice = params.pushNotice;
+      var upsertNoticeByEpisode = params.upsertNoticeByEpisode;
       var resolveSeriesDetails = params.resolveSeriesDetails;
       var redrawAllSubscribeButtons = params.redrawAllSubscribeButtons;
       function connectWebSocket() {
@@ -2014,19 +2086,24 @@
       function onWsPayload(payload) {
         if (!payload || !payload.method) return;
         if (payload.method === 'lme_episode_new') {
-          handleEpisodePayload(payload.data || {});
+          handleEpisodePayload(payload.data || {}, false);
+          return;
+        }
+        if (payload.method === 'lme_episode_translation_update') {
+          handleEpisodePayload(payload.data || {}, true);
           return;
         }
         if (payload.method === 'unsubscribe_by_error') {
           handleUnsubscribeByErrorPayload(payload.data || {});
         }
       }
-      function handleEpisodePayload(data) {
+      function handleEpisodePayload(data, isTranslationUpdate) {
         var eventId = String(data && data.event_id ? data.event_id : '').trim();
         if (!eventId) return;
-        buildEpisodeNotice(data).then(function (notice) {
+        buildEpisodeNotice(data, isTranslationUpdate).then(function (notice) {
           if (!notice) return;
-          pushNotice(notice)["finally"](function () {
+          var saveNotice = isTranslationUpdate && typeof upsertNoticeByEpisode === 'function' ? upsertNoticeByEpisode : pushNotice;
+          saveNotice(notice)["finally"](function () {
             sendAck(eventId);
           });
         })["catch"](function () {
@@ -2054,7 +2131,7 @@
           }));
         } catch (error) {}
       }
-      function buildEpisodeNotice(data) {
+      function buildEpisodeNotice(data, isTranslationUpdate) {
         var eventId = String(data && data.event_id ? data.event_id : '').trim();
         if (!eventId) return Promise.resolve(null);
         var contentId = buildContentId(data && data._id ? data._id : '');
@@ -2062,10 +2139,12 @@
         var season = parsePositiveInt(data && data.season);
         var episode = parsePositiveInt(data && data.episode);
         var detectedAt = parseDetectedAt(data && data.detected_at);
+        var normalizedContentId = contentId || (tmdbId > 0 ? 'tv:' + tmdbId : '');
         return resolveSeriesDetails(tmdbId).then(function (details) {
           var labels = [];
           if (season > 0) labels.push('S - <b>' + season + '</b>');
           if (episode > 0) labels.push('E - <b>' + episode + '</b>');
+          appendStudiosLabels(labels, data, isTranslationUpdate);
           var card = details.card || {
             id: tmdbId,
             source: 'tmdb',
@@ -2073,6 +2152,7 @@
           };
           var title = details.title || fallbackSeriesTitle(tmdbId);
           var text = season > 0 && episode > 0 ? t('nn_notice_new_episode') : t('nn_notice_series_update');
+          if (isTranslationUpdate) text = t('nn_notice_translation_update');
           return {
             id: eventId,
             from: NOTICE_CHANNEL,
@@ -2081,9 +2161,35 @@
             text: text,
             poster: details.poster || '',
             nightingaleCard: card,
-            labels: labels
+            labels: labels,
+            nightingaleMeta: {
+              contentId: normalizedContentId,
+              season: season,
+              episode: episode
+            }
           };
         });
+      }
+      function appendStudiosLabels(labels, data, isTranslationUpdate) {
+        var studios = normalizeStudioList(data && data.translation_studios);
+        var addedStudios = normalizeStudioList(data && data.added_studios);
+        if (studios.length) {
+          labels.push(t('nn_notice_studios_label') + ': <b>' + studios.map(escapeHtml).join(', ') + '</b>');
+        }
+        if (isTranslationUpdate && addedStudios.length) {
+          labels.push(t('nn_notice_added_studios_label') + ': <b>' + addedStudios.map(escapeHtml).join(', ') + '</b>');
+        }
+      }
+      function normalizeStudioList(value) {
+        if (!Array.isArray(value)) return [];
+        var list = [];
+        value.forEach(function (item) {
+          var name = String(item || '').trim();
+          if (!name) return;
+          if (list.indexOf(name) >= 0) return;
+          list.push(name);
+        });
+        return list;
       }
       function processUnsubscribeByError(data) {
         var contentId = buildContentId(data && data._id ? data._id : '');
@@ -2819,6 +2925,7 @@
       isRuntimeAvailable: isRuntimeAvailable,
       getEffectiveUserId: getEffectiveUserId,
       pushNotice: pushNotice,
+      upsertNoticeByEpisode: upsertNoticeByEpisode,
       redrawAllSubscribeButtons: function redrawAllSubscribeButtons() {
         if (!buttonsController || typeof buttonsController.redrawAllSubscribeButtons !== 'function') return;
         buttonsController.redrawAllSubscribeButtons();
