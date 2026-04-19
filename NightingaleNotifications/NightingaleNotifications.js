@@ -543,7 +543,7 @@
       return fromLocalStorage;
     }
     function getSyncUid() {
-      return String(Lampa.Storage.get(STORAGE_KEYS.syncUid, '') || '').trim();
+      return String(Lampa.Storage.get(STORAGE_KEYS$1.syncUid, '') || '').trim();
     }
     function getEffectiveUserId() {
       return getSyncUid() || getLocalLampaUid();
