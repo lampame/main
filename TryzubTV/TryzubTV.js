@@ -2736,7 +2736,7 @@
             return socket.connect();
           case 3:
             key = _context.v;
-            newLink = "https://vod-maincast.cosmonova-broadcast.tv/".concat(cardData.salo_vod_id, "/master.m3u8?key=").concat(key);
+            newLink = "https://vod-maincast-1.mw-02.cosmonova-broadcast.tv/".concat(cardData.salo_vod_id, "/master.m3u8?key=").concat(key);
             Lampa.Player.play({
               title: cardData.title,
               url: newLink
@@ -3095,7 +3095,7 @@
             return socket.connect();
           case 3:
             key = _context.v;
-            newLink = "https://vod-maincast.cosmonova-broadcast.tv/".concat(cardData.salo_vod_id, "/master.m3u8?key=").concat(key);
+            newLink = "https://vod-maincast-1.mw-02.cosmonova-broadcast.tv/".concat(cardData.salo_vod_id, "/master.m3u8?key=").concat(key);
             Lampa.Player.play({
               title: cardData.title,
               url: newLink
@@ -3597,7 +3597,7 @@
                     return socket.connect();
                   case 3:
                     key = _context.v;
-                    newLink = "https://vod-maincast.cosmonova-broadcast.tv/".concat(card_data.salo_vod_id, "/master.m3u8?key=").concat(key);
+                    newLink = "https://vod-maincast-1.mw-02.cosmonova-broadcast.tv/".concat(card_data.salo_vod_id, "/master.m3u8?key=").concat(key);
                     Lampa.Player.play({
                       title: card_data.title,
                       url: newLink
