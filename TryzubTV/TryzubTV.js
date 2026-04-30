@@ -2636,7 +2636,7 @@
             };
             return;
           }
-          socket = new WebSocket('wss://vod-maincast.cosmonova-broadcast.tv/ws');
+          socket = new WebSocket('wss://vod-maincast-1.mw-02.cosmonova-broadcast.tv/ws');
           socket.onopen = function () {
             console.log('TryzubTV: WebSocket connected');
           };
