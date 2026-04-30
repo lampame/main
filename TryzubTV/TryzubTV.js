@@ -1124,6 +1124,92 @@
     PROVIDER_YOUTV: PROVIDER_YOUTV
   };
 
+  var SocketManager = function () {
+    var instance;
+    var socket;
+    var key;
+    var currentHost;
+    function createInstance() {
+      var connect = function connect() {
+        var host = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'vod-maincast-1.mw-02.cosmonova-broadcast.tv';
+        return new Promise(function (resolve, reject) {
+          if (socket && socket.readyState === WebSocket.OPEN && key && currentHost === host) {
+            return resolve(key);
+          }
+          if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN) && currentHost !== host) {
+            disconnect();
+          }
+          if (socket && socket.readyState === WebSocket.CONNECTING && currentHost === host) {
+            socket.onmessage = function (event) {
+              handleMessage(event, resolve, reject);
+            };
+            return;
+          }
+          currentHost = host;
+          socket = new WebSocket("wss://".concat(host, "/ws"));
+          socket.onopen = function () {
+            console.log('TryzubTV: WebSocket connected');
+          };
+          socket.onmessage = function (event) {
+            handleMessage(event, resolve, reject);
+          };
+          socket.onerror = function () {
+            console.error('TryzubTV: WebSocket error');
+            reject('TryzubTV: WebSocket error');
+            disconnect();
+          };
+          socket.onclose = function () {
+            console.log('TryzubTV: WebSocket disconnected');
+            socket = null;
+            key = null;
+          };
+        });
+      };
+      var handleMessage = function handleMessage(event, resolve, reject) {
+        try {
+          var data = JSON.parse(event.data);
+          if (data.type === 'auth' && data.payload && data.payload.hash) {
+            key = data.payload.hash;
+            console.log('TryzubTV: Key received');
+            resolve(key);
+          } else {
+            reject('TryzubTV: Invalid auth response');
+          }
+        } catch (e) {
+          reject('TryzubTV: Failed to parse message');
+        }
+      };
+      var disconnect = function disconnect() {
+        if (socket) {
+          socket.onopen = null;
+          socket.onmessage = null;
+          socket.onerror = null;
+          socket.onclose = null;
+          socket.close();
+          socket = null;
+          key = null;
+        }
+      };
+      var listen = function listen() {
+        Lampa.Player.listener.follow('destroy', function () {
+          console.log('TryzubTV: Player destroyed, closing socket.');
+          disconnect();
+        });
+      };
+      return {
+        connect: connect,
+        disconnect: disconnect,
+        listen: listen
+      };
+    }
+    return {
+      getInstance: function getInstance() {
+        if (!instance) instance = createInstance();
+        return instance;
+      }
+    };
+  }();
+
   function toPlaylistItems(items, fallbackTitle) {
     return (items || []).filter(function (item) {
       return item && (item.link || item.url);
@@ -1885,9 +1971,81 @@
       epg_current: cardData.tryzubtv_epg || null
     }], 0, categoryTitle);
   }
+  function playReplay(_x18) {
+    return _playReplay.apply(this, arguments);
+  }
+  function _playReplay() {
+    _playReplay = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(cardData) {
+      var host, proxy, response, match, socket, key, newLink, _t4, _t5;
+      return _regenerator().w(function (_context11) {
+        while (1) switch (_context11.n) {
+          case 0:
+            if (!(!cardData || !cardData.salo_vod_id)) {
+              _context11.n = 1;
+              break;
+            }
+            return _context11.a(2);
+          case 1:
+            Lampa.Loading.start();
+            _context11.p = 2;
+            host = 'vod-maincast.cosmonova-broadcast.tv';
+            proxy = 'https://apx.lme.isroot.in/destination/';
+            _context11.p = 3;
+            _context11.n = 4;
+            return fetch("".concat(proxy, "https://").concat(host, "/player?v=").concat(cardData.salo_vod_id), {
+              method: 'GET',
+              redirect: 'follow'
+            });
+          case 4:
+            response = _context11.v;
+            if (response.url) {
+              match = response.url.match(/vod-maincast-\d+\.mw-02\.cosmonova-broadcast\.tv/);
+              if (match) {
+                host = match[0];
+                console.log('TryzubTV: resolved host via proxy', host);
+              }
+            }
+            _context11.n = 6;
+            break;
+          case 5:
+            _context11.p = 5;
+            _t4 = _context11.v;
+            console.error('TryzubTV: failed to resolve host via proxy', _t4);
+            // Якщо проксі або редірект не спрацювали, використовуємо один з відомих хостів як фолбек
+            host = 'vod-maincast-1.mw-02.cosmonova-broadcast.tv';
+          case 6:
+            socket = SocketManager.getInstance();
+            _context11.n = 7;
+            return socket.connect(host);
+          case 7:
+            key = _context11.v;
+            newLink = "https://".concat(host, "/").concat(cardData.salo_vod_id, "/master.m3u8?key=").concat(key);
+            Lampa.Player.play({
+              title: cardData.title,
+              url: newLink
+            });
+            _context11.n = 9;
+            break;
+          case 8:
+            _context11.p = 8;
+            _t5 = _context11.v;
+            console.error('TryzubTV: replay playback failed', _t5);
+            Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
+          case 9:
+            _context11.p = 9;
+            Lampa.Loading.stop();
+            return _context11.f(9);
+          case 10:
+            return _context11.a(2);
+        }
+      }, _callee11, null, [[3, 5], [2, 8, 9, 10]]);
+    }));
+    return _playReplay.apply(this, arguments);
+  }
   var Player = {
     playChannel: playChannel,
-    playChannelList: playChannelList
+    playChannelList: playChannelList,
+    playReplay: playReplay
   };
 
   var FAVORITES_KEY = 'tryzubtv_favorites_v1';
@@ -2620,78 +2778,6 @@
     });
   }
 
-  var SocketManager = function () {
-    var instance;
-    var socket;
-    var key;
-    function createInstance() {
-      var connect = function connect() {
-        return new Promise(function (resolve, reject) {
-          if (socket && socket.readyState === WebSocket.OPEN && key) {
-            return resolve(key);
-          }
-          if (socket && socket.readyState === WebSocket.CONNECTING) {
-            socket.onmessage = function (event) {
-              handleMessage(event, resolve, reject);
-            };
-            return;
-          }
-          socket = new WebSocket('wss://vod-maincast-1.mw-02.cosmonova-broadcast.tv/ws');
-          socket.onopen = function () {
-            console.log('TryzubTV: WebSocket connected');
-          };
-          socket.onmessage = function (event) {
-            handleMessage(event, resolve, reject);
-          };
-          socket.onerror = function () {
-            console.error('TryzubTV: WebSocket error');
-            reject('TryzubTV: WebSocket error');
-            disconnect();
-          };
-          socket.onclose = function () {
-            console.log('TryzubTV: WebSocket disconnected');
-            socket = null;
-            key = null;
-          };
-        });
-      };
-      var handleMessage = function handleMessage(event, resolve, reject) {
-        try {
-          var data = JSON.parse(event.data);
-          if (data.type === 'auth' && data.payload && data.payload.hash) {
-            key = data.payload.hash;
-            console.log('TryzubTV: Key received');
-            resolve(key);
-          } else {
-            reject('TryzubTV: Invalid auth response');
-          }
-        } catch (e) {
-          reject('TryzubTV: Failed to parse message');
-        }
-      };
-      var disconnect = function disconnect() {
-        if (socket) socket.close();
-      };
-      var listen = function listen() {
-        Lampa.Player.listener.follow('destroy', function () {
-          console.log('TryzubTV: Player destroyed, closing socket.');
-          disconnect();
-        });
-      };
-      return {
-        connect: connect,
-        disconnect: disconnect,
-        listen: listen
-      };
-    }
-    return {
-      getInstance: function getInstance() {
-        if (!instance) instance = createInstance();
-        return instance;
-      }
-    };
-  }();
-
   function appendReplayOverlay$1(cardItem, cardData) {
     try {
       var cardElement = cardItem.render ? cardItem.render(true) : null;
@@ -2713,51 +2799,6 @@
     } catch (e) {
       console.error('TryzubTV: replay card overlay error', e);
     }
-  }
-  function playReplay$1(_x) {
-    return _playReplay$1.apply(this, arguments);
-  }
-  function _playReplay$1() {
-    _playReplay$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(cardData) {
-      var socket, key, newLink, _t;
-      return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
-          case 0:
-            if (!(!cardData || !cardData.salo_vod_id)) {
-              _context.n = 1;
-              break;
-            }
-            return _context.a(2);
-          case 1:
-            Lampa.Loading.start();
-            _context.p = 2;
-            socket = SocketManager.getInstance();
-            _context.n = 3;
-            return socket.connect();
-          case 3:
-            key = _context.v;
-            newLink = "https://vod-maincast-1.mw-02.cosmonova-broadcast.tv/".concat(cardData.salo_vod_id, "/master.m3u8?key=").concat(key);
-            Lampa.Player.play({
-              title: cardData.title,
-              url: newLink
-            });
-            _context.n = 5;
-            break;
-          case 4:
-            _context.p = 4;
-            _t = _context.v;
-            console.error('TryzubTV: replay playback failed', _t);
-            Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
-          case 5:
-            _context.p = 5;
-            Lampa.Loading.stop();
-            return _context.f(5);
-          case 6:
-            return _context.a(2);
-        }
-      }, _callee, null, [[2, 4, 5, 6]]);
-    }));
-    return _playReplay$1.apply(this, arguments);
   }
   function loadLineContent$1(lineItem, lineData) {
     if (!lineItem || !lineData || lineData.tryzubtv_loaded) return;
@@ -2889,7 +2930,7 @@
                   return;
                 }
                 if (cardData && cardData.salo_vod_id) {
-                  playReplay$1(cardData);
+                  Player.playReplay(cardData);
                   return;
                 }
                 Player.playChannel(cardData);
@@ -3073,51 +3114,6 @@
       console.error('TryzubTV: replay card overlay error', e);
     }
   }
-  function playReplay(_x) {
-    return _playReplay.apply(this, arguments);
-  }
-  function _playReplay() {
-    _playReplay = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(cardData) {
-      var socket, key, newLink, _t;
-      return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
-          case 0:
-            if (!(!cardData || !cardData.salo_vod_id)) {
-              _context.n = 1;
-              break;
-            }
-            return _context.a(2);
-          case 1:
-            Lampa.Loading.start();
-            _context.p = 2;
-            socket = SocketManager.getInstance();
-            _context.n = 3;
-            return socket.connect();
-          case 3:
-            key = _context.v;
-            newLink = "https://vod-maincast-1.mw-02.cosmonova-broadcast.tv/".concat(cardData.salo_vod_id, "/master.m3u8?key=").concat(key);
-            Lampa.Player.play({
-              title: cardData.title,
-              url: newLink
-            });
-            _context.n = 5;
-            break;
-          case 4:
-            _context.p = 4;
-            _t = _context.v;
-            console.error('TryzubTV: replay playback failed', _t);
-            Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
-          case 5:
-            _context.p = 5;
-            Lampa.Loading.stop();
-            return _context.f(5);
-          case 6:
-            return _context.a(2);
-        }
-      }, _callee, null, [[2, 4, 5, 6]]);
-    }));
-    return _playReplay.apply(this, arguments);
-  }
   function loadLineContent(lineItem, lineData) {
     if (!lineItem || !lineData || lineData.tryzubtv_loaded) return;
     lineData.tryzubtv_loaded = true;
@@ -3239,7 +3235,7 @@
                   return;
                 }
                 if (cardData && cardData.salo_vod_id) {
-                  playReplay(cardData);
+                  Player.playReplay(cardData);
                   return;
                 }
                 Player.playChannel(cardData);
@@ -3580,43 +3576,14 @@
           },
           onEnter: function () {
             var _onEnter = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-              var socket, key, newLink, _t;
               return _regenerator().w(function (_context) {
                 while (1) switch (_context.n) {
                   case 0:
-                    if (!(!card_data || !card_data.salo_vod_id)) {
-                      _context.n = 1;
-                      break;
-                    }
-                    return _context.a(2);
+                    Player.playReplay(card_data);
                   case 1:
-                    Lampa.Loading.start();
-                    _context.p = 2;
-                    socket = SocketManager.getInstance();
-                    _context.n = 3;
-                    return socket.connect();
-                  case 3:
-                    key = _context.v;
-                    newLink = "https://vod-maincast-1.mw-02.cosmonova-broadcast.tv/".concat(card_data.salo_vod_id, "/master.m3u8?key=").concat(key);
-                    Lampa.Player.play({
-                      title: card_data.title,
-                      url: newLink
-                    });
-                    _context.n = 5;
-                    break;
-                  case 4:
-                    _context.p = 4;
-                    _t = _context.v;
-                    console.error('TryzubTV: Failed to start replay playback', _t);
-                    Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
-                  case 5:
-                    _context.p = 5;
-                    Lampa.Loading.stop();
-                    return _context.f(5);
-                  case 6:
                     return _context.a(2);
                 }
-              }, _callee, null, [[2, 4, 5, 6]]);
+              }, _callee);
             }));
             function onEnter() {
               return _onEnter.apply(this, arguments);
