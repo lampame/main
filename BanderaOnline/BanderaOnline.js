@@ -406,7 +406,6 @@
         if (!params.kinopoisk_id) params.kinopoisk_id = movie.kinopoisk_id || '';
         if (!params.mal_id) params.mal_id = movie.mal_id || '';
         if (typeof params.serial == 'undefined') params.serial = getSerial(movie);
-        console.log('BO Search Params:', params);
         component.loading(true);
         api_client.search(params || {}, sourceKey, function (json) {
           if (!json || !json.ok) {
@@ -417,7 +416,7 @@
             component.empty();
             return;
           }
-          var items = json.results || json.items || [];
+          var items = json.items || [];
           if (!items.length) {
             component.empty();
             return;
@@ -2211,8 +2210,8 @@
       };
       api_client.search(params, filter_sources, function (json) {
         _this6.loading(false);
-        if (json && json.ok && Array.isArray(json.results) && json.results.length) {
-          _this6.similars(json.results);
+        if (json && json.ok && Array.isArray(json.items) && json.items.length) {
+          _this6.similars(json.items);
         } else {
           _this6.empty();
         }
