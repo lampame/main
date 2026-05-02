@@ -3209,8 +3209,8 @@
     resetTemplates();
     Lampa.Listener.follow('full', function (e) {
       if (e.type == 'complite') {
-        var view = e.object.activity.render();
-        if (view.find('.view--online').length) return;
+        var view = e.body;
+        if (!view || view.find('.view--online').length) return;
         var btn = $(Lampa.Lang.translate(button));
         btn.on('hover:enter', function () {
           resetTemplates();
@@ -3226,7 +3226,8 @@
             page: 1
           });
         });
-        e.object.activity.render().find('.view--torrent').after(btn);
+        var target = view.find('.view--torrent');
+        if (target.length) target.after(btn);else view.find('.button--book, .button--play').last().after(btn);
       }
     });
   }
