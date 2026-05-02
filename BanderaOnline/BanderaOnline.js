@@ -666,7 +666,8 @@
             ref: episode.ref,
             info: voice.display_name || voice.id,
             voice_name: voice.display_name || voice.id,
-            voice_id: voice.id
+            voice_id: voice.id,
+            subtitles: mergeSubtitles(episode.subtitles, episode.ref && episode.ref.subtitles)
           };
         });
         component.draw(items, {
@@ -685,7 +686,7 @@
                 timeline: item.timeline,
                 quality: qualitys,
                 title: item.title,
-                subtitles: first.subtitles
+                subtitles: mergeSubtitles(first.subtitles, item.subtitles)
               });
               var playlist = [];
               items.forEach(function (elem) {
@@ -696,6 +697,7 @@
                       var next_first = prepared_next.first;
                       cell.url = next_first ? normalizeStreamUrl(next_first.url) : '';
                       cell.quality = applyProxyToQualitys(prepared_next.qualitys);
+                      cell.subtitles = mergeSubtitles(next_first && next_first.subtitles, elem.subtitles);
                       elem.mark();
                       call();
                     }, function () {
@@ -706,7 +708,7 @@
                   title: elem.title,
                   timeline: elem.timeline,
                   quality: {},
-                  subtitles: [],
+                  subtitles: elem.subtitles || [],
                   mark: elem.mark
                 };
                 playlist.push(cell);
@@ -736,7 +738,7 @@
                 timeline: movie.timeline,
                 quality: qualitys,
                 title: movie.player_title || movie.title,
-                subtitles: first.subtitles
+                subtitles: mergeSubtitles(first.subtitles, movie.subtitles)
               });
               Lampa.Player.playlist([]);
             }, function (errorText) {
@@ -781,7 +783,8 @@
             stream: stream,
             streams: streams,
             player_title: movie_title,
-            stream_ref: json.stream_ref || null
+            stream_ref: json.stream_ref || null,
+            subtitles: mergeSubtitles(stream.subtitles, json.subtitles)
           };
         }).filter(Boolean);
         if (items.length) return items;
@@ -802,7 +805,8 @@
             file: '',
             streams: voice_streams,
             player_title: movie_title + (label ? ' / ' + label : ''),
-            stream_ref: voice_stream_ref
+            stream_ref: voice_stream_ref,
+            subtitles: mergeSubtitles(voice.subtitles, json.subtitles)
           };
         }).filter(Boolean);
         if (voice_items.length) return voice_items;
@@ -814,7 +818,8 @@
           file: '',
           streams: streams,
           player_title: movie_title,
-          stream_ref: json.stream_ref || null
+          stream_ref: json.stream_ref || null,
+          subtitles: normalizeSubtitles(json.subtitles)
         }];
       }
       function parsePackedStreamUrl(value) {
@@ -835,6 +840,25 @@
           });
         });
         return items;
+      }
+      function normalizeSubtitles(subtitles) {
+        if (!Array.isArray(subtitles)) return [];
+        var index = -1;
+        return subtitles.map(function (subtitle) {
+          if (!subtitle || !subtitle.url) return null;
+          index++;
+          return {
+            index: typeof subtitle.index != 'undefined' ? subtitle.index : index,
+            label: subtitle.label || subtitle.lang || subtitle.language || Lampa.Lang.translate('player_subs') + ' ' + (index + 1),
+            language: subtitle.language || subtitle.lang || subtitle.label || '',
+            url: subtitle.url
+          };
+        }).filter(Boolean);
+      }
+      function mergeSubtitles(primary, fallback) {
+        var normalized_primary = normalizeSubtitles(primary);
+        if (normalized_primary.length) return normalized_primary;
+        return normalizeSubtitles(fallback);
       }
       function prepareStreams(streams) {
         var qualitys = {};
@@ -857,6 +881,9 @@
             }
             if (!variants.length) variants = [stream];
             variants.forEach(function (variant, variant_index) {
+              if (variant && variant.subtitles) {
+                variant.subtitles = normalizeSubtitles(variant.subtitles);
+              }
               var label = variant.title || variant.quality || 'stream-' + (index + 1) + '-' + (variant_index + 1);
               var url = normalizeStreamUrl(variant && variant.url);
               if (url) qualitys[label] = url;
@@ -892,9 +919,9 @@
         return /(^|\/\/)([^\/]*\.)?ashdi\.vip(\/|$)/i.test(url || '');
       }
       function wrapAshdiProxy(url) {
-        var base = 'https://tut.im/proxy.php?url=';
+        var base = 'https://proxy.m7-club.com/?url=';
         if (url.indexOf(base) === 0) return url;
-        return base + encodeURIComponent(url);
+        return base + url;
       }
       function getStream(ref, success, fail) {
         var url = apiBase() + '/stream';
@@ -911,7 +938,15 @@
             if (fail) fail(extractErrorText(json));
             return;
           }
-          success(json.streams);
+          var stream_subtitles = normalizeSubtitles(json.subtitles);
+          var streams = json.streams.map(function (stream) {
+            if (!stream || stream.subtitles || !stream_subtitles.length) return stream;
+            var next = {};
+            Lampa.Arrays.extend(next, stream, true);
+            next.subtitles = stream_subtitles;
+            return next;
+          });
+          success(streams);
         }, function () {
           if (fail) fail();
         });
@@ -1013,36 +1048,14 @@
     });
     var files = new Lampa.Explorer(object);
     var filter = new Lampa.Filter(object);
-    var sources = {
-      uatut: createV2('uatut'),
-      uaflix: createV2('uaflix'),
-      kurwaborz: createV2('kurwaborz'),
-      makhno: createV2('makhno'),
-      filmix: createV2('filmix'),
-      bambooua: createV2('bambooua'),
-      animeon: createV2('animeon'),
-      moonanime: createV2('moonanime'),
-      starlight: createV2('starlight'),
-      mikai: createV2('mikai'),
-      midnight: createV2('midnight'),
-      uakino: createV2('uakino'),
-      ashdibase: createV2('ashdibase')
-    };
-    var balanser_titles = {
-      uaflix: 'UAflix',
-      uatut: 'UATuT',
-      kurwaborz: 'Kurwaborz',
-      makhno: 'Makhno',
-      filmix: 'Filmix',
-      bambooua: 'BambooUA',
-      animeon: 'AnimeON',
-      moonanime: 'MoonAnime',
-      starlight: 'StarLight',
-      mikai: 'Mikai',
-      midnight: 'Midnight',
-      uakino: 'UAKino',
-      ashdibase: 'AshdiBase'
-    };
+    var sources = {};
+    var balanser_titles = {};
+    function ensureSource(key) {
+      if (key && !sources[key]) {
+        sources[key] = createV2(key);
+      }
+      return sources[key];
+    }
     var last;
     var extended;
     var selected_id;
@@ -1124,19 +1137,6 @@
       }
       sources = filterEnabledSources(sources);
       sources = applyUserSources(sources);
-      if (!sources.length) {
-        sources = ['uatut', 'uaflix', 'kurwaborz', 'makhno', 'filmix', 'uakino', 'ashdibase'];
-        if (include_anime) {
-          sources.push('bambooua', 'animeon', 'moonanime');
-          sources.push('mikai');
-        }
-        if (include_starlight) {
-          sources.push('starlight');
-        }
-        if (include_midnight) {
-          sources.push('midnight');
-        }
-      }
       return sources;
     }
     function getUserHiddenSources() {
@@ -1171,11 +1171,10 @@
     function getBaseSources() {
       var from_api = getEnabledSources();
       if (from_api) {
-        return from_api.filter(function (name) {
-          return sources[name];
-        });
+        return from_api;
       }
-      return ['uatut', 'uaflix', 'kurwaborz', 'makhno', 'filmix', 'mikai', 'uakino', 'ashdibase'];
+      var keys = Object.keys(sources);
+      return keys.length ? keys : [];
     }
     function filterEnabledSources(list) {
       var enabled = getEnabledSources();
@@ -1198,8 +1197,8 @@
       }).map(function (item) {
         return mapSourceName(item.key || item.name);
       }).filter(Boolean);
-      enabled = enabled.filter(function (name) {
-        return sources[name];
+      enabled.forEach(function (name) {
+        return ensureSource(name);
       });
       return enabled.length ? enabled : null;
     }
@@ -1224,7 +1223,10 @@
         if (!item || !item.name && !item.key) return;
         var display = extractSourceTitle(item);
         var key = mapSourceName(item.key || item.name);
-        if (display && key && sources[key]) balanser_titles[key] = display;
+        if (key) {
+          ensureSource(key);
+          if (display) balanser_titles[key] = display;
+        }
       });
     }
     function extractSourceTitle(item) {
@@ -1326,8 +1328,11 @@
       } else {
         balanser = Lampa.Storage.get('bandera_online_balanser', 'uatut');
       }
-      if (!sources[balanser] || filter_sources.indexOf(balanser) === -1) {
-        balanser = filter_sources[0] || 'uatut';
+      if (!ensureSource(balanser) || filter_sources.indexOf(balanser) === -1) {
+        balanser = filter_sources[0] || '';
+      }
+      if (!ensureSource(balanser)) {
+        return null;
       }
       return new sources[balanser](this, object);
     };
