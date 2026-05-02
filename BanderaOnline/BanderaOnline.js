@@ -1,6 +1,34 @@
 (function () {
   'use strict';
 
+  function _classCallCheck(a, n) {
+    if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function");
+  }
+  function _defineProperties(e, r) {
+    for (var t = 0; t < r.length; t++) {
+      var o = r[t];
+      o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o);
+    }
+  }
+  function _createClass(e, r, t) {
+    return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", {
+      writable: !1
+    }), e;
+  }
+  function _toPrimitive(t, r) {
+    if ("object" != typeof t || !t) return t;
+    var e = t[Symbol.toPrimitive];
+    if (void 0 !== e) {
+      var i = e.call(t, r || "default");
+      if ("object" != typeof i) return i;
+      throw new TypeError("@@toPrimitive must return a primitive value.");
+    }
+    return ("string" === r ? String : Number)(t);
+  }
+  function _toPropertyKey(t) {
+    var i = _toPrimitive(t, "string");
+    return "symbol" == typeof i ? i : i + "";
+  }
   function _typeof(o) {
     "@babel/helpers - typeof";
 
@@ -11,52 +39,42 @@
     }, _typeof(o);
   }
 
-  var api_base = 'https://bbe.lme.isroot.in/api/v2';
-
-  var AUTH_KEYS$1 = {
-    filmixToken: 'BO_FILMIX_TOKEN',
-    filmixDeviceId: 'BO_FILMIX_DEVICE_ID'
+  function normalizeErrorCode(json) {
+    return json && (json.error_code || json.meta && json.meta.code) || '';
+  }
+  function extractErrorText(json) {
+    return json && (json.error || json.message || json.error_code) || '';
+  }
+  var DISABLED_SOURCE_CODES = {
+    NOT_FOUND: true,
+    CONTENT_REMOVED: true,
+    UNAUTHORIZED: true,
+    INVALID_AUTH: true,
+    MISSING_IMDB_OR_TMDB: true,
+    INVALID_TMDB_ID: true,
+    INVALID_SERIAL: true,
+    NO_PLAYER_DATA: true,
+    NO_STREAM_DATA: true,
+    NO_STREAMS: true,
+    NO_STREAM: true,
+    NO_MOVIE_STREAM: true,
+    NO_MOVIE_STREAMS: true,
+    NO_EPISODES: true,
+    NO_VOICES: true,
+    NO_SERIAL_STRUCTURE: true,
+    NO_ANIME_INFO: true,
+    NO_ANIME_STRUCTURE: true,
+    VOICE_NOT_FOUND: true
   };
-  function normalize(value) {
-    return (value || '').toString().trim();
-  }
-  function read(key) {
-    return normalize(Lampa.Storage.get(key, ''));
-  }
-  function write(key, value) {
-    Lampa.Storage.set(key, normalize(value));
-  }
-  function getAuthKeys() {
-    return AUTH_KEYS$1;
-  }
-  function getFilmixToken() {
-    return read(AUTH_KEYS$1.filmixToken);
-  }
-  function setFilmixToken(value) {
-    write(AUTH_KEYS$1.filmixToken, value);
-  }
-  function getFilmixDeviceId() {
-    return read(AUTH_KEYS$1.filmixDeviceId);
-  }
-  function setFilmixDeviceId(value) {
-    write(AUTH_KEYS$1.filmixDeviceId, value);
-  }
-  function ensureFilmixDeviceId() {
-    var deviceId = getFilmixDeviceId();
-    if (!deviceId) {
-      deviceId = Lampa.Utils.uid(16);
-      setFilmixDeviceId(deviceId);
-    }
-    return deviceId;
-  }
 
   function createV2(sourceKey) {
     return function v2(component, _object) {
-      var network = new Lampa.Reguest();
+      var api_client = component.api_client;
       var object = _object;
       var selected = null;
       var series = null;
       var episodes_cache = {};
+      var stream_cache = {};
       var content_ref = null;
       var lazy_state = createLazyState();
       var filter_items = {
@@ -67,28 +85,6 @@
         season: 0,
         voice: 0,
         voice_name: ''
-      };
-      var disabled_source_codes = {
-        NO_RESULTS: true,
-        NOT_FOUND: true,
-        CONTENT_REMOVED: true,
-        UNAUTHORIZED: true,
-        INVALID_AUTH: true,
-        MISSING_IMDB_OR_TMDB: true,
-        INVALID_TMDB_ID: true,
-        INVALID_SERIAL: true,
-        NO_PLAYER_DATA: true,
-        NO_STREAM_DATA: true,
-        NO_STREAMS: true,
-        NO_STREAM: true,
-        NO_MOVIE_STREAM: true,
-        NO_MOVIE_STREAMS: true,
-        NO_EPISODES: true,
-        NO_VOICES: true,
-        NO_SERIAL_STRUCTURE: true,
-        NO_ANIME_INFO: true,
-        NO_ANIME_STRUCTURE: true,
-        VOICE_NOT_FOUND: true
       };
       this.searchByTitle = function (_object, title) {
         object = _object;
@@ -157,73 +153,20 @@
         buildEpisodes();
       };
       this.cancel = function () {
-        network.clear();
+        api_client.clear();
       };
       this.destroy = function () {
-        network.clear();
+        api_client.clear();
         selected = null;
         series = null;
         episodes_cache = {};
         content_ref = null;
         lazy_state = createLazyState();
       };
-      function apiBase() {
-        if (api_base.indexOf('/api/v1') !== -1) return api_base.replace('/api/v1', '/api/v2');
-        if (api_base.indexOf('/api/v2') !== -1) return api_base;
-        return api_base.replace(/\/$/, '') + '/api/v2';
-      }
-      function addParam(url, key, value) {
-        if (!value) return url;
-        return Lampa.Utils.addUrlComponent(url, key + '=' + encodeURIComponent(value));
-      }
-      function getSourceAuth() {
-        var token = getFilmixToken();
-        var deviceId = getFilmixDeviceId();
-        if (token && !deviceId) {
-          deviceId = ensureFilmixDeviceId();
-        }
-        return {
-          filmix_token: token,
-          filmix_device_id: deviceId
-        };
-      }
-      function appendSearchAuth(url) {
-        var auth = getSourceAuth();
-        if (sourceKey == 'filmix') {
-          url = addParam(url, 'filmix_token', auth.filmix_token);
-          url = addParam(url, 'filmix_device_id', auth.filmix_device_id);
-        }
-        return url;
-      }
-      function extendRefWithAuth(ref) {
-        if (!ref || _typeof(ref) !== 'object') return ref;
-        var auth = getSourceAuth();
-        var next = {};
-        Lampa.Arrays.extend(next, ref, true);
-        if (sourceKey == 'filmix') {
-          if (!next.token && auth.filmix_token) next.token = auth.filmix_token;
-          if (!next.device_id && auth.filmix_device_id) next.device_id = auth.filmix_device_id;
-        }
-        return next;
-      }
-      function postJson(url, data, success, fail) {
-        network.silent(url, success, fail, JSON.stringify(data), {
-          dataType: 'json',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-      function normalizeErrorCode(json) {
-        return json && (json.error_code || json.meta && json.meta.code) || '';
-      }
-      function extractErrorText(json) {
-        return json && (json.error || json.message || json.error_code) || '';
-      }
       function handleSourceError(json) {
         var code = normalizeErrorCode(json);
         var text = extractErrorText(json) || code;
-        if (code && disabled_source_codes[code]) {
+        if (code && DISABLED_SOURCE_CODES[code]) {
           component.disableSource(sourceKey, code);
           component.empty();
           return;
@@ -234,7 +177,7 @@
       function handleStreamError(json) {
         var code = normalizeErrorCode(json);
         var text = extractErrorText(json);
-        if (code && disabled_source_codes[code]) {
+        if (code && DISABLED_SOURCE_CODES[code]) {
           component.disableSource(sourceKey, code);
         }
         if (text) component.pushError(text);
@@ -425,14 +368,9 @@
         if (lazy_state.pending[season_number]) return;
         lazy_state.pending[season_number] = true;
         component.loading(true);
-        var url = apiBase() + '/content';
         var ref = cloneRef(content_ref);
         ref.season = season_number;
-        postJson(url, {
-          source: sourceKey,
-          ref: extendRefWithAuth(ref),
-          full: true
-        }, function (json) {
+        api_client.getContent(sourceKey, ref, function (json) {
           delete lazy_state.pending[season_number];
           if (!json || !json.ok || json.type != 'series') {
             component.loading(false);
@@ -457,35 +395,29 @@
       function normalizeEpisodeTitle(episode, number) {
         return episode.title || episode.name || Lampa.Lang.translate('torrent_serial_episode') + ' ' + number;
       }
-      function buildSearchUrl(params) {
-        var url = apiBase() + '/search';
-        var movie = object.movie || {};
-        url = addParam(url, 'source', sourceKey);
-        url = addParam(url, 'title', params.title || movie.title || movie.name);
-        url = addParam(url, 'original_title', params.original_title || movie.original_title || movie.original_name);
-        url = addParam(url, 'imdb_id', params.imdb_id || movie.imdb_id);
-        url = addParam(url, 'tmdb_id', params.tmdb_id || getTmdbId(movie));
-        url = addParam(url, 'kinopoisk_id', params.kinopoisk_id || movie.kinopoisk_id);
-        url = addParam(url, 'mal_id', params.mal_id || movie.mal_id);
-        url = addParam(url, 'year', params.year || getYear(movie));
-        if (sourceKey == 'makhno') url = addParam(url, 'serial', typeof params.serial != 'undefined' ? params.serial : getSerial(movie));
-        if (movie.name) url = addParam(url, 'type', 'series');else url = addParam(url, 'type', 'movie');
-        url = appendSearchAuth(url);
-        return url;
-      }
       function search(params) {
-        var url = buildSearchUrl(params || {});
-        network.silent(url, function (json) {
+        params = params || {};
+        var movie = object && object.movie || object || {};
+        if (!params.title) params.title = movie.title || movie.name || '';
+        if (!params.original_title) params.original_title = movie.original_title || movie.original_name || '';
+        if (!params.year) params.year = getYear(movie);
+        if (!params.imdb_id) params.imdb_id = movie.imdb_id || '';
+        if (!params.tmdb_id) params.tmdb_id = getTmdbId(movie);
+        if (!params.kinopoisk_id) params.kinopoisk_id = movie.kinopoisk_id || '';
+        if (!params.mal_id) params.mal_id = movie.mal_id || '';
+        if (typeof params.serial == 'undefined') params.serial = getSerial(movie);
+        console.log('BO Search Params:', params);
+        component.loading(true);
+        api_client.search(params || {}, sourceKey, function (json) {
           if (!json || !json.ok) {
             handleSourceError(json);
             return;
           }
           if (json.meta && json.meta.code == 'NO_RESULTS') {
-            component.disableSource(sourceKey, json.meta.code);
             component.empty();
             return;
           }
-          var items = json.items || [];
+          var items = json.results || json.items || [];
           if (!items.length) {
             component.empty();
             return;
@@ -523,7 +455,6 @@
         });
       }
       function loadContent(ref) {
-        var url = apiBase() + '/content';
         var request_ref = cloneRef(ref);
         content_ref = cloneRef(ref);
         if (isUaflixLazyMode()) {
@@ -541,11 +472,7 @@
           request_ref = cloneRef(content_ref);
           request_ref.season = season_number;
         }
-        postJson(url, {
-          source: sourceKey,
-          ref: extendRefWithAuth(request_ref),
-          full: true
-        }, function (json) {
+        api_client.getContent(sourceKey, request_ref, function (json) {
           if (!json || !json.ok) {
             handleSourceError(json);
             return;
@@ -924,15 +851,15 @@
         return base + url;
       }
       function getStream(ref, success, fail) {
-        var url = apiBase() + '/stream';
+        var cache_key = Lampa.Utils.hash(JSON.stringify(ref));
+        if (stream_cache[cache_key]) {
+          return success(stream_cache[cache_key]);
+        }
         if (!ref) {
           if (fail) fail();
           return;
         }
-        postJson(url, {
-          source: sourceKey,
-          ref: extendRefWithAuth(ref)
-        }, function (json) {
+        api_client.getStream(sourceKey, ref, function (json) {
           if (!json || !json.ok || !Array.isArray(json.streams)) {
             handleStreamError(json);
             if (fail) fail(extractErrorText(json));
@@ -946,6 +873,7 @@
             next.subtitles = stream_subtitles;
             return next;
           });
+          stream_cache[cache_key] = streams;
           success(streams);
         }, function () {
           if (fail) fail();
@@ -1000,13 +928,33 @@
     };
   }
 
-  var QR_URL = 'https://lampame.donatik.me';
+  var config = {
+    api_base: 'https://bbe.lme.isroot.in/api/v2',
+    community_watches_url: 'https://lampame.github.io/main/cw.js',
+    community_watches_name: 'CommunityWatches',
+    qr_url: 'https://lampame.donatik.me',
+    qr_poster: 'https://iili.io/fkdGkSj.png',
+    storage_prefixes: {
+      cw_autoinstall_done: 'bandera_online_cw_autoinstall_done',
+      last_balanser: 'bandera_online_last_balanser',
+      balanser: 'bandera_online_balanser',
+      watched_last: 'bandera_online_watched_last',
+      view: 'bandera_online_view'
+    }
+  };
+
+  var QR_URL = config.qr_url;
   var QR_TEXT = "<a href=\"".concat(QR_URL, "\">\u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F</a>");
   var QR_BODY = 'Подяка автору плагіну BanderaOnline добровільна, на розвиток якого витрачено багато часу та сил.';
-  var QR_CARD_POSTER = 'https://iili.io/fkdGkSj.png';
+  var QR_CARD_POSTER = config.qr_poster;
   function openQrModal() {
-    var html = $('<div class="banderaonline-qr-modal">' + '<style>' + '.banderaonline-qr-modal__content{display:flex;flex-direction:row;gap:1.2em;align-items:center;text-align:center}' + '.banderaonline-qr-modal__info{max-width:28em}' + '.banderaonline-qr-modal__qr{display:flex;flex-direction:column;align-items:center}' + '@media (max-width: 600px){.banderaonline-qr-modal__content{flex-direction:column}}' + '</style>' + '<div class="banderaonline-qr-modal__content">' + '<div class="account-modal-split__info banderaonline-qr-modal__info">' + //`<div class="account-modal-split__title">${QR_TITLE}</div>` +
+    var html = $('<div class="banderaonline-qr-modal">' + '<style id="banderaonline-qr-style">' + '.banderaonline-qr-modal__content{display:flex;flex-direction:row;gap:1.2em;align-items:center;text-align:center}' + '.banderaonline-qr-modal__info{max-width:28em}' + '.banderaonline-qr-modal__qr{display:flex;flex-direction:column;align-items:center}' + '@media (max-width: 600px){.banderaonline-qr-modal__content{flex-direction:column}}' + '</style>' + '<div class="banderaonline-qr-modal__content">' + '<div class="account-modal-split__info banderaonline-qr-modal__info">' + //`<div class="account-modal-split__title">${QR_TITLE}</div>` +
     "<div class=\"account-modal-split__text\"><img src=\"".concat(QR_CARD_POSTER, "\" class=\"banderaonline-qr-modal__img\"><br />").concat(QR_BODY, "</div>") + '</div>' + '<div class="account-modal-split__qr banderaonline-qr-modal__qr">' + '<div class="account-modal-split__qr-code" style="margin-bottom:0;width: 13em;height: 13em;"></div>' + "<div class=\"account-modal-split__qr-text\">".concat(QR_TEXT, "</div>") + '</div>' + '</div>' + '</div>');
+
+    // Idempotent style check
+    if ($('#banderaonline-qr-style').length) {
+      html.find('#banderaonline-qr-style').remove();
+    }
     var qrElement = html.find('.account-modal-split__qr-code');
     var renderQr = function renderQr() {
       if (!window.qrcode) {
@@ -1014,7 +962,14 @@
         return;
       }
       Lampa.Utils.qrcode(QR_URL, qrElement, function (error) {
-        console.error(error);
+        if (error) console.error(error);
+
+        // Fix sizing race: apply sizing AFTER rendering
+        var svg = qrElement.find('svg');
+        if (svg[0]) {
+          svg[0].style.setProperty('width', '12em', 'important');
+          svg[0].style.setProperty('height', '12em', 'important');
+        }
       });
     };
     if (!window.qrcode && Lampa.Utils.putScript) {
@@ -1022,11 +977,6 @@
       Lampa.Utils.putScript([qrLib], renderQr, renderQr, null, false);
     } else {
       renderQr();
-    }
-    var svg = qrElement.find('svg');
-    if (svg[0]) {
-      svg[0].style.setProperty('width', '12em', 'important');
-      svg[0].style.setProperty('height', '12em', 'important');
     }
     var enabledController = Lampa.Controller.enabled().name;
     Lampa.Modal.open({
@@ -1040,8 +990,261 @@
     });
   }
 
+  var AUTH_KEYS$1 = {
+    filmixToken: 'BO_FILMIX_TOKEN',
+    filmixDeviceId: 'BO_FILMIX_DEVICE_ID'
+  };
+  function normalize(value) {
+    return (value || '').toString().trim();
+  }
+  function read(key) {
+    return normalize(Lampa.Storage.get(key, ''));
+  }
+  function write(key, value) {
+    Lampa.Storage.set(key, normalize(value));
+  }
+  function getAuthKeys() {
+    return AUTH_KEYS$1;
+  }
+  function getFilmixToken() {
+    return read(AUTH_KEYS$1.filmixToken);
+  }
+  function setFilmixToken(value) {
+    write(AUTH_KEYS$1.filmixToken, value);
+  }
+  function getFilmixDeviceId() {
+    return read(AUTH_KEYS$1.filmixDeviceId);
+  }
+  function setFilmixDeviceId(value) {
+    write(AUTH_KEYS$1.filmixDeviceId, value);
+  }
+  function ensureFilmixDeviceId() {
+    var deviceId = getFilmixDeviceId();
+    if (!deviceId) {
+      deviceId = Lampa.Utils.uid(16);
+      setFilmixDeviceId(deviceId);
+    }
+    return deviceId;
+  }
+
+  var APIClient = /*#__PURE__*/function () {
+    function APIClient() {
+      _classCallCheck(this, APIClient);
+      this.network = new Lampa.Reguest();
+    }
+    return _createClass(APIClient, [{
+      key: "apiBase",
+      value: function apiBase() {
+        return config.api_base;
+      }
+    }, {
+      key: "getAuth",
+      value: function getAuth() {
+        var token = getFilmixToken();
+        var deviceId = getFilmixDeviceId();
+        if (token && !deviceId) {
+          deviceId = ensureFilmixDeviceId();
+        }
+        return {
+          filmix_token: token,
+          filmix_device_id: deviceId
+        };
+      }
+    }, {
+      key: "addParam",
+      value: function addParam(url, key, value) {
+        if (!value) return url;
+        return Lampa.Utils.addUrlComponent(url, key + '=' + encodeURIComponent(value));
+      }
+    }, {
+      key: "postJson",
+      value: function postJson(url, data, success, fail) {
+        this.network.silent(url, success, fail, JSON.stringify(data), {
+          dataType: 'json',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    }, {
+      key: "getJson",
+      value: function getJson(url, success, fail) {
+        this.network.silent(url, success, fail);
+      }
+    }, {
+      key: "clear",
+      value: function clear() {
+        this.network.clear();
+      }
+    }, {
+      key: "getSources",
+      value: function getSources(success, fail) {
+        this.getJson(this.apiBase() + '/sources', success, fail);
+      }
+    }, {
+      key: "search",
+      value: function search(params, sources, success, fail) {
+        var url = this.apiBase() + '/search';
+        var sourceKey = Array.isArray(sources) ? sources.join(',') : sources;
+        url = this.addParam(url, 'sources', sourceKey);
+        url = this.addParam(url, 'source', sourceKey);
+        for (var key in params) {
+          url = this.addParam(url, key, params[key]);
+        }
+        var auth = this.getAuth();
+        if (sources === 'filmix' || Array.isArray(sources) && sources.indexOf('filmix') !== -1) {
+          url = this.addParam(url, 'filmix_token', auth.filmix_token);
+          url = this.addParam(url, 'filmix_device_id', auth.filmix_device_id);
+        }
+        this.getJson(url, success, fail);
+      }
+    }, {
+      key: "getContent",
+      value: function getContent(sourceKey, ref, success, fail) {
+        var url = this.apiBase() + '/content';
+        var data = {
+          source: sourceKey,
+          ref: this.extendRefWithAuth(sourceKey, ref),
+          full: true
+        };
+        this.postJson(url, data, success, fail);
+      }
+    }, {
+      key: "getStream",
+      value: function getStream(sourceKey, ref, success, fail) {
+        var url = this.apiBase() + '/stream';
+        var data = {
+          source: sourceKey,
+          ref: this.extendRefWithAuth(sourceKey, ref)
+        };
+        this.postJson(url, data, success, fail);
+      }
+    }, {
+      key: "extendRefWithAuth",
+      value: function extendRefWithAuth(sourceKey, ref) {
+        if (!ref || _typeof(ref) !== 'object') return ref;
+        var auth = this.getAuth();
+        var next = {};
+        Lampa.Arrays.extend(next, ref, true);
+        if (sourceKey == 'filmix') {
+          if (!next.token && auth.filmix_token) next.token = auth.filmix_token;
+          if (!next.device_id && auth.filmix_device_id) next.device_id = auth.filmix_device_id;
+        }
+        return next;
+      }
+    }]);
+  }();
+
+  var SourcesStore = /*#__PURE__*/function () {
+    function SourcesStore() {
+      _classCallCheck(this, SourcesStore);
+      this.sources_key = 'BO_SOURCES';
+      this.sources_sort_key = 'BO_SOURCES_SORT';
+      this.sources_hide_key = 'BO_SOURCES_HIDE';
+      this.available_sources = Lampa.Storage.get(this.sources_key, []);
+      this.titles = {};
+      this.applyTitles(this.available_sources);
+    }
+    return _createClass(SourcesStore, [{
+      key: "normalizeName",
+      value: function normalizeName(name) {
+        return (name || '').toString().trim().toLowerCase();
+      }
+    }, {
+      key: "applyTitles",
+      value: function applyTitles(list) {
+        var _this = this;
+        if (!Array.isArray(list)) return;
+        list.forEach(function (item) {
+          if (!item) return;
+          var key = _this.normalizeName(item.key || item.name);
+          var title = item.display_name || item.displayName || item.display || item.title || item.label || item.name || '';
+          if (key && title) _this.titles[key] = title;
+        });
+      }
+    }, {
+      key: "getSorted",
+      value: function getSorted() {
+        var sorted = Lampa.Storage.get(this.sources_sort_key, []);
+        return Array.isArray(sorted) ? sorted.map(this.normalizeName).filter(Boolean) : [];
+      }
+    }, {
+      key: "getHidden",
+      value: function getHidden() {
+        var hidden = Lampa.Storage.get(this.sources_hide_key, []);
+        return Array.isArray(hidden) ? hidden.map(this.normalizeName).filter(Boolean) : [];
+      }
+    }, {
+      key: "saveAvailable",
+      value: function saveAvailable(list) {
+        this.available_sources = list;
+        this.applyTitles(list);
+        Lampa.Storage.set(this.sources_key, list);
+      }
+    }, {
+      key: "getEnabledKeys",
+      value: function getEnabledKeys() {
+        var _this2 = this;
+        return this.available_sources.filter(function (item) {
+          return item && item.enabled !== false;
+        }).map(function (item) {
+          return _this2.normalizeName(item.key || item.name);
+        }).filter(Boolean);
+      }
+    }, {
+      key: "applyUserFilters",
+      value: function applyUserFilters(list) {
+        var hidden = this.getHidden();
+        var sorted = this.getSorted();
+        var result = list.slice(0);
+        if (sorted.length) {
+          var ordered = [];
+          sorted.forEach(function (key) {
+            if (result.indexOf(key) !== -1) ordered.push(key);
+          });
+          result.forEach(function (key) {
+            if (ordered.indexOf(key) === -1) ordered.push(key);
+          });
+          result = ordered;
+        }
+        if (hidden.length) {
+          result = result.filter(function (name) {
+            return hidden.indexOf(name) === -1;
+          });
+        }
+        return result;
+      }
+    }, {
+      key: "getTitle",
+      value: function getTitle(key) {
+        return this.titles[this.normalizeName(key)] || key;
+      }
+    }]);
+  }();
+  var sourcesStore = new SourcesStore();
+
+  function getFileId(movie, sourceKey) {
+    if (!movie) return '';
+
+    // Use IDs for Makhno and AnimeOn as they support it reliably
+    if (sourceKey === 'makhno' || sourceKey === 'animeon') {
+      var id = movie.tmdb_id || movie.id;
+      if (id && /^\d+$/.test(id)) return 'id:' + id;
+    }
+    return Lampa.Utils.hash(movie.number_of_seasons ? movie.original_name : movie.original_title);
+  }
+  function getHashTimeline(movie, season, episode, sourceKey) {
+    var base = getFileId(movie, sourceKey);
+    return Lampa.Utils.hash(season ? [season, episode, base].join(':') : base);
+  }
+  function getHashBehold(movie, season, episode, voice_name, sourceKey) {
+    var base = getHashTimeline(movie, season, episode, sourceKey);
+    return Lampa.Utils.hash(base + ':' + (voice_name || ''));
+  }
+
   function component(object) {
-    var network = new Lampa.Reguest();
+    var api_client = new APIClient();
+    this.api_client = api_client;
     var scroll = new Lampa.Scroll({
       mask: true,
       over: true
@@ -1049,7 +1252,6 @@
     var files = new Lampa.Explorer(object);
     var filter = new Lampa.Filter(object);
     var sources = {};
-    var balanser_titles = {};
     function ensureSource(key) {
       if (key && !sources[key]) {
         sources[key] = createV2(key);
@@ -1066,11 +1268,14 @@
     var images = [];
     var disabled_sources = {};
     var filter_sources = buildFilterSources(object && object.movie);
-    var available_sources = null;
-    var sources_base = api_base;
-    var sources_key = 'BO_SOURCES';
-    var sources_sort_key = 'BO_SOURCES_SORT';
-    var sources_hide_key = 'BO_SOURCES_HIDE';
+    var available_sources = sourcesStore.available_sources;
+
+    // TMDB Season Cache
+    var tmdb_season_cache = {};
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
     var filter_translate = {
       season: Lampa.Lang.translate('torrent_serial_season'),
       voice: Lampa.Lang.translate('torrent_parser_voice'),
@@ -1083,7 +1288,7 @@
       return filter_sources.map(function (key) {
         var disabled = isSourceDisabled(key);
         return {
-          title: balanser_titles[key] || key,
+          title: sourcesStore.getTitle(key),
           source: key,
           selected: key == balanser,
           ghost: disabled,
@@ -1094,7 +1299,7 @@
     function updateSourceSort() {
       if (!filter) return;
       filter.set('sort', buildSourceSortItems());
-      filter.chosen('sort', [balanser_titles[balanser] || balanser]);
+      filter.chosen('sort', [sourcesStore.getTitle(balanser)]);
     }
     function resolveEpisodeNumber(value, fallback) {
       if (value === null || typeof value === 'undefined' || value === '') return fallback;
@@ -1136,37 +1341,8 @@
         });
       }
       sources = filterEnabledSources(sources);
-      sources = applyUserSources(sources);
+      sources = sourcesStore.applyUserFilters(sources);
       return sources;
-    }
-    function getUserHiddenSources() {
-      var hidden = Lampa.Storage.get(sources_hide_key, []);
-      if (!Array.isArray(hidden)) return [];
-      return hidden.map(mapSourceName).filter(Boolean);
-    }
-    function getUserSortedSources() {
-      var sorted = Lampa.Storage.get(sources_sort_key, []);
-      if (!Array.isArray(sorted)) return [];
-      return sorted.map(mapSourceName).filter(Boolean);
-    }
-    function applyUserSources(list) {
-      var hidden = getUserHiddenSources();
-      var sorted = getUserSortedSources();
-      var result = list.slice(0);
-      if (sorted.length) {
-        var ordered = [];
-        sorted.forEach(function (key) {
-          if (result.indexOf(key) !== -1) ordered.push(key);
-        });
-        result.forEach(function (key) {
-          if (ordered.indexOf(key) === -1) ordered.push(key);
-        });
-        result = ordered;
-      }
-      if (hidden.length) result = result.filter(function (name) {
-        return hidden.indexOf(name) === -1;
-      });
-      return result;
     }
     function getBaseSources() {
       var from_api = getEnabledSources();
@@ -1183,19 +1359,12 @@
         return enabled.indexOf(name) !== -1;
       });
     }
-    function normalizeSourceName(name) {
-      return (name || '').toString().trim().toLowerCase();
-    }
-    function mapSourceName(name) {
-      var key = normalizeSourceName(name);
-      return key;
-    }
     function getEnabledSources() {
       if (!available_sources || !available_sources.length) return null;
       var enabled = available_sources.filter(function (item) {
         return item && item.enabled !== false;
       }).map(function (item) {
-        return mapSourceName(item.key || item.name);
+        return sourcesStore.normalizeName(item.key || item.name);
       }).filter(Boolean);
       enabled.forEach(function (name) {
         return ensureSource(name);
@@ -1203,11 +1372,11 @@
       return enabled.length ? enabled : null;
     }
     function loadAvailableSources(call) {
-      var cached = Lampa.Storage.get(sources_key, null);
-      network.silent(sources_base + '/sources', function (json) {
+      var cached = Lampa.Storage.get(sourcesStore.sources_key, null);
+      api_client.getSources(function (json) {
         if (json && json.ok && Array.isArray(json.sources)) {
           applyAvailableSources(json.sources);
-          Lampa.Storage.set(sources_key, available_sources);
+          sourcesStore.saveAvailable(json.sources);
         } else if (cached && Array.isArray(cached)) {
           applyAvailableSources(cached);
         }
@@ -1222,10 +1391,10 @@
       list.forEach(function (item) {
         if (!item || !item.name && !item.key) return;
         var display = extractSourceTitle(item);
-        var key = mapSourceName(item.key || item.name);
+        var key = sourcesStore.normalizeName(item.key || item.name);
         if (key) {
           ensureSource(key);
-          if (display) balanser_titles[key] = display;
+          if (display) sourcesStore.titles[key] = display;
         }
       });
     }
@@ -1318,7 +1487,9 @@
       var from = this.getChoice();
       if (from.voice_name) to.voice_name = from.voice_name;
       this.saveChoice(to, balanser_name);
-      Lampa.Activity.replace();
+      this.reset();
+      source = this.createSource();
+      this.search();
     };
     this.createSource = function () {
       var last_select_balanser = Lampa.Storage.cache('bandera_online_last_balanser', 3000, {});
@@ -1435,7 +1606,7 @@
         if (elem.season) info.push(Lampa.Lang.translate('torrent_serial_season') + ' ' + elem.season);
         var name = elem.title || elem.name || '';
         var orig = elem.title_en || elem.original_title || elem.orig_title || '';
-        elem.title = name + (orig && orig !== name ? ' / ' + orig : '');
+        elem.title = escapeHtml(name + (orig && orig !== name ? ' / ' + orig : ''));
         elem.time = elem.time || '';
         elem.info = info.join('<span class="online-prestige-split">●</span>');
         var item = Lampa.Template.get('bandera_online_folder', elem);
@@ -1481,7 +1652,7 @@
     this.reset = function () {
       last = false;
       clearInterval(balanser_timer);
-      network.clear();
+      api_client.clear();
       this.clearImages();
       scroll.render().find('.empty').remove();
       scroll.clear();
@@ -1535,7 +1706,7 @@
       this.selected(filter_items);
     };
     this.disableSource = function (source_name, reason) {
-      var key = mapSourceName(source_name);
+      var key = sourcesStore.normalizeName(source_name);
       if (!key) return;
       if (!disabled_sources[key]) {
         disabled_sources[key] = {
@@ -1575,18 +1746,22 @@
         }
       }
       filter.chosen('filter', select);
-      filter.chosen('sort', [balanser_titles[balanser] || balanser]);
+      filter.chosen('sort', [sourcesStore.getTitle(balanser)]);
     };
     this.getEpisodes = function (season, call) {
-      var episodes = [];
-      if (typeof object.movie.id == 'number' && object.movie.name) {
-        Lampa.Api.sources.tmdb.get('tv/' + object.movie.id + '/season/' + season, {}, function (data) {
-          episodes = data.episodes || [];
-          call(episodes);
+      var id = getTmdbId(object.movie);
+      var cache_key = id + '_' + season;
+      if (tmdb_season_cache[cache_key]) {
+        return call(tmdb_season_cache[cache_key]);
+      }
+      if (id && object.movie.name) {
+        Lampa.Api.sources.tmdb.get('tv/' + id + '/season/' + season, {}, function (data) {
+          tmdb_season_cache[cache_key] = data.episodes || [];
+          call(tmdb_season_cache[cache_key]);
         }, function () {
-          call(episodes);
+          call([]);
         });
-      } else call(episodes);
+      } else call([]);
     };
 
     /**
@@ -1600,7 +1775,7 @@
       scroll.append(item);
     };
     this.watched = function (set) {
-      var file_id = Lampa.Utils.hash(object.movie.number_of_seasons ? object.movie.original_name : object.movie.original_title);
+      var file_id = getFileId(object.movie, balanser);
       var watched = Lampa.Storage.cache('bandera_online_watched_last', 5000, {});
       if (set) {
         if (!watched[file_id]) watched[file_id] = {};
@@ -1653,8 +1828,8 @@
             quality: '',
             time: Lampa.Utils.secondsToTime((episode ? episode.runtime : object.movie.runtime) * 60, true)
           });
-          var hash_timeline = Lampa.Utils.hash(element.season ? [element.season, element.episode, object.movie.original_title].join('') : object.movie.original_title);
-          var hash_behold = Lampa.Utils.hash(element.season ? [element.season, element.episode, object.movie.original_title, element.voice_name].join('') : object.movie.original_title + element.voice_name);
+          var hash_timeline = getHashTimeline(object.movie, element.season, element.episode, balanser);
+          var hash_behold = getHashBehold(object.movie, element.season, element.episode, element.voice_name, balanser);
           var data = {
             hash_timeline: hash_timeline,
             hash_behold: hash_behold
@@ -1666,7 +1841,7 @@
           }
           element.timeline = Lampa.Timeline.view(hash_timeline);
           if (episode) {
-            element.title = episode.name;
+            element.title = escapeHtml(episode.name);
             if (element.info.length < 30 && episode.vote_average) info.push(Lampa.Template.get('bandera_online_rate', {
               rate: parseFloat(episode.vote_average + '').toFixed(1)
             }, true));
@@ -1674,7 +1849,7 @@
           } else if (object.movie.release_date && fully) {
             info.push(Lampa.Utils.parseTime(object.movie.release_date).full);
           }
-          if (!serial && object.movie.tagline && element.info.length < 30) info.push(object.movie.tagline);
+          if (!serial && object.movie.tagline && element.info.length < 30) info.push(escapeHtml(object.movie.tagline));
           if (element.info) info.push(element.info);
           if (info.length) element.info = info.map(function (i) {
             return '<span>' + i + '</span>';
@@ -1700,7 +1875,8 @@
               loader.remove();
               if (serial) image.append('<div class="online-prestige__episode-number">' + formatEpisodeNumber(element.episode, index + 1) + '</div>');
             };
-            img.src = Lampa.TMDB.image('t/p/w300' + (episode ? episode.still_path : object.movie.backdrop_path));
+            var path = episode ? episode.still_path : object.movie.backdrop_path;
+            if (path) img.src = Lampa.TMDB.image('t/p/w300' + path);else img.src = './img/img_broken.svg';
             images.push(img);
           }
           html.find('.online-prestige__timeline').append(Lampa.Timeline.render(element.timeline));
@@ -1726,7 +1902,7 @@
             _this4.saveChoice(choice);
             _this4.watched({
               balanser: balanser,
-              balanser_name: balanser_titles[balanser] || Lampa.Utils.capitalizeFirstLetter(balanser),
+              balanser_name: sourcesStore.getTitle(balanser),
               voice_id: choice.voice_id,
               voice_name: choice.voice_name || element.voice_name,
               episode: element.episode,
@@ -1793,13 +1969,13 @@
               info: info.length ? info.map(function (i) {
                 return '<span>' + i + '</span>';
               }).join('<span class="online-prestige-split">●</span>') : '',
-              title: episode.name,
+              title: escapeHtml(episode.name),
               quality: day > 0 ? txt : ''
             });
             var loader = html.find('.online-prestige__loader');
             var image = html.find('.online-prestige__img');
             var season = items[0] ? items[0].season : 1;
-            html.find('.online-prestige__timeline').append(Lampa.Timeline.render(Lampa.Timeline.view(Lampa.Utils.hash([season, episode.episode_number, object.movie.original_title].join('')))));
+            html.find('.online-prestige__timeline').append(Lampa.Timeline.render(Lampa.Timeline.view(getHashTimeline(object.movie, season, episode.episode_number, balanser))));
             var img = html.find('img')[0];
             if (episode.still_path) {
               img.onerror = function () {
@@ -1813,6 +1989,7 @@
               img.src = Lampa.TMDB.image('t/p/w300' + episode.still_path);
               images.push(img);
             } else {
+              img.src = './img/img_broken.svg';
               loader.remove();
               image.append('<div class="online-prestige__episode-number">' + formatEpisodeNumber(episode.episode_number) + '</div>');
             }
@@ -1980,7 +2157,7 @@
       var _this5 = this;
       this.reset();
       var html = Lampa.Template.get('bandera_online_does_not_answer', {
-        balanser: balanser_titles[balanser] || balanser
+        balanser: sourcesStore.getTitle(balanser)
       });
       var tic = 10;
       html.find('.cancel').on('hover:enter', function () {
@@ -1989,6 +2166,10 @@
       html.find('.change').on('hover:enter', function () {
         clearInterval(balanser_timer);
         filter.render().find('.filter--sort').trigger('hover:enter');
+      });
+      html.find('.search_all').on('hover:enter', function () {
+        clearInterval(balanser_timer);
+        _this5.searchAll();
       });
       scroll.append(html);
       this.loading(false);
@@ -2014,6 +2195,31 @@
           }
         }
       }, 1000);
+    };
+    this.searchAll = function () {
+      var _this6 = this;
+      this.reset();
+      this.loading(true);
+      var params = {
+        title: object.movie.title || object.movie.name,
+        original_title: object.movie.original_title || object.movie.original_name,
+        imdb_id: object.movie.imdb_id,
+        tmdb_id: getTmdbId(object.movie),
+        kinopoisk_id: object.movie.kinopoisk_id,
+        mal_id: object.movie.mal_id,
+        year: getYear(object.movie)
+      };
+      api_client.search(params, filter_sources, function (json) {
+        _this6.loading(false);
+        if (json && json.ok && Array.isArray(json.results) && json.results.length) {
+          _this6.similars(json.results);
+        } else {
+          _this6.empty();
+        }
+      }, function () {
+        _this6.loading(false);
+        _this6.empty();
+      });
     };
     this.getLastEpisode = function (items) {
       var last_episode = 0;
@@ -2069,12 +2275,12 @@
       this.stop();
     };
     this.stop = function () {
-      network.clear();
+      api_client.clear();
       clearInterval(balanser_timer);
       if (source && source.cancel) source.cancel();
     };
     this.destroy = function () {
-      network.clear();
+      api_client.clear();
       this.clearImages();
       files.destroy();
       scroll.destroy();
@@ -2083,12 +2289,10 @@
     };
   }
 
-  var SOURCES_KEY = 'BO_SOURCES';
-  var SOURCES_SORT_KEY = 'BO_SOURCES_SORT';
-  var SOURCES_HIDE_KEY = 'BO_SOURCES_HIDE';
   var FILMIX_POLL_INTERVAL = 10000;
   var FILMIX_MAX_QUALITY_KEY = 'BO_FILMIX_MAX_QUALITY';
   var AUTH_KEYS = getAuthKeys();
+  var api_base = config.api_base;
   var filmixAuthTimer = null;
   var filmixHeaderLoading = false;
   function sanitizeStoredValue(key) {
@@ -2097,39 +2301,11 @@
       Lampa.Storage.set(key, '');
     }
   }
-  function normalizeSourceName(name) {
-    return (name || '').toString().trim().toLowerCase();
-  }
-  function mapSourceName(name) {
-    var key = normalizeSourceName(name);
-    return key;
-  }
   function normalizeValue(value) {
     return (value || '').toString().trim();
   }
-  function extractSourceTitle(item) {
-    if (!item) return '';
-    return item.display_name || item.displayName || item.display || item.title || item.label || item.name || item.key || '';
-  }
-  function getStoredSources() {
-    var sources = Lampa.Storage.get(SOURCES_KEY, null);
-    return Array.isArray(sources) ? sources : [];
-  }
   function isVisibleSource(key) {
     return key && key !== 'hdrezka';
-  }
-  function setStoredSources(list) {
-    Lampa.Storage.set(SOURCES_KEY, list);
-  }
-  function getHiddenSources() {
-    var hidden = Lampa.Storage.get(SOURCES_HIDE_KEY, []);
-    if (!Array.isArray(hidden)) return [];
-    return hidden.map(mapSourceName).filter(Boolean);
-  }
-  function getSortedSources() {
-    var sorted = Lampa.Storage.get(SOURCES_SORT_KEY, []);
-    if (!Array.isArray(sorted)) return [];
-    return sorted.map(mapSourceName).filter(Boolean);
   }
   function addQuery(url, params) {
     var next = url;
@@ -2196,17 +2372,17 @@
     });
   }
   function buildSourcesList() {
-    var sources = getStoredSources();
+    var sources = sourcesStore.available_sources;
     if (!sources.length) {
       return $("<div class=\"settings-param-text\">".concat(Lampa.Lang.translate('bandera_online_sources_empty'), "</div>"));
     }
-    var hidden = getHiddenSources();
-    var sorted = getSortedSources();
+    var hidden = sourcesStore.getHidden();
+    var sorted = sourcesStore.getSorted();
     var items = sources.map(function (item) {
-      var key = mapSourceName(item.key || item.name);
+      var key = sourcesStore.normalizeName(item.key || item.name);
       return {
         key: key,
-        title: extractSourceTitle(item),
+        title: sourcesStore.getTitle(key),
         enabled: item.enabled !== false
       };
     }).filter(function (item) {
@@ -2251,14 +2427,13 @@
   function saveSourcesSettings(list) {
     var sort = [];
     var hide = [];
-    list.find('.menu-edit-list__item').each(function () {
-      var key = mapSourceName($(this).data('key'));
-      if (!key) return;
+    list.find('.bandera-online-sources__item').each(function () {
+      var key = $(this).data('key');
       sort.push(key);
       if ($(this).hasClass('hidden')) hide.push(key);
     });
-    Lampa.Storage.set(SOURCES_SORT_KEY, sort);
-    Lampa.Storage.set(SOURCES_HIDE_KEY, hide);
+    sourcesStore.saveSorted(sort);
+    sourcesStore.saveHidden(hide);
   }
   function stopFilmixPolling() {
     if (filmixAuthTimer) {
@@ -2437,10 +2612,14 @@
     function buildActions() {
       var container = $('<div class="bandera-online-sources__actions"></div>');
       var syncButton = $('<div class="modal__button bandera-online-sources__action selector"></div>');
+      var saveButton = $('<div class="modal__button bandera-online-sources__action selector"></div>');
       syncButton.addClass('bandera-online-sources__action--sync');
       syncButton.text(Lampa.Lang.translate('bandera_online_sources_sync'));
       syncButton.on('click hover:enter', sync);
-      container.append(syncButton);
+      saveButton.addClass('bandera-online-sources__action--save');
+      saveButton.text(Lampa.Lang.translate('bandera_online_sources_save'));
+      saveButton.on('click hover:enter', closeAndSave);
+      container.append(syncButton).append(saveButton);
       return container;
     }
     function render(update_modal) {
@@ -2592,11 +2771,11 @@
   }
 
   var communityWatchesPlugin = {
-    url: 'https://lampame.github.io/main/cw.js',
-    name: 'CommunityWatches',
+    url: config.community_watches_url,
+    name: config.community_watches_name,
     status: 1
   };
-  var communityWatchesAutoinstallFlag = 'bandera_online_cw_autoinstall_done';
+  var communityWatchesAutoinstallFlag = config.storage_prefixes.cw_autoinstall_done;
   function normalizePluginUrl(url) {
     return (url || '').toString().trim().replace(/[?#].*$/, '').replace(/\/+$/, '').replace(/^https?:\/\//i, '').toLowerCase();
   }
@@ -2650,7 +2829,7 @@
     ensureCommunityWatchesPlugin();
     function resetTemplates() {
       Lampa.Template.add('bandera_online_full', "<div class=\"online-prestige online-prestige--full selector\">\n            <div class=\"online-prestige__img\">\n                <img alt=\"\">\n                <div class=\"online-prestige__loader\"></div>\n            </div>\n            <div class=\"online-prestige__body\">\n                <div class=\"online-prestige__head\">\n                    <div class=\"online-prestige__title\">{title}</div>\n                    <div class=\"online-prestige__time\">{time}</div>\n                </div>\n\n                <div class=\"online-prestige__timeline\"></div>\n\n                <div class=\"online-prestige__footer\">\n                    <div class=\"online-prestige__info\">{info}</div>\n                    <div class=\"online-prestige__quality\">{quality}</div>\n                </div>\n            </div>\n        </div>");
-      Lampa.Template.add('bandera_online_does_not_answer', "<div class=\"online-empty\">\n            <div class=\"online-empty__title\">\n                #{online_balanser_dont_work}\n            </div>\n            <div class=\"online-empty__time\">\n                #{online_balanser_timeout}\n            </div>\n            <div class=\"online-empty__buttons\">\n                <div class=\"online-empty__button selector cancel\">#{cancel}</div>\n                <div class=\"online-empty__button selector change\">#{online_change_balanser}</div>\n            </div>\n            <div class=\"online-empty__templates\">\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n            </div>\n        </div>");
+      Lampa.Template.add('bandera_online_does_not_answer', "<div class=\"online-empty\">\n            <div class=\"online-empty__title\">\n                #{online_balanser_dont_work}\n            </div>\n            <div class=\"online-empty__time\">\n                #{online_balanser_timeout}\n            </div>\n            <div class=\"online-empty__buttons\">\n                <div class=\"online-empty__button selector cancel\">#{cancel}</div>\n                <div class=\"online-empty__button selector change\">#{online_change_balanser}</div>\n                <div class=\"online-empty__button selector search_all\">#{bandera_online_search_all}</div>\n            </div>\n            <div class=\"online-empty__templates\">\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n            </div>\n        </div>");
       Lampa.Template.add('bandera_online_rate', "<div class=\"online-prestige-rate\">\n            <svg width=\"17\" height=\"16\" viewBox=\"0 0 17 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path d=\"M8.39409 0.192139L10.99 5.30994L16.7882 6.20387L12.5475 10.4277L13.5819 15.9311L8.39409 13.2425L3.20626 15.9311L4.24065 10.4277L0 6.20387L5.79819 5.30994L8.39409 0.192139Z\" fill=\"#fff\"></path>\n            </svg>\n            <span>{rate}</span>\n        </div>");
       Lampa.Template.add('bandera_online_folder', "<div class=\"online-prestige online-prestige--folder selector\">\n            <div class=\"online-prestige__folder\">\n                <svg viewBox=\"0 0 128 112\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <rect y=\"20\" width=\"128\" height=\"92\" rx=\"13\" fill=\"white\"></rect>\n                    <path d=\"M29.9963 8H98.0037C96.0446 3.3021 91.4079 0 86 0H42C36.5921 0 31.9555 3.3021 29.9963 8Z\" fill=\"white\" fill-opacity=\"0.23\"></path>\n                    <rect x=\"11\" y=\"8\" width=\"106\" height=\"76\" rx=\"13\" fill=\"white\" fill-opacity=\"0.51\"></rect>\n                </svg>\n            </div>\n            <div class=\"online-prestige__body\">\n                <div class=\"online-prestige__head\">\n                    <div class=\"online-prestige__title\">{title}</div>\n                    <div class=\"online-prestige__time\">{time}</div>\n                </div>\n\n                <div class=\"online-prestige__footer\">\n                    <div class=\"online-prestige__info\">{info}</div>\n                </div>\n            </div>\n        </div>");
       Lampa.Template.add('bandera_online_watched', "<div class=\"online-prestige online-prestige-watched selector\">\n            <div class=\"online-prestige-watched__icon\">\n                <svg width=\"21\" height=\"21\" viewBox=\"0 0 21 21\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <circle cx=\"10.5\" cy=\"10.5\" r=\"9\" stroke=\"currentColor\" stroke-width=\"3\"/>\n                    <path d=\"M14.8477 10.5628L8.20312 14.399L8.20313 6.72656L14.8477 10.5628Z\" fill=\"currentColor\"/>\n                </svg>\n            </div>\n            <div class=\"online-prestige-watched__body\">\n                \n            </div>\n        </div>");
@@ -2840,6 +3019,12 @@
         ua: 'Зберегти та закрити',
         en: 'Save and close'
       },
+      bandera_online_search_all: {
+        ru: 'Поиск по всем источникам',
+        uk: 'Пошук по всіх джерелах',
+        ua: 'Пошук по всіх джерелах',
+        en: 'Search all sources'
+      },
       bandera_online_sources_empty: {
         ru: 'Список джерел ще не синхронізований.',
         uk: 'Список джерел ще не синхронізований.',
@@ -3016,13 +3201,17 @@
       }
     });
     initSettings();
-    Lampa.Template.add('bandera_online_css', "\n        <style>\n        @charset 'UTF-8';.online-prestige{position:relative;-webkit-border-radius:.3em;-moz-border-radius:.3em;border-radius:.3em;background-color:rgba(0,0,0,0.3);display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;will-change:transform}.online-prestige__body{padding:1.2em;line-height:1.3;-webkit-box-flex:1;-webkit-flex-grow:1;-moz-box-flex:1;-ms-flex-positive:1;flex-grow:1;position:relative}@media screen and (max-width:480px){.online-prestige__body{padding:.8em 1.2em}}.online-prestige__img{position:relative;width:13em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;min-height:8.2em}.online-prestige__img>img{position:absolute;top:0;left:0;width:100%;height:100%;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:.3em;-moz-border-radius:.3em;border-radius:.3em;opacity:0;-webkit-transition:opacity .3s;-o-transition:opacity .3s;-moz-transition:opacity .3s;transition:opacity .3s}.online-prestige__img--loaded>img{opacity:1}@media screen and (max-width:480px){.online-prestige__img{width:7em;min-height:6em}}.online-prestige__folder{padding:1em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.online-prestige__folder>svg{width:4.4em !important;height:4.4em !important}.online-prestige__viewed{position:absolute;top:1em;left:1em;background:rgba(0,0,0,0.45);-webkit-border-radius:100%;-moz-border-radius:100%;border-radius:100%;padding:.25em;font-size:.76em}.online-prestige__viewed>svg{width:1.5em !important;height:1.5em !important}.online-prestige__episode-number{position:absolute;top:0;left:0;right:0;bottom:0;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-moz-box-pack:center;-ms-flex-pack:center;justify-content:center;font-size:2em}.online-prestige__loader{position:absolute;top:50%;left:50%;width:2em;height:2em;margin-left:-1em;margin-top:-1em;background:url(./img/loader.svg) no-repeat center center;-webkit-background-size:contain;-moz-background-size:contain;-o-background-size:contain;background-size:contain}.online-prestige__head,.online-prestige__footer{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-moz-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.online-prestige__timeline{margin:.8em 0}.online-prestige__timeline>.time-line{display:block !important}.online-prestige__title{font-size:1.7em;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;line-clamp:1;-webkit-box-orient:vertical}@media screen and (max-width:480px){.online-prestige__title{font-size:1.4em}}.online-prestige__time{padding-left:2em}.online-prestige__info{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.online-prestige__info>*{overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;line-clamp:1;-webkit-box-orient:vertical}.online-prestige__quality{padding-left:1em;white-space:nowrap}.online-prestige__scan-file{position:absolute;bottom:0;left:0;right:0}.online-prestige__scan-file .broadcast__scan{margin:0}.online-prestige .online-prestige-split{font-size:.8em;margin:0 1em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.online-prestige.focus::after{content:'';position:absolute;top:-0.6em;left:-0.6em;right:-0.6em;bottom:-0.6em;-webkit-border-radius:.7em;-moz-border-radius:.7em;border-radius:.7em;border:solid .3em #fff;z-index:-1;pointer-events:none}.online-prestige+.online-prestige{margin-top:1.5em}.online-prestige--folder .online-prestige__footer{margin-top:.8em}.online-prestige-watched{padding:1em}.online-prestige-watched__icon>svg{width:1.5em;height:1.5em}.online-prestige-watched__body{padding-left:1em;padding-top:.1em;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap}.online-prestige-watched__body>span+span::before{content:' ● ';vertical-align:top;display:inline-block;margin:0 .5em}.online-prestige-rate{display:-webkit-inline-box;display:-webkit-inline-flex;display:-moz-inline-box;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.online-prestige-rate>svg{width:1.3em !important;height:1.3em !important}.online-prestige-rate>span{font-weight:600;font-size:1.1em;padding-left:.7em}.online-empty{line-height:1.4}.online-empty__title{font-size:1.8em;margin-bottom:.3em}.online-empty__time{font-size:1.2em;font-weight:300;margin-bottom:1.6em}.online-empty__buttons{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex}.online-empty__buttons>*+*{margin-left:1em}.online-empty__button{background:rgba(0,0,0,0.3);font-size:1.2em;padding:.5em 1.2em;-webkit-border-radius:.2em;-moz-border-radius:.2em;border-radius:.2em;margin-bottom:2.4em}.online-empty__button.focus{background:#fff;color:black}.online-empty__templates .online-empty-template:nth-child(2){opacity:.5}.online-empty__templates .online-empty-template:nth-child(3){opacity:.2}.online-empty-template{background-color:rgba(255,255,255,0.3);padding:1em;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;-webkit-border-radius:.3em;-moz-border-radius:.3em;border-radius:.3em}.online-empty-template>*{background:rgba(0,0,0,0.3);-webkit-border-radius:.3em;-moz-border-radius:.3em;border-radius:.3em}.online-empty-template__ico{width:4em;height:4em;margin-right:2.4em}.online-empty-template__body{height:1.7em;width:70%}.online-empty-template+.online-empty-template{margin-top:1em}\n        .bandera-online-sources__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:end;-webkit-justify-content:flex-end;-ms-flex-pack:end;justify-content:flex-end;margin-bottom:1.2em;position:-webkit-sticky;position:sticky;top:0;z-index:2;background:-webkit-gradient(linear,left top,left bottom,from(#262829),to(rgba(38,40,41,0.92)));background:-webkit-linear-gradient(top,#262829 0,rgba(38,40,41,0.92) 100%);background:-o-linear-gradient(top,#262829 0,rgba(38,40,41,0.92) 100%);background:linear-gradient(180deg,#262829 0,rgba(38,40,41,0.92) 100%);padding-bottom:.4em}.bandera-online-sources__action{padding:.7em 1.1em;font-size:1em}.bandera-online-sources__title{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.6em}.bandera-online-sources__name{font-size:1em;line-height:1.2}.bandera-online-sources__status{font-size:.7em;padding:.2em .5em;-webkit-border-radius:.3em;border-radius:.3em;color:#fff;text-transform:uppercase;line-height:1}.bandera-online-sources__status.is-enabled{background-color:#46b85a}.bandera-online-sources__status.is-disabled{background-color:#d24a4a}\n        </style>\n    ");
-    $('body').append(Lampa.Template.get('bandera_online_css', {}, true));
+    Lampa.Template.add('bandera_online_css', "\n        <style id=\"bandera_online_style\">\n        @charset 'UTF-8';.online-prestige{position:relative;-webkit-border-radius:.3em;-moz-border-radius:.3em;border-radius:.3em;background-color:rgba(0,0,0,0.3);display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;will-change:transform}.online-prestige__body{padding:1.2em;line-height:1.3;-webkit-box-flex:1;-webkit-flex-grow:1;-moz-box-flex:1;-ms-flex-positive:1;flex-grow:1;position:relative}@media screen and (max-width:480px){.online-prestige__body{padding:.8em 1.2em}}.online-prestige__img{position:relative;width:13em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;min-height:8.2em}.online-prestige__img>img{position:absolute;top:0;left:0;width:100%;height:100%;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:.3em;-moz-border-radius:.3em;border-radius:.3em;opacity:0;-webkit-transition:opacity .3s;-o-transition:opacity .3s;-moz-transition:opacity .3s;transition:opacity .3s}.online-prestige__img--loaded>img{opacity:1}@media screen and (max-width:480px){.online-prestige__img{width:7em;min-height:6em}}.online-prestige__folder{padding:1em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.online-prestige__folder>svg{width:4.4em !important;height:4.4em !important}.online-prestige__viewed{position:absolute;top:1em;left:1em;background:rgba(0,0,0,0.45);-webkit-border-radius:100%;-moz-border-radius:100%;border-radius:100%;padding:.25em;font-size:.76em}.online-prestige__viewed>svg{width:1.5em !important;height:1.5em !important}.online-prestige__episode-number{position:absolute;top:0;left:0;right:0;bottom:0;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-moz-box-pack:center;-ms-flex-pack:center;justify-content:center;font-size:2em}.online-prestige__loader{position:absolute;top:50%;left:50%;width:2em;height:2em;margin-left:-1em;margin-top:-1em;background:url(./img/loader.svg) no-repeat center center;-webkit-background-size:contain;-moz-background-size:contain;-o-background-size:contain;background-size:contain}.online-prestige__head,.online-prestige__footer{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-moz-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.online-prestige__timeline{margin:.8em 0}.online-prestige__timeline>.time-line{display:block !important}.online-prestige__title{font-size:1.7em;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;line-clamp:1;-webkit-box-orient:vertical}@media screen and (max-width:480px){.online-prestige__title{font-size:1.4em}}.online-prestige__time{padding-left:2em}.online-prestige__info{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.online-prestige__info>*{overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;line-clamp:1;-webkit-box-orient:vertical}.online-prestige__quality{padding-left:1em;white-space:nowrap}.online-prestige__scan-file{position:absolute;bottom:0;left:0;right:0}.online-prestige__scan-file .broadcast__scan{margin:0}.online-prestige .online-prestige-split{font-size:.8em;margin:0 1em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.online-prestige.focus::after{content:'';position:absolute;top:-0.6em;left:-0.6em;right:-0.6em;bottom:-0.6em;-webkit-border-radius:.7em;-moz-border-radius:.7em;border-radius:.7em;border:solid .3em #fff;z-index:-1;pointer-events:none}.online-prestige+.online-prestige{margin-top:1.5em}.online-prestige--folder .online-prestige__footer{margin-top:.8em}.online-prestige-watched{padding:1em}.online-prestige-watched__icon>svg{width:1.5em;height:1.5em}.online-prestige-watched__body{padding-left:1em;padding-top:.1em;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap}.online-prestige-watched__body>span+span::before{content:' ● ';vertical-align:top;display:inline-block;margin:0 .5em}.online-prestige-rate{display:-webkit-inline-box;display:-webkit-inline-flex;display:-moz-inline-box;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}.online-prestige-rate>svg{width:1.3em !important;height:1.3em !important}.online-prestige-rate>span{font-weight:600;font-size:1.1em;padding-left:.7em}.online-empty{line-height:1.4}.online-empty__title{font-size:1.8em;margin-bottom:.3em}.online-empty__time{font-size:1.2em;font-weight:300;margin-bottom:1.6em}.online-empty__buttons{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex}.online-empty__buttons>*+*{margin-left:1em}.online-empty__button{background:rgba(0,0,0,0.3);font-size:1.2em;padding:.5em 1.2em;-webkit-border-radius:.2em;-moz-border-radius:.2em;border-radius:.2em;margin-bottom:2.4em}.online-empty__button.focus{background:#fff;color:black}.online-empty__templates .online-empty-template:nth-child(2){opacity:.5}.online-empty__templates .online-empty-template:nth-child(3){opacity:.2}.online-empty-template{background-color:rgba(255,255,255,0.3);padding:1em;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;-webkit-border-radius:.3em;-moz-border-radius:.3em;border-radius:.3em}.online-empty-template>*{background:rgba(0,0,0,0.3);-webkit-border-radius:.3em;-moz-border-radius:.3em;border-radius:.3em}.online-empty-template__ico{width:4em;height:4em;margin-right:2.4em}.online-empty-template__body{height:1.7em;width:70%}.online-empty-template+.online-empty-template{margin-top:1em}\n        .bandera-online-sources__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:end;-webkit-justify-content:flex-end;-ms-flex-pack:end;justify-content:flex-end;margin-bottom:1.2em;position:-webkit-sticky;position:sticky;top:0;z-index:2;background:-webkit-gradient(linear,left top,left bottom,from(#262829),to(rgba(38,40,41,0.92)));background:-webkit-linear-gradient(top,#262829 0,rgba(38,40,41,0.92) 100%);background:-o-linear-gradient(top,#262829 0,rgba(38,40,41,0.92) 100%);background:linear-gradient(180deg,#262829 0,rgba(38,40,41,0.92) 100%);padding-bottom:.4em}.bandera-online-sources__action{padding:.7em 1.1em;font-size:1em}.bandera-online-sources__title{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.6em}.bandera-online-sources__name{font-size:1em;line-height:1.2}.bandera-online-sources__status{font-size:.7em;padding:.2em .5em;-webkit-border-radius:.3em;border-radius:.3em;color:#fff;text-transform:uppercase;line-height:1}.bandera-online-sources__status.is-enabled{background-color:#46b85a}.bandera-online-sources__status.is-disabled{background-color:#d24a4a}\n        </style>\n    ");
+    if (!$('#bandera_online_style').length) {
+      $('body').append(Lampa.Template.get('bandera_online_css', {}, true));
+    }
     var button = "<div class=\"full-start__button selector view--online\" data-subtitle=\"[Free] Bandera Online v".concat(manifest.version, "\">\n        <svg viewBox=\"0 -4 28 28\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <g clip-path=\"url(#clip0_503_2809)\"> <rect width=\"28\" height=\"20\" rx=\"2\" fill=\"white\"></rect> <mask id=\"mask0_503_2809\" style=\"mask-type:alpha\" maskUnits=\"userSpaceOnUse\" x=\"0\" y=\"0\" width=\"28\" height=\"20\"> <rect width=\"28\" height=\"20\" rx=\"2\" fill=\"white\"></rect> </mask> <g mask=\"url(#mask0_503_2809)\"> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M0 10.6667H28V0H0V10.6667Z\" fill=\"#156DD1\"></path> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M0 20H28V10.6667H0V20Z\" fill=\"#FFD948\"></path> </g> </g> <defs> <clipPath id=\"clip0_503_2809\"> <rect width=\"28\" height=\"20\" rx=\"2\" fill=\"white\"></rect> </clipPath> </defs> </g></svg>\n        <span>\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430 t.me/mmssixxx</span>\n    </div>");
     Lampa.Component.add('bandera_online', component);
     resetTemplates();
     Lampa.Listener.follow('full', function (e) {
       if (e.type == 'complite') {
+        var view = e.object.activity.render();
+        if (view.find('.view--online').length) return;
         var btn = $(Lampa.Lang.translate(button));
         btn.on('hover:enter', function () {
           resetTemplates();
