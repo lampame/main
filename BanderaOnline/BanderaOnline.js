@@ -1181,6 +1181,16 @@
         Lampa.Storage.set(this.sources_key, list);
       }
     }, {
+      key: "saveSorted",
+      value: function saveSorted(list) {
+        Lampa.Storage.set(this.sources_sort_key, list);
+      }
+    }, {
+      key: "saveHidden",
+      value: function saveHidden(list) {
+        Lampa.Storage.set(this.sources_hide_key, list);
+      }
+    }, {
       key: "getEnabledKeys",
       value: function getEnabledKeys() {
         var _this2 = this;
@@ -2633,7 +2643,7 @@
       var network = new Lampa.Reguest();
       network.silent(api_base + '/sources', function (json) {
         if (json && json.ok && Array.isArray(json.sources)) {
-          setStoredSources(json.sources);
+          sourcesStore.saveAvailable(json.sources);
           render(true);
           Lampa.Noty.show(Lampa.Lang.translate('bandera_online_sources_sync_success'));
         } else {
