@@ -219,21 +219,22 @@
         extension: decoded.slice(dotIndex)
       };
     }
-    function setFileNameInUrl(url, filename) {
-      var parsed;
-      try {
-        parsed = new URL(url);
-      } catch (e) {
-        return sanitizeUrl(url);
+    function buildInfuseFilename(editedName, extension, movie) {
+      var name = String(editedName || '');
+      var ext = String(extension || '');
+
+      // TV show: Infuse не розуміє {tmdb-XXXXX} для серіалів —
+      // він сприймає це як ID фільму. Використовуємо тільки SxxExx патерн.
+      if (movie && (movie.first_air_date || movie.number_of_seasons)) {
+        name = name.replace(/\s*\{tmdb-\d+\}\s*/g, '').trim();
+        return name + ext;
       }
-      var parts = parsed.pathname.split('/');
-      var index = parts.length - 1;
-      var currentMeta = getFileMeta(parsed.toString());
-      var nextName = String(filename || '').trim() || currentMeta.name;
-      var encodedSegment = encodeURIComponent(nextName + currentMeta.extension);
-      parts[index] = encodedSegment;
-      parsed.pathname = parts.join('/');
-      return sanitizeUrl(parsed.toString());
+
+      // Фільм: {tmdb-XXXXX} дає точний збіг в Infuse
+      if (movie && movie.id && !name.includes('{tmdb-')) {
+        name = name + ' {tmdb-' + movie.id + '}';
+      }
+      return name + ext;
     }
     function createMenuTitle(label) {
       return "<div class=\"infuseSaver\">".concat(INFUSE_LOGO, "<span>").concat(label, "</span></div>");
@@ -277,12 +278,13 @@
         };
       });
     }
-    function getPreparedLinks(editableLinks) {
+    function getPreparedLinks(editableLinks, movie) {
       return editableLinks.filter(function (item) {
         return item.enabled;
       }).map(function (item) {
         return {
-          url: setFileNameInUrl(item.originalUrl, item.editedName)
+          url: item.originalUrl,
+          filename: buildInfuseFilename(item.editedName, item.extension, movie)
         };
       });
     }
@@ -662,7 +664,7 @@
         var nextFocusMeta = focusMeta || readFocusMeta();
         var html = buildLinksEditorHtml(state, {
           save: function save() {
-            var links = getPreparedLinks(state.links);
+            var links = getPreparedLinks(state.links, state.movie);
             if (!links.length) {
               Lampa.Noty.show(tr('its_no_series_to_send'));
               return;
@@ -769,14 +771,18 @@
     }
     function sendPreparedLinks(preparedLinks, isAppleTv) {
       if (isAppleTv) {
-        var playlist = encodeURIComponent(JSON.stringify(preparedLinks));
+        var playlist = encodeURIComponent(JSON.stringify(preparedLinks.map(function (item) {
+          return {
+            url: item.url
+          };
+        })));
         window.location.assign('lampa://saveAllToInfuse?playlist=' + playlist);
         return;
       }
-      var urlParams = preparedLinks.map(function (item) {
-        return 'url=' + encodeURIComponent(item.url);
+      var params = preparedLinks.map(function (item) {
+        return 'url=' + encodeURIComponent(item.url) + '&filename=' + encodeURIComponent(item.filename);
       }).join('&');
-      window.location.assign('infuse://x-callback-url/save?' + urlParams);
+      window.location.assign('infuse://x-callback-url/save?' + params);
     }
     function addBulkSaveAction(data) {
       var links = data.items || [];
@@ -789,8 +795,11 @@
         title: createMenuTitle(tr('its_save_all')),
         onSelect: function onSelect() {
           var preparedLinks = links.map(function (item) {
+            var url = sanitizeUrl(item.url);
+            var meta = getFileMeta(url);
             return {
-              url: sanitizeUrl(item.url)
+              url: url,
+              filename: buildInfuseFilename(meta.name, meta.extension, movie)
             };
           });
           sendPreparedLinks(preparedLinks, isAppleTv);
