@@ -286,11 +286,6 @@
         };
       });
     }
-    function buildShortcutsPayload(links) {
-      return links.reduce(function (acc, item) {
-        return acc + encodeURIComponent(item.url + '\n');
-      }, '');
-    }
     function showBellMessage(text) {
       if (Lampa.Bell && typeof Lampa.Bell.push === 'function') {
         Lampa.Bell.push({
@@ -778,8 +773,10 @@
         window.location.assign('lampa://saveAllToInfuse?playlist=' + playlist);
         return;
       }
-      var payload = buildShortcutsPayload(preparedLinks);
-      window.location.assign('shortcuts://run-shortcut?name=Infuse import links&input=text&text=' + payload);
+      var urlParams = preparedLinks.map(function (item) {
+        return 'url=' + encodeURIComponent(item.url);
+      }).join('&');
+      window.location.assign('infuse://x-callback-url/save?' + urlParams);
     }
     function addBulkSaveAction(data) {
       var links = data.items || [];
@@ -836,7 +833,7 @@
       registerTranslations();
       Lampa.Manifest.plugins = {
         type: 'other',
-        version: '0.5',
+        version: '0.6',
         name: 'AppleTV Tweaks',
         description: 'Some tweaks for Apple TV',
         component: 'its'
