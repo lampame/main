@@ -974,9 +974,9 @@
   }
   function _refreshTokens() {
     _refreshTokens = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-      var _ref14,
+      var _ref16,
         redirect_uri,
-        _ref14$reason,
+        _ref16$reason,
         reason,
         refresh_token,
         logging,
@@ -984,7 +984,7 @@
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
-            _ref14 = _args.length > 0 && _args[0] !== undefined ? _args[0] : {}, redirect_uri = _ref14.redirect_uri, _ref14$reason = _ref14.reason, reason = _ref14$reason === void 0 ? 'manual' : _ref14$reason;
+            _ref16 = _args.length > 0 && _args[0] !== undefined ? _args[0] : {}, redirect_uri = _ref16.redirect_uri, _ref16$reason = _ref16.reason, reason = _ref16$reason === void 0 ? 'manual' : _ref16$reason;
             refresh_token = Lampa.Storage.get('trakt_refresh_token');
             logging = Lampa.Storage.field('trakt_enable_logging');
             if (refresh_token) {
@@ -1053,12 +1053,12 @@
   }
   function _ensureValidAccessToken() {
     _ensureValidAccessToken = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-      var _ref15,
-        _ref15$reason,
+      var _ref17,
+        _ref17$reason,
         reason,
-        _ref15$force,
+        _ref17$force,
         force,
-        _ref15$skewMs,
+        _ref17$skewMs,
         skewMs,
         token,
         refreshToken,
@@ -1068,7 +1068,7 @@
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.n) {
           case 0:
-            _ref15 = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {}, _ref15$reason = _ref15.reason, reason = _ref15$reason === void 0 ? 'preflight' : _ref15$reason, _ref15$force = _ref15.force, force = _ref15$force === void 0 ? false : _ref15$force, _ref15$skewMs = _ref15.skewMs, skewMs = _ref15$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref15$skewMs;
+            _ref17 = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {}, _ref17$reason = _ref17.reason, reason = _ref17$reason === void 0 ? 'preflight' : _ref17$reason, _ref17$force = _ref17.force, force = _ref17$force === void 0 ? false : _ref17$force, _ref17$skewMs = _ref17.skewMs, skewMs = _ref17$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref17$skewMs;
             token = Lampa.Storage.get('trakt_token');
             refreshToken = Lampa.Storage.get('trakt_refresh_token');
             if (refreshToken) {
@@ -2475,6 +2475,112 @@
         })["catch"](function (error) {
           reject(error);
         });
+      });
+    },
+    dvdCalendar: function dvdCalendar() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var limit = Math.max(1, parseInt(params.limit, 10) || 36);
+      var page = Math.max(1, parseInt(params.page, 10) || 1);
+      var now = new Date();
+      var startDate = new Date(now);
+      startDate.setDate(now.getDate() - 3);
+      var yyyy = startDate.getFullYear();
+      var mm = String(startDate.getMonth() + 1).padStart(2, '0');
+      var dd = String(startDate.getDate()).padStart(2, '0');
+      var dateString = "".concat(yyyy, "-").concat(mm, "-").concat(dd);
+      var days = 7;
+      var url = "/calendars/all/dvd/".concat(dateString, "/").concat(days, "?extended=full,images");
+      return requestApi('GET', url).then(function (response) {
+        var raw = Array.isArray(response) ? response : [];
+        var formatted = formatTraktResults(raw);
+        var total = raw.length;
+        return {
+          results: formatted.results || [],
+          total: total,
+          total_pages: Math.max(1, Math.ceil(total / limit)),
+          page: page
+        };
+      });
+    },
+    calendar: function calendar() {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var limit = Math.max(1, parseInt(params.limit, 10) || 36);
+      var page = Math.max(1, parseInt(params.page, 10) || 1);
+
+      // Calculate date range: 3 days ago to 3 days ahead (7 days total)
+      var now = new Date();
+      var startDate = new Date(now);
+      startDate.setDate(now.getDate() - 3);
+      var yyyy = startDate.getFullYear();
+      var mm = String(startDate.getMonth() + 1).padStart(2, '0');
+      var dd = String(startDate.getDate()).padStart(2, '0');
+      var dateString = "".concat(yyyy, "-").concat(mm, "-").concat(dd);
+      var days = 7;
+      var url = "/calendars/my/shows/".concat(dateString, "/").concat(days, "?extended=full,images");
+      return requestApi('GET', url).then(function (response) {
+        var raw = Array.isArray(response) ? response : [];
+
+        // Group by show TMDB ID to deduplicate
+        var showMap = {};
+        raw.forEach(function (item) {
+          var show = item && item.show;
+          var episode = item && item.episode;
+          if (!show || !show.ids) return;
+          var tmdbId = show.ids.tmdb;
+          if (!tmdbId) return;
+          if (!showMap[tmdbId]) {
+            showMap[tmdbId] = {
+              show: show,
+              first_aired: item.first_aired,
+              episode: episode
+            };
+          }
+        });
+        var shows = Object.values(showMap);
+
+        // Shuffle for variety
+        for (var i = shows.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var _ref14 = [shows[j], shows[i]];
+          shows[i] = _ref14[0];
+          shows[j] = _ref14[1];
+        }
+        var total = shows.length;
+        var offset = (page - 1) * limit;
+        var paginated = shows.slice(offset, offset + limit);
+        var results = paginated.map(function (_ref15) {
+          var show = _ref15.show,
+            first_aired = _ref15.first_aired,
+            episode = _ref15.episode;
+          var releaseDate = first_aired ? String(first_aired).slice(0, 10) : show.year ? String(show.year) : '';
+          return {
+            component: 'full',
+            id: show.ids.tmdb,
+            ids: show.ids,
+            title: show.title,
+            original_title: show.title,
+            original_name: show.title,
+            name: show.title,
+            release_date: releaseDate,
+            vote_average: Number(show.rating || 0),
+            poster: getImageUrl(show, 'poster'),
+            image: getImageUrl(show, 'fanart'),
+            method: 'tv',
+            type: 'tv',
+            card_type: 'tv',
+            source: 'tmdb',
+            season: episode ? episode.season : null,
+            episode: episode ? episode.number : null,
+            episode_title: episode ? episode.title : null,
+            air_date: releaseDate
+          };
+        });
+        return {
+          results: results,
+          total: total,
+          total_pages: Math.max(1, Math.ceil(total / limit)),
+          page: page
+        };
       });
     }
   };
@@ -4233,6 +4339,30 @@
         en: "TraktTV: Recommendations (tv)",
         uk: "TraktTV: Рекомендації (серіали)",
         ro: "TraktTV: Recomandări (seriale)"
+      },
+      trakttv_row_calendar_main: {
+        ru: "TraktTV: Календарь выходов",
+        en: "TraktTV: Calendar",
+        uk: "TraktTV: Календар виходів",
+        ro: "TraktTV: Calendar"
+      },
+      trakttv_row_calendar_tv: {
+        ru: "TraktTV: Календарь выходов (сериалы)",
+        en: "TraktTV: Calendar (shows)",
+        uk: "TraktTV: Календар виходів (серіали)",
+        ro: "TraktTV: Calendar (seriale)"
+      },
+      trakttv_row_dvd_calendar_main: {
+        ru: "TraktTV: DVD Релизы",
+        en: "TraktTV: DVD Releases",
+        uk: "TraktTV: DVD Релізи",
+        ro: "TraktTV: Lansări DVD"
+      },
+      trakttv_row_dvd_calendar_movies: {
+        ru: "TraktTV: DVD Релизы (фильмы)",
+        en: "TraktTV: DVD Releases (movies)",
+        uk: "TraktTV: DVD Релізи (фільми)",
+        ro: "TraktTV: Lansări DVD (filme)"
       },
       trakttv_no_recommendations: {
         ru: "Нет рекомендаций",
@@ -9326,6 +9456,15 @@
   }
 
   /**
+   * Check if user has permission to see Calendar content
+   * @returns {boolean}
+   */
+  function checkCalendarPermissions() {
+    if (!Lampa.Storage.get('trakt_token')) return false;
+    return true;
+  }
+
+  /**
    * Unified content type detection
    * @param {Object} data - Item data
    * @returns {string} - Content type: 'movie', 'tv', 'show', 'episode'
@@ -9708,6 +9847,8 @@
     registerLineTitleDecorator();
     registerSourceFiltersCacheInvalidation();
     registerRows();
+    registerCalendarRows();
+    registerDvdRows();
   }
   function registerSourceFiltersCacheInvalidation() {
     if (!Lampa || !Lampa.Storage || !Lampa.Storage.listener || typeof Lampa.Storage.listener.follow !== 'function') return;
@@ -9871,6 +10012,247 @@
       }
     }];
     rows.forEach(function (row) {
+      Lampa.ContentRows.add({
+        name: row.name,
+        title: row.title,
+        index: row.index,
+        screen: row.screen,
+        call: createRowCall(row)
+      });
+    });
+  }
+
+  /**
+   * Register Calendar rows with Episode card format
+   * (same look as title_upcoming_episodes / title_recent_episodes)
+   */
+  function registerCalendarRows() {
+    if (!Api || typeof Api.get !== 'function') return;
+    var ROW_LIMIT = 20;
+
+    /**
+     * Build a calendar API call handler for a given screen filter
+     */
+    function createCalendarCall(screenFilter) {
+      return function (params, screen) {
+        // Permission: needs Trakt auth
+        if (!Lampa.Storage.get('trakt_token')) return;
+
+        // Screen-specific visibility
+        if (typeof screenFilter === 'function' && !screenFilter(params, screen)) return;
+        return function (call) {
+          var now = new Date();
+          var startDate = new Date(now);
+          startDate.setDate(now.getDate() - 3);
+          var yyyy = startDate.getFullYear();
+          var mm = String(startDate.getMonth() + 1).padStart(2, '0');
+          var dd = String(startDate.getDate()).padStart(2, '0');
+          var dateString = "".concat(yyyy, "-").concat(mm, "-").concat(dd);
+          var days = 7;
+          Api.get("/calendars/my/shows/".concat(dateString, "/").concat(days, "?extended=full,images")).then(function (response) {
+            var raw = Array.isArray(response) ? response : [];
+
+            // Group by show TMDB ID (deduplicate — one card per show)
+            var showMap = {};
+            raw.forEach(function (item) {
+              var show = item && item.show;
+              var episode = item && item.episode;
+              if (!show || !show.ids) return;
+              var tmdbId = show.ids.tmdb;
+              if (!tmdbId) return;
+              if (!showMap[tmdbId]) {
+                showMap[tmdbId] = {
+                  show: show,
+                  first_aired: item.first_aired,
+                  episode: episode
+                };
+              }
+            });
+            var shows = Object.values(showMap);
+
+            // Sort by first_aired ascending (earliest upcoming first)
+            shows.sort(function (a, b) {
+              return (a.first_aired || '').localeCompare(b.first_aired || '');
+            });
+
+            // Resolve Episode interaction & Module from Lampa runtime
+            var EpisodeClass = Lampa.Maker && Lampa.Maker.get('Episode');
+            var EpisodeModule = Lampa.Maker && Lampa.Maker.module('Episode');
+            var moduleMask = EpisodeModule ? EpisodeModule.only('Card', 'Callback') : undefined;
+            var selectedShows = shows.slice(0, ROW_LIMIT);
+
+            // Build base episode-card items (still_path will be filled from TMDB)
+            var baseResults = selectedShows.map(function (item) {
+              var show = item.show;
+              var first_aired = item.first_aired;
+              var episode = item.episode;
+              var airDate = first_aired ? String(first_aired).slice(0, 10) : '';
+              var airTime = airDate ? Lampa.Utils.parseToDate(airDate).getTime() : Date.now();
+              var card = {
+                id: show.ids.tmdb,
+                ids: show.ids,
+                title: show.title,
+                original_title: show.title,
+                original_name: show.title,
+                name: show.title,
+                poster: getImageUrl(show, 'poster'),
+                image: getImageUrl(show, 'fanart'),
+                source: 'tmdb'
+              };
+              var epData = {
+                air_date: airDate,
+                season_number: episode ? episode.season : null,
+                episode_number: episode ? episode.number : null,
+                name: episode ? episode.title : '',
+                still_path: ''
+              };
+              var out = {
+                card: card,
+                episode: epData,
+                time: airTime,
+                title: show.title,
+                id: show.ids.tmdb,
+                ids: show.ids,
+                params: {}
+              };
+
+              // Copy episode fields to root
+              Lampa.Arrays && Lampa.Arrays.extend ? Lampa.Arrays.extend(out, epData) : Object.keys(epData).forEach(function (k) {
+                out[k] = epData[k];
+              });
+
+              // Episode interaction
+              if (EpisodeClass) {
+                out.params.createInstance = function (data) {
+                  var merged = _typeof(data) === 'object' && data !== null ? Object.assign({}, data, data.episode || {}, {
+                    card: data.card || data
+                  }) : {};
+                  return new EpisodeClass(merged);
+                };
+              }
+              if (moduleMask) {
+                out.params.module = moduleMask;
+              }
+              out.params.emit = {
+                onlyEnter: function onlyEnter() {
+                  Lampa.Activity.push({
+                    url: '',
+                    component: 'full',
+                    id: card.id,
+                    method: 'tv',
+                    card: card,
+                    source: 'tmdb'
+                  });
+                },
+                onlyFocus: function onlyFocus() {
+                  if (Lampa.Utils && Lampa.Utils.cardImgBackgroundBlur) {
+                    Lampa.Background.change(Lampa.Utils.cardImgBackgroundBlur(card));
+                  }
+                }
+              };
+              return out;
+            });
+
+            // Fetch episode stills from TMDB in parallel (silent, each fails to empty string)
+            var stillPromises = selectedShows.map(function (item) {
+              var showTmdbId = item.show && item.show.ids && item.show.ids.tmdb;
+              var seasonNum = item.episode && item.episode.season;
+              var epNum = item.episode && item.episode.number;
+              if (!showTmdbId || seasonNum == null || epNum == null) return Promise.resolve('');
+              return new Promise(function (resolve) {
+                try {
+                  var url = Lampa.TMDB.api('tv/' + showTmdbId + '/season/' + seasonNum + '/episode/' + epNum + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'en'));
+                  var network = new Lampa.Reguest();
+                  network.silent(url, function (data) {
+                    resolve(data && data.still_path ? String(data.still_path) : '');
+                  }, function () {
+                    resolve('');
+                  });
+                } catch (e) {
+                  resolve('');
+                }
+              });
+            });
+            return Promise.all(stillPromises).then(function (stillPaths) {
+              // Merge still_path into results
+              baseResults.forEach(function (out, index) {
+                var path = stillPaths[index];
+                if (path) {
+                  out.still_path = path;
+                  out.episode.still_path = path;
+                }
+              });
+              if (!baseResults.length) return call();
+              call({
+                results: baseResults,
+                title: Lampa.Lang.translate('trakttv_calendar'),
+                trakt_line: true,
+                trakt_line_title: Lampa.Lang.translate('trakttv_calendar')
+              });
+            });
+          })["catch"](function () {
+            call();
+          });
+        };
+      };
+    }
+
+    // Row: main screen (always visible when authed)
+    Lampa.ContentRows.add({
+      name: 'TraktCalendarRow',
+      title: Lampa.Lang.translate('trakttv_row_calendar_main'),
+      index: 3,
+      screen: ['main'],
+      call: createCalendarCall(function () {
+        return true;
+      })
+    });
+
+    // Row: category / tv screen (only on tv URL)
+    Lampa.ContentRows.add({
+      name: 'TraktCalendarRowTv',
+      title: Lampa.Lang.translate('trakttv_row_calendar_tv'),
+      index: 3,
+      screen: ['category'],
+      call: createCalendarCall(function (params) {
+        return params && params.url === 'tv';
+      })
+    });
+  }
+
+  /**
+   * Register DVD calendar rows (standard poster cards)
+   * Uses /calendars/all/dvd/{start_date}/{days} via createRowCall
+   */
+  function registerDvdRows() {
+    var dvdRows = [{
+      name: 'TraktDvdCalendarRow',
+      title: Lampa.Lang.translate('trakttv_row_dvd_calendar_main'),
+      index: 3,
+      screen: ['main'],
+      displayTitle: Lampa.Lang.translate('trakttv_calendar'),
+      apiMethod: 'dvdCalendar',
+      limit: 36,
+      displayLimit: 20,
+      checkPermission: checkCalendarPermissions,
+      visibleOn: function visibleOn() {
+        return true;
+      }
+    }, {
+      name: 'TraktDvdCalendarRowMovies',
+      title: Lampa.Lang.translate('trakttv_row_dvd_calendar_movies'),
+      index: 3,
+      screen: ['category'],
+      displayTitle: Lampa.Lang.translate('trakttv_calendar'),
+      apiMethod: 'dvdCalendar',
+      limit: 36,
+      displayLimit: 20,
+      checkPermission: checkCalendarPermissions,
+      visibleOn: function visibleOn(params) {
+        return params && params.url === 'movie';
+      }
+    }];
+    dvdRows.forEach(function (row) {
       Lampa.ContentRows.add({
         name: row.name,
         title: row.title,
