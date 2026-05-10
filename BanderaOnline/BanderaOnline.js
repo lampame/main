@@ -1232,25 +1232,19 @@
   }();
   var sourcesStore = new SourcesStore();
 
-  function getFileId(movie, sourceKey) {
+  function getFileId(movie) {
     if (!movie) return '';
-
-    // Use IDs for Makhno and AnimeOn as they support it reliably
-    if (sourceKey === 'makhno' || sourceKey === 'animeon') {
-      var _id = movie.tmdb_id || movie.id;
-      if (_id && /^\d+$/.test(_id)) return 'id:' + _id;
-    }
     var title = movie.number_of_seasons ? movie.original_name || movie.name || movie.title : movie.original_title || movie.title || movie.name;
     var id = movie.tmdb_id || movie.id;
-    var key = title || (id ? 'id:' + id : '') || sourceKey || '';
+    var key = title || (id ? 'id:' + id : '') || '';
     return Lampa.Utils.hash(key);
   }
-  function getHashTimeline(movie, season, episode, sourceKey) {
-    var base = getFileId(movie, sourceKey);
+  function getHashTimeline(movie, season, episode) {
+    var base = getFileId(movie);
     return Lampa.Utils.hash(season ? [season, episode, base].join(':') : base);
   }
-  function getHashBehold(movie, season, episode, voice_name, sourceKey) {
-    var base = getHashTimeline(movie, season, episode, sourceKey);
+  function getHashBehold(movie, season, episode, voice_name) {
+    var base = getHashTimeline(movie, season, episode);
     return Lampa.Utils.hash(base + ':' + (voice_name || ''));
   }
 
@@ -1787,7 +1781,7 @@
       scroll.append(item);
     };
     this.watched = function (set) {
-      var file_id = getFileId(object.movie, balanser);
+      var file_id = getFileId(object.movie);
       var watched = Lampa.Storage.cache('bandera_online_watched_last', 5000, {});
       if (set) {
         if (!watched[file_id]) watched[file_id] = {};
@@ -1840,8 +1834,8 @@
             quality: '',
             time: Lampa.Utils.secondsToTime((episode ? episode.runtime : object.movie.runtime) * 60, true)
           });
-          var hash_timeline = getHashTimeline(object.movie, element.season, element.episode, balanser);
-          var hash_behold = getHashBehold(object.movie, element.season, element.episode, element.voice_name, balanser);
+          var hash_timeline = getHashTimeline(object.movie, element.season, element.episode);
+          var hash_behold = getHashBehold(object.movie, element.season, element.episode, element.voice_name);
           var data = {
             hash_timeline: hash_timeline,
             hash_behold: hash_behold
@@ -1987,7 +1981,7 @@
             var loader = html.find('.online-prestige__loader');
             var image = html.find('.online-prestige__img');
             var season = items[0] ? items[0].season : 1;
-            html.find('.online-prestige__timeline').append(Lampa.Timeline.render(Lampa.Timeline.view(getHashTimeline(object.movie, season, episode.episode_number, balanser))));
+            html.find('.online-prestige__timeline').append(Lampa.Timeline.render(Lampa.Timeline.view(getHashTimeline(object.movie, season, episode.episode_number))));
             var img = html.find('img')[0];
             if (episode.still_path) {
               img.onerror = function () {
