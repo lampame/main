@@ -5476,6 +5476,12 @@
         uk: "Відскануйте QR-код",
         ro: "Scanați codul QR"
       },
+      trakttv_check_now: {
+        ru: "Проверить",
+        en: "Check now",
+        uk: "Перевірити",
+        ro: "Verifică"
+      },
       trakttv_settings_thanks: {
         ru: "Подяка",
         en: "Thanks",
@@ -7196,7 +7202,7 @@
           var safeUserCode = String(data.user_code || '');
           var activateUrl = "https://trakt.tv/activate/".concat(safeUserCode);
           var qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=' + encodeURIComponent(activateUrl);
-          var modal = $("\n                        <div class=\"about trakt-device-auth\">\n                            <div class=\"trakt-device-auth__qr-container\">\n                                <a href=\"".concat(activateUrl, "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"trakt-device-auth__qr-link\">\n                                    <img src=\"").concat(qrCodeUrl, "\" alt=\"Trakt.TV QR Code\" class=\"trakt-device-auth__qr-image\">\n                                </a>\n                                <div class=\"trakt-device-auth__qr-caption\">").concat(Lampa.Lang.translate('trakttv_scan_qr_code'), "</div>\n                            </div>\n                            <div class=\"about__text trakt-device-auth__verification\">").concat(safeVerification, "</div>\n                            <div class=\"about__text trakt-device-auth__code\">").concat(Lampa.Lang.translate('trakttv_code'), ": <strong>").concat(safeUserCode, "</strong></div>\n                        </div>\n                    "));
+          var modal = $("\n                        <div class=\"about trakt-device-auth\">\n                            <div class=\"trakt-device-auth__inner\">\n                                <div class=\"trakt-device-auth__qr-col\">\n                                    <div class=\"trakt-device-auth__qr-container\">\n                                        <a href=\"".concat(activateUrl, "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"trakt-device-auth__qr-link\">\n                                            <img src=\"").concat(qrCodeUrl, "\" alt=\"Trakt.TV QR Code\" class=\"trakt-device-auth__qr-image\">\n                                        </a>\n                                        <div class=\"trakt-device-auth__qr-caption\">").concat(Lampa.Lang.translate('trakttv_scan_qr_code'), "</div>\n                                    </div>\n                                </div>\n                                <div class=\"trakt-device-auth__info-col\">\n                                    <div class=\"about__text trakt-device-auth__verification\">").concat(safeVerification, "</div>\n                                    <div class=\"about__text trakt-device-auth__code\">").concat(Lampa.Lang.translate('trakttv_code'), ": <strong>").concat(safeUserCode, "</strong></div>\n                                    <div class=\"modal__button selector trakt-check-btn\">").concat(Lampa.Lang.translate('trakttv_check_now'), "</div>\n                                </div>\n                            </div>\n                        </div>\n                    "));
           modal.find('.trakt-device-auth__qr-image').on('error', function () {
             modal.find('.trakt-device-auth__qr-container').addClass('trakt-device-auth__qr-container--hidden');
           });
@@ -7204,12 +7210,14 @@
             title: Lampa.Lang.translate('trakttv_auth'),
             html: modal,
             size: Lampa.Platform.screen('mobile') ? 'medium' : 'small',
+            select: modal.find('.trakt-check-btn')[0],
+            onSelect: function onSelect() {
+              if (checkNowHandler) checkNowHandler();
+            },
             scroll: {
               nopadding: true
             },
             onBack: function onBack() {
-              // stop polling, clear flag
-              // Stop polling and clear flag on modal close
               if (currentPollTimeoutId) {
                 clearTimeout(currentPollTimeoutId);
                 currentPollTimeoutId = null;
@@ -7836,7 +7844,10 @@
       favoriteType: favoriteType
     });
   }
-  var currentPollTimeoutId = null; // Змінна для зберігання ідентифікатора таймауту опитування
+  var currentPollTimeoutId = null;
+  var visibilityHandler = null;
+  var pollInFlight = false;
+  var checkNowHandler = null;
 
   // Centralized error handling and polling stop
   function handlePollingError(modalInstance, messageKey, defaultMessage, code) {
@@ -7851,6 +7862,12 @@
         clearTimeout(currentPollTimeoutId);
         currentPollTimeoutId = null;
       }
+      if (visibilityHandler) {
+        document.removeEventListener('visibilitychange', visibilityHandler);
+        visibilityHandler = null;
+      }
+      pollInFlight = false;
+      checkNowHandler = null;
       Lampa.Storage.set('trakt_active_device_auth', false);
       Lampa.Storage.set('trakt_active_device_auth_started_at', null);
     }
@@ -7869,6 +7886,12 @@
       clearTimeout(currentPollTimeoutId);
       currentPollTimeoutId = null;
     }
+    if (visibilityHandler) {
+      document.removeEventListener('visibilitychange', visibilityHandler);
+      visibilityHandler = null;
+    }
+    pollInFlight = false;
+    checkNowHandler = null;
     if (Api$1 && Api$1.auth && typeof Api$1.auth.storeTokens === 'function') {
       Api$1.auth.storeTokens(response);
     } else {
@@ -7921,9 +7944,10 @@
   // Окрема функція для poll авторизації
   function pollAuth(data, modalInstance) {
     var originalIntervalSec = Number(data && data.interval);
-    var currentPollingStepMs = Number.isFinite(originalIntervalSec) ? originalIntervalSec * 1000 : 5000; // Default to 5 seconds
-    var expiresMs = Number.isFinite(Number(data && data.expires_in)) ? Number(data.expires_in) * 1000 : 600 * 1000; // Default to 10 minutes
-
+    var originalIntervalMs = Number.isFinite(originalIntervalSec) && originalIntervalSec > 0 ? originalIntervalSec * 1000 : 5000;
+    var currentPollingStepMs = originalIntervalMs;
+    var expiresMs = Number.isFinite(Number(data && data.expires_in)) ? Number(data.expires_in) * 1000 : 600 * 1000;
+    var pendingCount = 0;
     if (!data || !data.device_code) {
       handlePollingError(modalInstance, 'trakttvAuthError', 'Authentication error', 'missing-device_code');
       return;
@@ -7939,7 +7963,15 @@
       clearTimeout(currentPollTimeoutId);
       currentPollTimeoutId = null;
     }
-    var _executePoll = function executePoll() {
+    var scheduleNext = function scheduleNext(delayMs) {
+      if (currentPollTimeoutId) {
+        clearTimeout(currentPollTimeoutId);
+      }
+      currentPollTimeoutId = setTimeout(executePoll, delayMs);
+    };
+    var executePoll = function executePoll() {
+      currentPollTimeoutId = null;
+
       // Check for timeout BEFORE making the API call
       if (Date.now() - startTime >= expiresMs) {
         logWarn('Device auth polling timeout', {
@@ -7948,24 +7980,36 @@
           debugOnly: true
         });
         handlePollingError(modalInstance, 'trakttvExpired', 'Expired, please restart', 'timeout');
-        return; // Stop polling
+        return;
       }
       if (!Api$1) {
         logApiMissing();
         handlePollingError(modalInstance, 'trakttvAuthError', 'Authentication error', 'api-missing');
         return;
       }
+      pollInFlight = true;
       Api$1.auth.device.poll(data.device_code).then(function (response) {
-        // Trakt.tv returns 200 OK with token on success
+        pollInFlight = false;
+        pendingCount = 0;
         handleAuthSuccess(modalInstance, response);
       })["catch"](function (error) {
         var status = error && error.status;
         var errorCode = extractPollingErrorCode(error);
         switch (status) {
           case 400:
-            // polling continues for pending/unknown interim state
             if (!errorCode || errorCode === 'authorization_pending') {
-              currentPollTimeoutId = setTimeout(_executePoll, currentPollingStepMs);
+              pendingCount++;
+              var effectiveDelay = originalIntervalMs;
+              if (pendingCount > 3) {
+                var multiplier = Math.min(1.5 + (pendingCount - 4) * 0.25, 4);
+                effectiveDelay = Math.min(originalIntervalMs * multiplier, 45 * 1000);
+                logDebug('Adaptive backoff increased delay', {
+                  pendingCount: pendingCount,
+                  effectiveDelay: effectiveDelay
+                });
+              }
+              scheduleNext(effectiveDelay);
+              pollInFlight = false;
               break;
             }
             logWarn('Device auth poll returned invalid 400 state', {
@@ -7974,29 +8018,29 @@
             }, {
               debugOnly: true
             });
+            pendingCount = 0;
             handlePollingError(modalInstance, 'trakttvAuthError', 'Authentication error', errorCode || status);
             break;
           case 404:
-            // invalid_device_code
+            pendingCount = 0;
             handlePollingError(modalInstance, 'trakttvInvalidCode', 'Invalid device code', status);
             break;
           case 409:
-            // already_used
-            handlePollingError(modalInstance, 'trakttvAuthOk', 'Already authorized', status); // This is a success case for the user
+            pendingCount = 0;
+            handlePollingError(modalInstance, 'trakttvAuthOk', 'Already authorized', status);
             break;
           case 410:
-            // expired_token
+            pendingCount = 0;
             handlePollingError(modalInstance, 'trakttvExpired', 'Expired, please restart', status);
             break;
           case 418:
-            // denied
+            pendingCount = 0;
             handlePollingError(modalInstance, 'trakttvDenied', 'Access denied', status);
             break;
           case 429:
-            // slow_down - implement exponential backoff with jitter
-            // Increase polling step, but cap it to avoid excessively long delays
-            currentPollingStepMs = Math.min(currentPollingStepMs * 2, 60 * 1000); // Double, max 60 seconds
-            var jitter = Math.random() * 1000; // Add random jitter up to 1 second
+            pendingCount = 0;
+            currentPollingStepMs = Math.min(currentPollingStepMs * 2, 60 * 1000);
+            var jitter = Math.random() * 1000;
             var retryAfterMs = parseRetryAfterMs(error && error.headers ? error.headers : {});
             var nextStepMs = Math.max(currentPollingStepMs + jitter, retryAfterMs || 0);
             logWarn('Device auth polling slowed down by server', {
@@ -8004,10 +8048,11 @@
             }, {
               debugOnly: true
             });
-            currentPollTimeoutId = setTimeout(_executePoll, nextStepMs);
+            scheduleNext(nextStepMs);
+            pollInFlight = false;
             break;
           default:
-            // Any other error
+            pendingCount = 0;
             logWarn('Device auth poll returned unexpected status', {
               status: status
             }, {
@@ -8019,8 +8064,38 @@
       });
     };
 
-    // Start the first poll immediately
-    _executePoll();
+    // Wire up "Check now" via onSelect callback
+    checkNowHandler = function checkNowHandler() {
+      if (pollInFlight) return;
+      if (currentPollTimeoutId) {
+        clearTimeout(currentPollTimeoutId);
+        currentPollTimeoutId = null;
+      }
+      executePoll();
+    };
+
+    // Stop polling when tab is hidden; resume when visible again
+    if (visibilityHandler) {
+      document.removeEventListener('visibilitychange', visibilityHandler);
+    }
+    visibilityHandler = function visibilityHandler() {
+      if (document.hidden) {
+        if (currentPollTimeoutId) {
+          clearTimeout(currentPollTimeoutId);
+          currentPollTimeoutId = null;
+        }
+      } else {
+        // Tab visible again — restart a normal poll cycle
+        if (!currentPollTimeoutId && Lampa.Storage.get('trakt_active_device_auth') === true) {
+          currentPollingStepMs = originalIntervalMs;
+          scheduleNext(originalIntervalMs);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', visibilityHandler);
+
+    // First poll after interval — never immediately
+    scheduleNext(originalIntervalMs);
   }
   var config = {
     main: main
@@ -11601,7 +11676,7 @@
     } catch (e) {/* noop */}
 
     // Додаємо стилі
-    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.trakt-brand-icon{width:100%;height:100%;display:block;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:inherit}.trakt-brand-icon path{fill:currentColor}.trakt-head-action.focus .trakt-brand-icon,.trakt-head-action.hover .trakt-brand-icon,.menu__item.focus .trakt-brand-icon,.menu__item.hover .trakt-brand-icon,.menu__item.traverse .trakt-brand-icon,.settings-folder.focus .trakt-brand-icon{color:inherit}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__controls{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.55em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.8em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 11em;-ms-flex:1 1 11em;flex:1 1 11em;min-width:9.5em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.trakt-watchlist-hub__tabs .simple-button--filter>div{width:100%;margin-left:0;padding:0;background:transparent;text-align:center;font-weight:700}.trakt-watchlist-hub__sorts{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.55em}.trakt-watchlist__sort{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:7.6em;padding:.65em .85em;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.55em;-webkit-border-radius:.9em;border-radius:.9em}.trakt-watchlist__sort>div{margin-left:0}.trakt-watchlist__sort .trakt-watchlist__sort-label{min-width:0;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap;font-weight:600;text-align:left}.trakt-watchlist__sort .trakt-watchlist__sort-state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;min-width:1em;font-size:1.05em;line-height:1;font-weight:700;text-align:center;opacity:.88}.trakt-watchlist__sort .trakt-watchlist__sort-state:empty{display:none}.trakt-watchlist__sort--active{background:rgba(255,255,255,0.14);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16)}.trakt-watchlist__sort--more{-webkit-flex-basis:8.4em;-ms-flex-preferred-size:8.4em;flex-basis:8.4em}.trakt-watchlist__sort--desc .trakt-watchlist__sort-state,.trakt-watchlist__sort--asc .trakt-watchlist__sort-state{opacity:1}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{text-align:center;padding:0 1.2em 1.2em}.trakt-device-auth__qr-container{margin:0 auto 1.2em;width:min(100%,22em)}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin-top:.2em}.trakt-device-auth__code strong{letter-spacing:.08em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__qr-container{width:min(100%,18.5em)}}</style>");
+    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.trakt-brand-icon{width:100%;height:100%;display:block;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:inherit}.trakt-brand-icon path{fill:currentColor}.trakt-head-action.focus .trakt-brand-icon,.trakt-head-action.hover .trakt-brand-icon,.menu__item.focus .trakt-brand-icon,.menu__item.hover .trakt-brand-icon,.menu__item.traverse .trakt-brand-icon,.settings-folder.focus .trakt-brand-icon{color:inherit}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__controls{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.55em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.8em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 11em;-ms-flex:1 1 11em;flex:1 1 11em;min-width:9.5em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.trakt-watchlist-hub__tabs .simple-button--filter>div{width:100%;margin-left:0;padding:0;background:transparent;text-align:center;font-weight:700}.trakt-watchlist-hub__sorts{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.55em}.trakt-watchlist__sort{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:7.6em;padding:.65em .85em;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.55em;-webkit-border-radius:.9em;border-radius:.9em}.trakt-watchlist__sort>div{margin-left:0}.trakt-watchlist__sort .trakt-watchlist__sort-label{min-width:0;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap;font-weight:600;text-align:left}.trakt-watchlist__sort .trakt-watchlist__sort-state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;min-width:1em;font-size:1.05em;line-height:1;font-weight:700;text-align:center;opacity:.88}.trakt-watchlist__sort .trakt-watchlist__sort-state:empty{display:none}.trakt-watchlist__sort--active{background:rgba(255,255,255,0.14);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16)}.trakt-watchlist__sort--more{-webkit-flex-basis:8.4em;-ms-flex-preferred-size:8.4em;flex-basis:8.4em}.trakt-watchlist__sort--desc .trakt-watchlist__sort-state,.trakt-watchlist__sort--asc .trakt-watchlist__sort-state{opacity:1}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{padding:.4em 1.2em 1.2em}.trakt-device-auth__inner{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;gap:1.5em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.trakt-device-auth__qr-col{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;width:min(45%,14em)}.trakt-device-auth__info-col{-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.6em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start;padding-top:.4em}.trakt-device-auth__qr-container{width:100%}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72;text-align:center}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin:0}.trakt-device-auth__code strong{letter-spacing:.08em}.trakt-check-btn{cursor:pointer;margin-top:.4em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__inner{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.trakt-device-auth__qr-col{width:min(100%,18.5em)}.trakt-device-auth__info-col{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     // Фонова валідація токена при старті (єдиний шлях auth lifecycle).
