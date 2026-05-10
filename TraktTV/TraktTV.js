@@ -404,6 +404,107 @@
   var inFlightRequests = new Map();
   var responseCache = new Map();
   var AUTH_BLOCK_STORAGE_KEY = 'trakt_auth_blocked';
+
+  // ── Global Rate Limiter ──────────────────────────────────────────────────
+  // Sliding-window rate limiter that also enters global cooldown after 429.
+  // Prevents runaway concurrent requests from different modules.
+
+  var RL_MAX_REQUESTS_PER_WINDOW = 50; // max requests per window
+  var RL_WINDOW_MS = 10 * 1000; // sliding window: 10 seconds
+  var RL_MAX_AUTH_PER_WINDOW = 5; // auth (/oauth/*) requests per window
+  var RL_DEFAULT_COOLDOWN_MS = 60 * 1000; // default cooldown after 429
+  var RL_MIN_COOLDOWN_MS = 10 * 1000; // minimum cooldown
+  var RL_MAX_COOLDOWN_MS = 5 * 60 * 1000; // maximum cooldown
+  var RL_POLL_INTERVAL_MS = 300; // how often waitForSlot re-checks
+
+  var rlRequestLog = []; // { ts: number } timestamps of recent requests
+  var rlAuthRequestLog = []; // timestamps of recent auth requests
+  var rlCooldownUntil = 0; // 0 = no cooldown
+
+  function rlIsAuthEndpoint(url) {
+    if (!url || typeof url !== 'string') return false;
+    return url.indexOf('/oauth/') !== -1;
+  }
+  function rlIsOnCooldown() {
+    var remaining = rlCooldownUntil - Date.now();
+    if (remaining <= 0) {
+      rlCooldownUntil = 0;
+      return false;
+    }
+    return true;
+  }
+  function rlEnterCooldown(retryAfterSeconds) {
+    var durationMs = RL_DEFAULT_COOLDOWN_MS;
+    if (typeof retryAfterSeconds === 'number' && Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+      durationMs = retryAfterSeconds * 1000;
+    }
+    durationMs = Math.max(RL_MIN_COOLDOWN_MS, Math.min(RL_MAX_COOLDOWN_MS, durationMs));
+    rlCooldownUntil = Date.now() + durationMs;
+  }
+  function rlPruneLog(log) {
+    var cutoff = Date.now() - RL_WINDOW_MS;
+    while (log.length > 0 && log[0].ts < cutoff) log.shift();
+  }
+  function rlCanMakeRequest(url) {
+    var isAuth = rlIsAuthEndpoint(url);
+    var log = isAuth ? rlAuthRequestLog : rlRequestLog;
+    var max = isAuth ? RL_MAX_AUTH_PER_WINDOW : RL_MAX_REQUESTS_PER_WINDOW;
+    rlPruneLog(log);
+    return log.length < max;
+  }
+  function rlRecordRequest(url, status) {
+    var isAuth = rlIsAuthEndpoint(url);
+    var log = isAuth ? rlAuthRequestLog : rlRequestLog;
+    log.push({
+      ts: Date.now()
+    });
+    rlPruneLog(log);
+    if (status === 429) {
+      rlEnterCooldown();
+    }
+  }
+  function rlGetCooldownRemainingMs() {
+    return Math.max(0, rlCooldownUntil - Date.now());
+  }
+  function rlWaitForSlot(_x) {
+    return _rlWaitForSlot.apply(this, arguments);
+  } // ── end Rate Limiter ─────────────────────────────────────────────────────
+  function _rlWaitForSlot() {
+    _rlWaitForSlot = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(url) {
+      var isAuth;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            // Auth requests bypass cooldown but still respect sliding window
+            isAuth = rlIsAuthEndpoint(url);
+          case 1:
+            if (!(!isAuth && rlIsOnCooldown())) {
+              _context.n = 3;
+              break;
+            }
+            _context.n = 2;
+            return sleep$1(RL_POLL_INTERVAL_MS);
+          case 2:
+            return _context.a(3, 1);
+          case 3:
+            if (!rlCanMakeRequest(url)) {
+              _context.n = 4;
+              break;
+            }
+            return _context.a(2);
+          case 4:
+            _context.n = 5;
+            return sleep$1(RL_POLL_INTERVAL_MS);
+          case 5:
+            _context.n = 1;
+            break;
+          case 6:
+            return _context.a(2);
+        }
+      }, _callee);
+    }));
+    return _rlWaitForSlot.apply(this, arguments);
+  }
   var authBlocked = false;
   var authBlockedReason = '';
   var authBlockedAt = 0;
@@ -973,53 +1074,67 @@
     return _refreshTokens.apply(this, arguments);
   }
   function _refreshTokens() {
-    _refreshTokens = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+    _refreshTokens = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
       var _ref16,
         redirect_uri,
         _ref16$reason,
         reason,
         refresh_token,
         logging,
-        _args = arguments;
-      return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        _args2 = arguments;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.n) {
           case 0:
-            _ref16 = _args.length > 0 && _args[0] !== undefined ? _args[0] : {}, redirect_uri = _ref16.redirect_uri, _ref16$reason = _ref16.reason, reason = _ref16$reason === void 0 ? 'manual' : _ref16$reason;
+            _ref16 = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {}, redirect_uri = _ref16.redirect_uri, _ref16$reason = _ref16.reason, reason = _ref16$reason === void 0 ? 'manual' : _ref16$reason;
             refresh_token = Lampa.Storage.get('trakt_refresh_token');
             logging = Lampa.Storage.field('trakt_enable_logging');
             if (refresh_token) {
-              _context.n = 1;
+              _context2.n = 1;
               break;
             }
             if (logging) logDebug('refreshTokens skipped: no refresh token');
             setAuthBlocked('no_refresh_token');
-            return _context.a(2, Promise.reject(Object.assign(new Error('No refresh_token'), {
+            return _context2.a(2, Promise.reject(Object.assign(new Error('No refresh_token'), {
               status: 0,
               code: 'no_refresh_token'
             })));
           case 1:
             if (!isDeviceAuthActive()) {
-              _context.n = 2;
+              _context2.n = 2;
               break;
             }
             if (logging) logDebug('refreshTokens skipped: device auth active', {
               reason: reason
             });
-            return _context.a(2, Promise.reject(Object.assign(new Error('Device auth is active'), {
+            return _context2.a(2, Promise.reject(Object.assign(new Error('Device auth is active'), {
               status: 423,
               code: 'device_auth_active'
             })));
           case 2:
-            return _context.a(2, _performRequest('POST', '/oauth/token', {
-              refresh_token: refresh_token,
-              redirect_uri: redirect_uri || '',
-              grant_type: 'refresh_token'
-            }, true).then(function (res) {
+            return _context2.a(2, rlWaitForSlot('/oauth/token').then(function () {
+              return _performRequest('POST', '/oauth/token', {
+                refresh_token: refresh_token,
+                redirect_uri: redirect_uri || '',
+                grant_type: 'refresh_token'
+              }, true);
+            }).then(function (res) {
+              rlRecordRequest('/oauth/token', 200);
               if (res && res.access_token) {
                 saveTokens(res);
               }
               return res;
             })["catch"](function (error) {
+              var status = Number(error && error.status) || 0;
+              rlRecordRequest('/oauth/token', status);
+              if (status === 429) {
+                var retryAfterSec = parseRetryAfterMs$1(error && error.headers ? error.headers : {});
+                rlEnterCooldown(retryAfterSec ? Math.round(retryAfterSec / 1000) : undefined);
+                logWarn('Trakt rate limit on token refresh, global cooldown entered', {
+                  cooldownMs: rlGetCooldownRemainingMs()
+                }, {
+                  debugOnly: true
+                });
+              }
               if (error && (error.status === 400 || error.status === 401)) {
                 setAuthBlocked("refresh_failed_".concat(error.status));
                 clearAuthStorage();
@@ -1033,7 +1148,7 @@
               throw error;
             }));
         }
-      }, _callee);
+      }, _callee2);
     }));
     return _refreshTokens.apply(this, arguments);
   }
@@ -1052,7 +1167,7 @@
     return _ensureValidAccessToken.apply(this, arguments);
   }
   function _ensureValidAccessToken() {
-    _ensureValidAccessToken = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+    _ensureValidAccessToken = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
       var _ref17,
         _ref17$reason,
         reason,
@@ -1064,40 +1179,40 @@
         refreshToken,
         noAccessToken,
         shouldRefreshByExpiry,
-        _args2 = arguments;
-      return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+        _args3 = arguments;
+      return _regenerator().w(function (_context3) {
+        while (1) switch (_context3.n) {
           case 0:
-            _ref17 = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {}, _ref17$reason = _ref17.reason, reason = _ref17$reason === void 0 ? 'preflight' : _ref17$reason, _ref17$force = _ref17.force, force = _ref17$force === void 0 ? false : _ref17$force, _ref17$skewMs = _ref17.skewMs, skewMs = _ref17$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref17$skewMs;
+            _ref17 = _args3.length > 0 && _args3[0] !== undefined ? _args3[0] : {}, _ref17$reason = _ref17.reason, reason = _ref17$reason === void 0 ? 'preflight' : _ref17$reason, _ref17$force = _ref17.force, force = _ref17$force === void 0 ? false : _ref17$force, _ref17$skewMs = _ref17.skewMs, skewMs = _ref17$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref17$skewMs;
             token = Lampa.Storage.get('trakt_token');
             refreshToken = Lampa.Storage.get('trakt_refresh_token');
             if (refreshToken) {
-              _context2.n = 1;
+              _context3.n = 1;
               break;
             }
-            return _context2.a(2, null);
+            return _context3.a(2, null);
           case 1:
             if (!isDeviceAuthActive()) {
-              _context2.n = 2;
+              _context3.n = 2;
               break;
             }
-            return _context2.a(2, null);
+            return _context3.a(2, null);
           case 2:
             noAccessToken = !token;
             shouldRefreshByExpiry = force || isTokenExpiringSoon({
               skewMs: Number(skewMs) || TOKEN_EXPIRY_SKEW_MS
             });
             if (!(!noAccessToken && !shouldRefreshByExpiry)) {
-              _context2.n = 3;
+              _context3.n = 3;
               break;
             }
-            return _context2.a(2, null);
+            return _context3.a(2, null);
           case 3:
-            return _context2.a(2, runRefreshFlow({
+            return _context3.a(2, runRefreshFlow({
               reason: reason
             }));
         }
-      }, _callee2);
+      }, _callee3);
     }));
     return _ensureValidAccessToken.apply(this, arguments);
   }
@@ -1280,11 +1395,11 @@
   function clearResponseCache() {
     responseCache.clear();
   }
-  function performRequestWithRetry(_x, _x2) {
+  function performRequestWithRetry(_x2, _x3) {
     return _performRequestWithRetry.apply(this, arguments);
   }
   function _performRequestWithRetry() {
-    _performRequestWithRetry = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(method, url) {
+    _performRequestWithRetry = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(method, url) {
       var params,
         unauthorized,
         requestOptions,
@@ -1292,33 +1407,64 @@
         maxRetriesRaw,
         maxRetries,
         attempt,
+        result,
         status,
+        retryAfterSec,
         delay,
-        _args3 = arguments,
+        _args4 = arguments,
         _t;
-      return _regenerator().w(function (_context3) {
-        while (1) switch (_context3.n) {
+      return _regenerator().w(function (_context4) {
+        while (1) switch (_context4.n) {
           case 0:
-            params = _args3.length > 2 && _args3[2] !== undefined ? _args3[2] : {};
-            unauthorized = _args3.length > 3 && _args3[3] !== undefined ? _args3[3] : false;
-            requestOptions = _args3.length > 4 && _args3[4] !== undefined ? _args3[4] : {};
+            params = _args4.length > 2 && _args4[2] !== undefined ? _args4[2] : {};
+            unauthorized = _args4.length > 3 && _args4[3] !== undefined ? _args4[3] : false;
+            requestOptions = _args4.length > 4 && _args4[4] !== undefined ? _args4[4] : {};
             logging = Lampa.Storage.field('trakt_enable_logging');
             maxRetriesRaw = Number(requestOptions && requestOptions.maxRetries);
             maxRetries = Number.isFinite(maxRetriesRaw) ? Math.max(0, Math.min(5, maxRetriesRaw)) : MAX_RETRY_ATTEMPTS;
             attempt = 0;
           case 1:
-            _context3.p = 2;
-            _context3.n = 3;
+            _context4.n = 2;
+            return rlWaitForSlot(url);
+          case 2:
+            _context4.p = 2;
+            _context4.n = 3;
             return _performRequest(method, url, params, unauthorized, requestOptions);
           case 3:
-            return _context3.a(2, _context3.v);
+            result = _context4.v;
+            // Record successful request in the rate limiter log
+            rlRecordRequest(url, 200);
+            return _context4.a(2, result);
           case 4:
-            _context3.p = 4;
-            _t = _context3.v;
-            status = Number(_t && _t.status) || 0;
+            _context4.p = 4;
+            _t = _context4.v;
+            status = Number(_t && _t.status) || 0; // Record failure in rate limiter; trigger cooldown on 429
+            rlRecordRequest(url, status);
+            if (status === 429 && !rlIsOnCooldown()) {
+              retryAfterSec = parseRetryAfterMs$1(_t && _t.headers ? _t.headers : {});
+              rlEnterCooldown(retryAfterSec ? Math.round(retryAfterSec / 1000) : undefined);
+              if (logging) {
+                logWarn('Trakt rate limit: global cooldown entered', {
+                  endpoint: normalizeRequestUrl(url).full,
+                  method: String(method || 'GET').toUpperCase(),
+                  cooldownMs: rlGetCooldownRemainingMs()
+                }, {
+                  debugOnly: true
+                });
+              }
+            }
             if (!(!isRetryableStatus(status) || attempt >= maxRetries)) {
-              _context3.n = 5;
+              _context4.n = 5;
               break;
+            }
+            // Propagate 403 as terminal for non-auth to avoid futile retries
+            if (status === 403) {
+              logWarn('Trakt request rejected with 403, not retrying', {
+                endpoint: normalizeRequestUrl(url).full,
+                method: String(method || 'GET').toUpperCase()
+              }, {
+                debugOnly: true
+              });
             }
             throw _t;
           case 5:
@@ -1337,23 +1483,23 @@
                 debugOnly: true
               });
             }
-            _context3.n = 6;
+            _context4.n = 6;
             return sleep$1(delay);
           case 6:
-            _context3.n = 1;
+            _context4.n = 1;
             break;
           case 7:
-            return _context3.a(2);
+            return _context4.a(2);
         }
-      }, _callee3, null, [[2, 4]]);
+      }, _callee4, null, [[2, 4]]);
     }));
     return _performRequestWithRetry.apply(this, arguments);
   }
-  function executeRequestWithPolicy(_x3, _x4) {
+  function executeRequestWithPolicy(_x4, _x5) {
     return _executeRequestWithPolicy.apply(this, arguments);
   }
   function _executeRequestWithPolicy() {
-    _executeRequestWithPolicy = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(method, url) {
+    _executeRequestWithPolicy = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(method, url) {
       var params,
         unauthorized,
         requestOptions,
@@ -1365,35 +1511,35 @@
         dedupEnabled,
         requestKey,
         promise,
-        _args4 = arguments;
-      return _regenerator().w(function (_context4) {
-        while (1) switch (_context4.n) {
+        _args5 = arguments;
+      return _regenerator().w(function (_context5) {
+        while (1) switch (_context5.n) {
           case 0:
-            params = _args4.length > 2 && _args4[2] !== undefined ? _args4[2] : {};
-            unauthorized = _args4.length > 3 && _args4[3] !== undefined ? _args4[3] : false;
-            requestOptions = _args4.length > 4 && _args4[4] !== undefined ? _args4[4] : {};
+            params = _args5.length > 2 && _args5[2] !== undefined ? _args5[2] : {};
+            unauthorized = _args5.length > 3 && _args5[3] !== undefined ? _args5[3] : false;
+            requestOptions = _args5.length > 4 && _args5[4] !== undefined ? _args5[4] : {};
             normalizedMethod = String(method || 'GET').toUpperCase();
             ttlMs = getCacheTtlMs(normalizedMethod, url, requestOptions);
             cacheKey = ttlMs > 0 ? buildCacheKey(normalizedMethod, url, unauthorized, requestOptions) : '';
             useCache = ttlMs > 0 && !(requestOptions && requestOptions.forceFresh);
             if (!useCache) {
-              _context4.n = 1;
+              _context5.n = 1;
               break;
             }
             cached = getCachedResponse(cacheKey);
             if (!(cached !== null)) {
-              _context4.n = 1;
+              _context5.n = 1;
               break;
             }
-            return _context4.a(2, cached);
+            return _context5.a(2, cached);
           case 1:
             dedupEnabled = !(requestOptions && requestOptions.dedup === false);
             requestKey = dedupEnabled ? buildRequestKey(normalizedMethod, url, params, unauthorized, requestOptions) : '';
             if (!(requestKey && inFlightRequests.has(requestKey))) {
-              _context4.n = 2;
+              _context5.n = 2;
               break;
             }
-            return _context4.a(2, inFlightRequests.get(requestKey));
+            return _context5.a(2, inFlightRequests.get(requestKey));
           case 2:
             promise = performRequestWithRetry(normalizedMethod, url, params, unauthorized, requestOptions).then(function (result) {
               if (useCache) {
@@ -1409,17 +1555,17 @@
             if (requestKey) {
               inFlightRequests.set(requestKey, promise);
             }
-            return _context4.a(2, promise);
+            return _context5.a(2, promise);
         }
-      }, _callee4);
+      }, _callee5);
     }));
     return _executeRequestWithPolicy.apply(this, arguments);
   }
-  function requestApi(_x5, _x6) {
+  function requestApi(_x6, _x7) {
     return _requestApi.apply(this, arguments);
   }
   function _requestApi() {
-    _requestApi = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(method, url) {
+    _requestApi = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(method, url) {
       var params,
         unauthorized,
         requestOptions,
@@ -1427,15 +1573,15 @@
         normalizedMethod,
         normalizedEndpoint,
         didRefreshAfter401,
-        _args5 = arguments,
+        _args6 = arguments,
         _t2,
         _t3;
-      return _regenerator().w(function (_context5) {
-        while (1) switch (_context5.n) {
+      return _regenerator().w(function (_context6) {
+        while (1) switch (_context6.n) {
           case 0:
-            params = _args5.length > 2 && _args5[2] !== undefined ? _args5[2] : {};
-            unauthorized = _args5.length > 3 && _args5[3] !== undefined ? _args5[3] : false;
-            requestOptions = _args5.length > 5 && _args5[5] !== undefined ? _args5[5] : {};
+            params = _args6.length > 2 && _args6[2] !== undefined ? _args6[2] : {};
+            unauthorized = _args6.length > 3 && _args6[3] !== undefined ? _args6[3] : false;
+            requestOptions = _args6.length > 5 && _args6[5] !== undefined ? _args6[5] : {};
             logging = Lampa.Storage.field('trakt_enable_logging');
             normalizedMethod = String(method || 'GET').toUpperCase();
             normalizedEndpoint = normalizeRequestUrl(url).full;
@@ -1443,15 +1589,15 @@
 
             // If auth is blocked due to prior terminal auth failure, stop user-scoped traffic until new token appears.
             if (!(!unauthorized && isAuthBlocked())) {
-              _context5.n = 2;
+              _context6.n = 2;
               break;
             }
             if (!(hasUsableAccessToken() && hasNewAccessTokenSinceBlock())) {
-              _context5.n = 1;
+              _context6.n = 1;
               break;
             }
             clearAuthBlocked();
-            _context5.n = 2;
+            _context6.n = 2;
             break;
           case 1:
             if (logging) {
@@ -1467,22 +1613,22 @@
             throw buildAuthBlockedError(authBlockedReason || 'reauth_required');
           case 2:
             if (!(!unauthorized && Lampa.Storage.get('trakt_refresh_token'))) {
-              _context5.n = 7;
+              _context6.n = 7;
               break;
             }
-            _context5.p = 3;
-            _context5.n = 4;
+            _context6.p = 3;
+            _context6.n = 4;
             return ensureValidAccessToken({
               reason: "preflight:".concat(normalizedMethod, ":").concat(normalizedEndpoint)
             });
           case 4:
-            _context5.n = 7;
+            _context6.n = 7;
             break;
           case 5:
-            _context5.p = 5;
-            _t2 = _context5.v;
+            _context6.p = 5;
+            _t2 = _context6.v;
             if (!(_t2 && (_t2.status === 400 || _t2.status === 401))) {
-              _context5.n = 6;
+              _context6.n = 6;
               break;
             }
             setAuthBlocked("preflight_refresh_failed_".concat(_t2.status));
@@ -1499,16 +1645,16 @@
               });
             }
           case 7:
-            _context5.p = 8;
-            _context5.n = 9;
+            _context6.p = 8;
+            _context6.n = 9;
             return executeRequestWithPolicy(normalizedMethod, url, params, unauthorized, requestOptions);
           case 9:
-            return _context5.a(2, _context5.v);
+            return _context6.a(2, _context6.v);
           case 10:
-            _context5.p = 10;
-            _t3 = _context5.v;
+            _context6.p = 10;
+            _t3 = _context6.v;
             if (!(!unauthorized && _t3 && _t3.status === 401 && !didRefreshAfter401)) {
-              _context5.n = 12;
+              _context6.n = 12;
               break;
             }
             didRefreshAfter401 = true;
@@ -1518,12 +1664,12 @@
                 method: normalizedMethod
               });
             }
-            _context5.n = 11;
+            _context6.n = 11;
             return runRefreshFlow({
               reason: "401:".concat(normalizedMethod, ":").concat(normalizedEndpoint)
             });
           case 11:
-            return _context5.a(3, 7);
+            return _context6.a(3, 7);
           case 12:
             if (!unauthorized && _t3 && _t3.status === 401) {
               setAuthBlocked('unauthorized_after_refresh');
@@ -1531,9 +1677,9 @@
             }
             throw _t3;
           case 13:
-            return _context5.a(2);
+            return _context6.a(2);
         }
-      }, _callee5, null, [[8, 10], [3, 5]]);
+      }, _callee6, null, [[8, 10], [3, 5]]);
     }));
     return _requestApi.apply(this, arguments);
   }
@@ -2217,22 +2363,46 @@
          * Device OAuth: start
          */
         login: function login() {
-          return _performRequest('POST', '/oauth/device/code', {}, true);
+          var url = '/oauth/device/code';
+          return rlWaitForSlot(url).then(function () {
+            return _performRequest('POST', url, {}, true);
+          }).then(function (res) {
+            rlRecordRequest(url, 200);
+            return res;
+          })["catch"](function (error) {
+            rlRecordRequest(url, Number(error && error.status) || 0);
+            throw error;
+          });
         },
         /**
          * Device OAuth: poll token
          * unauthorized = true
          */
         poll: function poll(device_code) {
-          return _performRequest('POST', '/oauth/device/token', {
-            code: device_code
-          }, true).then(function (response) {
+          var url = '/oauth/device/token';
+          return rlWaitForSlot(url).then(function () {
+            return _performRequest('POST', url, {
+              code: device_code
+            }, true);
+          }).then(function (response) {
+            rlRecordRequest(url, 200);
             if (response && response.access_token) {
               saveTokens(response);
             }
             return response;
           })["catch"](function (error) {
-            if (error && error.status === 400) {
+            var status = Number(error && error.status) || 0;
+            rlRecordRequest(url, status);
+            if (status === 429) {
+              var retryAfterSec = parseRetryAfterMs$1(error && error.headers ? error.headers : {});
+              rlEnterCooldown(retryAfterSec ? Math.round(retryAfterSec / 1000) : undefined);
+              logWarn('Trakt rate limit on device auth, global cooldown entered', {
+                cooldownMs: rlGetCooldownRemainingMs()
+              }, {
+                debugOnly: true
+              });
+            }
+            if (error && status === 400) {
               var payload = error && error.response;
               var code = payload && _typeof(payload) === 'object' ? String(payload.error || payload.error_code || '').toLowerCase() : '';
               if (code && code !== 'authorization_pending') {
@@ -2488,8 +2658,8 @@
       var mm = String(startDate.getMonth() + 1).padStart(2, '0');
       var dd = String(startDate.getDate()).padStart(2, '0');
       var dateString = "".concat(yyyy, "-").concat(mm, "-").concat(dd);
-      var days = 7;
-      var url = "/calendars/all/dvd/".concat(dateString, "/").concat(days, "?extended=full,images");
+      var days = 31;
+      var url = "/calendars/my/dvd/".concat(dateString, "/").concat(days, "?extended=full,images");
       return requestApi('GET', url).then(function (response) {
         var raw = Array.isArray(response) ? response : [];
         var formatted = formatTraktResults(raw);
