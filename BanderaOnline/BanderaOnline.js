@@ -3228,8 +3228,8 @@
     resetTemplates();
     Lampa.Listener.follow('full', function (e) {
       if (e.type == 'complite') {
-        var view = e.body;
-        if (!view || view.find('.view--bandera-online').length) return;
+        var render = e.object.activity.render();
+        if (!render || render.find('.view--bandera-online').length) return;
         var btn = $(Lampa.Lang.translate(button));
         btn.on('hover:enter', function () {
           resetTemplates();
@@ -3245,13 +3245,7 @@
             page: 1
           });
         });
-        var target = view.find('.full-start-new__buttons');
-        if (target.length) {
-          target.find('.button--book, .button--play').last().after(btn);
-        } else {
-          var torrentTarget = view.find('.view--torrent');
-          if (torrentTarget.length) torrentTarget.after(btn);else view.find('.button--book, .button--play').last().after(btn);
-        }
+        render.find('.view--torrent').after(btn);
       }
     });
   }
