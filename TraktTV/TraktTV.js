@@ -11823,6 +11823,15 @@
       if (Lampa.Controller) Lampa.Controller.toggle('settings');
       setTimeout(function () {
         if (Lampa.Settings && typeof Lampa.Settings.create === 'function') {
+          // ВАЖЛИВО: від'єднуємо main.render перед Settings.create,
+          // щоб body.empty() всередині create не знищив jQuery event handlers
+          // на папці Extensions (data-component="plugins")
+          if (Lampa.Settings.main) {
+            var mainView = Lampa.Settings.main();
+            if (mainView && mainView.render) {
+              mainView.render().detach();
+            }
+          }
           Lampa.Settings.create('trakt');
         }
       }, 0);
