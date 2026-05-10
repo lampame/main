@@ -404,6 +404,7 @@
   var inFlightRequests = new Map();
   var responseCache = new Map();
   var AUTH_BLOCK_STORAGE_KEY = 'trakt_auth_blocked';
+  var AUTH_RATE_LIMIT_STORAGE_KEY = 'trakt_auth_rate_limited_until';
 
   // ── Global Rate Limiter ──────────────────────────────────────────────────
   // Sliding-window rate limiter that also enters global cooldown after 429.
@@ -416,7 +417,8 @@
   var RL_MIN_COOLDOWN_MS = 10 * 1000; // minimum cooldown
   var RL_MAX_COOLDOWN_MS = 5 * 60 * 1000; // maximum cooldown
   var RL_POLL_INTERVAL_MS = 300; // how often waitForSlot re-checks
-
+  var AUTH_RATE_LIMIT_DEFAULT_COOLDOWN_MS = 60 * 1000;
+  var AUTH_RATE_LIMIT_MAX_COOLDOWN_MS = 5 * 60 * 1000;
   var rlRequestLog = []; // { ts: number } timestamps of recent requests
   var rlAuthRequestLog = []; // timestamps of recent auth requests
   var rlCooldownUntil = 0; // 0 = no cooldown
@@ -528,6 +530,7 @@
     Lampa.Storage.set('trakt_token', null);
     Lampa.Storage.set('trakt_refresh_token', null);
     clearTokenExpiryMeta();
+    clearAuthRateLimitCooldown();
     Lampa.Storage.set('trakt_active_device_auth', false);
     Lampa.Storage.set('trakt_active_device_auth_started_at', null);
   }
@@ -577,6 +580,47 @@
       blockedAt: authBlockedAt || Date.now()
     });
   }
+  function clearAuthRateLimitCooldown() {
+    try {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.set === 'function') {
+        Lampa.Storage.set(AUTH_RATE_LIMIT_STORAGE_KEY, null);
+      }
+    } catch (error) {/* noop */}
+  }
+  function getAuthRateLimitRemainingMs() {
+    var cooldownUntil = 0;
+    try {
+      cooldownUntil = Number(Lampa.Storage.get(AUTH_RATE_LIMIT_STORAGE_KEY) || 0);
+    } catch (error) {
+      cooldownUntil = 0;
+    }
+    if (!Number.isFinite(cooldownUntil) || cooldownUntil <= Date.now()) {
+      clearAuthRateLimitCooldown();
+      return 0;
+    }
+    return cooldownUntil - Date.now();
+  }
+  function buildAuthRateLimitError(error) {
+    return Object.assign(new Error('Trakt auth is temporarily rate limited'), {
+      status: 503,
+      code: 'auth_rate_limited',
+      retryAfterMs: getAuthRateLimitRemainingMs(),
+      originalError: error || null
+    });
+  }
+  function setAuthRateLimitCooldown(error) {
+    var retryAfterMs = parseRetryAfterMs$1(error && error.headers ? error.headers : {});
+    var cooldownMs = Math.min(AUTH_RATE_LIMIT_MAX_COOLDOWN_MS, Math.max(1000, retryAfterMs || AUTH_RATE_LIMIT_DEFAULT_COOLDOWN_MS));
+    try {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.set === 'function') {
+        Lampa.Storage.set(AUTH_RATE_LIMIT_STORAGE_KEY, Date.now() + cooldownMs);
+      }
+    } catch (storageError) {/* noop */}
+    return cooldownMs;
+  }
+  function isAuthRateLimitStatus(status) {
+    return status === 429 || status === 503;
+  }
   function notifyAuthBlockedOnce() {
     if (authBlockedNotified) return;
     authBlockedNotified = true;
@@ -620,6 +664,7 @@
     }
     if (response.access_token) {
       clearAuthBlocked();
+      clearAuthRateLimitCooldown();
     }
   }
   function getTokenExpiryMeta() {
@@ -1573,9 +1618,13 @@
         normalizedMethod,
         normalizedEndpoint,
         didRefreshAfter401,
+        status,
+        cooldownMs,
+        refreshStatus,
         _args6 = arguments,
         _t2,
-        _t3;
+        _t3,
+        _t4;
       return _regenerator().w(function (_context6) {
         while (1) switch (_context6.n) {
           case 0:
@@ -1612,29 +1661,62 @@
             notifyAuthBlockedOnce();
             throw buildAuthBlockedError(authBlockedReason || 'reauth_required');
           case 2:
-            if (!(!unauthorized && Lampa.Storage.get('trakt_refresh_token'))) {
-              _context6.n = 7;
+            if (!(!unauthorized && getAuthRateLimitRemainingMs() > 0)) {
+              _context6.n = 3;
               break;
             }
-            _context6.p = 3;
-            _context6.n = 4;
+            if (logging) {
+              logWarn('Auth cooldown: user-scoped request rejected without network', {
+                endpoint: normalizedEndpoint,
+                method: normalizedMethod,
+                retryAfterMs: getAuthRateLimitRemainingMs()
+              }, {
+                debugOnly: true
+              });
+            }
+            throw buildAuthRateLimitError();
+          case 3:
+            if (!(!unauthorized && Lampa.Storage.get('trakt_refresh_token'))) {
+              _context6.n = 9;
+              break;
+            }
+            _context6.p = 4;
+            _context6.n = 5;
             return ensureValidAccessToken({
               reason: "preflight:".concat(normalizedMethod, ":").concat(normalizedEndpoint)
             });
-          case 4:
-            _context6.n = 7;
-            break;
           case 5:
-            _context6.p = 5;
+            _context6.n = 9;
+            break;
+          case 6:
+            _context6.p = 6;
             _t2 = _context6.v;
+            status = Number(_t2 && _t2.status) || 0;
+            if (!isAuthRateLimitStatus(status)) {
+              _context6.n = 7;
+              break;
+            }
+            cooldownMs = setAuthRateLimitCooldown(_t2);
+            if (logging) {
+              logWarn('Preflight token refresh rate limited, auth cooldown entered', {
+                endpoint: normalizedEndpoint,
+                method: normalizedMethod,
+                status: status,
+                cooldownMs: cooldownMs
+              }, {
+                debugOnly: true
+              });
+            }
+            throw buildAuthRateLimitError(_t2);
+          case 7:
             if (!(_t2 && (_t2.status === 400 || _t2.status === 401))) {
-              _context6.n = 6;
+              _context6.n = 8;
               break;
             }
             setAuthBlocked("preflight_refresh_failed_".concat(_t2.status));
             notifyAuthBlockedOnce();
             throw _t2;
-          case 6:
+          case 8:
             if (logging) {
               logWarn('Preflight token refresh failed, using current token', {
                 endpoint: normalizedEndpoint,
@@ -1644,17 +1726,17 @@
                 debugOnly: true
               });
             }
-          case 7:
-            _context6.p = 8;
-            _context6.n = 9;
-            return executeRequestWithPolicy(normalizedMethod, url, params, unauthorized, requestOptions);
           case 9:
-            return _context6.a(2, _context6.v);
-          case 10:
             _context6.p = 10;
+            _context6.n = 11;
+            return executeRequestWithPolicy(normalizedMethod, url, params, unauthorized, requestOptions);
+          case 11:
+            return _context6.a(2, _context6.v);
+          case 12:
+            _context6.p = 12;
             _t3 = _context6.v;
             if (!(!unauthorized && _t3 && _t3.status === 401 && !didRefreshAfter401)) {
-              _context6.n = 12;
+              _context6.n = 18;
               break;
             }
             didRefreshAfter401 = true;
@@ -1664,22 +1746,42 @@
                 method: normalizedMethod
               });
             }
-            _context6.n = 11;
+            _context6.p = 13;
+            _context6.n = 14;
             return runRefreshFlow({
               reason: "401:".concat(normalizedMethod, ":").concat(normalizedEndpoint)
             });
-          case 11:
-            return _context6.a(3, 7);
-          case 12:
+          case 14:
+            _context6.n = 17;
+            break;
+          case 15:
+            _context6.p = 15;
+            _t4 = _context6.v;
+            refreshStatus = Number(_t4 && _t4.status) || 0;
+            if (!isAuthRateLimitStatus(refreshStatus)) {
+              _context6.n = 16;
+              break;
+            }
+            setAuthRateLimitCooldown(_t4);
+            throw buildAuthRateLimitError(_t4);
+          case 16:
+            throw _t4;
+          case 17:
+            return _context6.a(3, 9);
+          case 18:
             if (!unauthorized && _t3 && _t3.status === 401) {
               setAuthBlocked('unauthorized_after_refresh');
               notifyAuthBlockedOnce();
             }
+            if (!unauthorized && _t3 && _t3.status === 403 && normalizedEndpoint === '/users/me') {
+              setAuthBlocked('users_me_forbidden');
+              notifyAuthBlockedOnce();
+            }
             throw _t3;
-          case 13:
+          case 19:
             return _context6.a(2);
         }
-      }, _callee6, null, [[8, 10], [3, 5]]);
+      }, _callee6, null, [[13, 15], [10, 12], [4, 6]]);
     }));
     return _requestApi.apply(this, arguments);
   }
