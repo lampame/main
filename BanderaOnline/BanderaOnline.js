@@ -1237,10 +1237,13 @@
 
     // Use IDs for Makhno and AnimeOn as they support it reliably
     if (sourceKey === 'makhno' || sourceKey === 'animeon') {
-      var id = movie.tmdb_id || movie.id;
-      if (id && /^\d+$/.test(id)) return 'id:' + id;
+      var _id = movie.tmdb_id || movie.id;
+      if (_id && /^\d+$/.test(_id)) return 'id:' + _id;
     }
-    return Lampa.Utils.hash(movie.number_of_seasons ? movie.original_name : movie.original_title);
+    var title = movie.number_of_seasons ? movie.original_name || movie.name || movie.title : movie.original_title || movie.title || movie.name;
+    var id = movie.tmdb_id || movie.id;
+    var key = title || (id ? 'id:' + id : '') || sourceKey || '';
+    return Lampa.Utils.hash(key);
   }
   function getHashTimeline(movie, season, episode, sourceKey) {
     var base = getFileId(movie, sourceKey);
