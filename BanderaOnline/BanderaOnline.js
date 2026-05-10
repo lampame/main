@@ -1242,12 +1242,13 @@
     return Lampa.Utils.hash(key);
   }
   function getHashTimeline(movie, season, episode) {
-    var base = getFileId(movie);
-    return Lampa.Utils.hash(season ? [season, episode, base].join(':') : base);
+    var title = movie.original_title || movie.original_name || movie.name || movie.title || '';
+    return Lampa.Utils.hash(season ? [season, episode, title].join('') : title);
   }
   function getHashBehold(movie, season, episode, voice_name) {
-    var base = getHashTimeline(movie, season, episode);
-    return Lampa.Utils.hash(base + ':' + (voice_name || ''));
+    var title = movie.original_title || movie.original_name || movie.name || movie.title || '';
+    var vn = voice_name || '';
+    return Lampa.Utils.hash(season ? [season, episode, title, vn].join('') : title + vn);
   }
 
   function component(object) {
@@ -1793,11 +1794,11 @@
     };
     this.watched = function (set) {
       var file_id = getFileId(object.movie);
-      var watched = Lampa.Storage.cache('bandera_online_watched_last', 5000, {});
+      var watched = Lampa.Storage.cache('online_watched_last', 5000, {});
       if (set) {
         if (!watched[file_id]) watched[file_id] = {};
         Lampa.Arrays.extend(watched[file_id], set, true);
-        Lampa.Storage.set('bandera_online_watched_last', watched);
+        Lampa.Storage.set('online_watched_last', watched);
         this.updateWatched();
       } else {
         return watched[file_id];
@@ -1828,7 +1829,7 @@
       scroll.append(Lampa.Template.get('bandera_online_watched', {}));
       this.updateWatched();
       this.getEpisodes(items[0].season, function (episodes) {
-        var viewed = Lampa.Storage.cache('bandera_online_view', 5000, []);
+        var viewed = Lampa.Storage.cache('online_view', 5000, []);
         var serial = object.movie.name ? true : false;
         var choice = _this4.getChoice();
         var fully = window.innerWidth > 480;
@@ -1902,10 +1903,10 @@
             html.find('.online-prestige__img').append('<div class="online-prestige__viewed">' + Lampa.Template.get('icon_viewed', {}, true) + '</div>');
           }
           element.mark = function () {
-            viewed = Lampa.Storage.cache('bandera_online_view', 5000, []);
+            viewed = Lampa.Storage.cache('online_view', 5000, []);
             if (viewed.indexOf(hash_behold) == -1) {
               viewed.push(hash_behold);
-              Lampa.Storage.set('bandera_online_view', viewed);
+              Lampa.Storage.set('online_view', viewed);
               if (html.find('.online-prestige__viewed').length == 0) {
                 html.find('.online-prestige__img').append('<div class="online-prestige__viewed">' + Lampa.Template.get('icon_viewed', {}, true) + '</div>');
               }
@@ -1927,11 +1928,11 @@
             });
           };
           element.unmark = function () {
-            viewed = Lampa.Storage.cache('bandera_online_view', 5000, []);
+            viewed = Lampa.Storage.cache('online_view', 5000, []);
             if (viewed.indexOf(hash_behold) !== -1) {
               Lampa.Arrays.remove(viewed, hash_behold);
-              Lampa.Storage.set('bandera_online_view', viewed);
-              if (Lampa.Manifest.app_digital >= 177) Lampa.Storage.remove('bandera_online_view', hash_behold);
+              Lampa.Storage.set('online_view', viewed);
+              if (Lampa.Manifest.app_digital >= 177) Lampa.Storage.remove('online_view', hash_behold);
               html.find('.online-prestige__viewed').remove();
             }
           };
