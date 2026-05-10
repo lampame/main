@@ -441,6 +441,8 @@
                 kinopoisk_id: item.kinopoisk_id,
                 mal_id: item.mal_id,
                 serial: item.serial,
+                source: item.source || sourceKey,
+                poster: sourceKey == 'uaflix' ? item.poster : '',
                 ref: item.ref
               };
             }));
@@ -1616,6 +1618,15 @@
         elem.time = elem.time || '';
         elem.info = info.join('<span class="online-prestige-split">●</span>');
         var item = Lampa.Template.get('bandera_online_folder', elem);
+        if (elem.poster && (elem.source == 'uaflix' || balanser == 'uaflix')) {
+          var folder = item.find('.online-prestige__folder');
+          var poster = $('<div class="online-prestige__img online-prestige__img--loaded"><img alt="" src="' + escapeHtml(elem.poster) + '"></div>');
+          var img = poster.find('img')[0];
+          img.onerror = function () {
+            poster.replaceWith(folder);
+          };
+          folder.replaceWith(poster);
+        }
         item.on('hover:enter', function () {
           _this2.activity.loader(true);
           _this2.reset();
