@@ -1076,16 +1076,16 @@
             }
             throw new Error("qBittorrent URL is not configured");
           case 1:
-            if (!config.apiKey) {
+            if (config.apiKey) {
               _context2.n = 2;
               break;
             }
             if (showNotification) {
               Lampa.Bell.push({
-                text: Lampa.Lang.translate("AuthSuccess")
+                text: Lampa.Lang.translate("AuthDenied")
               });
             }
-            return _context2.a(2, true);
+            throw new Error("qBittorrent API key is not configured");
           case 2:
             _context2.p = 2;
             _context2.n = 3;
@@ -5113,23 +5113,25 @@
       },
       onChange: createAddressValidationHandler(manifest.component + "qBittorentUrl")
     });
-    // Lampa.SettingsApi.addParam({
-    //     component: manifest.component,
-    //     param: {
-    //         name: manifest.component + "qBittorentApiKey",
-    //         type: "button"
-    //     },
-    //     field: {
-    //         name: Lampa.Lang.translate('torrentmanager_api_key')
-    //     }, onRender: function (item) {
-    //         if (Lampa.Storage.field(manifest.component + 'Select') === "qBittorent") {
-    //             updateSecretLabel(item, Lampa.Lang.translate('torrentmanager_api_key'), manifest.component + "qBittorentApiKey");
-    //             item.show();
-    //         } else item.hide();
-    //     }, onChange: function () {
-    //         openSecretEditor(manifest.component + "qBittorentApiKey", 'qBittorrent API key');
-    //     },
-    // });
+    Lampa.SettingsApi.addParam({
+      component: manifest.component,
+      param: {
+        name: manifest.component + "qBittorentApiKey",
+        type: "button"
+      },
+      field: {
+        name: Lampa.Lang.translate('torrentmanager_api_key')
+      },
+      onRender: function onRender(item) {
+        if (Lampa.Storage.field(manifest.component + 'Select') === "qBittorent") {
+          updateSecretLabel(item, Lampa.Lang.translate('torrentmanager_api_key'), manifest.component + "qBittorentApiKey");
+          item.show();
+        } else item.hide();
+      },
+      onChange: function onChange() {
+        openSecretEditor(manifest.component + "qBittorentApiKey", 'qBittorrent API key');
+      }
+    });
     Lampa.SettingsApi.addParam({
       component: manifest.component,
       param: {
@@ -6342,7 +6344,7 @@
    */
   var MANIFEST = {
     type: 'other',
-    version: '3.0',
+    version: '3.1',
     author: '@lme_chat',
     name: 'Torrent Manager',
     description: 'Manager and Runner query',

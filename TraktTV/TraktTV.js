@@ -1620,6 +1620,7 @@
         didRefreshAfter401,
         status,
         cooldownMs,
+        _cooldownMs,
         refreshStatus,
         _args6 = arguments,
         _t2,
@@ -1680,6 +1681,21 @@
               _context6.n = 9;
               break;
             }
+            if (!(getAuthRateLimitRemainingMs() > 0)) {
+              _context6.n = 4;
+              break;
+            }
+            if (logging) {
+              logWarn('Preflight token refresh skipped: auth cooldown active', {
+                endpoint: normalizedEndpoint,
+                method: normalizedMethod,
+                retryAfterMs: getAuthRateLimitRemainingMs()
+              }, {
+                debugOnly: true
+              });
+            }
+            throw buildAuthRateLimitError();
+          case 4:
             _context6.p = 4;
             _context6.n = 5;
             return ensureValidAccessToken({
@@ -1717,7 +1733,19 @@
             notifyAuthBlockedOnce();
             throw _t2;
           case 8:
-            if (logging) {
+            // On 503, enter auth cooldown and continue with current token
+            if (status === 503) {
+              _cooldownMs = setAuthRateLimitCooldown(_t2);
+              if (logging) {
+                logWarn('Preflight token refresh: 503 received, auth cooldown entered, using current token', {
+                  endpoint: normalizedEndpoint,
+                  method: normalizedMethod,
+                  cooldownMs: _cooldownMs
+                }, {
+                  debugOnly: true
+                });
+              }
+            } else if (logging) {
               logWarn('Preflight token refresh failed, using current token', {
                 endpoint: normalizedEndpoint,
                 method: normalizedMethod,
@@ -8363,23 +8391,11 @@
     var ttl = getTTL();
     var rec = completionCache.get(key);
     var now = nowSec();
-
-    // DEBUG: Log canFinishOnce check
-    if (Lampa.Storage.field('trakt_enable_logging')) {
-      slog('DEBUG - canFinishOnce check:', {
-        key: key,
-        record: rec,
-        ttl: ttl,
-        now: now,
-        recordAge: rec ? now - rec.ts : null
-      });
-    }
     if (!rec) return {
       allow: true,
       reason: 'no_record'
     };
     if (now - rec.ts > ttl) {
-      // expired
       completionCache["delete"](key);
       return {
         allow: true,
@@ -8394,7 +8410,6 @@
       allow: false,
       reason: 'already_finishing'
     };
-    // intent within debounce might still be allowed by finish() flow, but finishWithIdempotency reads allow flag
     return {
       allow: true,
       reason: 'has_intent'
@@ -8583,16 +8598,6 @@
     var token = Lampa.Storage.get('trakt_token');
     var ttl = getTTL();
     var now = nowSec();
-
-    // DEBUG: Log intent marking
-    if (Lampa.Storage.field('trakt_enable_logging')) {
-      slog('DEBUG - markFinishIntent called:', {
-        key: key,
-        tokenAvailable: !!token,
-        existingRecord: completionCache.get(key),
-        timestamp: new Date().toISOString()
-      });
-    }
     var rec = completionCache.get(key);
     var isFresh = rec && now - rec.ts <= ttl;
 
@@ -8653,16 +8658,7 @@
       return _regenerator().w(function (_context5) {
         while (1) switch (_context5.n) {
           case 0:
-            token = Lampa.Storage.get('trakt_token'); // DEBUG: Log finish function call
-            if (Lampa.Storage.field('trakt_enable_logging')) {
-              slog('DEBUG - finish function called:', {
-                mediaId: media.id,
-                mediaHash: media.hash,
-                mediaType: getContentType$1(media),
-                tokenAvailable: !!token,
-                timestamp: new Date().toISOString()
-              });
-            }
+            token = Lampa.Storage.get('trakt_token');
             if (token) {
               _context5.n = 1;
               break;
@@ -8686,15 +8682,6 @@
             requestInProgress[key] = true;
             // END -- RACE CONDITION FIX
             _context5.p = 3;
-            // DEBUG: Log key used in finish
-            if (Lampa.Storage.field('trakt_enable_logging')) {
-              slog('DEBUG - finish function key:', {
-                key: key,
-                mediaIds: media.ids,
-                mediaId: media.id,
-                mediaHash: media.hash
-              });
-            }
             doFinish = /*#__PURE__*/function () {
               var _ref9 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
                 var type, tmdbId, search, e, traktId, res, _tmdbId, _search, _e, traktShowId, season, episode, seasons, _e2, last, titleCandidates, found, _iterator3, _step3, s, _iterator4, _step4, ep, _iterator5, _step5, title, epHash, _e3, _res, _t2, _t3, _t4;
@@ -9006,14 +8993,10 @@
         }
         return;
       }
-
-      // Зберігаємо поточну картку для подальшої обробки
       Lampa.Storage.set('trakt_last_card', card);
       if (this.isLoggingEnabled()) {
         slog('Card saved to storage', card);
       }
-
-      // Кешуємо відповідність hash -> card/season/episode для стабільного фінішу
       var timeline = data && data.timeline;
       var hash = timeline && timeline.hash;
       if (hash) {
@@ -9038,15 +9021,10 @@
      * @param {Object} data - Дані події
      */
     processTimelineUpdate: function processTimelineUpdate(data) {
-      // Додаткове логування для налагодження подвійних викликів
-      slog('processTimelineUpdate called with data:', data);
       if (this.isLoggingEnabled()) {
         slog('Timeline update received', data);
       }
-
-      // Перевіряємо налаштування trakt_enable_watching
       var enableWatching = Lampa.Storage.field('trakt_enable_watching');
-      slog('trakt_enable_watching setting:', enableWatching);
       if (!enableWatching) {
         if (this.isLoggingEnabled()) {
           slog('Watching is disabled by settings');
@@ -9057,10 +9035,6 @@
         if (this.isLoggingEnabled()) {
           slog('Invalid data received', data);
         }
-        slog('Invalid data - data:', data);
-        slog('Invalid data - data.data:', data && data.data);
-        slog('Invalid data - data.data.hash:', data && data.data && data.data.hash);
-        slog('Invalid data - data.data.road:', data && data.data && data.data.road);
         return;
       }
       var hash = data.data.hash;
@@ -9076,12 +9050,6 @@
         },
         ts: Date.now()
       };
-      slog('Timeline update data:', {
-        hash: hash,
-        percent: percent,
-        token: !!token,
-        minProgress: minProgress
-      });
       if (this.isLoggingEnabled()) {
         slog('Processing timeline update', {
           hash: hash,
@@ -9094,7 +9062,6 @@
         if (this.isLoggingEnabled()) {
           slog('No token found, skipping update');
         }
-        slog('No token found');
         return;
       }
       var card = this.getCurrentCard();
@@ -9151,37 +9118,12 @@
           if (!media.episode_number && meta.episode) media.episode_number = meta.episode;
           if (!media.ids && meta.ids) media.ids = meta.ids;
         }
-
-        // DEBUG: Log media object and hash source
-        if (this.isLoggingEnabled()) {
-          slog('DEBUG - Timeline route media:', {
-            cardId: card.id,
-            cardType: getContentType$1(card),
-            percent: percent,
-            minProgress: minProgress,
-            currentHash: hash,
-            mediaHash: media.hash
-          });
-        }
         var key = getCompletionKey(media);
-
-        // DEBUG: Log key generation
-        if (this.isLoggingEnabled()) {
-          slog('DEBUG - Timeline route key generation:', {
-            key: key,
-            mediaIds: media.ids,
-            mediaId: media.id,
-            mediaHash: media.hash,
-            contentType: getContentType$1(media)
-          });
-        }
         slog('Timeline threshold reached, finish intent and attempt', {
           key: key,
           percent: percent
         });
-        // Mark intent quickly so event-driven finishes coalesce
         markFinishIntent(key);
-        // Fire idempotent finish
         finish(media)["catch"](function (e) {
           return slog('finish error', e);
         });
@@ -9196,14 +9138,6 @@
     getCurrentCard: function getCurrentCard() {
       var card = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie) || null;
       if (!card) card = Lampa.Storage.get('trakt_last_card', null);
-
-      // Додаткове логування для налагодження
-      slog('getCurrentCard - Activity.active():', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active());
-      slog('getCurrentCard - card_data:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card_data);
-      slog('getCurrentCard - card:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card);
-      slog('getCurrentCard - movie:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().movie);
-      slog('getCurrentCard - trakt_last_card from storage:', Lampa.Storage.get('trakt_last_card', null));
-      slog('getCurrentCard - final card:', card);
       if (this.isLoggingEnabled()) {
         slog('Current card determined', card);
       }
@@ -9219,15 +9153,6 @@
     checkAndAddToShow: function checkAndAddToShow(card, hash, percent, token) {
       var originalName = card.original_name || card.name || card.original_title || card.title;
       var firstEpisodeHash = Lampa.Utils.hash('11' + originalName);
-
-      // Додаткове логування для налагодження
-      slog('checkAndAddToShow called with:', {
-        card: card,
-        hash: hash,
-        percent: percent,
-        originalName: originalName,
-        firstEpisodeHash: firstEpisodeHash
-      });
       if (this.isLoggingEnabled()) {
         slog('Checking if show should be added to watching', {
           card: card,
@@ -9238,12 +9163,9 @@
         });
       }
       var shouldAdd = hash === firstEpisodeHash;
-      slog('Should add show to watching:', shouldAdd);
       if (shouldAdd) {
         slog('Adding show to watching');
         this.addShowToWatching(card, token);
-      } else {
-        slog('Not adding show to watching');
       }
     },
     /**
@@ -9253,7 +9175,6 @@
      */
     addShowToWatching: function addShowToWatching(card, token) {
       var _this = this;
-      // Уникнення подвійних запитів
       if (isAddingShowToWatching) {
         slog('addShowToWatching called while already adding, skipping');
         return;
@@ -9262,37 +9183,23 @@
       if (this.isLoggingEnabled()) {
         slog('Adding show to watching', card);
       }
-
-      // Додаткове логування для налагодження
-      slog('addShowToWatching called with card:', card);
       var tmdbId = card.id || card.ids && card.ids.tmdb;
-      slog('Determined tmdbId:', tmdbId);
       if (!tmdbId) {
         slog('No tmdbId found, returning');
+        isAddingShowToWatching = false;
         return;
       }
-
-      // Визначаємо тип вмісту
       var contentType = getContentType$1(card);
-      slog('Determined content type:', contentType);
-
-      // Отримуємо Trakt ID за TMDB ID
-      slog('Searching for content by tmdbId:', tmdbId, 'type:', contentType);
       api$1.get("/search/tmdb/".concat(tmdbId, "?type=").concat(contentType)).then(function (response) {
-        slog('Search response:', response);
         if (response && response.length > 0) {
           var item = response[0];
           var traktId = item.show && item.show.ids.trakt || item.movie && item.movie.ids.trakt;
-          slog('Found traktId:', traktId);
-
-          // Додаємо вміст в "Смотрю"
           var body = {};
           if (contentType === 'show') {
             body.shows = [{
               ids: _objectSpread2({
                 trakt: traktId
               }, card.ids),
-              // Завжди додаємо traktId
               watched_at: new Date().toISOString()
             }];
           } else {
@@ -9300,11 +9207,9 @@
               ids: _objectSpread2({
                 trakt: traktId
               }, card.ids),
-              // Завжди додаємо traktId
               watched_at: new Date().toISOString()
             }];
           }
-          slog('Body for adding content to watching:', body);
           if (_this.isLoggingEnabled()) {
             slog('Sending request to add content to watching', body);
           }
@@ -9317,7 +9222,6 @@
           debugOnly: true
         });
       })["finally"](function () {
-        // Скидаємо стан після виконання запиту
         isAddingShowToWatching = false;
       });
     },
@@ -9355,14 +9259,6 @@
      */
     findEpisodeByHash: function findEpisodeByHash(card, hash, seasons) {
       var originalName = card.original_name || card.name || card.original_title || card.title;
-
-      // Додаткове логування для налагодження
-      slog('findEpisodeByHash called with:', {
-        card: card,
-        hash: hash,
-        seasons: seasons && seasons.length
-      });
-      slog('originalName:', originalName);
       for (var i = 0; i < seasons.length; i++) {
         var season = seasons[i];
         if (!season.episodes) continue;
@@ -9370,15 +9266,6 @@
           var episode = season.episodes[j];
           var episodeHashStr = [season.number, season.number > 10 ? ':' : '', episode.number, originalName].join('');
           var episodeHash = Lampa.Utils.hash(episodeHashStr);
-
-          // Додаткове логування для налагодження
-          slog('Checking episode:', {
-            season: season.number,
-            episode: episode.number,
-            episodeHashStr: episodeHashStr,
-            episodeHash: episodeHash,
-            ids: episode.ids
-          });
           if (episodeHash === hash && episode.ids && episode.ids.trakt) {
             var result = {
               traktId: episode.ids.trakt,
