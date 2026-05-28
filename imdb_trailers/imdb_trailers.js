@@ -82,7 +82,7 @@
       });
       var items = [];
       var html = $('<div></div>');
-      var body = $('<div class="category-full"></div>');
+      var body = $('<div class="category-full mapping--grid cols--6"></div>');
       var cursor = null;
       var loading = false;
       var last;
