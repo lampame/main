@@ -236,6 +236,22 @@
       "langs": [
         "uk"
       ]
+    },
+    {
+      "id": "imdb-trailers",
+      "title": "IMDb Trailers",
+      "short_uk": "Трендові трейлери IMDb: лінія на головній та повноекранний перегляд.",
+      "short_en": "Trending IMDb trailers: main-page line and full-screen browsing.",
+      "short_ru": "Трендовые трейлеры IMDb: линия на главной и полноэкранный просмотр.",
+      "desc_uk": "Плагін підтягує трендові трейлери з IMDb GraphQL API, показує їх горизонтальною лінією на головному екрані та в повноекранному режимі з пагінацією. Підтримує вибір якості відео, автоматичне формування плейлісту та умовне проксі для внутрішнього плеєра.",
+      "desc_en": "Fetches trending trailers from the IMDb GraphQL API, displays them as a horizontal line on the main screen and in a full-screen view with pagination. Supports video quality selection, automatic playlist creation, and conditional proxy for the internal player.",
+      "desc_ru": "Подтягивает трендовые трейлеры из IMDb GraphQL API, показывает их горизонтальной линией на главном экране и в полноэкранном режиме с пагинацией. Поддерживает выбор качества видео, автоматическое формирование плейлиста и условное прокси для внутреннего плеера.",
+      "file": "timdb.js",
+      "langs": [
+        "en",
+        "uk",
+        "ru"
+      ]
     }
   ]
 }
