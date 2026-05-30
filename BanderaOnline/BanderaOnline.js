@@ -1464,6 +1464,9 @@
           if (type == 'filter') {
             if (a.reset) {
               if (extended) source.reset();else _this.start();
+            } else if (a.stype == 'source') {
+              Lampa.Select.close();
+              _this.changeBalanser(b.source);
             } else {
               source.filter(type, a, b);
             }
@@ -1716,6 +1719,23 @@
         title: Lampa.Lang.translate('torrent_parser_reset'),
         reset: true
       });
+      if (filter_sources && filter_sources.length) {
+        var subitems = [];
+        filter_sources.forEach(function (name, i) {
+          subitems.push({
+            title: sourcesStore.getTitle(name),
+            selected: name == balanser,
+            index: i,
+            source: name
+          });
+        });
+        select.push({
+          title: Lampa.Lang.translate('online_balanser'),
+          subtitle: sourcesStore.getTitle(balanser),
+          items: subitems,
+          stype: 'source'
+        });
+      }
       this.saveChoice(choice);
       if (filter_items.voice && filter_items.voice.length) add('voice', Lampa.Lang.translate('torrent_parser_voice'));
       if (filter_items.season && filter_items.season.length) add('season', Lampa.Lang.translate('torrent_serial_season'));
