@@ -2327,6 +2327,7 @@
     };
   }
 
+  var PLUGIN_STORAGE_KEYS = ['BO_FILMIX_TOKEN', 'BO_FILMIX_DEVICE_ID', 'BO_FILMIX_MAX_QUALITY', 'BO_SOURCES', 'BO_SOURCES_SORT', 'BO_SOURCES_HIDE', 'bandera_online_cw_autoinstall_done', 'bandera_online_last_balanser', 'bandera_online_balanser', 'bandera_online_watched_last', 'bandera_online_view'];
   var FILMIX_POLL_INTERVAL = 10000;
   var FILMIX_MAX_QUALITY_KEY = 'BO_FILMIX_MAX_QUALITY';
   var AUTH_KEYS = getAuthKeys();
@@ -2643,6 +2644,15 @@
   function openThanksModal() {
     openQrModal();
   }
+  function resetPluginStorage() {
+    PLUGIN_STORAGE_KEYS.forEach(function (key) {
+      Lampa.Storage.set(key, '');
+    });
+    sourcesStore.available_sources = [];
+    sourcesStore.titles = {};
+    Lampa.Settings.update();
+    Lampa.Noty.show(Lampa.Lang.translate('bandera_online_sources_reset_done'));
+  }
   function openSourcesModal() {
     var wrapper = $('<div class="bandera-online-sources"></div>');
     var list = null;
@@ -2651,13 +2661,20 @@
       var container = $('<div class="bandera-online-sources__actions"></div>');
       var syncButton = $('<div class="modal__button bandera-online-sources__action selector"></div>');
       var saveButton = $('<div class="modal__button bandera-online-sources__action selector"></div>');
+      var resetButton = $('<div class="modal__button bandera-online-sources__action selector"></div>');
       syncButton.addClass('bandera-online-sources__action--sync');
       syncButton.text(Lampa.Lang.translate('bandera_online_sources_sync'));
       syncButton.on('click hover:enter', sync);
       saveButton.addClass('bandera-online-sources__action--save');
       saveButton.text(Lampa.Lang.translate('bandera_online_sources_save'));
       saveButton.on('click hover:enter', closeAndSave);
-      container.append(syncButton).append(saveButton);
+      resetButton.addClass('bandera-online-sources__action--reset');
+      resetButton.text(Lampa.Lang.translate('bandera_online_sources_reset'));
+      resetButton.on('click hover:enter', function () {
+        resetPluginStorage();
+        render(true);
+      });
+      container.append(syncButton).append(saveButton).append(resetButton);
       return container;
     }
     function render(update_modal) {
@@ -3092,6 +3109,18 @@
         uk: 'Не вдалося синхронізувати джерела',
         ua: 'Не вдалося синхронізувати джерела',
         en: 'Failed to sync sources'
+      },
+      bandera_online_sources_reset: {
+        ru: 'Скинути налаштування',
+        uk: 'Скинути налаштування',
+        ua: 'Скинути налаштування',
+        en: 'Reset settings'
+      },
+      bandera_online_sources_reset_done: {
+        ru: 'Налаштування скинуто',
+        uk: 'Налаштування скинуто',
+        ua: 'Налаштування скинуто',
+        en: 'Settings reset'
       },
       bandera_online_settings_filmix: {
         ru: 'Filmix',
