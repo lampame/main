@@ -4385,6 +4385,22 @@
         // 1) Load base details (uses in-memory cache internally)
         Api.getAnimeDetails(slug, function (details) {
           var payload = Api.buildFullPayloadFromDetails(details);
+
+          // Fire-and-forget resolve imdb_id via ani.zip mappings
+          var card = payload && payload.card;
+          var malId = card && card.mal_id;
+          if (malId) {
+            var mappingUrl = 'https://api.ani.zip/mappings?mal_id=' + malId;
+            var mapperNet = new Lampa.Reguest();
+            mapperNet.silent(mappingUrl, function (raw) {
+              try {
+                var parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                if (parsed && parsed.mappings && parsed.mappings.imdb_id) {
+                  card.imdb_id = parsed.mappings.imdb_id;
+                }
+              } catch (_) {}
+            }, function () {});
+          }
           if (!payload || !payload.card) {
             console.log('[Hikka] SourceProvider: invalid payload after details', payload);
             if (onerror) onerror('Hikka Source: invalid payload');
