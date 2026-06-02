@@ -183,6 +183,12 @@
         ru: 'Рецензии',
         en: 'Reviews'
       },
+      kinobaza_networks: {
+        uk: 'Мережі',
+        ru: 'Сети',
+        en: 'Networks',
+        be: 'Сеткі'
+      },
       // ===== ПРОФЕСІЇ ПЕРСОН =====
 
       kinobaza_job_unknown: {
@@ -747,7 +753,7 @@
       },
       companies: mapSimpleList(data.companies),
       production_companies: mapProductionCompanies(data.companies),
-      networks: mapSimpleList(data.networks),
+      networks: mapNetworks(data.networks),
       homepage: '',
       status: '',
       spoken_languages: [],
@@ -840,6 +846,25 @@
     return items.map(function (item) {
       return item.title || item.name || '';
     }).filter(Boolean);
+  }
+
+  /**
+   * Маппінг мереж (networks) у формат [{id, name, logo, logo_svg}]
+   * @param {array|null} items
+   * @returns {array}
+   */
+  function mapNetworks(items) {
+    if (!items || !Array.isArray(items)) return [];
+    return items.map(function (item) {
+      return {
+        id: parseInt(item.id, 10) || 0,
+        name: item.title || item.name || '',
+        logo: item.logo || '',
+        logo_svg: item.logo_svg || ''
+      };
+    }).filter(function (n) {
+      return n.name;
+    });
   }
 
   /**
@@ -1090,7 +1115,9 @@
       // profile_path — тільки valid TMDB (починається з /), інакше Card module
       // піде через TMDB.img() і отримає біту картинку
       poster: profileUrl,
-      profile_path: hasValidTmdb ? item.poster_tmdb : ''
+      profile_path: hasValidTmdb ? item.poster_tmdb : '',
+      media_type: 'person',
+      type: 'person'
     };
 
     // Налаштовуємо маршрутизацію: при Enter відкриваємо картку актора
@@ -1131,6 +1158,7 @@
     mapPersonSearch: mapPersonSearch,
     mapPersonSearchList: mapPersonSearchList,
     mapGenres: mapGenres,
+    mapNetworks: mapNetworks,
     mapPersons: mapPersons,
     mapCrew: mapCrew,
     mapEpisodes: mapEpisodes,
@@ -1927,6 +1955,10 @@
 
   // Кеш маппінгу Kinobaza ID → TMDB ID (оптимізація: ID стабільні)
   var tmdbIdCache = {};
+
+  // Кеш Kinobaza person ID → slug
+  // Потрібен бо при кліку на актора зі сторінки фільму Lampa втрачає slug
+  var personSlugCache = {};
 
   /**
    * Збагачення картки TMDB ID при збереженні зі списку
@@ -2976,6 +3008,8 @@
     if (!persons || !Array.isArray(persons)) return [];
     return persons.map(function (p) {
       var profileRaw = p.poster_tmdb || p.poster_kinobaza || '';
+      // Зберігаємо slug в кеш для source-override.js
+      if (p.slug) personSlugCache[p.id] = p.slug;
       return {
         id: p.id,
         slug: p.slug || '',
@@ -2983,7 +3017,8 @@
         character: p.character || '',
         profile_path: profileRaw,
         poster: p.poster_tmdb ? Lampa.TMDB.image('t/p/w300/' + p.poster_tmdb.replace(/^\//, '')) : p.poster_kinobaza ? api$1.cdn(p.poster_kinobaza, 'w300') : './img/img_broken.svg',
-        source: source
+        source: source,
+        gender: p.gender || 2
       };
     });
   }
@@ -3387,7 +3422,9 @@
     initBookmarksListener: initBookmarksListener,
     // Sub-sources для anime/cartoons (доступні як Lampa.Api.sources.kinobaza.anime)
     anime: sourceAnime,
-    cartoons: sourceCartoons
+    cartoons: sourceCartoons,
+    // Slug cache для source-override (id → slug, бо Lampa втрачає slug при кліку)
+    personSlugCache: personSlugCache
   };
 
   /**
@@ -3605,7 +3642,8 @@
                 profile_path: poster,
                 poster: poster ? a.poster_tmdb ? Lampa.TMDB.image('t/p/w276_and_h350_face/' + a.poster_tmdb.replace(/^\//, '')) : 'https://i.kinobaza.com.ua/w300/' + a.poster_kinobaza : './img/img_broken.svg',
                 character: a.character || '',
-                source: 'kinobaza'
+                source: 'kinobaza',
+                gender: a.gender || 2
               };
             });
             var insertAt = personIdx >= 0 ? personIdx + 1 : rows.length;
@@ -3721,6 +3759,61 @@
           var $pg = $full.find('.full-start__pg');
           if ($pg.length) {
             $pg.removeClass('hide').text(pgText);
+          }
+        }
+
+        // 6. Networks — логотипи мереж в кінці тегів
+        var networks = movie.networks;
+        if (networks && Array.isArray(networks) && networks.length) {
+          var $tags = $full.find('.full-descr__tags');
+          if ($tags.length) {
+            var networkLogoUrl = function networkLogoUrl(n) {
+              return n.logo_svg ? 'https://image.tmdb.org/t/p/original/' + n.logo_svg.replace(/^\//, '') : n.logo ? 'https://image.tmdb.org/t/p/original/' + n.logo.replace(/^\//, '') : '';
+            };
+            var networkPush = function networkPush(n) {
+              Lampa.Activity.push({
+                url: 'titles?network=' + n.id,
+                title: n.name,
+                component: 'category_full',
+                source: 'kinobaza',
+                page: 1
+              });
+            };
+            if (networks.length === 1) {
+              // Одна мережа — tag-count з лого всередині
+              var n = networks[0];
+              var src = networkLogoUrl(n);
+              if (src) {
+                var $netTag = $('<div class="tag-count selector kinobaza-single-network" title="' + n.name + '">' + '<span class="kinobaza-network-logo-wrap"><img src="' + src + '" class="kinobaza-network-logo" alt="' + n.name + '"></span>' + '</div>');
+                $netTag.on('hover:enter', function () {
+                  networkPush(n);
+                });
+                $tags.append($netTag);
+              }
+            } else {
+              // Дві і більше — tag-count з лічильником
+              var $netTag = $('<div class="tag-count selector">' + '<div class="tag-count__name">' + (Lampa.Lang.translate('kinobaza_networks') || 'Мережі') + '</div>' + '<div class="tag-count__count">' + networks.length + '</div>' + '</div>');
+              $netTag.on('hover:enter', function () {
+                var selectItems = networks.map(function (n) {
+                  var logoUrl = networkLogoUrl(n);
+                  return {
+                    title: logoUrl ? '<img src="' + logoUrl + '" style="height:1.2em;vertical-align:middle;margin-right:0.5em"> ' + n.name : n.name,
+                    elem: n
+                  };
+                });
+                Lampa.Select.show({
+                  title: Lampa.Lang.translate('kinobaza_networks') || 'Мережі',
+                  items: selectItems,
+                  onSelect: function onSelect(a) {
+                    networkPush(a.elem);
+                  },
+                  onBack: function onBack() {
+                    Lampa.Controller.toggle('full_descr');
+                  }
+                });
+              });
+              $tags.append($netTag);
+            }
           }
         }
       } catch (err) {}
@@ -4044,7 +4137,16 @@
 
   var registered$2 = false;
   var origFull = null;
+  var origPush = null;
   var origPerson = null;
+
+  /**
+   * Дістає slug персони з кеша за ID
+   */
+  function lookupPersonSlug(id) {
+    if (!id || !Lampa.Api.sources || !Lampa.Api.sources.kinobaza || !Lampa.Api.sources.kinobaza.personSlugCache) return '';
+    return Lampa.Api.sources.kinobaza.personSlugCache[id] || '';
+  }
 
   /**
    * Реєструє override для Lampa.Api.full
@@ -4058,20 +4160,71 @@
       if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.kinobaza) return;
       origFull = Lampa.Api.full;
 
-      // Перехоплюємо Api.person — при source=kinobaza відкриваємо kinobaza_person_detail
+      // ========== 1. Перехоплюємо Activity.push ==========
+      // Це найраніша точка: перехоплюємо до створення компонента.
+      // Актор: {component:'actor', id, source:'kinobaza'} → kinobaza_person_detail
+      if (Lampa.Activity && Lampa.Activity.push) {
+        origPush = Lampa.Activity.push;
+        Lampa.Activity.push = function (object) {
+          if (object && object.component === 'actor' && object.source === 'kinobaza') {
+            var slug = object.slug || lookupPersonSlug(object.id);
+            if (slug) {
+              object.component = 'kinobaza_person_detail';
+              object.slug = slug;
+              object.title = object.title || slug;
+            }
+          }
+          origPush(object);
+        };
+      }
+
+      // ========== 2. Перехоплюємо Router.call для 'actor' ==========
+      // Дублюючий захист, якщо хтось використовує Router напряму
+      if (Lampa.Router && Lampa.Router.routes) {
+        // Шукаємо існуючий route 'actor'
+        var actorRouteIdx = -1;
+        for (var ri = 0; ri < Lampa.Router.routes.length; ri++) {
+          if (Lampa.Router.routes[ri].name === 'actor') {
+            actorRouteIdx = ri;
+            break;
+          }
+        }
+        if (actorRouteIdx >= 0) {
+          var origActorCallback = Lampa.Router.routes[actorRouteIdx].callback;
+          Lampa.Router.routes[actorRouteIdx].callback = function (data) {
+            var base = origActorCallback(data);
+            if (data.source === 'kinobaza') {
+              var slug = data.slug || lookupPersonSlug(data.id);
+              if (slug) {
+                base.slug = slug;
+                base.title = data.title || slug;
+                base.id = data.id;
+              }
+            }
+            return base;
+          };
+        }
+      }
+
+      // ========== 3. Перехоплюємо Api.person (safety net) ==========
       origPerson = Lampa.Api.person;
       Lampa.Api.person = function (params, oncomplite, onerror) {
         if (params.source === 'kinobaza') {
-          // Push кастомного компонента поверх actor
-          Lampa.Activity.push({
-            url: '',
-            component: 'kinobaza_person_detail',
-            source: 'kinobaza',
-            slug: params.slug,
-            id: params.id,
-            page: 1
-          });
-          // Все одно викликаємо оригінал щоб actor не завис у loading
+          var slug = params.slug || lookupPersonSlug(params.id);
+          if (slug) {
+            // Якщо дійшли сюди без Activity.push — значить actor вже створено.
+            // push нову активність (не replace — active() ще не в стеку)
+            Lampa.Activity.push({
+              url: '',
+              component: 'kinobaza_person_detail',
+              source: 'kinobaza',
+              slug: slug,
+              id: params.id || 0,
+              page: 1,
+              title: params.name || params.title || slug
+            });
+            return;
+          }
           if (origPerson) origPerson(params, oncomplite, onerror);
           return;
         }
@@ -5319,13 +5472,18 @@
       id: item.id,
       slug: item.slug,
       source: 'kinobaza',
+      gender: item.gender || 2,
+      // ← критично: без gender відкриває full (фільм) в старому line.js та discovery onSelect
+
       title: displayName,
       original_title: displayName,
       // Не ставимо original_name — уникаємо TV badge
       // Не ставимо release_date — Release module видалить card__age
 
       poster: posterUrl,
-      profile_path: isRealTmdb ? item.poster_tmdb : ''
+      profile_path: isRealTmdb ? item.poster_tmdb : '',
+      media_type: 'person',
+      type: 'person'
     };
 
     // Налаштовуємо відкриття картки актора при Enter
@@ -6238,27 +6396,12 @@
   }
 
   /**
-   * Завантажує CSS стилі плагіна
+   * Завантажує CSS стилі плагіна через Lampa.Template
    */
   function loadStyles() {
-    if (!document.getElementById('kinobaza-styles')) {
-      var link = document.createElement('link');
-      link.id = 'kinobaza-styles';
-      link.rel = 'stylesheet';
-      link.href = 'plugins/kinobaza/css/kinobaza.css';
-      document.head.appendChild(link);
-    }
-  }
-
-  /**
-   * Додає inline-стилі для рейтингів (якщо CSS ще не завантажився)
-   */
-  function loadInlineStyles() {
-    if (!document.getElementById('kinobaza-rates-style')) {
-      var style = document.createElement('style');
-      style.id = 'kinobaza-rates-style';
-      style.textContent = '.full-start__rate.rate--metacritic>div:first-child{background:#6c3!important}.full-start__rate.rate--rotten>div:first-child{background:#c33!important}';
-      document.head.appendChild(style);
+    if (!$('#kinobaza_style').length) {
+      Lampa.Template.add('kinobaza_css', "\n            <style id=\"kinobaza_style\">\n            @charset 'UTF-8';.full-start__rate.rate--metacritic>div:first-child{background:#6c3 !important;color:#000;-webkit-border-radius:.3em;border-radius:.3em;font-weight:700;padding:0 .4em}.full-start__rate.rate--rotten>div:first-child{background:#c33 !important;color:#000;-webkit-border-radius:.3em;border-radius:.3em;font-weight:700;padding:0 .4em}.full-descr__info.full--releases{-webkit-flex-basis:100%;-ms-flex-preferred-size:100%;flex-basis:100%;margin-top:1em}.full-descr__info.full--releases .full-descr__info-name{font-size:1.1em;margin-bottom:.5em}.full-descr__info.full--releases .full-descr__info-body{font-size:1em;line-height:1.6}.full-persons--dub .card{border:solid .2em rgba(102,204,102,0.3)}.full-persons--dub .card.focus{border-color:rgba(102,204,102,0.8)}.full-discuss--reviews .discuss-item{border-left:solid .2em #fc3}.full-discuss--comments .discuss-item{border-left:solid .2em #6cf}.kb_jobs{position:absolute;top:1.4em;left:2.5em;padding:.35em .55em;background:rgba(0,0,0,0.75);color:#fff;font-size:.75em;-webkit-border-radius:.3em;border-radius:.3em;z-index:1;pointer-events:none;white-space:nowrap}.kb_jobs--first{left:-0.8em}.kinobaza-single-network{padding:.2em .3em}.kinobaza-single-network.focus{background-color:rgba(0,0,0,0.45) !important;-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.65);box-shadow:0 0 0 .2em rgba(255,255,255,0.65)}.kinobaza-network-logo-wrap{display:inline-block;width:60px;height:1.2em;overflow:hidden;vertical-align:middle}.kinobaza-network-logo{width:100%;height:100%;-o-object-fit:contain;object-fit:contain;vertical-align:top}\n            </style>\n        ");
+      $('body').append(Lampa.Template.get('kinobaza_css', {}, true));
     }
   }
 
@@ -6367,7 +6510,6 @@
 
     // 11. Завантаження стилів
     loadStyles();
-    loadInlineStyles();
   }
 
   // ============== GUARD ==============
