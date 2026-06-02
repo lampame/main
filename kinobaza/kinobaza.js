@@ -155,6 +155,18 @@
       },
       // ===== ІНТЕРФЕЙС (специфічний для КіноБази) =====
 
+      kinobaza_persons: {
+        uk: 'Особи',
+        ru: 'Личности',
+        en: 'People',
+        be: 'Асобы'
+      },
+      kinobaza_myperson: {
+        uk: 'Особи',
+        ru: 'Личности',
+        en: 'People',
+        be: 'Асобы'
+      },
       kinobaza_search: {
         uk: 'Результати пошуку',
         ru: 'Результаты поиска',
@@ -170,6 +182,44 @@
         uk: 'Рецензії',
         ru: 'Рецензии',
         en: 'Reviews'
+      },
+      // ===== ПРОФЕСІЇ ПЕРСОН =====
+
+      kinobaza_job_unknown: {
+        uk: 'Невідомо',
+        ru: 'Неизвестно',
+        en: 'Unknown',
+        be: 'Невядома'
+      },
+      kinobaza_job_actor: {
+        uk: 'Актор',
+        ru: 'Актер',
+        en: 'Actor',
+        be: 'Акцёр'
+      },
+      kinobaza_job_director: {
+        uk: 'Режисер',
+        ru: 'Режиссер',
+        en: 'Director',
+        be: 'Рэжысёр'
+      },
+      kinobaza_job_writer: {
+        uk: 'Сценарист',
+        ru: 'Сценарист',
+        en: 'Screenwriter',
+        be: 'Сцэнарыст'
+      },
+      kinobaza_job_creator: {
+        uk: 'Творець',
+        ru: 'Создатель',
+        en: 'Creator',
+        be: 'Стваральнік'
+      },
+      kinobaza_job_composer: {
+        uk: 'Композитор',
+        ru: 'Композитор',
+        en: 'Composer',
+        be: 'Кампазітар'
       }
     });
   }
@@ -188,8 +238,8 @@
    * CDN:     https://i.kinobaza.com.ua/{size}/{path}
    * Auth:    Bearer token (опціональний)
    */
-  var BASE_URL$3 = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
-  var network$4 = new Lampa.Reguest();
+  var BASE_URL$4 = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
+  var network$5 = new Lampa.Reguest();
 
   /**
    * CDN URL для зображень
@@ -209,7 +259,7 @@
    * @param {string} params
    * @returns {string}
    */
-  function addParam(u, params) {
+  function addParam$1(u, params) {
     return u + (/\?/.test(u) ? '&' : '?') + params;
   }
 
@@ -219,17 +269,17 @@
    * @param {object} params
    * @returns {string}
    */
-  function buildUrl$9(path) {
+  function buildUrl$a(path) {
     var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var u = BASE_URL$3 + path;
+    var u = BASE_URL$4 + path;
     var _loop = function _loop(key) {
       if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
         if (Array.isArray(params[key])) {
           params[key].forEach(function (v) {
-            u = addParam(u, key + '[]=' + encodeURIComponent(v));
+            u = addParam$1(u, key + '[]=' + encodeURIComponent(v));
           });
         } else {
-          u = addParam(u, key + '=' + encodeURIComponent(params[key]));
+          u = addParam$1(u, key + '=' + encodeURIComponent(params[key]));
         }
       }
     };
@@ -243,7 +293,7 @@
    * Отримує заголовки для запиту
    * @returns {object}
    */
-  function getHeaders$1() {
+  function getHeaders$2() {
     var headers = {};
     var token = storage.getToken();
     if (token) {
@@ -259,17 +309,17 @@
    * @param {function} resolve
    * @param {function} reject
    */
-  function get(path) {
+  function get$1(path) {
     var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var resolve = arguments.length > 2 ? arguments[2] : undefined;
     var reject = arguments.length > 3 ? arguments[3] : undefined;
-    var u = buildUrl$9(path, params);
-    network$4.silent(u, function (json) {
+    var u = buildUrl$a(path, params);
+    network$5.silent(u, function (json) {
       resolve(json);
     }, function (a, c) {
       if (reject) reject(a, c);
     }, false, {
-      headers: getHeaders$1()
+      headers: getHeaders$2()
     });
   }
 
@@ -281,7 +331,7 @@
   function getTitles() {
     var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     return new Promise(function (resolve, reject) {
-      get('/titles', params, resolve, reject);
+      get$1('/titles', params, resolve, reject);
     });
   }
 
@@ -292,7 +342,7 @@
    */
   function getTitle(slug) {
     return new Promise(function (resolve, reject) {
-      get('/titles/' + encodeURIComponent(slug), {
+      get$1('/titles/' + encodeURIComponent(slug), {
         include_posters: 1,
         include_networks: 1,
         include_user_links: 1
@@ -308,7 +358,7 @@
    */
   function getEpisodes(titleSlug, seasonNumber) {
     return new Promise(function (resolve, reject) {
-      get('/titles/' + encodeURIComponent(titleSlug) + '/episodes', {
+      get$1('/titles/' + encodeURIComponent(titleSlug) + '/episodes', {
         season: seasonNumber
       }, resolve, reject);
     });
@@ -319,9 +369,11 @@
    * @param {string} slug
    * @returns {Promise<k6.p>}
    */
-  function getPerson(slug) {
+  function getPerson$1(slug) {
     return new Promise(function (resolve, reject) {
-      get('/persons/' + encodeURIComponent(slug), {}, resolve, reject);
+      get$1('/persons/' + encodeURIComponent(slug), {
+        include_user_links: 1
+      }, resolve, reject);
     });
   }
 
@@ -332,8 +384,23 @@
    */
   function searchTitles(query) {
     return new Promise(function (resolve, reject) {
-      get('/titles', {
+      get$1('/titles', {
         q: query
+      }, resolve, reject);
+    });
+  }
+
+  /**
+   * GET /titles?person_id={id}&page={page} — тайтли персони
+   * @param {number} personId
+   * @param {number} page
+   * @returns {Promise<{total: number, data: array}>}
+   */
+  function getPersonTitles$1(personId, page) {
+    return new Promise(function (resolve, reject) {
+      get$1('/titles', {
+        person_id: personId,
+        page: page || 1
       }, resolve, reject);
     });
   }
@@ -346,7 +413,7 @@
   function getLists() {
     var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     return new Promise(function (resolve, reject) {
-      get('/lists', params, resolve, reject);
+      get$1('/lists', params, resolve, reject);
     });
   }
 
@@ -358,7 +425,7 @@
    */
   function getComments(id, type) {
     return new Promise(function (resolve, reject) {
-      get('/comments', {
+      get$1('/comments', {
         id: id,
         type: type
       }, resolve, reject);
@@ -372,7 +439,7 @@
    */
   function getReviews(titleId) {
     return new Promise(function (resolve, reject) {
-      get('/reviews', {
+      get$1('/reviews', {
         title_id: titleId
       }, resolve, reject);
     });
@@ -385,7 +452,7 @@
    */
   function getDubPersons(titleId) {
     return new Promise(function (resolve, reject) {
-      get('/persons', {
+      get$1('/persons', {
         title_id: titleId,
         type: 10
       }, resolve, reject);
@@ -395,22 +462,40 @@
   /**
    * Очистити pending запити
    */
-  function clear$4() {
-    network$4.clear();
+  function clear$5() {
+    network$5.clear();
+  }
+
+  /**
+   * GET /persons?q={query}&page={page} — пошук персон
+   * @param {string} query
+   * @param {number} page
+   * @returns {Promise<{total: number, data: [k6.p]}>}
+   */
+  function searchPersons(query, page) {
+    return new Promise(function (resolve, reject) {
+      var params = {
+        q: query
+      };
+      if (page && page > 1) params.page = page;
+      get$1('/persons', params, resolve, reject);
+    });
   }
   var api$1 = {
     cdn: cdn,
     getTitles: getTitles,
     getTitle: getTitle,
     getEpisodes: getEpisodes,
-    getPerson: getPerson,
+    getPerson: getPerson$1,
+    getPersonTitles: getPersonTitles$1,
     searchTitles: searchTitles,
+    searchPersons: searchPersons,
     getLists: getLists,
     getComments: getComments,
     getReviews: getReviews,
     getDubPersons: getDubPersons,
-    clear: clear$4,
-    BASE_URL: BASE_URL$3
+    clear: clear$5,
+    BASE_URL: BASE_URL$4
   };
 
   /**
@@ -461,11 +546,18 @@
    */
   function resolveImage$1(tmdbPath, kbzPath) {
     var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'w300';
-    if (tmdbPath) {
+    // TMDB шляхи завжди починаються з /
+    // Якщо poster_tmdb має формат "69fdf197a6076.jpg" — це насправді kinobaza шлях
+    var isRealTmdb = tmdbPath && tmdbPath.charAt(0) === '/';
+    if (isRealTmdb) {
       return Lampa.TMDB.image('t/p/' + size + '/' + tmdbPath.replace(/^\//, ''));
     }
     if (kbzPath) {
       return api$1.cdn(kbzPath, size);
+    }
+    // Фолбек: пробуємо TMDB навіть без /
+    if (tmdbPath) {
+      return Lampa.TMDB.image('t/p/' + size + '/' + tmdbPath.replace(/^\//, ''));
     }
     return BROKEN;
   }
@@ -686,10 +778,17 @@
    * @param {object} data  — k6.p (Person Detail)
    * @returns {object}
    */
-  function mapPerson(data) {
+  function mapPerson$1(data) {
     if (!data) return {};
     var posterUrl = resolveImage$1(data.poster_tmdb, data.poster_kinobaza, 'w300');
     var profileRaw = data.poster_tmdb || data.poster_kinobaza || '';
+
+    // TMDB шлях починається з /, Kinobaza — просто ім'я файлу
+    var isRealTmdb = profileRaw && profileRaw.charAt(0) === '/';
+    // profile_path — тільки TMDB шлях (для TMDB.img()), інакше img fallback
+    var profilePath = isRealTmdb ? profileRaw : '';
+    // img — повний URL для About module як fallback
+    var imgUrl = posterUrl;
     return {
       id: data.id,
       slug: data.slug,
@@ -699,13 +798,15 @@
       original_name: data.name_en || '',
       biography: data.biography || '',
       poster: posterUrl,
-      profile_path: profileRaw,
+      profile_path: profilePath,
+      img: imgUrl,
       birthday: data.birthday || '',
       deathday: data.deathday || '',
       age: data.age || 0,
       height: data.height || 0,
       zodiac: data.zodiac || '',
       birthplace: data.birthplace_uk || data.birthplace_en || '',
+      place_of_birth: data.birthplace_uk || data.birthplace_en || '',
       character: data.character || '',
       extra: data.extra || '',
       myFavorite: data.my_favorite || false,
@@ -899,16 +1000,145 @@
       };
     });
   }
+
+  /**
+   * Маппінг кодів професій у назви (Lampa.Lang ключі)
+   * Код → ключ перекладу
+   */
+  var JOB_TRANSLATION_KEYS = {
+    0: 'kinobaza_job_unknown',
+    1: 'kinobaza_job_actor',
+    2: 'kinobaza_job_director',
+    3: 'kinobaza_job_writer',
+    4: 'kinobaza_job_creator',
+    5: 'kinobaza_job_composer'
+  };
+  var JOB_EMOJI = {
+    0: '❓',
+    1: '🎭',
+    2: '🎬',
+    3: '✍️',
+    4: '🏛️',
+    5: '🎵'
+  };
+
+  /**
+   * Повертає назву професії з jobs масиву (перша знайдена, окрім 0)
+   * @param {number[]} jobs  — масив кодів професій
+   * @returns {string}
+   */
+  function getJobName(jobs) {
+    if (!jobs || !Array.isArray(jobs) || !jobs.length) return '';
+    for (var i = 0; i < jobs.length; i++) {
+      var code = jobs[i];
+      if (code !== 0 && JOB_TRANSLATION_KEYS[code]) {
+        return Lampa.Lang.translate(JOB_TRANSLATION_KEYS[code]) || '';
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Повертає емодзі для першої знайденої професії (окрім 0)
+   * @param {number[]} jobs
+   * @returns {string}
+   */
+  function getJobEmoji(jobs) {
+    if (!jobs || !Array.isArray(jobs) || !jobs.length) return '';
+    for (var i = 0; i < jobs.length; i++) {
+      var code = jobs[i];
+      if (code !== 0 && JOB_EMOJI[code]) {
+        return JOB_EMOJI[code];
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Картка персони для результатів пошуку
+   * 
+   * API /persons не повертає jobs — тільки базові поля:
+   *   {id, slug, name_uk, name_en, poster_kinobaza, poster_tmdb,
+   *    birthday, deathday, gender, age, my_favorite}
+   * 
+   * @param {object} item  — k6.p (Person list item)
+   * @returns {object}     — Lampa card object для пошуку
+   */
+  function mapPersonSearch(item) {
+    if (!item) return null;
+    var personName = item.name_uk || item.name_en || '';
+    var profileUrl = resolveImage$1(item.poster_tmdb, item.poster_kinobaza, 'w300');
+    var isDeceased = !!(item.deathday && item.deathday !== '');
+    var displayName = isDeceased ? '† ' + personName : personName;
+
+    // Card module getPosterPath(): profile_path → TMDB.img() → ламається якщо це не TMDB шлях
+    // TMDB шляхи завжди починаються з /, кінобазівські — просто файл
+    var hasValidTmdb = item.poster_tmdb && item.poster_tmdb.charAt(0) === '/';
+    var card = {
+      id: item.id,
+      slug: item.slug,
+      source: SOURCE,
+      gender: item.gender || 2,
+      // ← потрібно для old line.js: без gender відкриває full (фільм)
+
+      title: displayName,
+      original_title: displayName,
+      // Не ставимо original_name — уникаємо "TV" badge від Icons module
+      // Не ставимо release_date — Release module видалить card__age
+      // (slice(0,4) обрізає все до 4 символів, тому рік/вік марні)
+      release_date: '',
+      // profile_path — тільки valid TMDB (починається з /), інакше Card module
+      // піде через TMDB.img() і отримає біту картинку
+      poster: profileUrl,
+      profile_path: hasValidTmdb ? item.poster_tmdb : ''
+    };
+
+    // Налаштовуємо маршрутизацію: при Enter відкриваємо картку актора
+    // Activity.push зберігає slug (Router.call його втрачає)
+    card.params = {
+      emit: {
+        onEnter: function onEnter() {
+          Lampa.Activity.push({
+            url: '',
+            component: 'kinobaza_person_detail',
+            source: SOURCE,
+            slug: card.slug,
+            id: card.id,
+            page: 1
+          });
+        }
+      }
+    };
+    return card;
+  }
+
+  /**
+   * Маппінг списку персон для пошуку
+   * @param {array} items
+   * @returns {array}
+   */
+  function mapPersonSearchList(items) {
+    if (!items || !Array.isArray(items)) return [];
+    return items.map(function (item) {
+      return mapPersonSearch(item);
+    }).filter(Boolean);
+  }
   var card = {
     mapOne: mapOne,
     mapList: mapList,
     mapFull: mapFull,
-    mapPerson: mapPerson,
+    mapPerson: mapPerson$1,
+    mapPersonSearch: mapPersonSearch,
+    mapPersonSearchList: mapPersonSearchList,
     mapGenres: mapGenres,
     mapPersons: mapPersons,
     mapCrew: mapCrew,
     mapEpisodes: mapEpisodes,
-    SOURCE: SOURCE
+    SOURCE: SOURCE,
+    getJobName: getJobName,
+    getJobEmoji: getJobEmoji,
+    JOB_TRANSLATION_KEYS: JOB_TRANSLATION_KEYS,
+    JOB_EMOJI: JOB_EMOJI
   };
 
   /**
@@ -938,12 +1168,12 @@
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$8(withUkrAudio, platform, orderBy),
+      url: buildUrl$9(withUkrAudio, platform, orderBy),
       type: type,
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$8(withUkrAudio, platform, orderBy),
+          url: buildUrl$9(withUkrAudio, platform, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -960,7 +1190,7 @@
    * @param {string} orderBy
    * @returns {string}
    */
-  function buildUrl$8(withUkrAudio, platform, orderBy) {
+  function buildUrl$9(withUkrAudio, platform, orderBy) {
     var params = ['list_type=5'];
     params.push('order_by=' + orderBy);
     if (withUkrAudio) {
@@ -998,12 +1228,12 @@
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$7(type, withUkrAudio, platform, orderBy),
+      url: buildUrl$8(type, withUkrAudio, platform, orderBy),
       type: type === 'all' ? 'movie' : type,
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$7(type, withUkrAudio, platform, orderBy),
+          url: buildUrl$8(type, withUkrAudio, platform, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -1021,7 +1251,7 @@
    * @param {string} orderBy
    * @returns {string}
    */
-  function buildUrl$7(type, withUkrAudio, platform, orderBy) {
+  function buildUrl$8(type, withUkrAudio, platform, orderBy) {
     var params = ['list_type=31'];
     params.push('order_by=' + orderBy);
     if (type === 'movie') {
@@ -1066,12 +1296,12 @@
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$6(type, withUkrAudio, platform, listType, orderBy),
+      url: buildUrl$7(type, withUkrAudio, platform, listType, orderBy),
       type: type === 'tv' ? 'tv' : 'movie',
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$6(type, withUkrAudio, platform, listType, orderBy),
+          url: buildUrl$7(type, withUkrAudio, platform, listType, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -1090,7 +1320,7 @@
    * @param {string} orderBy
    * @returns {string}
    */
-  function buildUrl$6(type, withUkrAudio, platform, listType, orderBy) {
+  function buildUrl$7(type, withUkrAudio, platform, listType, orderBy) {
     var params = ['genres[]=32', 'countries[]=39', 'countries[]=214', 'countries[]=97', 'countries[]=96', 'countries[]=92'];
     params.push('order_by=' + orderBy);
     if (listType) {
@@ -1180,12 +1410,12 @@
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$5(type, withUkrAudio, platform, listType, orderBy),
+      url: buildUrl$6(type, withUkrAudio, platform, listType, orderBy),
       type: type === 'tv' ? 'tv' : 'movie',
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$5(type, withUkrAudio, platform, listType, orderBy),
+          url: buildUrl$6(type, withUkrAudio, platform, listType, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -1204,7 +1434,7 @@
    * @param {string} orderBy
    * @returns {string}
    */
-  function buildUrl$5(type, withUkrAudio, platform, listType, orderBy) {
+  function buildUrl$6(type, withUkrAudio, platform, listType, orderBy) {
     var params = ['genres[]=12', 'exclude_genres[]=32'];
     params.push('order_by=' + orderBy);
     if (listType) {
@@ -1291,12 +1521,12 @@
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$4(type, withUkrAudio, popular7d, orderBy),
+      url: buildUrl$5(type, withUkrAudio, popular7d, orderBy),
       type: type === 'tv' ? 'tv' : 'movie',
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$4(type, withUkrAudio, popular7d, orderBy),
+          url: buildUrl$5(type, withUkrAudio, popular7d, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -1314,7 +1544,7 @@
    * @param {string} orderBy
    * @returns {string}
    */
-  function buildUrl$4(type, withUkrAudio, popular7d, orderBy) {
+  function buildUrl$5(type, withUkrAudio, popular7d, orderBy) {
     var params = [PLATFORM_KEY$2 + '_audio=1'];
     params.push('order_by=' + orderBy);
     if (popular7d) {
@@ -1358,12 +1588,12 @@
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$3(type, withUkrAudio, popular7d, orderBy),
+      url: buildUrl$4(type, withUkrAudio, popular7d, orderBy),
       type: type === 'tv' ? 'tv' : 'movie',
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$3(type, withUkrAudio, popular7d, orderBy),
+          url: buildUrl$4(type, withUkrAudio, popular7d, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -1381,7 +1611,7 @@
    * @param {string} orderBy
    * @returns {string}
    */
-  function buildUrl$3(type, withUkrAudio, popular7d, orderBy) {
+  function buildUrl$4(type, withUkrAudio, popular7d, orderBy) {
     var params = [PLATFORM_KEY$1 + '_audio=1'];
     params.push('order_by=' + orderBy);
     if (popular7d) {
@@ -1425,12 +1655,12 @@
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$2(type, withUkrAudio, popular7d, orderBy),
+      url: buildUrl$3(type, withUkrAudio, popular7d, orderBy),
       type: type === 'tv' ? 'tv' : 'movie',
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$2(type, withUkrAudio, popular7d, orderBy),
+          url: buildUrl$3(type, withUkrAudio, popular7d, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -1448,7 +1678,7 @@
    * @param {string} orderBy
    * @returns {string}
    */
-  function buildUrl$2(type, withUkrAudio, popular7d, orderBy) {
+  function buildUrl$3(type, withUkrAudio, popular7d, orderBy) {
     var params = [PLATFORM_KEY + '_audio=1'];
     params.push('order_by=' + orderBy);
     if (popular7d) {
@@ -1692,7 +1922,7 @@
    * Інтегрується в Lampa.Api.sources.kinobaza
    * Патерни з tmdb.js / cub.js
    */
-  var network$3 = new Lampa.Reguest();
+  var network$4 = new Lampa.Reguest();
   var source = 'kinobaza';
 
   // Кеш маппінгу Kinobaza ID → TMDB ID (оптимізація: ID стабільні)
@@ -1765,7 +1995,7 @@
    * @param {function} oncomplite
    * @param {function} onerror
    */
-  function main(params, oncomplite, onerror) {
+  function main$1(params, oncomplite, onerror) {
     var parts_limit = 7;
     var parts_data = [
     // 1. Зараз дивляться (list_type=1)
@@ -2511,22 +2741,90 @@
    * @param {object} params  — {query: string}
    * @param {function} oncomplite
    */
-  function search(params, oncomplite) {
-    api$1.searchTitles(params.query).then(function (json) {
-      var items = [];
-      if (json.data && json.data.length) {
-        var mapped = card.mapList(json.data);
-        json.results = mapped;
-        json = Lampa.Utils.addSource(json, 'kinobaza');
-        items.push({
-          title: Lampa.Lang.translate('kinobaza_search'),
-          type: 'movie',
-          results: mapped
-        });
+  function search$1(params, oncomplite) {
+    // Lampa передає query вже URL-закодованим (encodeURIComponent).
+    // Потрібно декодувати, щоб api.buildUrl не зробили подвійне кодування.
+    var rawQuery = params.query ? decodeURIComponent(params.query) : '';
+    var loaded = 0;
+    var total = 2;
+
+    // Зберігаємо секції окремо, будуємо items в чіткому порядку
+    var movieSection = null;
+    var seriesSection = null;
+    var personSection = null;
+    function tryComplete() {
+      loaded++;
+      if (loaded >= total) {
+        var items = [];
+        // Фільми → Серіали → Особи
+        if (movieSection) items.push(movieSection);
+        if (seriesSection) items.push(seriesSection);
+        if (personSection) items.push(personSection);
+        oncomplite(items);
       }
-      oncomplite(items);
+    }
+
+    // ===== 1. Titles (фільми + серіали) =====
+    api$1.searchTitles(rawQuery).then(function (json) {
+      var movies = [];
+      var series = [];
+      if (json.data && json.data.length) {
+        for (var i = 0; i < json.data.length; i++) {
+          var item = json.data[i];
+          if (item.number_of_episodes > 0) {
+            series.push(item);
+          } else {
+            movies.push(item);
+          }
+        }
+      }
+      if (movies.length) {
+        var movieResults = card.mapList(movies);
+        var movieWrapper = {
+          results: movieResults
+        };
+        Lampa.Utils.addSource(movieWrapper, 'kinobaza');
+        movieSection = {
+          title: Lampa.Lang.translate('menu_movies'),
+          type: 'movie',
+          results: movieResults
+        };
+      }
+      if (series.length) {
+        var seriesResults = card.mapList(series);
+        var seriesWrapper = {
+          results: seriesResults
+        };
+        Lampa.Utils.addSource(seriesWrapper, 'kinobaza');
+        seriesSection = {
+          title: Lampa.Lang.translate('menu_tv'),
+          type: 'tv',
+          results: seriesResults
+        };
+      }
+      tryComplete();
     })["catch"](function () {
-      oncomplite([]);
+      tryComplete();
+    });
+
+    // ===== 2. Persons =====
+    api$1.searchPersons(rawQuery).then(function (json) {
+      var personData = json.data || [];
+      if (personData.length) {
+        var personResults = card.mapPersonSearchList(personData);
+        var personWrapper = {
+          results: personResults
+        };
+        Lampa.Utils.addSource(personWrapper, 'kinobaza');
+        personSection = {
+          title: Lampa.Lang.translate('kinobaza_persons'),
+          type: 'person',
+          results: personResults
+        };
+      }
+      tryComplete();
+    })["catch"](function () {
+      tryComplete();
     });
   }
 
@@ -2728,9 +3026,17 @@
    * @param {function} onerror
    */
   function person(params, oncomplite, onerror) {
+    // Використовується тільки як fallback.
+    // Основний потік: картка → kinobaza_person_detail компонент (завантажує все сам).
+    // Повертаємо персону без кредитів — рядки не створюються.
     if (params.slug) {
       api$1.getPerson(params.slug).then(function (data) {
-        oncomplite(card.mapPerson(data));
+        oncomplite({
+          person: card.mapPerson(data),
+          credits: {
+            knownFor: []
+          }
+        });
       })["catch"](onerror);
     } else {
       // Делегуємо tmdb якщо немає slug
@@ -2765,6 +3071,7 @@
 
   /**
    * Парсинг URL списку в query параметри
+   * Підтримує array params (genres[]=1&genres[]=2 → genres: ['1', '2'])
    */
   function parseListUrl(url) {
     var params = {};
@@ -2775,7 +3082,17 @@
       queryString.split('&').forEach(function (pair) {
         var kv = pair.split('=');
         if (kv.length === 2) {
-          params[kv[0]] = decodeURIComponent(kv[1]);
+          var key = decodeURIComponent(kv[0]);
+          var value = decodeURIComponent(kv[1]);
+
+          // Handle array params (genres[]=1&genres[]=2)
+          if (key.indexOf('[]') > 0) {
+            key = key.replace('[]', '');
+            if (!params[key]) params[key] = [];
+            params[key].push(value);
+          } else {
+            params[key] = value;
+          }
         }
       });
     }
@@ -2789,7 +3106,7 @@
    * @param {object} params
    * @param {function} oncomplite
    */
-  function menu(params, oncomplite) {
+  function menu$1(params, oncomplite) {
     var genres = [{
       title: Lampa.Lang.translate('filter_genre_ac') || 'Бойовик',
       id: '1'
@@ -2907,36 +3224,116 @@
     return {
       title: Lampa.Lang.translate('kinobaza_title') || 'КіноБаза',
       search: function search(params, oncomplite) {
-        api$1.searchTitles(params.query).then(function (data) {
-          var mapped = card.mapList(data.data || []);
-          var wrapper = {
-            results: mapped
-          };
-          Lampa.Utils.addSource(wrapper, 'kinobaza');
-          oncomplite([{
-            title: Lampa.Lang.translate('kinobaza_search') || 'Результати пошуку',
-            type: 'movie',
-            results: mapped
-          }]);
+        // Lampa передає query вже URL-закодованим — декодуємо перед відправкою
+        var rawQuery = params.query ? decodeURIComponent(params.query) : '';
+        var loaded = 0;
+        var total = 2;
+        var movieSection = null;
+        var seriesSection = null;
+        var personSection = null;
+        function tryComplete() {
+          loaded++;
+          if (loaded >= total) {
+            var items = [];
+            if (movieSection) items.push(movieSection);
+            if (seriesSection) items.push(seriesSection);
+            if (personSection) items.push(personSection);
+            oncomplite(items);
+          }
+        }
+
+        // ===== 1. Titles =====
+        api$1.searchTitles(rawQuery).then(function (data) {
+          var raw = data.data || [];
+          if (raw.length) {
+            var movies = [];
+            var series = [];
+            for (var i = 0; i < raw.length; i++) {
+              if (raw[i].number_of_episodes > 0) {
+                series.push(raw[i]);
+              } else {
+                movies.push(raw[i]);
+              }
+            }
+            if (movies.length) {
+              var movieResults = card.mapList(movies);
+              var movieWrapper = {
+                results: movieResults
+              };
+              Lampa.Utils.addSource(movieWrapper, 'kinobaza');
+              movieSection = {
+                title: Lampa.Lang.translate('menu_movies'),
+                type: 'movie',
+                results: movieResults
+              };
+            }
+            if (series.length) {
+              var seriesResults = card.mapList(series);
+              var seriesWrapper = {
+                results: seriesResults
+              };
+              Lampa.Utils.addSource(seriesWrapper, 'kinobaza');
+              seriesSection = {
+                title: Lampa.Lang.translate('menu_tv'),
+                type: 'tv',
+                results: seriesResults
+              };
+            }
+          }
+          tryComplete();
         })["catch"](function () {
-          oncomplite([]);
+          tryComplete();
+        });
+
+        // ===== 2. Persons =====
+        api$1.searchPersons(rawQuery).then(function (data) {
+          var personData = data.data || [];
+          if (personData.length) {
+            var personResults = card.mapPersonSearchList(personData);
+            var personWrapper = {
+              results: personResults
+            };
+            Lampa.Utils.addSource(personWrapper, 'kinobaza');
+            personSection = {
+              title: Lampa.Lang.translate('kinobaza_persons'),
+              type: 'person',
+              results: personResults
+            };
+          }
+          tryComplete();
+        })["catch"](function () {
+          tryComplete();
         });
       },
       params: {
         save: true
       },
       onSelect: function onSelect(params, close) {
-        close();
-        Lampa.Activity.push({
-          url: '',
-          component: 'full',
-          slug: params.element.slug,
-          id: params.element.id,
-          method: params.element.original_name ? 'tv' : 'movie',
-          source: source,
-          card: params.element,
-          page: 1
-        });
+        var card = params.element || {};
+        if (close) close();
+        if (card.gender !== undefined || card.slug && card._job_name) {
+          // Картка персони → kinobaza_person_detail
+          Lampa.Activity.push({
+            url: '',
+            component: 'kinobaza_person_detail',
+            source: 'kinobaza',
+            slug: card.slug,
+            id: card.id,
+            page: 1
+          });
+        } else {
+          // Картка фільму/серіалу → full
+          Lampa.Activity.push({
+            url: '',
+            component: 'full',
+            slug: card.slug,
+            id: card.id,
+            method: card.original_name || card.name ? 'tv' : 'movie',
+            source: source,
+            card: card,
+            page: 1
+          });
+        }
       },
       onMore: function onMore(params, close) {
         close();
@@ -2950,16 +3347,16 @@
       },
       onCancel: function onCancel() {
         api$1.clear();
-        network$3.clear();
+        network$4.clear();
       }
     };
   }
 
   // ============== CLEAR ==============
 
-  function clear$3() {
+  function clear$4() {
     api$1.clear();
-    network$3.clear();
+    network$4.clear();
   }
 
   /**
@@ -2975,17 +3372,17 @@
     });
   }
   var source$1 = {
-    main: main,
+    main: main$1,
     category: category,
     full: full,
-    search: search,
-    menu: menu,
+    search: search$1,
+    menu: menu$1,
     menuCategory: menuCategory,
     list: list,
     person: person,
     seasons: seasons,
     discovery: discovery,
-    clear: clear$3,
+    clear: clear$4,
     enrichCard: enrichCard,
     initBookmarksListener: initBookmarksListener,
     // Sub-sources для anime/cartoons (доступні як Lampa.Api.sources.kinobaza.anime)
@@ -3110,7 +3507,7 @@
       try {
         var loadReviewsAndComments = function loadReviewsAndComments() {
           // 2. Рецензії
-          api$1.getReviews(movie.id).then(function (reviewsData) {
+          api$1.getReviews(movie.kinobaza_id || movie.id).then(function (reviewsData) {
             if (!reviewsData || !reviewsData.data || !reviewsData.data.length) {
               loadComments();
               return;
@@ -3144,7 +3541,7 @@
         var loadComments = function loadComments() {
           // 3. Коментарі
           if (movie.comments_count > 0) {
-            api$1.getComments(movie.id, 7).then(function (commentsData) {
+            api$1.getComments(movie.kinobaza_id || movie.id, 7).then(function (commentsData) {
               if (!commentsData || !commentsData.data || !commentsData.data.length) return;
               var commentResults = commentsData.data.map(function (c) {
                 var author = c.user && c.user.name || '';
@@ -3193,7 +3590,7 @@
 
         // 1. Дубляж — завжди першим
         if (movie.hasDubInfo) {
-          api$1.getDubPersons(movie.id).then(function (dubData) {
+          api$1.getDubPersons(movie.kinobaza_id || movie.id).then(function (dubData) {
             if (!dubData || !dubData.data || !dubData.data.length) {
               loadReviewsAndComments();
               return;
@@ -3338,15 +3735,15 @@
    *
    * @module listeners/anime-override
    */
-  var registered$3 = false;
+  var registered$5 = false;
 
   /**
    * Реєструє anime override listener
    * Додає kinobaza_anime source та перехоплює menu action для аніме
    */
   function registerAnimeOverride() {
-    if (registered$3) return;
-    registered$3 = true;
+    if (registered$5) return;
+    registered$5 = true;
     try {
       // 1. Додаємо kinobaza_anime до available sources
       if (Lampa.Api && Lampa.Api.sources) {
@@ -3395,15 +3792,15 @@
    *
    * @module listeners/cartoon-override
    */
-  var registered$2 = false;
+  var registered$4 = false;
 
   /**
    * Реєструє cartoon override listener
    * Додає kinobaza_cartoons source та перехоплює menu action для мультфільмів
    */
   function registerCartoonOverride() {
-    if (registered$2) return;
-    registered$2 = true;
+    if (registered$4) return;
+    registered$4 = true;
     try {
       // 1. Додаємо kinobaza_cartoons до available sources
       if (Lampa.Api && Lampa.Api.sources) {
@@ -3459,14 +3856,14 @@
    * @module listeners/content-rows
    */
 
-  var registered$1 = false;
+  var registered$3 = false;
 
   /**
    * Реєструє ContentRows integration
    */
   function registerContentRows() {
-    if (registered$1) return;
-    registered$1 = true;
+    if (registered$3) return;
+    registered$3 = true;
 
     // ============== ANIME ==============
 
@@ -3645,8 +4042,9 @@
    * @module listeners/source-override
    */
 
-  var registered = false;
+  var registered$2 = false;
   var origFull = null;
+  var origPerson = null;
 
   /**
    * Реєструє override для Lampa.Api.full
@@ -3654,11 +4052,31 @@
    * за slug або imdb_id. Якщо не знайдено — fallback на оригінальний source.
    */
   function registerSourceOverride() {
-    if (registered) return;
-    registered = true;
+    if (registered$2) return;
+    registered$2 = true;
     try {
       if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.kinobaza) return;
       origFull = Lampa.Api.full;
+
+      // Перехоплюємо Api.person — при source=kinobaza відкриваємо kinobaza_person_detail
+      origPerson = Lampa.Api.person;
+      Lampa.Api.person = function (params, oncomplite, onerror) {
+        if (params.source === 'kinobaza') {
+          // Push кастомного компонента поверх actor
+          Lampa.Activity.push({
+            url: '',
+            component: 'kinobaza_person_detail',
+            source: 'kinobaza',
+            slug: params.slug,
+            id: params.id,
+            page: 1
+          });
+          // Все одно викликаємо оригінал щоб actor не завис у loading
+          if (origPerson) origPerson(params, oncomplite, onerror);
+          return;
+        }
+        if (origPerson) origPerson(params, oncomplite, onerror);
+      };
       Lampa.Api.full = function (params, oncomplite, onerror) {
         try {
           // Перевіряємо чи активна КіноБаза
@@ -3694,14 +4112,60 @@
   }
 
   /**
+   * MyPerson Override Listener
+   * Перехоплює клік на "Особи" в штатному меню Lampa
+   * та перенаправляє на kinobaza_myperson компонент
+   *
+   * Обходить стандартний myperson компонент, який використовує TMDB/Account API
+   *
+   * @module listeners/myperson-override
+   */
+
+  var registered$1 = false;
+
+  /**
+   * Реєструє myperson override listener
+   */
+  function registerMyPersonOverride() {
+    if (registered$1) return;
+    registered$1 = true;
+
+    // Listener на menu action — перехоплює клік "Особи"
+    if (Lampa.Listener) {
+      Lampa.Listener.follow('menu', function (e) {
+        try {
+          if (e.type !== 'action') return;
+          if (e.action !== 'myperson') return;
+
+          // Перевіряємо чи обрано kinobaza
+          var currentSource = Lampa.Storage && Lampa.Storage.field ? Lampa.Storage.field('source') : '';
+          if (currentSource !== 'kinobaza') return;
+
+          // Запобігаємо стандартній поведінці (TMDB/Account persons)
+          e.abort();
+
+          // Відкриваємо наш компонент списку осіб
+          if (Lampa.Router) {
+            Lampa.Router.call('kinobaza_myperson', {
+              title: Lampa.Lang.translate('kinobaza_myperson') || 'Особи'
+            });
+          }
+        } catch (err) {
+          // мовчки ігноруємо помилки в listener
+        }
+      });
+    }
+  }
+
+  /**
    * Kinobaza Trailers API
    * Endpoint: GET /api/v1/trailers
    * Пагінація: курсор (after)
    * Без автентифікації
    */
 
-  var BASE_URL$2 = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
-  var network$2 = new Lampa.Reguest();
+  var BASE_URL$3 = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
+  var network$3 = new Lampa.Reguest();
 
   /**
    * Будує повний URL з query параметрами
@@ -3709,8 +4173,8 @@
    * @param {object} params
    * @returns {string}
    */
-  function buildUrl$1(path, params) {
-    var u = BASE_URL$2 + path;
+  function buildUrl$2(path, params) {
+    var u = BASE_URL$3 + path;
     var keys = Object.keys(params || {});
     for (var i = 0; i < keys.length; i++) {
       var key = keys[i];
@@ -3736,8 +4200,8 @@
     if (options && options.after) {
       params.after = options.after;
     }
-    var u = buildUrl$1('/trailers', params);
-    network$2.silent(u, function (json) {
+    var u = buildUrl$2('/trailers', params);
+    network$3.silent(u, function (json) {
       if (resolve) resolve(json);
     }, function (a, c) {
       if (reject) reject(a, c);
@@ -3747,13 +4211,13 @@
   /**
    * Очистити pending запити
    */
-  function clear$2() {
-    network$2.clear();
+  function clear$3() {
+    network$3.clear();
   }
   var api = {
     getTrailers: getTrailers,
-    clear: clear$2,
-    BASE_URL: BASE_URL$2
+    clear: clear$3,
+    BASE_URL: BASE_URL$3
   };
 
   /**
@@ -4057,7 +4521,7 @@
    * Паттерн: kinobaza/kinobaza.js (module imports, guard, startPlugin)
    * Паттерн: t_cub.js (trailer card, CSS, play button)
    */
-  function startPlugin$3() {
+  function startPlugin$4() {
     window.plugin_kinobaza_trailers_ready = true;
 
     // ==================== 1. MANIFEST ====================
@@ -4125,7 +4589,7 @@
 
   // ==================== GUARD ====================
 
-  if (!window.plugin_kinobaza_trailers_ready) startPlugin$3();
+  if (!window.plugin_kinobaza_trailers_ready) startPlugin$4();
 
   /**
    * Kinobaza Releases API
@@ -4136,8 +4600,8 @@
    * Відповідь: { total: number, data: [k6.d0] }
    */
 
-  var BASE_URL$1 = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
-  var network$1 = new Lampa.Reguest();
+  var BASE_URL$2 = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
+  var network$2 = new Lampa.Reguest();
 
   /**
    * Будує URL з query параметрами
@@ -4145,9 +4609,9 @@
    * @param {object} params
    * @returns {string}
    */
-  function buildUrl(path) {
+  function buildUrl$1(path) {
     var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var u = BASE_URL$1 + path;
+    var u = BASE_URL$2 + path;
     var first = true;
     for (var key in params) {
       if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
@@ -4187,8 +4651,8 @@
       megogo_subtitles: 1,
       page: page
     };
-    var url = buildUrl('/titles', params);
-    network$1.silent(url, function (json) {
+    var url = buildUrl$1('/titles', params);
+    network$2.silent(url, function (json) {
       resolve(json);
     }, function (a, c) {
       if (reject) reject(a, c);
@@ -4198,12 +4662,12 @@
   /**
    * Очистити мережеві запити
    */
-  function clear$1() {
-    network$1.clear();
+  function clear$2() {
+    network$2.clear();
   }
   var releasesApi = {
     getReleases: getReleases,
-    clear: clear$1
+    clear: clear$2
   };
 
   /**
@@ -4241,7 +4705,7 @@
       }
     });
   }
-  function component$2(object) {
+  function component$4(object) {
     var comp = Lampa.Maker.make('Category', object);
     comp.use({
       onCreate: function onCreate() {
@@ -4294,7 +4758,7 @@
    * - card.mapList() для маппінгу k6.d0 → Lampa cards
    * - fmtDate() для форматування released_en → DD.MM.YYYY
    */
-  function startPlugin$2() {
+  function startPlugin$3() {
     window.plugin_kinobaza_releases_ready = true;
 
     // ============== 1. MANIFEST ==============
@@ -4330,7 +4794,7 @@
 
     // ============== 5. COMPONENT REGISTRATION ==============
 
-    Lampa.Component.add('kinobaza_releases', component$2);
+    Lampa.Component.add('kinobaza_releases', component$4);
 
     // ============== 6. MENU BUTTON ==============
 
@@ -4356,7 +4820,7 @@
   // ============== GUARD ==============
 
   if (!window.plugin_kinobaza_releases_ready) {
-    startPlugin$2();
+    startPlugin$3();
   }
 
   /**
@@ -4365,13 +4829,13 @@
    *   GET /lists?order_by=date_added_desc&type=1&page={page}
    *   GET /titles?list_type=13&list_id={id}&page={page}
    */
-  var BASE_URL = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
-  var network = new Lampa.Reguest();
+  var BASE_URL$1 = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
+  var network$1 = new Lampa.Reguest();
 
   /**
    * Заголовки з Bearer токеном (опціонально)
    */
-  function getHeaders() {
+  function getHeaders$1() {
     var token = storage.getToken();
     if (token) {
       return {
@@ -4391,8 +4855,8 @@
    * @param {function} reject
    */
   function getCollections(page, resolve, reject) {
-    var url = BASE_URL + '/lists?order_by=date_added_desc&type=1&page=' + (page || 1);
-    network.silent(url, function (json) {
+    var url = BASE_URL$1 + '/lists?order_by=date_added_desc&type=1&page=' + (page || 1);
+    network$1.silent(url, function (json) {
       if (json && json.data) {
         json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         resolve(json);
@@ -4401,7 +4865,7 @@
       }
     }, function (a, c) {
       if (reject) reject(a, c);
-    }, false, getHeaders());
+    }, false, getHeaders$1());
   }
 
   /**
@@ -4417,8 +4881,8 @@
       if (reject) reject();
       return;
     }
-    var url = BASE_URL + '/titles?list_type=13&list_id=' + listId + '&page=' + (page || 1);
-    network.silent(url, function (json) {
+    var url = BASE_URL$1 + '/titles?list_type=13&list_id=' + listId + '&page=' + (page || 1);
+    network$1.silent(url, function (json) {
       if (json && json.data) {
         json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         resolve(json);
@@ -4427,19 +4891,19 @@
       }
     }, function (a, c) {
       if (reject) reject(a, c);
-    }, false, getHeaders());
+    }, false, getHeaders$1());
   }
 
   /**
    * Очистити всі pending запити
    */
-  function clear() {
-    network.clear();
+  function clear$1() {
+    network$1.clear();
   }
-  var Api = {
+  var Api$1 = {
     getCollections: getCollections,
     getCollectionItems: getCollectionItems,
-    clear: clear
+    clear: clear$1
   };
 
   /**
@@ -4550,11 +5014,11 @@
    * Різниця: портретні картки (Collection card class через createInstance)
    * API: GET /lists?order_by=date_added_desc&type=1&page={page}
    */
-  function component$1(object) {
+  function component$3(object) {
     var comp = Lampa.Maker.make('Category', object);
     comp.use({
       onCreate: function onCreate() {
-        Api.getCollections(object.page || 1, function (data) {
+        Api$1.getCollections(object.page || 1, function (data) {
           data.results = (data.data || []).map(function (elem) {
             elem.params = elem.params || {};
             elem.params.createInstance = function (itemData) {
@@ -4567,7 +5031,7 @@
         }.bind(this), this.empty.bind(this));
       },
       onNext: function onNext(resolve, reject) {
-        Api.getCollections(this.object.page, function (data) {
+        Api$1.getCollections(this.object.page, function (data) {
           data.results = (data.data || []).map(function (elem) {
             elem.params = elem.params || {};
             elem.params.createInstance = function (itemData) {
@@ -4588,7 +5052,7 @@
    * API: GET /titles?list_type=13&list_id={id}&page={page}
    * Використовує card.mapList() для маппінгу в стандартні Lampa картки
    */
-  function component(object) {
+  function component$2(object) {
     var comp = Lampa.Maker.make('Category', object);
     comp.use({
       onCreate: function onCreate() {
@@ -4596,7 +5060,7 @@
           this.empty();
           return;
         }
-        Api.getCollectionItems(object.url, object.page || 1, function (data) {
+        Api$1.getCollectionItems(object.url, object.page || 1, function (data) {
           if (data && data.data) {
             data.results = card.mapList(data.data);
           }
@@ -4608,7 +5072,7 @@
           reject();
           return;
         }
-        Api.getCollectionItems(object.url, this.object.page, function (data) {
+        Api$1.getCollectionItems(object.url, this.object.page, function (data) {
           if (data && data.data) {
             data.results = card.mapList(data.data);
           }
@@ -4638,7 +5102,7 @@
    * Реєструє компоненти колекцій, шаблони, CSS, переклади, кнопку меню
    * Паттерн: Lampa.Native.Collections/collections.js
    */
-  function startPlugin$1() {
+  function startPlugin$2() {
     window.plugin_kinobaza_collections_ready = true;
 
     // ==================== MANIFEST ====================
@@ -4653,8 +5117,8 @@
 
     // ==================== COMPONENTS ====================
 
-    Lampa.Component.add('kinobaza_collections', component$1);
-    Lampa.Component.add('kinobaza_collection_view', component);
+    Lampa.Component.add('kinobaza_collections', component$3);
+    Lampa.Component.add('kinobaza_collection_view', component$2);
 
     // ==================== TEMPLATES ====================
 
@@ -4710,8 +5174,1026 @@
   // ==================== GUARD ====================
 
   if (!window.plugin_kinobaza_collections_ready) {
+    startPlugin$2();
+  }
+
+  /**
+   * Kinobaza MyPerson API
+   * GET /persons — список осіб з пагінацією
+   */
+  var BASE_URL = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
+  var network = new Lampa.Reguest();
+
+  /**
+   * Заголовки з Bearer токеном (опціонально)
+   */
+  function getHeaders() {
+    var token = storage.getToken();
+    if (token) {
+      return {
+        headers: {
+          Authorization: 'Bearer ' + token
+        }
+      };
+    }
+    return {};
+  }
+
+  /**
+   * Додає параметри до URL
+   */
+  function addParam(u, params) {
+    return u + (/\?/.test(u) ? '&' : '?') + params;
+  }
+
+  /**
+   * Будує повний URL з query параметрами
+   */
+  function buildUrl(path, params) {
+    var u = BASE_URL + path;
+    for (var key in params) {
+      if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+        u = addParam(u, key + '=' + encodeURIComponent(params[key]));
+      }
+    }
+    return u;
+  }
+
+  /**
+   * Виконує GET-запит
+   */
+  function get(path, params, resolve, reject) {
+    var u = buildUrl(path, params);
+    network.silent(u, function (json) {
+      if (json && json.data) {
+        json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
+        resolve(json);
+      } else {
+        if (reject) reject();
+      }
+    }, function (a, c) {
+      if (reject) reject(a, c);
+    }, false, getHeaders());
+  }
+
+  /**
+   * GET /persons — список осіб з пагінацією
+   * @param {number} page — номер сторінки
+   * @param {function} resolve
+   * @param {function} reject
+   */
+  function getPersons(page, resolve, reject) {
+    get('/persons', {
+      page: page || 1
+    }, resolve, reject);
+  }
+
+  /**
+   * GET /persons/{slug} — деталі персони
+   * Використовує окремий запит БЕЗ перевірки json.data (бо відповідь — плоский об'єкт)
+   */
+  function getPerson(slug, resolve, reject) {
+    var u = buildUrl('/persons/' + encodeURIComponent(slug), {
+      include_user_links: 1
+    });
+    network.silent(u, function (json) {
+      if (json && json.id) {
+        resolve(json);
+      } else {
+        if (reject) reject();
+      }
+    }, function (a, c) {
+      if (reject) reject(a, c);
+    }, false, getHeaders());
+  }
+
+  /**
+   * GET /titles?person_id={id}&page={page} — тайтли персони
+   */
+  function getPersonTitles(personId, page, resolve, reject) {
+    get('/titles', {
+      order_by: 'date_desc',
+      person_id: personId,
+      page: page || 1
+    }, resolve, reject);
+  }
+  function clear() {
+    network.clear();
+  }
+  var Api = {
+    getPersons: getPersons,
+    getPerson: getPerson,
+    getPersonTitles: getPersonTitles,
+    clear: clear
+  };
+
+  /**
+   * Kinobaza MyPerson — список осіб з пагінацією
+   * Паттерн: collections/component.js — Lampa.Maker.make('Category')
+   * API: GET /persons?page={page}
+   */
+
+  /**
+   * Конвертує одну особу з API в картку Lampa
+   * (аналогічно card.mapPersonSearch, але без імпорту всього card.js)
+   */
+  function mapPerson(item) {
+    if (!item) return null;
+    var personName = item.name_uk || item.name_en || '';
+    var isDeceased = !!(item.deathday && item.deathday !== '');
+    var displayName = isDeceased ? '† ' + personName : personName;
+
+    // Визначаємо правильний URL постера
+    var isRealTmdb = item.poster_tmdb && item.poster_tmdb.charAt(0) === '/';
+    var posterUrl = '';
+    if (isRealTmdb) {
+      posterUrl = Lampa.TMDB.image('t/p/w300/' + item.poster_tmdb.replace(/^\//, ''));
+    } else if (item.poster_kinobaza) {
+      posterUrl = 'https://i.kinobaza.com.ua/w300/' + item.poster_kinobaza.replace(/^\//, '');
+    } else if (item.poster_tmdb) {
+      posterUrl = Lampa.TMDB.image('t/p/w300/' + item.poster_tmdb.replace(/^\//, ''));
+    } else {
+      posterUrl = './img/img_broken.svg';
+    }
+    var card = {
+      id: item.id,
+      slug: item.slug,
+      source: 'kinobaza',
+      title: displayName,
+      original_title: displayName,
+      // Не ставимо original_name — уникаємо TV badge
+      // Не ставимо release_date — Release module видалить card__age
+
+      poster: posterUrl,
+      profile_path: isRealTmdb ? item.poster_tmdb : ''
+    };
+
+    // Налаштовуємо відкриття картки актора при Enter
+    // Використовуємо кастомний компонент kinobaza_person_detail
+    // замість стандартного actor (який використовує Line замість Category)
+    card.params = {
+      emit: {
+        onEnter: function onEnter() {
+          Lampa.Activity.push({
+            url: '',
+            component: 'kinobaza_person_detail',
+            source: 'kinobaza',
+            slug: card.slug,
+            id: card.id,
+            page: 1
+          });
+        }
+      }
+    };
+    return card;
+  }
+
+  /**
+   * Компонент списку осіб
+   */
+  function component$1(object) {
+    var comp = Lampa.Maker.make('Category', object);
+    comp.use({
+      onCreate: function onCreate() {
+        Api.getPersons(object.page || 1, function (json) {
+          var items = json.data || [];
+          var results = items.map(function (item) {
+            return mapPerson(item);
+          }).filter(Boolean);
+          json.results = results;
+          json.total_pages = Math.ceil((json.total || items.length) / 30) || 1;
+          Lampa.Utils.addSource(json, 'kinobaza');
+          this.build(json);
+        }.bind(this), this.empty.bind(this));
+      },
+      onNext: function onNext(resolve, reject) {
+        Api.getPersons(this.object.page, function (json) {
+          var items = json.data || [];
+          var results = items.map(function (item) {
+            return mapPerson(item);
+          }).filter(Boolean);
+          json.results = results;
+          resolve(json);
+        }, reject);
+      }
+    });
+    return comp;
+  }
+
+  /**
+   * Kinobaza Person Detail — TryzubTV tv.js pattern
+   * Sync: header + scroll setup. Async: data loading.
+   */
+  var JOB_NAMES = {
+    1: 'Актор',
+    2: 'Режисер',
+    3: 'Сценарист',
+    4: 'Творець',
+    5: 'Композитор'
+  };
+  function component(object) {
+    var activity, html, body, scroll, header;
+    var cards = [],
+      last;
+    var page = 1,
+      totalPages = 1,
+      loading = false;
+    var personId = object.id || 0;
+    var personSlug = object.slug || '';
+    function clearCards() {
+      cards.forEach(function (c) {
+        c.destroy();
+      });
+      cards = [];
+      last = null;
+      body.empty();
+    }
+    function createCards(list) {
+      if (!list || !list.length) return;
+      var fragment = document.createDocumentFragment();
+      list.forEach(function (data) {
+        if (!data) return;
+        var card = Lampa.Maker.make('Card', data);
+        card.create();
+        var render = card.render(true);
+        if (!render) return;
+        if (data._job_name) {
+          var $view = $(render).find('.card__view');
+          var $tv = $view.find('.card__type');
+          var cls = $tv.length ? 'kb_jobs' : 'kb_jobs kb_jobs--first';
+          $view.append('<div class="' + cls + '">' + data._job_name + '</div>');
+        }
+        $(render).on('hover:focus', function () {
+          last = render;
+          scroll.update(render, false);
+        });
+        $(render).on('hover:enter', function () {
+          Lampa.Activity.push({
+            url: '',
+            component: 'full',
+            slug: data.slug,
+            id: data.id,
+            source: 'kinobaza',
+            page: 1
+          });
+        });
+        fragment.appendChild(render);
+        cards.push(card);
+      });
+      body.append(fragment);
+      if (cards.length && !last) last = cards[0].render(true);
+      Lampa.Layer.visible(scroll.render(true));
+      if (Lampa.Controller.enabled().name === 'content') {
+        Lampa.Controller.collectionSet(body);
+        Lampa.Controller.collectionFocus(last || false, body);
+      }
+    }
+    function loadPage(p) {
+      if (loading || p > totalPages) return;
+      loading = true;
+      if (activity) activity.loader(true);
+      Api.getPersonTitles(personId, p, function (json) {
+        loading = false;
+        if (activity) activity.loader(false);
+        totalPages = Math.ceil((json.total || (json.data || []).length) / 30) || 1;
+        page = p;
+        var items = (json.data || []).map(mapCard).filter(Boolean);
+        createCards(items);
+      }, function () {
+        loading = false;
+        if (activity) activity.loader(false);
+      });
+    }
+    function mapCard(item) {
+      if (!item) return null;
+      var isTV = (item.number_of_episodes || 0) > 0;
+      var tvName = item.name_original || item.name_en || '';
+      var poster = './img/img_broken.svg';
+      if (item.poster_tmdb && item.poster_tmdb.charAt(0) === '/') {
+        poster = Lampa.TMDB.image('t/p/w300/' + item.poster_tmdb.replace(/^\//, ''));
+      } else if (item.poster_kinobaza) {
+        poster = 'https://i.kinobaza.com.ua/w300/' + item.poster_kinobaza.replace(/^\//, '');
+      }
+      var jobCode = 0;
+      if (item.jobs && item.jobs.length) {
+        for (var j = 0; j < item.jobs.length; j++) {
+          if (item.jobs[j] !== 0) {
+            jobCode = item.jobs[j];
+            break;
+          }
+        }
+      }
+      return {
+        id: item.id,
+        kinobaza_id: item.id,
+        slug: item.slug,
+        source: 'kinobaza',
+        title: item.name_uk || item.name_en || '',
+        original_title: item.name_original || item.name_en || '',
+        name: isTV ? tvName : undefined,
+        original_name: isTV ? tvName : undefined,
+        year: item.year || 0,
+        poster: poster,
+        poster_path: item.poster_tmdb || item.poster_kinobaza || '',
+        backdrop_path: item.backdrop_tmdb || '',
+        vote_average: (item.rating || 0) / 10,
+        vote: (item.imdb_rating || 0) / 10,
+        voting: item.rating || 0,
+        release_date: item.released_ua || item.released_en || '',
+        number_of_episodes: item.number_of_episodes || 0,
+        _job_code: jobCode,
+        _job_name: JOB_NAMES[jobCode] || ''
+      };
+    }
+    function fillPersonHeader(data) {
+      if (!header || !data) return;
+
+      // header from Template.js() might be jQuery or raw DOM
+      var $h = $(header);
+      var name = data.name_uk || data.name_en || '-';
+      var birthday = data.birthday || '';
+      var place = data.birthplace_uk || data.birthplace_en || '';
+      $h.find('.person-start__name').text(name);
+      if (birthday) {
+        var formatted = birthday;
+        if (Lampa.Utils && Lampa.Utils.parseTime) formatted = Lampa.Utils.parseTime(birthday).full;
+        $h.find('.person-start__tag div').text(formatted);
+      } else {
+        $h.find('.person-start__tags').remove();
+      }
+      if (place) $h.find('.person-start__place').text(place);
+
+      // Photo — raw DOM for reliability
+      var photoUrl = './img/actor.svg';
+      if (data.poster_tmdb && data.poster_tmdb.charAt(0) === '/') {
+        photoUrl = Lampa.TMDB.image('t/p/w300/' + data.poster_tmdb.replace(/^\//, ''));
+      } else if (data.poster_kinobaza) {
+        photoUrl = 'https://i.kinobaza.com.ua/w300/' + data.poster_kinobaza.replace(/^\//, '');
+      }
+      var img = $h[0].querySelector('.person-start__img');
+      if (img) {
+        img.src = photoUrl;
+        img.addEventListener('load', function () {
+          img.classList.add('loaded');
+        });
+      }
+
+      // Hide subscribe button
+      var subBtn = $h[0].querySelector('.button--subscribe');
+      if (subBtn) subBtn.style.display = 'none';
+
+      // Info button → biography modal
+      var infoBtn = $h[0].querySelector('.button--info');
+      if (infoBtn && data.biography) {
+        $(infoBtn).on('hover:enter', function () {
+          if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal) {
+            Lampa.Modal.open({
+              title: name,
+              size: 'large',
+              html: $('<div class="about">' + data.biography.replace(/\n/g, '<br>') + '</div>'),
+              onBack: function onBack() {
+                Lampa.Modal.close();
+                Lampa.Controller.toggle('content');
+              }
+            });
+          }
+        });
+      }
+    }
+    function bindScroll() {
+      scroll.onScroll = function () {
+        Lampa.Layer.visible(scroll.render(true));
+      };
+      scroll.onEnd = function () {
+        if (page < totalPages && !loading) loadPage(page + 1);
+      };
+    }
+
+    // ============ COMPONENT LIFECYCLE (tv.js pattern) ============
+
+    return {
+      create: function create() {
+        activity = this.activity;
+
+        // 1. Build sync DOM
+        html = $('<div class="kinobaza-person-detail"></div>');
+        body = $('<div class="mapping--grid cols--6"></div>');
+        scroll = new Lampa.Scroll({
+          mask: true,
+          over: true,
+          step: 250,
+          end_ratio: 2
+        });
+
+        // Person header — sync build, async fill
+        header = Lampa.Template.js('person_start');
+
+        // Add scroll body
+        scroll.append(body[0]);
+
+        // Append header (outside scroll) + scroll to root html
+        html.append(header, scroll.render());
+        scroll.minus(header[0]);
+        bindScroll();
+
+        // 2. Async data load
+        if (personSlug) {
+          Api.getPerson(personSlug, function (data) {
+            if (data) fillPersonHeader(data);
+          });
+        }
+        loadPage(1);
+        return this.render();
+      },
+      render: function render(js) {
+        return js ? html[0] : html;
+      },
+      start: function start() {
+        // Controller навігації в заголовку особи
+        Lampa.Controller.add('person_head', {
+          link: this,
+          toggle: function toggle() {
+            Lampa.Controller.collectionSet(header);
+            Lampa.Controller.collectionFocus(false, header);
+          },
+          up: function up() {
+            Lampa.Controller.toggle('head');
+          },
+          left: function left() {
+            Lampa.Controller.toggle('menu');
+          },
+          down: function down() {
+            Lampa.Controller.toggle('content');
+          },
+          back: function back() {
+            Lampa.Activity.backward();
+          }
+        });
+
+        // Controller сітки карток
+        Lampa.Controller.add('content', {
+          link: this,
+          toggle: function toggle() {
+            Lampa.Controller.collectionSet(body);
+            Lampa.Controller.collectionFocus(last || false, body);
+          },
+          left: function left() {
+            if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+          },
+          right: function right() {
+            if (Navigator.canmove('right')) Navigator.move('right');
+          },
+          up: function up() {
+            if (Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('person_head');
+          },
+          down: function down() {
+            if (Navigator.canmove('down')) Navigator.move('down');
+          },
+          back: function back() {
+            Lampa.Activity.backward();
+          }
+        });
+        Lampa.Controller.toggle('content');
+      },
+      pause: function pause() {},
+      destroy: function destroy() {
+        clearCards();
+        if (scroll) scroll.destroy();
+        if (html) html.remove();
+        cards = [];
+        header = null;
+      }
+    };
+  }
+
+  /**
+   * Kinobaza MyPerson — entry point
+   * Реєструє компонент списку осіб та переклади
+   * Перехоплення штатного меню "Особи" — в listeners/myperson-override.js
+   * Паттерн: collections/collections.js, trailers/trailers.js
+   */
+  function startPlugin$1() {
+    window.plugin_kinobaza_myperson_ready = true;
+
+    // ==================== MANIFEST ====================
+
+    Lampa.Manifest.plugins = {
+      type: 'video',
+      version: '1.0.0',
+      name: Lampa.Lang.translate('kinobaza_myperson'),
+      component: 'kinobaza_myperson',
+      description: 'Список осіб КіноБази (актори, режисери)'
+    };
+
+    // ==================== COMPONENT ====================
+
+    Lampa.Component.add('kinobaza_myperson', component$1);
+    Lampa.Component.add('kinobaza_person_detail', component);
+
+    // ==================== TRANSLATIONS ====================
+
+    Lampa.Lang.add({
+      kinobaza_myperson: {
+        uk: 'Особи',
+        ru: 'Личности',
+        en: 'People',
+        be: 'Асобы'
+      }
+    });
+  }
+
+  // ==================== GUARD ====================
+
+  if (!window.plugin_kinobaza_myperson_ready) {
     startPlugin$1();
   }
+
+  /**
+   * Kinobaza Discover — дані фільтрів
+   *
+   * Патерн: content_filter/data.js (lampa-source/src/interaction/content_filter/data.js)
+   * Адаптовано для API КіноБази:
+   *   - type: 1 (фільм), 2 (серіал)
+   *   - rating: рейтинг КіноБази (0-10)
+   *   - imdb_rating: рейтинг IMDb (0-10)
+   *   - year: рік/діапазон (ys/ye)
+   *   - genres: масив ID жанрів КіноБази (genres[])
+   *   - translated: has_ukr_audio / has_ukr_subtitles
+   *   - sort: order_by
+   */
+
+  var data = {};
+  data.type = {
+    title: 'Тип',
+    items: [{
+      title: 'Фільм',
+      selected: true,
+      type: 1
+    }, {
+      title: 'Серіал',
+      type: 2
+    }]
+  };
+  data.rating = {
+    title: 'Рейтинг КіноБази',
+    items: [{
+      title: 'Будь-який'
+    }, {
+      title: 'Від 8',
+      start: 8
+    }, {
+      title: 'Від 7',
+      start: 7
+    }, {
+      title: 'Від 6',
+      start: 6
+    }, {
+      title: 'Від 5',
+      start: 5
+    }, {
+      title: '1 — 3',
+      range: '1-3'
+    }, {
+      title: '3 — 5',
+      range: '3-5'
+    }, {
+      title: '5 — 7',
+      range: '5-7'
+    }, {
+      title: '7 — 9',
+      range: '7-9'
+    }, {
+      title: '9 — 10',
+      range: '9-10'
+    }]
+  };
+  data.imdb_rating = {
+    title: 'Рейтинг IMDb',
+    items: [{
+      title: 'Будь-який'
+    }, {
+      title: 'Від 8',
+      start: 8
+    }, {
+      title: 'Від 7',
+      start: 7
+    }, {
+      title: 'Від 6',
+      start: 6
+    }, {
+      title: 'Від 5',
+      start: 5
+    }, {
+      title: '1 — 3',
+      range: '1-3'
+    }, {
+      title: '3 — 5',
+      range: '3-5'
+    }, {
+      title: '5 — 7',
+      range: '5-7'
+    }, {
+      title: '7 — 9',
+      range: '7-9'
+    }, {
+      title: '9 — 10',
+      range: '9-10'
+    }]
+  };
+  data.year = {
+    title: 'Рік',
+    items: [{
+      title: 'Будь-який',
+      any: true
+    }]
+  };
+
+  // Динамічні роки — точно як в content_filter/data.js
+  var y = new Date().getFullYear();
+  var i = 100;
+  for (var a = 0; a < 5; a++) {
+    data.year.items.push({
+      title: y - a
+    });
+  }
+  while (i -= 5) {
+    var end = y - (99 - i);
+    data.year.items.push({
+      title: end + 5 + '-' + end
+    });
+  }
+  data.genres = {
+    title: 'Жанри',
+    items: [{
+      id: 1,
+      title: 'Бойовик',
+      checkbox: true
+    }, {
+      id: 2,
+      title: 'Пригоди',
+      checkbox: true
+    }, {
+      id: 3,
+      title: 'Фентезі',
+      checkbox: true
+    }, {
+      id: 4,
+      title: 'Жахи',
+      checkbox: true
+    }, {
+      id: 5,
+      title: 'Трилер',
+      checkbox: true
+    }, {
+      id: 6,
+      title: 'Комедія',
+      checkbox: true
+    }, {
+      id: 7,
+      title: 'Драма',
+      checkbox: true
+    }, {
+      id: 8,
+      title: 'Біографія',
+      checkbox: true
+    }, {
+      id: 9,
+      title: 'Історичний',
+      checkbox: true
+    }, {
+      id: 10,
+      title: 'Кримінальний',
+      checkbox: true
+    }, {
+      id: 11,
+      title: 'Мелодрама',
+      checkbox: true
+    }, {
+      id: 13,
+      title: 'Сімейний',
+      checkbox: true
+    }, {
+      id: 14,
+      title: 'Фантастика',
+      checkbox: true
+    }, {
+      id: 15,
+      title: 'Військовий',
+      checkbox: true
+    }, {
+      id: 20,
+      title: 'Документальний',
+      checkbox: true
+    }]
+  };
+  data.translated = {
+    title: 'Переклад',
+    items: [{
+      title: 'Будь-який'
+    }, {
+      title: 'З укр. аудіо',
+      code: 'has_ukr_audio'
+    }, {
+      title: 'З укр. субтитрами',
+      code: 'has_ukr_subtitles'
+    }]
+  };
+  data.sort = {
+    title: 'Сортування',
+    items: [{
+      title: 'Будь-який'
+    }, {
+      title: 'Популярністю',
+      order: 'popularity'
+    }, {
+      title: "Новинки (дата прем'єри)",
+      order: 'date_desc'
+    }, {
+      title: 'Рейтинг КіноБази',
+      order: 'rating_desc'
+    }, {
+      title: 'Рейтинг IMDb',
+      order: 'imdb_rating_desc'
+    }, {
+      title: 'Голоси КіноБази',
+      order: 'votes_desc'
+    }, {
+      title: 'Голоси IMDb',
+      order: 'imdb_votes_desc'
+    }]
+  };
+
+  /**
+   * Kinobaza Discover — UI фільтр-меню
+   *
+   * Патерн: content_filter/menu.js (lampa-source/src/interaction/content_filter/menu.js)
+   * Адаптовано для API КіноБази:
+   *   - queryForKinobaza() будує URL з params для /titles
+   *   - Всі фільтри відповідають kinobaza API (type, rating, imdb_rating, ys/ye, genres[], translated, order_by)
+   *   - Типи контенту: ТІЛЬКИ Фільм (type=1) та Серіал (type=2)
+   */
+
+  /**
+   * Вибирає елемент (single-select)
+   * @param {Array} where - масив елементів
+   * @param {Object} a - вибраний елемент
+   */
+  function select(where, a) {
+    where.forEach(function (element) {
+      element.selected = false;
+    });
+    a.selected = true;
+  }
+
+  /**
+   * Оновлює підзаголовок групи фільтрів
+   * @param {Object} where - об'єкт з масивом items
+   */
+  function selected(where) {
+    var titles = [];
+    where.items.forEach(function (a) {
+      if (a.selected || a.checked) titles.push(a.title);
+    });
+    where.subtitle = titles.length ? titles.join(', ') : Lampa.Lang.translate('nochoice');
+  }
+
+  /**
+   * Головне меню фільтрації
+   */
+  function main() {
+    for (var i in data) selected(data[i]);
+    if (!Lampa.Select || typeof Lampa.Select.show !== 'function') return;
+    var items = [{
+      title: Lampa.Lang.translate('search_start'),
+      search: true
+    }, data.type, data.rating, data.imdb_rating, data.genres, data.year, data.translated, data.sort];
+    Lampa.Select.show({
+      title: Lampa.Lang.translate('title_filter'),
+      items: items,
+      onBack: function onBack() {
+        Lampa.Controller.toggle('content');
+      },
+      onSelect: function onSelect(a) {
+        if (a.search) search();else submenu(a);
+      }
+    });
+  }
+
+  /**
+   * Підменю для конкретного фільтру
+   * @param {Object} item - об'єкт елемента (data.type, data.rating, etc.)
+   */
+  function submenu(item) {
+    if (!Lampa.Select || typeof Lampa.Select.show !== 'function') return;
+    Lampa.Select.show({
+      title: item.title,
+      items: item.items,
+      onBack: main,
+      onSelect: function onSelect(a) {
+        select(item.items, a);
+        main();
+      }
+    });
+  }
+
+  /**
+   * Будує URL-рядок для API КіноБази з обраних фільтрів
+   *
+   * Підтримує:
+   *   type, rating/rating_max, imdb_rating/imdb_rating_max,
+   *   ys/ye (роки), genres[] (жанри), translated, order_by
+   *
+   * @returns {string} - URL для Lampa.Activity.push (напр. 'titles?type=1&rating=7&genres[]=1&genres[]=2&ys=2020&ye=2025')
+   */
+  function queryForKinobaza() {
+    var query = [];
+    var genres = [];
+
+    // ===== TYPE =====
+    var typeItem = data.type.items.find(function (s) {
+      return s.selected;
+    });
+    if (typeItem && typeItem.type) {
+      query.push('type=' + typeItem.type);
+    }
+
+    // ===== RATING (КіноБаза) =====
+    data.rating.items.forEach(function (a) {
+      if (a.selected) {
+        if (a.start) {
+          query.push('rating=' + a.start);
+        } else if (a.range) {
+          var rParts = a.range.split('-');
+          query.push('rating=' + rParts[0]);
+          query.push('rating_max=' + rParts[1]);
+        }
+      }
+    });
+
+    // ===== IMDB RATING =====
+    data.imdb_rating.items.forEach(function (a) {
+      if (a.selected) {
+        if (a.start) {
+          query.push('imdb_rating=' + a.start);
+        } else if (a.range) {
+          var iParts = a.range.split('-');
+          query.push('imdb_rating=' + iParts[0]);
+          query.push('imdb_rating_max=' + iParts[1]);
+        }
+      }
+    });
+
+    // ===== YEAR =====
+    data.year.items.forEach(function (a) {
+      if (a.selected && !a.any) {
+        var titleStr = String(a.title);
+        if (titleStr.indexOf('-') >= 0) {
+          // Діапазон: "2027-2022" → ys=2022, ye=2027
+          var yParts = titleStr.split('-');
+          query.push('ys=' + yParts[1]);
+          query.push('ye=' + yParts[0]);
+        } else {
+          // Конкретний рік
+          query.push('ys=' + titleStr);
+          query.push('ye=' + titleStr);
+        }
+      }
+    });
+
+    // ===== GENRES (checkbox) =====
+    data.genres.items.forEach(function (a) {
+      if (a.checked) {
+        genres.push(a.id);
+      }
+    });
+    if (genres.length) {
+      genres.forEach(function (id) {
+        query.push('genres[]=' + id);
+      });
+    }
+
+    // ===== TRANSLATED =====
+    data.translated.items.forEach(function (a) {
+      if (a.selected && a.code) {
+        query.push('translated=' + a.code);
+      }
+    });
+
+    // ===== SORT =====
+    data.sort.items.forEach(function (a) {
+      if (a.selected && a.order) {
+        query.push('order_by=' + a.order);
+      }
+    });
+    return 'titles?' + query.join('&');
+  }
+
+  /**
+   * Запуск пошуку — конвертує вибір в Activity.push
+   */
+  function search() {
+    Lampa.Controller.toggle('content');
+    var query = queryForKinobaza();
+    var activity = {
+      url: query,
+      title: Lampa.Lang.translate('title_filter'),
+      component: 'category_full',
+      source: 'kinobaza',
+      card_type: true,
+      page: 1
+    };
+    var activeObj = Lampa.Activity.active();
+
+    // Якщо вже на category_full — замінити (поведінка як в оригінальному content_filter)
+    if (activeObj && activeObj.component === 'category_full' && activeObj.url && activeObj.url.indexOf('titles?') === 0) {
+      Lampa.Activity.replace(activity, true);
+    } else {
+      Lampa.Activity.push(activity);
+    }
+  }
+
+  /**
+   * Показати фільтр
+   */
+  function show() {
+    main();
+  }
+  var menu = {
+    show: show
+  };
+
+  /**
+   * Kinobaza Discover — реєстрація listener
+   *
+   * Перехоплює клік "filter" в меню Lampa (Lampa.Listener.send('menu', {type: 'action', action: 'filter'}))
+   * і замінює стандартний TMDB/CUB фільтр на власний з параметрами КіноБази.
+   *
+   * Патерн: listeners/anime-override.js, listeners/cartoon-override.js
+   *
+   * Flow:
+   *   1. Lampa.Listener.follow('menu', ...) перехоплює action === 'filter'
+   *   2. Перевіряє Storage.field('source') === 'kinobaza'
+   *   3. e.abort() — запобігає стандартному Filter.show()
+   *   4. menu.show() — показує Select.show() з фільтрами КіноБази
+   */
+  var registered = false;
+
+  /**
+   * Реєструє listener на menu action
+   */
+  function register() {
+    if (registered) return;
+    registered = true;
+    try {
+      if (!Lampa.Listener) return;
+      Lampa.Listener.follow('menu', function (e) {
+        try {
+          // Тільки action події
+          if (e.type !== 'action') return;
+          if (e.action !== 'filter') return;
+
+          // Перевіряємо чи обрано kinobaza
+          var currentSource = Lampa.Storage && typeof Lampa.Storage.field === 'function' ? Lampa.Storage.field('source') : '';
+          if (currentSource !== 'kinobaza') return;
+
+          // Запобігаємо стандартній поведінці Lampa Filter
+          e.abort();
+
+          // Показуємо власне фільтр-меню КіноБази
+          if (menu && typeof menu.show === 'function') {
+            menu.show();
+          }
+        } catch (err) {
+          // мовчки ігноруємо помилки в listener
+        }
+      });
+    } catch (err) {
+      // мовчки ігноруємо
+    }
+  }
+
+  /**
+   * Kinobaza Discover Filter — entry point
+   *
+   * Самовиконуваний модуль з guard патерном (window.kinobaza_discover_ready).
+   * При імпорті в kinobaza.js реєструє listener на menu action "filter"
+   * для показу власного фільтр-меню КіноБази.
+   *
+   * Патерн: trailers/trailers.js, releases/releases.js, collections/collections.js
+   * (self-executing IIFE + guard + register)
+   *
+   * Використовує:
+   *   - discover/index.js — реєстрація listener
+   *   - discover/data.js   — дані фільтрів
+   *   - discover/menu.js   — UI меню (Select.show)
+   *   - category_full      — компонент для результатів (через source: 'kinobaza')
+   */
+  (function () {
+
+    if (window.kinobaza_discover_ready) return;
+    window.kinobaza_discover_ready = true;
+    register();
+  })();
 
   /**
    * Додає 'kinobaza' в селектор джерела (source)
@@ -4744,7 +6226,7 @@
       if (!Lampa.Manifest) return;
       var manifest = {
         type: 'video',
-        version: '0.1a',
+        version: '0.2a',
         name: Lampa.Lang.translate('kinobaza_title') || 'КіноБаза',
         component: 'kinobaza',
         description: 'Контент-провайдер КіноБаза (kinobaza.com.ua)'
@@ -4860,26 +6342,6 @@
     // 5. Реєстрація Manifest
     registerManifest();
 
-    // 5.5. Додати кнопку в головне меню (замість deprecated onMain)
-    try {
-      if (Lampa.Menu && typeof Lampa.Menu.addButton === 'function') {
-        var menuBtn = Lampa.Menu.addButton('<svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>', Lampa.Lang.translate('kinobaza_title') || 'КіноБаза', function () {
-          Lampa.Activity.push({
-            url: '',
-            title: Lampa.Lang.translate('kinobaza_title') || 'КіноБаза',
-            component: 'category_full',
-            source: 'kinobaza',
-            page: 1
-          });
-        });
-        if (menuBtn && typeof menuBtn.addClass === 'function') {
-          menuBtn.addClass('kinobaza-menu-btn');
-        }
-      }
-    } catch (e) {
-      // мовчки ігноруємо помилки додавання кнопки
-    }
-
     // 6. Реєстрація listener для вставки акторів дубляжу через DOM
     registerFullListener();
 
@@ -4891,6 +6353,9 @@
 
     // 9. Реєстрація override для мультфільмів меню (обходить хардкод Lampa: cartoon -> movie + genres: 16)
     registerCartoonOverride();
+
+    // 9. Реєстрація override для меню "Особи"
+    registerMyPersonOverride();
 
     // 9.5. Реєстрація override для Lampa.Api.full — перехоплення відкриття карток
     // Коли активна КіноБаза, пробує завантажити картку через Kinobaza API
