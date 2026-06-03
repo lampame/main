@@ -220,7 +220,7 @@
         return !!(object && object.movie && object.movie.name);
       }
       function isLazySeriesMode() {
-        return sourceKey == 'uaflix' && isSeriesObject();
+        return (sourceKey == 'uaflix' || sourceKey == 'aycw') && isSeriesObject();
       }
       function toPositiveInt(value) {
         var parsed = parseInt(value, 10);
