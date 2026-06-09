@@ -154,10 +154,10 @@
         parser_torrent_type: 'jackett'
       }
     }, {
-      id: 'jacred_su',
-      name: 'JacRed.su',
+      id: 'jacred_pro',
+      name: 'Jacred.pro',
       settings: {
-        url: 'jacred.su',
+        url: 'jacred.pro',
         key: '',
         parser_torrent_type: 'jackett'
       }

@@ -642,9 +642,31 @@
                   subtitles: elem.subtitles || [],
                   mark: elem.mark
                 };
+                if (elem === item) {
+                  cell.url = play_url;
+                  cell.quality = qualitys;
+                }
                 playlist.push(cell);
               });
               Lampa.Player.playlist(playlist);
+            }, function (errorText) {
+              component.pushError(errorText || Lampa.Lang.translate('online_nolink'));
+            });
+          },
+          onContextMenu: function onContextMenu(item, html, data, call) {
+            getStream(item.ref, function (streams) {
+              var prepared = prepareStreams(streams);
+              var first = prepared.first;
+              var qualitys = applyProxyToQualitys(prepared.qualitys);
+              var play_url = first ? normalizeStreamUrl(first.url) : '';
+              if (!first || !play_url) {
+                component.pushError(Lampa.Lang.translate('online_nolink'));
+                return;
+              }
+              call({
+                file: play_url,
+                quality: qualitys
+              });
             }, function (errorText) {
               component.pushError(errorText || Lampa.Lang.translate('online_nolink'));
             });
@@ -672,6 +694,23 @@
                 subtitles: mergeSubtitles(first.subtitles, movie.subtitles)
               });
               Lampa.Player.playlist([]);
+            }, function (errorText) {
+              component.pushError(errorText || Lampa.Lang.translate('online_nolink'));
+            });
+          },
+          onContextMenu: function onContextMenu(movie, html, data, call) {
+            getMovieStream(movie, function (prepared) {
+              var first = prepared.first;
+              var qualitys = applyProxyToQualitys(prepared.qualitys);
+              var play_url = first ? normalizeStreamUrl(first.url) : '';
+              if (!first || !play_url) {
+                component.pushError(Lampa.Lang.translate('online_nolink'));
+                return;
+              }
+              call({
+                file: play_url,
+                quality: qualitys
+              });
             }, function (errorText) {
               component.pushError(errorText || Lampa.Lang.translate('online_nolink'));
             });
