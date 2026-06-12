@@ -870,8 +870,8 @@
       }
       function normalizeStreamUrl(url) {
         if (!url) return url;
-        if (!shouldUseAshdiProxy(url)) return url;
-        return wrapAshdiProxy(url);
+        if (!shouldUseStreamProxy(url)) return url;
+        return wrapStreamProxy(url);
       }
       function applyProxyToQualitys(qualitys) {
         var result = {};
@@ -880,16 +880,19 @@
         });
         return result;
       }
-      function shouldUseAshdiProxy(url) {
+      function shouldUseStreamProxy(url) {
         var player = Lampa.Storage.get('player');
         if (player && player !== 'inner') return false;
-        return isAshdiUrl(url);
+        return isAshdiUrl(url) || isZetvideoUrl(url);
       }
       function isAshdiUrl(url) {
         return /(^|\/\/)([^\/]*\.)?ashdi\.vip(\/|$)/i.test(url || '');
       }
-      function wrapAshdiProxy(url) {
-        var base = 'https://proxy.m7-club.com/?url=';
+      function isZetvideoUrl(url) {
+        return /(^|\/\/)([^\/]*\.)?zetvideo\.[^\/]+(\/|$)/i.test(url || '');
+      }
+      function wrapStreamProxy(url) {
+        var base = 'https://lampame-streamproxyinternal.hf.space/m3u8-proxy?url=';
         if (url.indexOf(base) === 0) return url;
         return base + url;
       }
