@@ -7681,6 +7681,24 @@
   }
 
   /**
+   * Відновити контролер settings_component після закриття модалки,
+   * якщо контролер залишився в стані 'modal'.
+   * 
+   * Lampa.Modal.close() не перемикає Controller.active назад,
+   * тому всі наступні Controller.back() потрапляють у stale modal
+   * замість settings_component — налаштування перестають закриватись.
+   */
+  function restoreSettingsController$1() {
+    try {
+      if (typeof Lampa.Controller !== 'undefined' && Lampa.Controller.enabled().name === 'modal') {
+        Lampa.Controller.toggle('settings_component');
+      }
+    } catch (e) {
+      // мовчки
+    }
+  }
+
+  /**
    * Показати модальне вікно про конфлікт
    * @param {function} onCancel
    */
@@ -7707,11 +7725,13 @@
         onSelect: function onSelect() {
           Lampa.Modal.close();
           if (onCancel) onCancel();
+          restoreSettingsController$1();
         }
       }],
       onBack: function onBack() {
         Lampa.Modal.close();
         if (onCancel) onCancel();
+        restoreSettingsController$1();
       }
     });
   }
@@ -8683,6 +8703,19 @@
     execute: execute
   };
 
+  /**
+   * Відновити контролер settings_component після закриття модалки.
+   * Lampa.Modal.close() не перемикає Controller.active назад.
+   */
+  function restoreSettingsController() {
+    try {
+      if (typeof Lampa.Controller !== 'undefined' && Lampa.Controller.enabled().name === 'modal') {
+        Lampa.Controller.toggle('settings_component');
+      }
+    } catch (e) {
+      // мовчки
+    }
+  }
   function start() {
     // Спочатку перевірка на CUB-конфлікт
     if (!guard.checkConflict()) return;
@@ -8701,10 +8734,12 @@
         name: 'Скасувати',
         onSelect: function onSelect() {
           Lampa.Modal.close();
+          restoreSettingsController();
         }
       }],
       onBack: function onBack() {
         Lampa.Modal.close();
+        restoreSettingsController();
       }
     });
   }
