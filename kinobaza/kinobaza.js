@@ -1,6 +1,247 @@
 (function () {
   'use strict';
 
+  function _arrayLikeToArray(r, a) {
+    (null == a || a > r.length) && (a = r.length);
+    for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
+    return n;
+  }
+  function _arrayWithHoles(r) {
+    if (Array.isArray(r)) return r;
+  }
+  function asyncGeneratorStep(n, t, e, r, o, a, c) {
+    try {
+      var i = n[a](c),
+        u = i.value;
+    } catch (n) {
+      return void e(n);
+    }
+    i.done ? t(u) : Promise.resolve(u).then(r, o);
+  }
+  function _asyncToGenerator(n) {
+    return function () {
+      var t = this,
+        e = arguments;
+      return new Promise(function (r, o) {
+        var a = n.apply(t, e);
+        function _next(n) {
+          asyncGeneratorStep(a, r, o, _next, _throw, "next", n);
+        }
+        function _throw(n) {
+          asyncGeneratorStep(a, r, o, _next, _throw, "throw", n);
+        }
+        _next(void 0);
+      });
+    };
+  }
+  function _createForOfIteratorHelper(r, e) {
+    var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
+    if (!t) {
+      if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) {
+        t && (r = t);
+        var n = 0,
+          F = function () {};
+        return {
+          s: F,
+          n: function () {
+            return n >= r.length ? {
+              done: !0
+            } : {
+              done: !1,
+              value: r[n++]
+            };
+          },
+          e: function (r) {
+            throw r;
+          },
+          f: F
+        };
+      }
+      throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+    }
+    var o,
+      a = !0,
+      u = !1;
+    return {
+      s: function () {
+        t = t.call(r);
+      },
+      n: function () {
+        var r = t.next();
+        return a = r.done, r;
+      },
+      e: function (r) {
+        u = !0, o = r;
+      },
+      f: function () {
+        try {
+          a || null == t.return || t.return();
+        } finally {
+          if (u) throw o;
+        }
+      }
+    };
+  }
+  function _iterableToArrayLimit(r, l) {
+    var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
+    if (null != t) {
+      var e,
+        n,
+        i,
+        u,
+        a = [],
+        f = !0,
+        o = !1;
+      try {
+        if (i = (t = t.call(r)).next, 0 === l) {
+          if (Object(t) !== t) return;
+          f = !1;
+        } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0);
+      } catch (r) {
+        o = !0, n = r;
+      } finally {
+        try {
+          if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return;
+        } finally {
+          if (o) throw n;
+        }
+      }
+      return a;
+    }
+  }
+  function _nonIterableRest() {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
+  function _regenerator() {
+    /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */
+    var e,
+      t,
+      r = "function" == typeof Symbol ? Symbol : {},
+      n = r.iterator || "@@iterator",
+      o = r.toStringTag || "@@toStringTag";
+    function i(r, n, o, i) {
+      var c = n && n.prototype instanceof Generator ? n : Generator,
+        u = Object.create(c.prototype);
+      return _regeneratorDefine(u, "_invoke", function (r, n, o) {
+        var i,
+          c,
+          u,
+          f = 0,
+          p = o || [],
+          y = !1,
+          G = {
+            p: 0,
+            n: 0,
+            v: e,
+            a: d,
+            f: d.bind(e, 4),
+            d: function (t, r) {
+              return i = t, c = 0, u = e, G.n = r, a;
+            }
+          };
+        function d(r, n) {
+          for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) {
+            var o,
+              i = p[t],
+              d = G.p,
+              l = i[2];
+            r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0));
+          }
+          if (o || r > 1) return a;
+          throw y = !0, n;
+        }
+        return function (o, p, l) {
+          if (f > 1) throw TypeError("Generator is already running");
+          for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) {
+            i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u);
+            try {
+              if (f = 2, i) {
+                if (c || (o = "next"), t = i[o]) {
+                  if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object");
+                  if (!t.done) return t;
+                  u = t.value, c < 2 && (c = 0);
+                } else 1 === c && (t = i.return) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1);
+                i = e;
+              } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break;
+            } catch (t) {
+              i = e, c = 1, u = t;
+            } finally {
+              f = 1;
+            }
+          }
+          return {
+            value: t,
+            done: y
+          };
+        };
+      }(r, o, i), !0), u;
+    }
+    var a = {};
+    function Generator() {}
+    function GeneratorFunction() {}
+    function GeneratorFunctionPrototype() {}
+    t = Object.getPrototypeOf;
+    var c = [][n] ? t(t([][n]())) : (_regeneratorDefine(t = {}, n, function () {
+        return this;
+      }), t),
+      u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c);
+    function f(e) {
+      return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e;
+    }
+    return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine(u), _regeneratorDefine(u, o, "Generator"), _regeneratorDefine(u, n, function () {
+      return this;
+    }), _regeneratorDefine(u, "toString", function () {
+      return "[object Generator]";
+    }), (_regenerator = function () {
+      return {
+        w: i,
+        m: f
+      };
+    })();
+  }
+  function _regeneratorDefine(e, r, n, t) {
+    var i = Object.defineProperty;
+    try {
+      i({}, "", {});
+    } catch (e) {
+      i = 0;
+    }
+    _regeneratorDefine = function (e, r, n, t) {
+      if (r) i ? i(e, r, {
+        value: n,
+        enumerable: !t,
+        configurable: !t,
+        writable: !t
+      }) : e[r] = n;else {
+        function o(r, n) {
+          _regeneratorDefine(e, r, function (e) {
+            return this._invoke(r, n, e);
+          });
+        }
+        o("next", 0), o("throw", 1), o("return", 2);
+      }
+    }, _regeneratorDefine(e, r, n, t);
+  }
+  function _regeneratorValues(e) {
+    if (null != e) {
+      var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"],
+        r = 0;
+      if (t) return t.call(e);
+      if ("function" == typeof e.next) return e;
+      if (!isNaN(e.length)) return {
+        next: function () {
+          return e && r >= e.length && (e = void 0), {
+            value: e && e[r++],
+            done: !e
+          };
+        }
+      };
+    }
+    throw new TypeError(typeof e + " is not iterable");
+  }
+  function _slicedToArray(r, e) {
+    return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest();
+  }
   function _typeof(o) {
     "@babel/helpers - typeof";
 
@@ -9,6 +250,13 @@
     } : function (o) {
       return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
     }, _typeof(o);
+  }
+  function _unsupportedIterableToArray(r, a) {
+    if (r) {
+      if ("string" == typeof r) return _arrayLikeToArray(r, a);
+      var t = {}.toString.call(r).slice(8, -1);
+      return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;
+    }
   }
 
   /**
@@ -24,11 +272,36 @@
   var TOKEN_KEY = 'kinobaza_token';
 
   /**
+   * Отримати ID активного профілю Lampa
+   * @returns {number}
+   */
+  function getActiveProfileId() {
+    try {
+      if (Lampa.Account && Lampa.Account.Permit && Lampa.Account.Permit.token && Lampa.Account.Permit.account && Lampa.Account.Permit.account.profile) {
+        return Lampa.Account.Permit.account.profile.id || 0;
+      }
+    } catch (e) {}
+    return 0;
+  }
+
+  /**
+   * Отримати ізольований ключ для профілю
+   * @param {string} key
+   * @param {number} [profileId]
+   * @returns {string}
+   */
+  function getProfileKey(key) {
+    var profileId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : getActiveProfileId();
+    if (!profileId || profileId === 0) return key;
+    return key + '_' + profileId;
+  }
+
+  /**
    * Отримати Bearer токен
    * @returns {string|null}
    */
   function getToken() {
-    return Lampa.Storage.get(TOKEN_KEY, '');
+    return Lampa.Storage.get(getProfileKey(TOKEN_KEY), '');
   }
 
   /**
@@ -36,14 +309,14 @@
    * @param {string} token
    */
   function setToken(token) {
-    Lampa.Storage.set(TOKEN_KEY, token);
+    Lampa.Storage.set(getProfileKey(TOKEN_KEY), token);
   }
 
   /**
    * Видалити токен
    */
   function removeToken() {
-    Lampa.Storage.set(TOKEN_KEY, '');
+    Lampa.Storage.set(getProfileKey(TOKEN_KEY), '');
   }
 
   /**
@@ -241,7 +514,9 @@
     removeToken: removeToken,
     hasToken: hasToken,
     registerTranslations: registerTranslations,
-    TOKEN_KEY: TOKEN_KEY
+    TOKEN_KEY: TOKEN_KEY,
+    getActiveProfileId: getActiveProfileId,
+    getProfileKey: getProfileKey
   };
 
   /**
@@ -353,6 +628,20 @@
    * @returns {Promise<k6.c0>}
    */
   function getTitle(slug) {
+    if (slug && slug.toString().startsWith('tt')) {
+      return new Promise(function (resolve, reject) {
+        var u = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/titles/' + slug + '?api_key=ygrn3a6sajxcdgex7cyh';
+        network$5.silent(u, function (data) {
+          if (data && data.id) {
+            resolve(data);
+          } else {
+            reject();
+          }
+        }, reject, false, {
+          headers: getHeaders$2()
+        });
+      });
+    }
     return new Promise(function (resolve, reject) {
       get$1('/titles/' + encodeURIComponent(slug), {
         include_posters: 1,
@@ -493,6 +782,53 @@
       get$1('/persons', params, resolve, reject);
     });
   }
+
+  // Окремий network для POST запитів (щоб не конфліктував чергою silent)
+  var authNetwork = new Lampa.Reguest();
+  authNetwork.timeout(15000);
+
+  /**
+   * Виконує POST-запит з form-urlencoded даними
+   * @param {string} path     - шлях (напр. '/login')
+   * @param {object} formData - об'єкт {key: value}
+   * @param {function} resolve
+   * @param {function} reject
+   */
+  function post(path, formData, resolve, reject) {
+    var u = BASE_URL$4 + path;
+    authNetwork.silent(u, function (json) {
+      resolve(json);
+    }, function (a, c) {
+      if (reject) reject(a, c);
+    }, formData, {
+      headers: getHeaders$2()
+    });
+  }
+
+  /**
+   * POST /login — авторизація за email + password
+   * @param {string} email
+   * @param {string} password
+   * @returns {Promise<{token, id, avatar, email, name, remove_watchlist_after_rate}>}
+   */
+  function login$1(email, password) {
+    return new Promise(function (resolve, reject) {
+      post('/login', {
+        email: email,
+        password: password
+      }, resolve, reject);
+    });
+  }
+
+  /**
+   * GET /me — дані поточного користувача
+   * @returns {Promise<{token, id, avatar, email, name, remove_watchlist_after_rate}>}
+   */
+  function fetchProfile() {
+    return new Promise(function (resolve, reject) {
+      get$1('/me', {}, resolve, reject);
+    });
+  }
   var api$1 = {
     cdn: cdn,
     getTitles: getTitles,
@@ -506,6 +842,9 @@
     getComments: getComments,
     getReviews: getReviews,
     getDubPersons: getDubPersons,
+    post: post,
+    login: login$1,
+    fetchProfile: fetchProfile,
     clear: clear$5,
     BASE_URL: BASE_URL$4
   };
@@ -702,6 +1041,7 @@
       imdb_votes: data.imdb_votes || 0,
       metascore: data.metascore || 0,
       tomato_meter: data.tomato_meter || 0,
+      tomato_user_meter: data.tomato_user_meter || 0,
       rating_breakdown: data.rating_breakdown || null,
       // Тип
       type: data.type || 1,
@@ -771,6 +1111,8 @@
       mySeenlist: data.mySeenlist || false,
       myStatus: data.myStatus || '',
       myStatusLabel: data.myStatusLabel || '',
+      myBlacklist: data.myBlacklist || false,
+      myFollow: data.myFollow || false,
       // Рецензії
       reviewPreview: data.reviewPreview || null,
       friendsRatings: data.friendsRatings || [],
@@ -1156,7 +1498,7 @@
       return mapPersonSearch(item);
     }).filter(Boolean);
   }
-  var card = {
+  var cardMapper = {
     mapOne: mapOne,
     mapList: mapList,
     mapFull: mapFull,
@@ -1236,6 +1578,304 @@
     getTrailers: getTrailers,
     clear: clear$4,
     BASE_URL: BASE_URL$3
+  };
+
+  var sessionCache = new Map(); // imdb_id (tt12345) -> { kinobaza_id, slug, themoviedb_id }
+
+  /**
+   * Отримати дані за IMDb ID через непублічний ендпоінт
+   * @param {string} imdbId - IMDb ID (tt12345 або 12345)
+   * @returns {Promise<{kinobaza_id: number, slug: string, themoviedb_id: number}|null>}
+   */
+  function resolveByImdb(_x) {
+    return _resolveByImdb.apply(this, arguments);
+  }
+  /**
+   * Фолбек-пошук за назвою та роком
+   * @param {object} card - Lampa card object
+   * @returns {Promise<{kinobaza_id: number, slug: string, themoviedb_id: number, is_tv: boolean}|null>}
+   */
+  function _resolveByImdb() {
+    _resolveByImdb = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(imdbId) {
+      var formattedId, url, response, data, entry, _t;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            if (imdbId) {
+              _context.n = 1;
+              break;
+            }
+            return _context.a(2, null);
+          case 1:
+            // Переконуємось у форматі ttXXXXX
+            formattedId = imdbId.toString().startsWith('tt') ? imdbId : 'tt' + imdbId;
+            if (!sessionCache.has(formattedId)) {
+              _context.n = 2;
+              break;
+            }
+            return _context.a(2, sessionCache.get(formattedId));
+          case 2:
+            _context.p = 2;
+            url = "https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/titles/".concat(formattedId, "?api_key=ygrn3a6sajxcdgex7cyh");
+            _context.n = 3;
+            return fetch(url);
+          case 3:
+            response = _context.v;
+            if (response.ok) {
+              _context.n = 4;
+              break;
+            }
+            return _context.a(2, null);
+          case 4:
+            _context.n = 5;
+            return response.json();
+          case 5:
+            data = _context.v;
+            if (!(data && data.id)) {
+              _context.n = 6;
+              break;
+            }
+            entry = {
+              kinobaza_id: data.id,
+              slug: data.slug || '',
+              themoviedb_id: data.themoviedb_id || 0,
+              is_tv: (data.number_of_episodes || data.number_of_seasons || 0) > 0
+            };
+            sessionCache.set(formattedId, entry);
+            return _context.a(2, entry);
+          case 6:
+            _context.n = 8;
+            break;
+          case 7:
+            _context.p = 7;
+            _t = _context.v;
+            console.error('KinoBaza Resolver', 'resolveByImdb error', _t);
+          case 8:
+            return _context.a(2, null);
+        }
+      }, _callee, null, [[2, 7]]);
+    }));
+    return _resolveByImdb.apply(this, arguments);
+  }
+  function searchByTitle$1(_x2) {
+    return _searchByTitle.apply(this, arguments);
+  }
+  /**
+   * Резолвінг картки для експорту (Lampa -> КіноБаза)
+   * @param {object} card - Lampa card object
+   * @returns {Promise<{kinobaza_id: number, slug: string, themoviedb_id: number, is_tv: boolean}|null>}
+   */
+  function _searchByTitle() {
+    _searchByTitle = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(card) {
+      var query, year, searchQuery, json, items, isTV, cardYear, found, _t2;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.n) {
+          case 0:
+            query = card.original_name || card.original_title || card.title || card.name || '';
+            if (query) {
+              _context2.n = 1;
+              break;
+            }
+            return _context2.a(2, null);
+          case 1:
+            year = '';
+            if (card.first_air_date) {
+              year = (card.first_air_date + '').slice(0, 4);
+            } else if (card.release_date) {
+              year = (card.release_date + '').slice(0, 4);
+            }
+            searchQuery = year ? "".concat(query, " ").concat(year) : query;
+            _context2.p = 2;
+            _context2.n = 3;
+            return api$1.searchTitles(searchQuery);
+          case 3:
+            json = _context2.v;
+            items = json.data || [];
+            isTV = !!(card.original_name || card.name || card.number_of_seasons || card.first_air_date);
+            cardYear = parseInt(year, 10); // Шукаємо точний збіг за типом та роком
+            found = items.find(function (item) {
+              var itemIsTV = (item.number_of_episodes || 0) > 0;
+              if (itemIsTV !== isTV) return false;
+              if (cardYear && item.year !== cardYear) return false;
+              var itemName = (item.name_original || item.name_en || '').toLowerCase();
+              var cardName = query.toLowerCase();
+              return itemName === cardName;
+            }); // Якщо немає точного — перший з правильним типом
+            if (!found) {
+              found = items.find(function (item) {
+                var itemIsTV = (item.number_of_episodes || 0) > 0;
+                return itemIsTV === isTV;
+              });
+            }
+
+            // Фолбек на перший знайдений
+            if (!found) {
+              found = items[0];
+            }
+            if (!(found && found.slug)) {
+              _context2.n = 4;
+              break;
+            }
+            return _context2.a(2, {
+              kinobaza_id: found.id,
+              slug: found.slug,
+              themoviedb_id: found.themoviedb_id || 0,
+              is_tv: (found.number_of_episodes || found.number_of_seasons || 0) > 0
+            });
+          case 4:
+            _context2.n = 6;
+            break;
+          case 5:
+            _context2.p = 5;
+            _t2 = _context2.v;
+            console.error('KinoBaza Resolver', 'searchByTitle error', _t2);
+          case 6:
+            return _context2.a(2, null);
+        }
+      }, _callee2, null, [[2, 5]]);
+    }));
+    return _searchByTitle.apply(this, arguments);
+  }
+  function resolveForExport(_x3) {
+    return _resolveForExport.apply(this, arguments);
+  }
+  /**
+   * Резолвінг для імпорту (КіноБаза -> Lampa)
+   * @param {object} kbItem - КіноБаза item object
+   * @returns {Promise<{kinobaza_id: number, slug: string, themoviedb_id: number, is_tv: boolean}>}
+   */
+  function _resolveForExport() {
+    _resolveForExport = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(card) {
+      var imdbId, resolved;
+      return _regenerator().w(function (_context3) {
+        while (1) switch (_context3.n) {
+          case 0:
+            if (card) {
+              _context3.n = 1;
+              break;
+            }
+            return _context3.a(2, null);
+          case 1:
+            if (!(card.source === 'kinobaza' && card.kinobaza_id && card.slug)) {
+              _context3.n = 2;
+              break;
+            }
+            return _context3.a(2, {
+              kinobaza_id: card.kinobaza_id,
+              slug: card.slug,
+              themoviedb_id: card.themoviedb_id || card.id || 0,
+              is_tv: !!(card.number_of_seasons || card.seasons || card.first_air_date || card.original_name || card.name)
+            });
+          case 2:
+            // Спроба через IMDb ID
+            imdbId = card.imdb_id || (card.imdb ? card.imdb : '');
+            if (!imdbId) {
+              _context3.n = 4;
+              break;
+            }
+            _context3.n = 3;
+            return resolveByImdb(imdbId);
+          case 3:
+            resolved = _context3.v;
+            if (!resolved) {
+              _context3.n = 4;
+              break;
+            }
+            return _context3.a(2, resolved);
+          case 4:
+            _context3.n = 5;
+            return searchByTitle$1(card);
+          case 5:
+            return _context3.a(2, _context3.v);
+        }
+      }, _callee3);
+    }));
+    return _resolveForExport.apply(this, arguments);
+  }
+  function resolveForImport(_x4) {
+    return _resolveForImport.apply(this, arguments);
+  }
+  function _resolveForImport() {
+    _resolveForImport = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(kbItem) {
+      var isTV, resolved, data;
+      return _regenerator().w(function (_context4) {
+        while (1) switch (_context4.n) {
+          case 0:
+            if (kbItem) {
+              _context4.n = 1;
+              break;
+            }
+            return _context4.a(2, null);
+          case 1:
+            isTV = (kbItem.number_of_episodes || kbItem.number_of_seasons || 0) > 0;
+            if (!kbItem.themoviedb_id) {
+              _context4.n = 2;
+              break;
+            }
+            return _context4.a(2, {
+              kinobaza_id: kbItem.id,
+              slug: kbItem.slug || '',
+              themoviedb_id: kbItem.themoviedb_id,
+              is_tv: isTV
+            });
+          case 2:
+            if (!kbItem.imdb_id) {
+              _context4.n = 4;
+              break;
+            }
+            _context4.n = 3;
+            return resolveByImdb(kbItem.imdb_id);
+          case 3:
+            resolved = _context4.v;
+            if (!(resolved && resolved.themoviedb_id)) {
+              _context4.n = 4;
+              break;
+            }
+            return _context4.a(2, resolved);
+          case 4:
+            if (!kbItem.slug) {
+              _context4.n = 9;
+              break;
+            }
+            _context4.p = 5;
+            _context4.n = 6;
+            return api$1.getTitle(kbItem.slug);
+          case 6:
+            data = _context4.v;
+            if (!(data && data.themoviedb_id)) {
+              _context4.n = 7;
+              break;
+            }
+            return _context4.a(2, {
+              kinobaza_id: data.id,
+              slug: data.slug || '',
+              themoviedb_id: data.themoviedb_id,
+              is_tv: (data.number_of_episodes || data.number_of_seasons || 0) > 0
+            });
+          case 7:
+            _context4.n = 9;
+            break;
+          case 8:
+            _context4.p = 8;
+            _context4.v;
+          case 9:
+            return _context4.a(2, {
+              kinobaza_id: kbItem.id,
+              slug: kbItem.slug || '',
+              themoviedb_id: 0,
+              is_tv: isTV
+            });
+        }
+      }, _callee4, null, [[5, 8]]);
+    }));
+    return _resolveForImport.apply(this, arguments);
+  }
+  var resolver = {
+    resolveByImdb: resolveByImdb,
+    searchByTitle: searchByTitle$1,
+    resolveForExport: resolveForExport,
+    resolveForImport: resolveForImport,
+    sessionCache: sessionCache
   };
 
   /**
@@ -1457,7 +2097,7 @@
           json.type = 'anime';
           json.url = 'titles?genres[]=32&countries[]=39&countries[]=214&countries[]=97&countries[]=96&countries[]=92&type=' + type;
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
           }
           oncomplite([json]);
         })["catch"](onerror);
@@ -1471,7 +2111,7 @@
         }).then(function (json) {
           json = api$1.addSource(json);
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
           }
           oncomplite(json);
         })["catch"](onerror);
@@ -1569,7 +2209,7 @@
           json.type = 'cartoons';
           json.url = 'titles?genres[]=12&exclude_genres[]=32&type=1';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
           }
           oncomplite([json]);
         })["catch"](onerror);
@@ -1583,7 +2223,7 @@
         }).then(function (json) {
           json = api$1.addSource(json);
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
           }
           oncomplite(json);
         })["catch"](onerror);
@@ -2046,7 +2686,7 @@
       json.type = isTV ? 'tv' : 'movie';
       json.url = 'titles?genres[]=32&countries[]=39&countries[]=214&countries[]=97&countries[]=96&countries[]=92&type=' + type + '&order_by=popularity';
       if (json.data) {
-        json.results = card.mapList(json.data);
+        json.results = cardMapper.mapList(json.data);
         json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
       }
       json = Lampa.Utils.addSource(json, 'kinobaza_anime');
@@ -2062,7 +2702,7 @@
         order_by: 'popularity'
       }).then(function (json) {
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
         }
         json = Lampa.Utils.addSource(json, 'kinobaza_anime');
         resolve(json);
@@ -2092,7 +2732,7 @@
     }
     api$1.getTitles(queryParams).then(function (json) {
       if (json.data) {
-        json.results = card.mapList(json.data);
+        json.results = cardMapper.mapList(json.data);
         json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
       }
       json = Lampa.Utils.addSource(json, 'kinobaza_anime');
@@ -2136,7 +2776,7 @@
       json.type = isTV ? 'tv' : 'movie';
       json.url = 'titles?genres[]=12&exclude_genres[]=32&type=' + type + '&order_by=popularity';
       if (json.data) {
-        json.results = card.mapList(json.data);
+        json.results = cardMapper.mapList(json.data);
         json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
       }
       json = Lampa.Utils.addSource(json, 'kinobaza_cartoons');
@@ -2151,7 +2791,7 @@
         order_by: 'popularity'
       }).then(function (json) {
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
         }
         json = Lampa.Utils.addSource(json, 'kinobaza_cartoons');
         resolve(json);
@@ -2181,7 +2821,7 @@
     }
     api$1.getTitles(queryParams).then(function (json) {
       if (json.data) {
-        json.results = card.mapList(json.data);
+        json.results = cardMapper.mapList(json.data);
         json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
       }
       json = Lampa.Utils.addSource(json, 'kinobaza_cartoons');
@@ -2219,11 +2859,63 @@
         resolve(card);
         return;
       }
+      var oldId = card.id;
+
+      // Helper to update Lampa's database and storage
+      var updateFavoriteDb = function updateFavoriteDb(data) {
+        var tmdbId = data.themoviedb_id;
+        var newId = tmdbId || oldId;
+
+        // 1. Update the card reference itself
+        card.id = newId;
+        card.kinobaza_id = data.id;
+        card.imdb_id = data.imdb_id ? 'tt' + data.imdb_id : '';
+        card.themoviedb_id = tmdbId || 0;
+        card.needsEnrichment = false;
+        if (tmdbId) {
+          tmdbIdCache[card.kinobaza_id] = tmdbId;
+        }
+
+        // 2. Update the card in Lampa's in-memory / storage favorites
+        if (typeof Lampa !== 'undefined' && Lampa.Favorite && typeof Lampa.Favorite.full === 'function') {
+          var fav = Lampa.Favorite.full();
+          if (fav && fav.card && Array.isArray(fav.card)) {
+            var dbCard = fav.card.find(function (c) {
+              return c.id === oldId;
+            });
+            if (dbCard) {
+              dbCard.id = newId;
+              dbCard.kinobaza_id = data.id;
+              dbCard.imdb_id = data.imdb_id ? 'tt' + data.imdb_id : '';
+              dbCard.themoviedb_id = tmdbId || 0;
+              dbCard.needsEnrichment = false;
+            }
+          }
+
+          // 3. Update the ID in all bookmark categories
+          var categories = ['like', 'wath', 'book', 'look', 'viewed', 'scheduled', 'continued', 'thrown', 'history'];
+          categories.forEach(function (cat) {
+            if (fav && fav[cat] && Array.isArray(fav[cat])) {
+              var index = fav[cat].indexOf(oldId);
+              if (index !== -1) {
+                fav[cat][index] = newId;
+              }
+            }
+          });
+
+          // 4. Save to Storage
+          if (Lampa.Storage && typeof Lampa.Storage.set === 'function') {
+            Lampa.Storage.set('favorite', fav);
+          }
+        }
+      };
 
       // Спроба з кеша
       if (tmdbIdCache[card.kinobaza_id]) {
-        card.id = tmdbIdCache[card.kinobaza_id];
-        card.needsEnrichment = false;
+        updateFavoriteDb({
+          themovedb_id: tmdbIdCache[card.kinobaza_id],
+          id: card.kinobaza_id
+        });
         resolve(card);
         return;
       }
@@ -2231,25 +2923,21 @@
       // Запит деталей
       var slug = card.slug || '';
       if (!slug) {
-        card.id = 'kb_' + card.id;
-        card.needsEnrichment = false;
+        updateFavoriteDb({
+          themovedb_id: 0,
+          id: card.id
+        });
         resolve(card);
         return;
       }
       api$1.getTitle(slug).then(function (data) {
-        var tmdbId = data.themoviedb_id;
-        card.id = tmdbId || card.id;
-        card.kinobaza_id = data.id;
-        card.imdb_id = data.imdb_id ? 'tt' + data.imdb_id : '';
-        card.themoviedb_id = tmdbId || 0;
-        if (tmdbId) {
-          tmdbIdCache[card.kinobaza_id] = tmdbId;
-        }
-        card.needsEnrichment = false;
+        updateFavoriteDb(data);
         resolve(card);
       })["catch"](function () {
-        card.id = 'kb_' + card.id;
-        card.needsEnrichment = false;
+        updateFavoriteDb({
+          themovedb_id: 0,
+          id: card.id
+        });
         resolve(card);
       });
     });
@@ -2288,7 +2976,7 @@
         json.type = 'now_watch';
         json.url = 'titles?list_type=1';
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
           json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
         json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2307,7 +2995,7 @@
         json.type = 'upcoming';
         json.url = 'titles?list_type=2';
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
           json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
         json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2326,7 +3014,7 @@
         json.type = 'trend_week';
         json.url = 'titles?list_type=31';
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
           json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
         json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2345,7 +3033,7 @@
         json.type = 'top';
         json.url = 'titles?list_type=3';
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
           json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
         json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2364,7 +3052,7 @@
         json.type = 'latest';
         json.url = 'titles?list_type=5';
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
           json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
         json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2383,7 +3071,7 @@
         json.type = 'best_movies';
         json.url = 'titles?list_type=20';
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
           json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
         json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2402,7 +3090,7 @@
         json.type = 'best_series';
         json.url = 'titles?list_type=4';
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
           json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
         json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2445,7 +3133,9 @@
           fulldata.push(status.data[key]);
         }
       }
-      if (fulldata.length) oncomplite(fulldata);else onerror();
+      if (fulldata.length) oncomplite(fulldata);else if (onerror) onerror({
+        empty: true
+      });
     };
     parts_data.forEach(function (part) {
       part(function (json) {
@@ -2563,7 +3253,7 @@
           json.type = 'latest';
           json.url = 'titles?list_type=5&genres[]=12&exclude_genres[]=32';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2583,7 +3273,7 @@
           json.type = 'popular';
           json.url = 'titles?list_type=31&genres[]=12&exclude_genres[]=32';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2604,7 +3294,7 @@
           json.type = 'new_movies';
           json.url = 'titles?genres[]=12&exclude_genres[]=32&type=1&order_by=date_desc';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2625,7 +3315,7 @@
           json.type = 'new_series';
           json.url = 'titles?genres[]=12&exclude_genres[]=32&type=2&order_by=date_desc';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2665,7 +3355,7 @@
           json.type = 'latest';
           json.url = 'titles?list_type=5&genres[]=32';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2685,7 +3375,7 @@
           json.type = 'popular';
           json.url = 'titles?genres[]=32&order_by=popularity';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2706,7 +3396,7 @@
           json.type = 'new_movies';
           json.url = 'titles?genres[]=32&type=1&order_by=date_desc';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2727,7 +3417,7 @@
           json.type = 'new_series';
           json.url = 'titles?genres[]=32&type=2&order_by=date_desc';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2748,7 +3438,7 @@
           json.type = 'ukr_audio';
           json.url = 'titles?genres[]=32&translated=has_ukr_audio';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2785,7 +3475,7 @@
           json.type = 'now_watch';
           json.url = 'titles?list_type=1';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2807,7 +3497,7 @@
           json.type = 'upcoming';
           json.url = 'titles?list_type=2';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2829,7 +3519,7 @@
         json.type = 'popular';
         json.url = 'titles?list_type=31&type=' + type;
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
           json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
         json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2850,7 +3540,7 @@
         json.type = 'top';
         json.url = 'titles?list_type=' + lt;
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
           json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
         json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2874,7 +3564,7 @@
         json.type = 'last_year';
         json.url = 'titles?ys=' + prevYear + '&ye=' + prevYear + '&type=' + type + '&list_type=31';
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
           json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
         json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2900,7 +3590,7 @@
           json.type = 'worth';
           json.url = 'titles?ys=' + ys + '&ye=' + ye + '&rating=6&type=' + type;
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2922,7 +3612,7 @@
         json.type = 'high_rated';
         json.url = 'titles?imdb_rating=8&type=' + type;
         if (json.data) {
-          json.results = card.mapList(json.data);
+          json.results = cardMapper.mapList(json.data);
           json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
         json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2945,7 +3635,7 @@
           json.type = 'new_year';
           json.url = 'titles?ys=' + currentYear + '&type=' + type + '&list_type=31';
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2969,7 +3659,7 @@
           json.type = 'ongoing';
           json.url = 'titles?list_type=31&type=' + type;
           if (json.data) {
-            json.results = card.mapList(json.data);
+            json.results = cardMapper.mapList(json.data);
             json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
           }
           json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -2995,7 +3685,7 @@
             json.type = 'genre_' + genreId;
             json.url = 'titles?type=' + type + '&genres[]=' + genreId + '&list_type=31';
             if (json.data) {
-              json.results = card.mapList(json.data);
+              json.results = cardMapper.mapList(json.data);
               json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
             }
             json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -3067,7 +3757,7 @@
         }
       }
       if (movies.length) {
-        var movieResults = card.mapList(movies);
+        var movieResults = cardMapper.mapList(movies);
         var movieWrapper = {
           results: movieResults
         };
@@ -3079,7 +3769,7 @@
         };
       }
       if (series.length) {
-        var seriesResults = card.mapList(series);
+        var seriesResults = cardMapper.mapList(series);
         var seriesWrapper = {
           results: seriesResults
         };
@@ -3099,7 +3789,7 @@
     api$1.searchPersons(rawQuery).then(function (json) {
       var personData = json.data || [];
       if (personData.length) {
-        var personResults = card.mapPersonSearchList(personData);
+        var personResults = cardMapper.mapPersonSearchList(personData);
         var personWrapper = {
           results: personResults
         };
@@ -3128,14 +3818,30 @@
     // Пріоритет: slug → imdb_id → card.slug → card.imdb_id → card.original_title/card.original_name
     var card = params.card || {};
     var lookupKey = params.slug || params.imdb_id || card.slug || card.imdb_id || '';
-    if (lookupKey) {
-      // Швидкий шлях: slug або imdb_id → деталі
-      api$1.getTitle(lookupKey).then(function (data) {
+    var executeWithSlug = function executeWithSlug(slug) {
+      api$1.getTitle(slug).then(function (data) {
         onFullLoaded(data, oncomplite);
       })["catch"](function () {
         // Fallback: search by title
         searchByTitle(card, oncomplite, onerror);
       });
+    };
+    if (lookupKey) {
+      if (lookupKey.toString().startsWith('tt')) {
+        // Це IMDb ID. Спершу резолвимо його в slug
+        resolver.resolveByImdb(lookupKey).then(function (target) {
+          if (target && target.slug) {
+            executeWithSlug(target.slug);
+          } else {
+            searchByTitle(card, oncomplite, onerror);
+          }
+        })["catch"](function () {
+          searchByTitle(card, oncomplite, onerror);
+        });
+      } else {
+        // Це вже готовий slug
+        executeWithSlug(lookupKey);
+      }
     } else {
       // Повільний шлях: пошук за назвою
       searchByTitle(card, oncomplite, onerror);
@@ -3148,7 +3854,9 @@
   function searchByTitle(card, oncomplite, onerror) {
     var query = card.original_name || card.original_title || card.title || card.name || '';
     if (!query) {
-      if (onerror) onerror();
+      if (onerror) onerror({
+        empty: true
+      });
       return;
     }
 
@@ -3197,13 +3905,19 @@
         api$1.getTitle(found.slug).then(function (data) {
           onFullLoaded(data, oncomplite);
         })["catch"](function () {
-          if (onerror) onerror();
+          if (onerror) onerror({
+            empty: true
+          });
         });
       } else {
-        if (onerror) onerror();
+        if (onerror) onerror({
+          empty: true
+        });
       }
     })["catch"](function () {
-      if (onerror) onerror();
+      if (onerror) onerror({
+        empty: true
+      });
     });
   }
 
@@ -3211,7 +3925,7 @@
    * Обробка повної картки після отримання деталей
    */
   function onFullLoaded(data, oncomplite) {
-    var movie = card.mapFull(data);
+    var movie = cardMapper.mapFull(data);
     var result = {
       movie: movie,
       persons: {
@@ -3220,11 +3934,11 @@
       },
       recomend: {
         title: Lampa.Lang.translate('title_recomendations'),
-        results: card.mapList(data.recommendations || [])
+        results: cardMapper.mapList(data.recommendations || [])
       },
       collection: {
         title: Lampa.Lang.translate('title_collection'),
-        results: card.mapList(data.collectionMovies || [])
+        results: cardMapper.mapList(data.collectionMovies || [])
       },
       simular: {
         results: []
@@ -3295,7 +4009,7 @@
     var slug = tv.slug || tv.original_title || '';
     var seasonNumber = from[0];
     api$1.getEpisodes(slug, seasonNumber).then(function (data) {
-      var episodes = card.mapEpisodes(data.data || []);
+      var episodes = cardMapper.mapEpisodes(data.data || []);
       oncomplite({
         name: Lampa.Lang.translate('title_seasons') + ' ' + seasonNumber,
         season_number: seasonNumber,
@@ -3323,7 +4037,7 @@
     if (params.slug) {
       api$1.getPerson(params.slug).then(function (data) {
         oncomplite({
-          person: card.mapPerson(data),
+          person: cardMapper.mapPerson(data),
           credits: {
             knownFor: []
           }
@@ -3334,7 +4048,9 @@
       if (Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb && Lampa.Api.sources.tmdb.person) {
         Lampa.Api.sources.tmdb.person(params, oncomplite, onerror);
       } else {
-        onerror();
+        if (onerror) onerror({
+          empty: true
+        });
       }
     }
   }
@@ -3352,7 +4068,7 @@
     queryParams.page = params.page || 1;
     api$1.getTitles(queryParams).then(function (json) {
       if (json.data) {
-        json.results = card.mapList(json.data);
+        json.results = cardMapper.mapList(json.data);
         json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
       }
       json = Lampa.Utils.addSource(json, 'kinobaza');
@@ -3547,7 +4263,7 @@
               }
             }
             if (movies.length) {
-              var movieResults = card.mapList(movies);
+              var movieResults = cardMapper.mapList(movies);
               var movieWrapper = {
                 results: movieResults
               };
@@ -3559,7 +4275,7 @@
               };
             }
             if (series.length) {
-              var seriesResults = card.mapList(series);
+              var seriesResults = cardMapper.mapList(series);
               var seriesWrapper = {
                 results: seriesResults
               };
@@ -3580,7 +4296,7 @@
         api$1.searchPersons(rawQuery).then(function (data) {
           var personData = data.data || [];
           if (personData.length) {
-            var personResults = card.mapPersonSearchList(personData);
+            var personResults = cardMapper.mapPersonSearchList(personData);
             var personWrapper = {
               results: personResults
             };
@@ -3657,7 +4373,9 @@
     Lampa.Listener.follow('state:changed', function (e) {
       if (e.target === 'favorite' && e.card && e.card.source === source && e.card.needsEnrichment) {
         enrichCard(e.card).then(function () {
-          Lampa.Favorite.read();
+          if (typeof Lampa !== 'undefined' && Lampa.Favorite && typeof Lampa.Favorite.read === 'function') {
+            Lampa.Favorite.read(true); // Quiet read without triggering page reload
+          }
         });
       }
     });
@@ -3796,132 +4514,153 @@
    * Реєструє listener для повної картки фільму
    * Вставляє: актори дубляжу, рецензії, коментарі
    */
-  function registerFullListener() {
-    Lampa.Listener.follow('full', function (e) {
-      if (e.type !== 'complite') return;
-      try {
-        var loadReviewsAndComments = function loadReviewsAndComments() {
-          // 2. Рецензії
-          api$1.getReviews(movie.kinobaza_id || movie.id).then(function (reviewsData) {
-            if (!reviewsData || !reviewsData.data || !reviewsData.data.length) {
-              loadComments();
-              return;
-            }
-            var reviewResults = reviewsData.data.map(function (r) {
-              var author = r.user && r.user.name || 'Користувач';
-              var fullText = (r.spoilers ? '⚠️ СПОЙЛЕРИ\n' : '') + (r.title || '') + '\n' + (r.body || '');
+  var onFullEvent = function onFullEvent(e) {
+    if (e.type !== 'complite') return;
+    try {
+      var loadReviewsAndComments = function loadReviewsAndComments() {
+        // 2. Рецензії
+        api$1.getReviews(movie.kinobaza_id || movie.id).then(function (reviewsData) {
+          if (!reviewsData || !reviewsData.data || !reviewsData.data.length) {
+            loadComments();
+            return;
+          }
+          var reviewResults = reviewsData.data.map(function (r) {
+            var author = r.user && r.user.name || 'Користувач';
+            var fullText = (r.spoilers ? '⚠️ СПОЙЛЕРИ\n' : '') + (r.title || '') + '\n' + (r.body || '');
+            return {
+              id: 'review_' + r.id,
+              email: author + (r.rating ? ' ★ ' + r.rating + '/10' : ''),
+              text: fullText,
+              comment: fullText,
+              like_count: r.likes || 0,
+              liked: r.likes || 0
+            };
+          });
+          rows.splice(cardsIdx, 0, ['discuss', {
+            title: Lampa.Lang.translate('kinobaza_reviews') || 'Рецензії',
+            results: reviewResults,
+            movie: movie,
+            page: 1,
+            total_pages: 1,
+            total_results: reviewResults.length
+          }]);
+          cardsIdx++;
+          loadComments();
+        })["catch"](function () {
+          loadComments();
+        });
+      };
+      var loadComments = function loadComments() {
+        // 3. Коментарі
+        if (movie.comments_count > 0) {
+          api$1.getComments(movie.kinobaza_id || movie.id, 7).then(function (commentsData) {
+            if (!commentsData || !commentsData.data || !commentsData.data.length) return;
+            var commentResults = commentsData.data.map(function (c) {
+              var author = c.user && c.user.name || '';
               return {
-                id: 'review_' + r.id,
-                email: author + (r.rating ? ' ★ ' + r.rating + '/10' : ''),
-                text: fullText,
-                comment: fullText,
-                like_count: r.likes || 0,
-                liked: r.likes || 0
+                id: c.id,
+                email: author + (c.rating ? ' ★ ' + c.rating + '/10' : ''),
+                text: c.body || '',
+                comment: c.body || '',
+                like_count: c.likes || 0,
+                liked: c.likes || 0
               };
             });
             rows.splice(cardsIdx, 0, ['discuss', {
-              title: Lampa.Lang.translate('kinobaza_reviews') || 'Рецензії',
-              results: reviewResults,
+              title: Lampa.Lang.translate('title_comments'),
+              results: commentResults,
               movie: movie,
               page: 1,
               total_pages: 1,
-              total_results: reviewResults.length
+              total_results: commentResults.length
             }]);
-            cardsIdx++;
-            loadComments();
-          })["catch"](function () {
-            loadComments();
-          });
-        };
-        var loadComments = function loadComments() {
-          // 3. Коментарі
-          if (movie.comments_count > 0) {
-            api$1.getComments(movie.kinobaza_id || movie.id, 7).then(function (commentsData) {
-              if (!commentsData || !commentsData.data || !commentsData.data.length) return;
-              var commentResults = commentsData.data.map(function (c) {
-                var author = c.user && c.user.name || '';
-                return {
-                  id: c.id,
-                  email: author + (c.rating ? ' ★ ' + c.rating + '/10' : ''),
-                  text: c.body || '',
-                  comment: c.body || '',
-                  like_count: c.likes || 0,
-                  liked: c.likes || 0
-                };
-              });
-              rows.splice(cardsIdx, 0, ['discuss', {
-                title: Lampa.Lang.translate('title_comments'),
-                results: commentResults,
-                movie: movie,
-                page: 1,
-                total_pages: 1,
-                total_results: commentResults.length
-              }]);
-            })["catch"](function () {});
-          }
-        };
-        var movie = e.data && e.data.movie;
-        if (!movie || movie.source !== 'kinobaza') return;
-        var rows = e.link && e.link.rows;
-        if (!rows) return;
-
-        // Знаходимо індекс persons
-        var personIdx = -1;
-        for (var i = 0; i < rows.length; i++) {
-          if (rows[i] && rows[i][0] === 'persons') {
-            personIdx = i;
-            break;
-          }
+          })["catch"](function () {});
         }
+      };
+      var movie = e.data && e.data.movie;
+      if (!movie || movie.source !== 'kinobaza') return;
+      var rows = e.link && e.link.rows;
+      if (!rows) return;
 
-        // Знаходимо індекс cards
-        var cardsIdx = rows.length;
-        for (var i = 0; i < rows.length; i++) {
-          if (rows[i] && rows[i][0] === 'cards') {
-            cardsIdx = i;
-            break;
-          }
+      // Знаходимо індекс persons
+      var personIdx = -1;
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i] && rows[i][0] === 'persons') {
+          personIdx = i;
+          break;
         }
+      }
 
-        // 1. Дубляж — завжди першим
-        if (movie.hasDubInfo) {
-          api$1.getDubPersons(movie.kinobaza_id || movie.id).then(function (dubData) {
-            if (!dubData || !dubData.data || !dubData.data.length) {
-              loadReviewsAndComments();
-              return;
-            }
-            var dubResults = dubData.data.map(function (a) {
-              var poster = a.poster_tmdb || a.poster_kinobaza || '';
-              return {
-                id: a.id,
-                slug: a.slug || '',
-                name: a.name_uk || a.name_en || '',
-                original_name: a.name_en || '',
-                profile_path: poster,
-                poster: poster ? a.poster_tmdb ? Lampa.TMDB.image('t/p/w276_and_h350_face/' + a.poster_tmdb.replace(/^\//, '')) : 'https://i.kinobaza.com.ua/w300/' + a.poster_kinobaza : './img/img_broken.svg',
-                character: a.character || '',
-                source: 'kinobaza',
-                gender: a.gender || 2
-              };
-            });
-            var insertAt = personIdx >= 0 ? personIdx + 1 : rows.length;
-            rows.splice(insertAt, 0, ['persons', {
-              title: Lampa.Lang.translate('kinobaza_dub_actors'),
-              results: dubResults
-            }]);
+      // Знаходимо індекс cards
+      var cardsIdx = rows.length;
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i] && rows[i][0] === 'cards') {
+          cardsIdx = i;
+          break;
+        }
+      }
 
-            // Оновлюємо cardsIdx після вставки
-            if (insertAt <= cardsIdx) cardsIdx++;
+      // 1. Дубляж — завжди першим
+      if (movie.hasDubInfo) {
+        api$1.getDubPersons(movie.kinobaza_id || movie.id).then(function (dubData) {
+          if (!dubData || !dubData.data || !dubData.data.length) {
             loadReviewsAndComments();
-          })["catch"](function () {
-            loadReviewsAndComments();
+            return;
+          }
+          var dubResults = dubData.data.map(function (a) {
+            var poster = a.poster_tmdb || a.poster_kinobaza || '';
+            return {
+              id: a.id,
+              slug: a.slug || '',
+              name: a.name_uk || a.name_en || '',
+              original_name: a.name_en || '',
+              profile_path: poster,
+              poster: poster ? a.poster_tmdb ? Lampa.TMDB.image('t/p/w276_and_h350_face/' + a.poster_tmdb.replace(/^\//, '')) : 'https://i.kinobaza.com.ua/w300/' + a.poster_kinobaza : './img/img_broken.svg',
+              character: a.character || '',
+              source: 'kinobaza',
+              gender: a.gender || 2
+            };
           });
-        } else {
+          var insertAt = personIdx >= 0 ? personIdx + 1 : rows.length;
+          rows.splice(insertAt, 0, ['persons', {
+            title: Lampa.Lang.translate('kinobaza_dub_actors'),
+            results: dubResults
+          }]);
+
+          // Оновлюємо cardsIdx після вставки
+          if (insertAt <= cardsIdx) cardsIdx++;
           loadReviewsAndComments();
-        }
-      } catch (err) {}
-    });
+        })["catch"](function () {
+          loadReviewsAndComments();
+        });
+      } else {
+        loadReviewsAndComments();
+      }
+    } catch (err) {}
+  };
+
+  /**
+   * Реєструє listener для повної картки фільму
+   * Вставляє: актори дубляжу, рецензії, коментарі
+   */
+  function registerFullListener() {
+    Lampa.Listener.follow('full', onFullEvent);
   }
+
+  /**
+   * Видаляє full listener
+   */
+  function unregisterFullListener() {
+    Lampa.Listener.remove('full', onFullEvent);
+  }
+
+  var ratingIcons = {
+    "imdb_rating": "<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 24 24'><path fill-rule='evenodd' d='M5 1a4 4 0 0 0-4 4v14a4 4 0 0 0 4 4h14a4 4 0 0 0 4-4V5a4 4 0 0 0-4-4zM4 14.91V9.09h1.455v5.82zm2.182 0V9.09H8L8.727 12l.728-2.91h1.818v5.82H9.818v-2.546l-.727 2.545h-.727l-.728-2.545v2.545zm5.818 0h2.182c.803 0 1.454-.652 1.454-1.455v-2.91c0-.803-.65-1.454-1.454-1.454H12v5.818Zm1.454-4.728h.364c.201 0 .364.163.364.364v2.909c0 .2-.163.363-.364.363h-.364zm2.91-1.091h1.454v1.783c.243-.177.603-.329 1.091-.329c.873 0 1.091.485 1.091.728v2.909c0 .242-.218.727-1.09.727c-.49 0-.849-.152-1.092-.328v.328h-1.454zm2.181 4.364V12a.364.364 0 0 0-.727 0v1.455a.364.364 0 0 0 .727 0' clip-rule='evenodd'/></svg>",
+    "rating": "<svg version='1.0' xmlns='http://www.w3.org/2000/svg' width='933.333' height='933.333' viewBox='0 0 700 700'>    <defs>        <linearGradient id='myGradient' gradientTransform='rotate(90)'>            <stop offset='0%'  stop-color='#005BBB' />            <stop offset='50%'  stop-color='#005BBB' />            <stop offset='50%' stop-color='#FFD500' />            <stop offset='100%' stop-color='#FFD500' />        </linearGradient>    </defs>    <path  fill='url(#myGradient)' d='M53 47.1c-15 1.5-25.4 6.6-37.2 18.1-4.5 4.4-10.5 14.4-13 21.6L.5 93.5v514l2.2 5.9c7.5 19.9 24.6 35 43.8 38.7 4.5.9 83.1 1.2 304 1.2 270.9 0 298.6-.2 304.8-1.7 11.4-2.7 22.3-9.4 30.4-18.6 3-3.5 9.5-13.5 10-15.5.1-.5 1.2-4.2 2.3-8 2-7 2-7.9 1.8-262l-.3-255-2.3-6.2c-7-18.7-22.5-32.9-41.3-37.9-6-1.6-26.2-1.7-301.4-1.8-162.2-.1-297.9.2-301.5.5zm73 48.5c2.5 1.2 5.9 3.7 7.6 5.5 5.8 6.4 6.3 8.9 6.4 37.7 0 16.4-.4 27.7-1.1 30.6-1.4 5.5-6.7 11.9-12.3 14.9-3.9 2.1-5.2 2.2-33.1 2.2-28.5 0-29.1 0-33.5-2.3-5.4-2.9-8.5-6.3-11.3-12.2-1.9-4.2-2-6.3-2-32 0-31 .4-33.1 7.7-40.3 6.1-5.8 8.8-6.2 39.6-6.2 25.8 0 27.8.2 32 2.1zm374 .2c5.4 2.9 8.5 6.3 11.3 12.2 2 4.4 2 5.6 2 102 0 95.4 0 97.6-2 102-2.5 5.8-8.6 11.6-13.7 13.3-3.4 1.1-29.2 1.3-148.6 1.2-132.1-.1-144.8-.3-148-1.8-6.9-3.3-12.4-9.8-13.6-16.2-1-5.2-1.1-187.2-.2-194.8 1.2-9 7.5-16.6 15.7-19 3.6-1.1 32.1-1.3 148.5-1.3l144.1.1 4.5 2.3zm139-.5c5.2 2.5 10.3 7.6 12.4 12.5 1.8 4 2 6.8 1.9 32.5 0 26.8-.1 28.4-2.1 32.4-1.2 2.3-3.8 5.8-5.9 7.8-6 5.8-9.9 6.4-40.8 6.1-25.3-.2-27.3-.3-31-2.3-4.2-2.2-8-5.9-11.1-10.8-1.7-2.6-1.9-5.5-2.2-30-.4-31 .1-35.2 5.4-41.4 7.1-8.2 9.9-8.8 43.4-8.6 22.9 0 27 .3 30 1.8zM126.6 235.8c5.6 2.9 10.9 9.3 12.3 14.8 1.5 6 1.4 54.8-.1 59.8-1.5 4.9-7.1 11.2-12.2 13.8-3.9 2.1-5.5 2.2-31.6 2.4-31 .1-34.4-.4-40.6-6.4-7.4-7.1-7.8-9.2-7.7-40.2 0-25.8.1-27.8 2.1-32.3 2.5-5.5 7.1-10.2 12.6-12.6 3.4-1.5 7.6-1.7 32.5-1.6 27.4.1 28.8.2 32.7 2.3zm512.4-.6c5 2.2 9.9 7.3 12.3 12.7 1.9 4.3 2.1 6.4 2 32.3v27.6l-2.7 5.6c-3 6-8.4 10.6-14.6 12.3-1.9.6-15.9.9-31 .8-25.9-.1-27.7-.2-31.5-2.2-5.5-2.9-10.1-8-11.9-13-1.9-5.4-2.3-53.6-.5-60.7 1.6-6.4 7.6-13 14-15.4 4.5-1.7 7.9-1.8 32.7-1.7 22.8.1 28.3.4 31.2 1.7zM126.5 375.7c4.2 2.2 8 5.9 11.1 10.8 1.7 2.6 1.9 5.5 2.2 30 .3 17.6 0 28.8-.8 32.1-1.3 6.1-6.3 12.5-12.4 15.6-3.9 2.1-5.3 2.2-33.1 2.2-32.1.1-33-.1-39.7-6.8-6.6-6.5-7.1-9.3-7.2-37.6-.1-14 .3-27.5.8-30 1.5-7.9 8.8-15.7 16.7-17.8 1.9-.4 15.8-.8 30.9-.7 25.9.1 27.7.2 31.5 2.2zm372.8-.3c5.2 2.6 9.6 7.2 12 12.6 1.9 4.3 2 7 2.1 98.5.1 51.7-.2 96.6-.6 99.9-1.2 9-7.5 16.5-16.1 19.1-5.4 1.6-285.9 1.9-292.1.3-9.2-2.3-16.1-10.1-17.3-19.4-1.4-10.3-.8-192.4.6-196.5 2.3-7 8.5-13.3 15.6-15.6 1.9-.6 55.8-.9 147.5-.9 139.6.1 144.6.2 148.3 2zm138.7-.6c8.4 3.7 13.7 10.4 14.8 18.8.9 7.4.8 49.5-.2 54.9-.9 4.3-4.7 10.2-9 13.6-5.2 4.1-9.6 4.6-38.6 4.5-26.2-.2-27.7-.3-31.6-2.4-5.1-2.6-10.7-8.9-12.2-13.8-1.5-5-1.6-53.8-.1-59.8 1.2-5 6.6-11.9 11-14.1 1.5-.9 4.5-1.9 6.6-2.3 5.7-1.3 56.3-.7 59.3.6zM126.5 515.7c4.1 2.2 8.8 6.8 11.5 11.3 2 3.3 2.8 56.1 1 62.7-1.5 5.3-6.9 11.7-12.4 14.6-3.9 2.1-5.2 2.2-33.1 2.2-26.5 0-29.3-.2-32.8-1.9-5.2-2.6-9.6-7.2-12-12.6-1.9-4.1-2-6.7-2-31.5 0-29 .4-32.4 5.1-38 3.3-3.9 8.1-7.1 12.3-8.2 1.9-.5 15.8-.9 30.9-.8 26 .1 27.7.2 31.5 2.2zm512.5-.5c5 2.2 9.9 7.3 12.3 12.7 1.9 4.3 2 6.5 2 32.1 0 25.3-.1 27.9-2 32-2.4 5.4-6.8 10-12 12.6-3.4 1.7-6.5 1.9-31.8 2-25.4.1-28.4-.1-32.5-1.8-5.1-2.2-9.2-5.7-12.3-10.8-2.1-3.3-2.2-4.8-2.5-31.5-.2-19.4 0-29.2.8-32.2 2.2-7.5 9.8-14.6 17.5-16.3 1.7-.3 15.2-.6 30-.5 22.1.1 27.6.4 30.5 1.7z'/></svg>",
+    "tomato_user_meter": "<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 24 24'><path d='M5.866 0L4.335 1.262l2.082 1.8c-2.629-.989-4.842 1.4-5.012 2.338c1.384-.323 2.24-.422 3.344-.335c-7.042 4.634-4.978 13.148-1.434 16.094c5.784 4.612 13.77 3.202 17.91-1.316C27.26 13.363 22.993.65 10.86 2.766c.107-1.17.633-1.503 1.243-1.602c-.89-1.493-3.67-.734-4.556 1.374C7.52 2.602 5.866 0 5.866 0zM4.422 7.217H6.9c2.673 0 2.898.012 3.55.202c1.06.307 1.868.973 2.313 1.904c.05.106.092.206.13.305l7.623.008l.027 2.912l-2.745-.024v7.549l-2.982-.016v-7.522l-2.127.016a2.92 2.92 0 0 1-1.056 1.134c-.287.176-.3.19-.254.264c.127.2 2.125 3.642 2.125 3.659l-3.39.019l-2.013-3.376c-.034-.047-.122-.068-.344-.084l-.297-.02l.037 3.48l-3.075-.038zm3.016 2.288l.024.338c.014.186.024.729.024 1.206v.867l.582-.025c.32-.013.695-.049.833-.078c.694-.146 1.048-.478 1.087-1.018c.027-.378-.063-.636-.303-.87c-.318-.309-.761-.416-1.733-.418Z'/></svg>",
+    "tomato_meter": "<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 24 24'><path d='M5.866 0L4.335 1.262l2.082 1.8c-2.629-.989-4.842 1.4-5.012 2.338c1.384-.323 2.24-.422 3.344-.335c-7.042 4.634-4.978 13.148-1.434 16.094c5.784 4.612 13.77 3.202 17.91-1.316C27.26 13.363 22.993.65 10.86 2.766c.107-1.17.633-1.503 1.243-1.602c-.89-1.493-3.67-.734-4.556 1.374C7.52 2.602 5.866 0 5.866 0zM4.422 7.217H6.9c2.673 0 2.898.012 3.55.202c1.06.307 1.868.973 2.313 1.904c.05.106.092.206.13.305l7.623.008l.027 2.912l-2.745-.024v7.549l-2.982-.016v-7.522l-2.127.016a2.92 2.92 0 0 1-1.056 1.134c-.287.176-.3.19-.254.264c.127.2 2.125 3.642 2.125 3.659l-3.39.019l-2.013-3.376c-.034-.047-.122-.068-.344-.084l-.297-.02l.037 3.48l-3.075-.038zm3.016 2.288l.024.338c.014.186.024.729.024 1.206v.867l.582-.025c.32-.013.695-.049.833-.078c.694-.146 1.048-.478 1.087-1.018c.027-.378-.063-.636-.303-.87c-.318-.309-.761-.416-1.733-.418Z'/></svg>",
+    "metascore": "<svg xmlns='http://www.w3.org/2000/svg' width='1024' height='1024' viewBox='0 0 24 24'><path d='M11.99 0A12 12 0 1 0 24 12v-.014A12 12 0 0 0 11.99 0m-.055 2.564a9.399 9.399 0 0 1 9.407 9.389v.01a9.399 9.399 0 1 1-9.408-9.399Zm-1.61 17.198l2.046-2.046l-3.94-3.94c-.165-.166-.345-.373-.442-.608c-.221-.47-.318-1.203.221-1.742c.664-.664 1.548-.387 2.406.47l3.788 3.788l2.046-2.046l-3.954-3.954a2.48 2.48 0 0 1-.456-.622c-.263-.539-.25-1.216.235-1.7c.677-.678 1.562-.429 2.544.553l3.677 3.677l2.046-2.046l-3.982-3.982c-2.018-2.018-3.912-1.949-5.212-.65c-.498.499-.802 1.024-.954 1.618a4.026 4.026 0 0 0-.055 1.686l-.027.028c-.996-.414-2.13-.166-3 .705c-1.162 1.161-1.12 2.392-.982 3.11l-.042.043l-1.009-.816l-1.77 1.77a64.1 64.1 0 0 1 2.213 2.1z'/></svg>"
+  };
 
   /**
    * Full-start listener — DOM-інжекції в шапку картки
@@ -3932,125 +4671,196 @@
   /**
    * Реєструє listener для шапки повної картки
    */
-  function registerFullStartListener() {
-    Lampa.Listener.follow('full', function (e) {
-      if (e.type !== 'complite') return;
-      try {
-        var movie = e.data && e.data.movie;
-        if (!movie || movie.source !== 'kinobaza') return;
-        var $full = e.object && e.object.activity && e.object.activity.render();
-        if (!$full || !$full.length) return;
+  var onFullStartEvent = function onFullStartEvent(e) {
+    if (e.type !== 'complite') return;
+    try {
+      var movie = e.data && e.data.movie;
+      if (!movie || movie.source !== 'kinobaza') return;
+      var $full = e.object && e.object.activity && e.object.activity.render();
+      if (!$full || !$full.length) return;
 
-        // 1. Rating breakdown — топ-3 оцінки + загальна кількість
-        var breakdown = movie.rating_breakdown;
-        var totalVotes = parseInt(movie.vote_count) || parseInt(movie.votes) || 0;
-        if (breakdown && totalVotes > 0) {
-          // Збираємо всі оцінки від 10 до 1
-          var ratings = [];
-          for (var i = 1; i <= 10; i++) {
-            var v = parseInt(breakdown[i]) || 0;
-            if (v > 0) ratings.push({
-              rating: i,
-              votes: v
-            });
-          }
-          ratings.sort(function (a, b) {
-            return b.rating - a.rating;
+      // 1. Rating breakdown — топ-3 оцінки + загальна кількість
+      var disableVotes = Lampa.Storage.field('kinobaza_card_disable_votes');
+      var breakdown = movie.rating_breakdown;
+      var totalVotes = parseInt(movie.vote_count) || parseInt(movie.votes) || 0;
+      var $breakdown = $full.find('.full-start-new__rating-breakdown');
+      if (disableVotes) {
+        if ($breakdown.length) $breakdown.remove();
+      } else if (breakdown && totalVotes > 0) {
+        // Збираємо всі оцінки від 10 до 1
+        var ratings = [];
+        for (var i = 1; i <= 10; i++) {
+          var v = parseInt(breakdown[i]) || 0;
+          if (v > 0) ratings.push({
+            rating: i,
+            votes: v
           });
-          var topText = ratings.map(function (r) {
-            return getRatingEmoji(r.rating) + r.rating + ': ' + r.votes;
-          }).join('  ');
-          var $reactions = $full.find('.full-start-new__reactions div').first();
+        }
+        ratings.sort(function (a, b) {
+          return b.rating - a.rating;
+        });
+        var topText = ratings.map(function (r) {
+          return getRatingEmoji(r.rating) + r.rating + ': ' + r.votes;
+        }).join('  ');
+        if (!$breakdown.length) {
+          $breakdown = $('<div class="full-start-new__rating-breakdown"><div></div></div>');
+          var $reactions = $full.find('.full-start-new__reactions');
           if ($reactions.length) {
-            $reactions.text(topText + '  ·  всього ' + totalVotes);
+            $reactions.before($breakdown);
+          } else {
+            var $details = $full.find('.full-start-new__details');
+            if ($details.length) {
+              $details.after($breakdown);
+            }
           }
         }
+        $breakdown.find('div').text(topText + '  ·  всього ' + totalVotes);
+      }
 
-        // 2. Metacritic — лаконічний бейдж перед PG
-        var $pg = $full.find('.full-start__pg');
-        if (movie.metascore > 0 && $pg.length) {
-          var metaColor = movie.metascore >= 61 ? '#6c3' : movie.metascore >= 40 ? '#fc3' : '#f00';
-          $pg.before('<div class="full-start__rate rate--metacritic">' + '<div style="background:' + metaColor + ';color:#000;border-radius:0.3em;font-weight:700;padding:0 0.4em">' + movie.metascore + '</div>' + '<div style="font-size:0.65em;text-transform:uppercase;letter-spacing:0.05em">Metacritic</div>' + '</div>');
+      // 2. Custom ratings with SVG icons
+      var disableRatings = Lampa.Storage.field('kinobaza_card_disable_ratings');
+      var $rateLine = $full.find('.full-start-new__rate-line');
+      if ($rateLine.length) {
+        // Remove previously added custom ratings to avoid duplication
+        $rateLine.find('.rate--custom').remove();
+        if (disableRatings) {
+          $rateLine.find('.rate--tmdb, .rate--imdb, .rate--kp').remove();
+        } else {
+          // Hide/remove default ratings
+          $rateLine.find('.rate--tmdb, .rate--imdb, .rate--kp').remove();
+
+          // Define ratings config
+          var ratingsConfig = [{
+            key: 'rating',
+            value: movie.vote_average,
+            label: 'КіноБаза',
+            suffix: ''
+          }, {
+            key: 'imdb_rating',
+            value: movie.imdb_rating,
+            label: 'IMDb',
+            suffix: ''
+          }, {
+            key: 'tomato_meter',
+            value: movie.tomato_meter,
+            label: 'Rotten Critics',
+            suffix: '%'
+          }, {
+            key: 'tomato_user_meter',
+            value: movie.tomato_user_meter,
+            label: 'Rotten Audience',
+            suffix: '%'
+          }, {
+            key: 'metascore',
+            value: movie.metascore,
+            label: 'Metacritic',
+            suffix: ''
+          }];
+          var $pg = $rateLine.find('.full-start__pg');
+          ratingsConfig.forEach(function (item) {
+            var val = parseFloat(item.value) || 0;
+            if (val > 0) {
+              var displayVal = val.toString();
+              if (item.key === 'imdb_rating' || item.key === 'rating') {
+                var ratingVal = val > 10 ? val / 10 : val;
+                displayVal = ratingVal.toFixed(1);
+              } else {
+                displayVal = Math.round(val) + item.suffix;
+              }
+              var svgIcon = ratingIcons[item.key] || '';
+              var badgeHtml = '<div class="full-start__rate rate--custom rate--' + item.key + '">';
+              if (svgIcon) {
+                badgeHtml += '<div class="rate__icon">' + svgIcon + '</div>';
+              }
+              badgeHtml += '<div class="rate__value">' + displayVal + '</div>';
+              if (!svgIcon) {
+                badgeHtml += '<div class="source--name">' + item.label + '</div>';
+              }
+              badgeHtml += '</div>';
+              if ($pg.length) {
+                $pg.before(badgeHtml);
+              } else {
+                $rateLine.append(badgeHtml);
+              }
+            }
+          });
         }
+      }
 
-        // 3. Rotten Tomatoes — лаконічний бейдж з томатом перед PG
-        if (movie.tomato_meter > 0 && $pg.length) {
-          var rtColor = movie.tomato_meter >= 75 ? '#6c3' : movie.tomato_meter >= 60 ? '#fc3' : '#f00';
-          var rtSymbol = movie.tomato_meter >= 60 ? '' : '💀';
-          $pg.before('<div class="full-start__rate rate--rotten">' + '<div style="background:' + rtColor + ';color:#000;border-radius:0.3em;font-weight:700;padding:0 0.4em">' + rtSymbol + ' ' + movie.tomato_meter + '%</div>' + '<div style="font-size:0.65em;text-transform:uppercase;letter-spacing:0.05em">Rotten</div>' + '</div>');
-        }
-
-        // 4. Release dates — власний клас full--releases, формат DD.MM.YYYY
-        var releases = [];
-        if (movie.released_ua) releases.push({
-          label: '🇺🇦',
-          date: movie.released_ua
-        });
-        if (movie.released_en) releases.push({
-          label: '🌍',
-          date: movie.released_en
-        });
-        if (movie.premiere_dvd) releases.push({
-          label: '📀 DVD',
-          date: movie.premiere_dvd
-        });
-        if (movie.premiere_bluray) releases.push({
-          label: '💿 Blu-ray',
-          date: movie.premiere_bluray
-        });
-        if (movie.premiere_digital) releases.push({
-          label: '📱 Digital',
-          date: movie.premiere_digital
-        });
-        if (releases.length > 1) {
-          var releaseText = releases.map(function (r) {
-            return r.label + ' ' + fmtDate(r.date);
-          }).join(' | ');
-          var $details = $full.find('.full-descr__details');
+      // 4. Release dates — власний клас full--releases, формат DD.MM.YYYY
+      var releases = [];
+      if (movie.released_ua) releases.push({
+        label: '🇺🇦',
+        date: movie.released_ua
+      });
+      if (movie.released_en) releases.push({
+        label: '🌍',
+        date: movie.released_en
+      });
+      if (movie.premiere_dvd) releases.push({
+        label: '📀 DVD',
+        date: movie.premiere_dvd
+      });
+      if (movie.premiere_bluray) releases.push({
+        label: '💿 Blu-ray',
+        date: movie.premiere_bluray
+      });
+      if (movie.premiere_digital) releases.push({
+        label: '📱 Digital',
+        date: movie.premiere_digital
+      });
+      if (releases.length > 1) {
+        var releaseText = releases.map(function (r) {
+          return r.label + ' ' + fmtDate(r.date);
+        }).join(' | ');
+        var $details = $full.find('.full-descr__details');
+        if ($details.length && !$details.find('.full--releases').length) {
           $details.append('<div class="full-descr__info full--releases" style="flex-basis:100%"><div class="full-descr__info-name">Релізи</div><div class="full-descr__info-body">' + releaseText + '</div></div>');
         }
+      }
 
-        // 5. PG / віковий рейтинг — показуємо в full-start__pg
-        var pgText = movie.rating_mpaa;
-        if (!pgText && movie.rating_age > 0) pgText = movie.rating_age + '+';
-        if (pgText) {
-          var $pg = $full.find('.full-start__pg');
-          if ($pg.length) {
-            $pg.removeClass('hide').text(pgText);
-          }
+      // 5. PG / віковий рейтинг — показуємо в full-start__pg
+      var pgText = movie.rating_mpaa;
+      if (!pgText && movie.rating_age > 0) pgText = movie.rating_age + '+';
+      if (pgText) {
+        var $pg = $full.find('.full-start__pg');
+        if ($pg.length) {
+          $pg.removeClass('hide').text(pgText);
         }
+      }
 
-        // 6. Networks — логотипи мереж в кінці тегів
-        var networks = movie.networks;
-        if (networks && Array.isArray(networks) && networks.length) {
-          var $tags = $full.find('.full-descr__tags');
-          if ($tags.length) {
-            var networkLogoUrl = function networkLogoUrl(n) {
-              return n.logo_svg ? 'https://image.tmdb.org/t/p/original/' + n.logo_svg.replace(/^\//, '') : n.logo ? 'https://image.tmdb.org/t/p/original/' + n.logo.replace(/^\//, '') : '';
-            };
-            var networkPush = function networkPush(n) {
-              Lampa.Activity.push({
-                url: 'titles?network=' + n.id,
-                title: n.name,
-                component: 'category_full',
-                source: 'kinobaza',
-                page: 1
+      // 6. Networks — логотипи мереж в кінці тегів
+      var networks = movie.networks;
+      if (networks && Array.isArray(networks) && networks.length) {
+        var $tags = $full.find('.full-descr__tags');
+        if ($tags.length) {
+          var networkLogoUrl = function networkLogoUrl(n) {
+            return n.logo_svg ? 'https://image.tmdb.org/t/p/original/' + n.logo_svg.replace(/^\//, '') : n.logo ? 'https://image.tmdb.org/t/p/original/' + n.logo.replace(/^\//, '') : '';
+          };
+          var networkPush = function networkPush(n) {
+            Lampa.Activity.push({
+              url: 'titles?network=' + n.id,
+              title: n.name,
+              component: 'category_full',
+              source: 'kinobaza',
+              page: 1
+            });
+          };
+          if (networks.length === 1) {
+            // Одна мережа — tag-count з лого всередині
+            var n = networks[0];
+            var src = networkLogoUrl(n);
+            if (src && !$tags.find('.kinobaza-single-network').length) {
+              var $netTag = $('<div class="tag-count selector kinobaza-single-network" title="' + n.name + '">' + '<span class="kinobaza-network-logo-wrap"><img src="' + src + '" class="kinobaza-network-logo" alt="' + n.name + '"></span>' + '</div>');
+              $netTag.on('hover:enter', function () {
+                networkPush(n);
               });
-            };
-            if (networks.length === 1) {
-              // Одна мережа — tag-count з лого всередині
-              var n = networks[0];
-              var src = networkLogoUrl(n);
-              if (src) {
-                var $netTag = $('<div class="tag-count selector kinobaza-single-network" title="' + n.name + '">' + '<span class="kinobaza-network-logo-wrap"><img src="' + src + '" class="kinobaza-network-logo" alt="' + n.name + '"></span>' + '</div>');
-                $netTag.on('hover:enter', function () {
-                  networkPush(n);
-                });
-                $tags.append($netTag);
-              }
-            } else {
-              // Дві і більше — tag-count з лічильником
-              var $netTag = $('<div class="tag-count selector">' + '<div class="tag-count__name">' + (Lampa.Lang.translate('kinobaza_networks') || 'Мережі') + '</div>' + '<div class="tag-count__count">' + networks.length + '</div>' + '</div>');
+              $tags.append($netTag);
+            }
+          } else {
+            // Дві і більше — tag-count з лічильником
+            if (!$tags.find('.kinobaza-multi-networks').length) {
+              var $netTag = $('<div class="tag-count selector kinobaza-multi-networks">' + '<div class="tag-count__name">' + (Lampa.Lang.translate('kinobaza_networks') || 'Мережі') + '</div>' + '<div class="tag-count__count">' + networks.length + '</div>' + '</div>');
               $netTag.on('hover:enter', function () {
                 var selectItems = networks.map(function (n) {
                   var logoUrl = networkLogoUrl(n);
@@ -4074,8 +4884,22 @@
             }
           }
         }
-      } catch (err) {}
-    });
+      }
+    } catch (err) {}
+  };
+
+  /**
+   * Реєструє listener для шапки повної картки
+   */
+  function registerFullStartListener() {
+    Lampa.Listener.follow('full', onFullStartEvent);
+  }
+
+  /**
+   * Видаляє full-start listener
+   */
+  function unregisterFullStartListener() {
+    Lampa.Listener.remove('full', onFullStartEvent);
   }
 
   /**
@@ -4087,6 +4911,31 @@
    * @module listeners/anime-override
    */
   var registered$5 = false;
+  var onMenuEvent$3 = function onMenuEvent(e) {
+    try {
+      if (e.type !== 'action') return;
+      if (e.action !== 'anime') return;
+
+      // Перевіряємо чи обрано kinobaza
+      var currentSource = Lampa.Storage && Lampa.Storage.field ? Lampa.Storage.field('source') : '';
+      if (currentSource !== 'kinobaza') return;
+
+      // Запобігаємо стандартній поведінці (перехід на cub source)
+      e.abort();
+
+      // Відкриваємо категорію аніме через kinobaza source з genres: 12 + countries: 39,214,97,96,92
+      if (Lampa.Router) {
+        Lampa.Router.call('category', {
+          url: 'anime',
+          title: (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('menu_anime') : 'Аніме') + ' - КіноБаза',
+          source: 'kinobaza',
+          genres: 12
+        });
+      }
+    } catch (err) {
+      // мовчки ігноруємо помилки в listener
+    }
+  };
 
   /**
    * Реєструє anime override listener
@@ -4106,32 +4955,28 @@
 
     // 2. Listener на menu action — перехоплює клік "Аніме"
     if (Lampa.Listener) {
-      Lampa.Listener.follow('menu', function (e) {
-        try {
-          if (e.type !== 'action') return;
-          if (e.action !== 'anime') return;
-
-          // Перевіряємо чи обрано kinobaza
-          var currentSource = Lampa.Storage && Lampa.Storage.field ? Lampa.Storage.field('source') : '';
-          if (currentSource !== 'kinobaza') return;
-
-          // Запобігаємо стандартній поведінці (перехід на cub source)
-          e.abort();
-
-          // Відкриваємо категорію аніме через kinobaza source з genres: 12 + countries: 39,214,97,96,92
-          if (Lampa.Router) {
-            Lampa.Router.call('category', {
-              url: 'anime',
-              title: (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('menu_anime') : 'Аніме') + ' - КіноБаза',
-              source: 'kinobaza',
-              genres: 12
-            });
-          }
-        } catch (err) {
-          // мовчки ігноруємо помилки в listener
-        }
-      });
+      Lampa.Listener.follow('menu', onMenuEvent$3);
     }
+  }
+
+  /**
+   * Видаляє anime override listener
+   * Викликати при destroy() плагіна
+   */
+  function unregisterAnimeOverride() {
+    if (!registered$5) return;
+    try {
+      // Видаляємо source
+      if (Lampa.Api && Lampa.Api.sources) {
+        delete Lampa.Api.sources.kinobaza_anime;
+      }
+    } catch (err) {
+      // мовчки ігноруємо
+    }
+    if (Lampa.Listener) {
+      Lampa.Listener.remove('menu', onMenuEvent$3);
+    }
+    registered$5 = false;
   }
 
   /**
@@ -4144,6 +4989,33 @@
    * @module listeners/cartoon-override
    */
   var registered$4 = false;
+  var onMenuEvent$2 = function onMenuEvent(e) {
+    try {
+      if (e.type !== 'action') return;
+      if (e.action !== 'cartoon') return;
+
+      // Перевіряємо чи обрано kinobaza
+      var currentSource = Lampa.Storage && Lampa.Storage.field ? Lampa.Storage.field('source') : '';
+      if (currentSource !== 'kinobaza') return;
+
+      // Запобігаємо стандартній поведінці (хардкод Lampa: cartoon -> url: 'movie', genres: 16)
+      e.abort();
+
+      // Відкриваємо категорію мультфільмів через kinobaza source з genres=12
+      // source.js category() при genres=12 потрапляє в гілку isCartoons,
+      // яка створює 5 мультфільм-специфічних parts_data
+      if (Lampa.Router) {
+        Lampa.Router.call('category', {
+          url: 'movie',
+          title: (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('menu_multmovie') : 'Мультфільми') + ' - КіноБаза',
+          source: 'kinobaza',
+          genres: 12
+        });
+      }
+    } catch (err) {
+      // мовчки ігноруємо помилки в listener
+    }
+  };
 
   /**
    * Реєструє cartoon override listener
@@ -4163,34 +5035,28 @@
 
     // 2. Listener на menu action — перехоплює клік "Мультфільми"
     if (Lampa.Listener) {
-      Lampa.Listener.follow('menu', function (e) {
-        try {
-          if (e.type !== 'action') return;
-          if (e.action !== 'cartoon') return;
-
-          // Перевіряємо чи обрано kinobaza
-          var currentSource = Lampa.Storage && Lampa.Storage.field ? Lampa.Storage.field('source') : '';
-          if (currentSource !== 'kinobaza') return;
-
-          // Запобігаємо стандартній поведінці (хардкод Lampa: cartoon -> url: 'movie', genres: 16)
-          e.abort();
-
-          // Відкриваємо категорію мультфільмів через kinobaza source з genres=12
-          // source.js category() при genres=12 потрапляє в гілку isCartoons,
-          // яка створює 5 мультфільм-специфічних parts_data
-          if (Lampa.Router) {
-            Lampa.Router.call('category', {
-              url: 'movie',
-              title: (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('menu_multmovie') : 'Мультфільми') + ' - КіноБаза',
-              source: 'kinobaza',
-              genres: 12
-            });
-          }
-        } catch (err) {
-          // мовчки ігноруємо помилки в listener
-        }
-      });
+      Lampa.Listener.follow('menu', onMenuEvent$2);
     }
+  }
+
+  /**
+   * Видаляє cartoon override listener
+   * Викликати при destroy() плагіна
+   */
+  function unregisterCartoonOverride() {
+    if (!registered$4) return;
+    try {
+      // Видаляємо source
+      if (Lampa.Api && Lampa.Api.sources) {
+        delete Lampa.Api.sources.kinobaza_cartoons;
+      }
+    } catch (err) {
+      // мовчки ігноруємо
+    }
+    if (Lampa.Listener) {
+      Lampa.Listener.remove('menu', onMenuEvent$2);
+    }
+    registered$4 = false;
   }
 
   /**
@@ -4208,6 +5074,7 @@
    */
 
   var registered$3 = false;
+  var _rows = [];
 
   /**
    * Реєструє ContentRows integration
@@ -4299,6 +5166,7 @@
       }
     };
     Lampa.ContentRows.add(animeRow);
+    _rows.push(animeRow);
 
     // ============== CARTOONS ==============
 
@@ -4383,6 +5251,21 @@
       }
     };
     Lampa.ContentRows.add(cartoonsRow);
+    _rows.push(cartoonsRow);
+  }
+
+  /**
+   * Видаляє ContentRows integration
+   */
+  function unregisterContentRows() {
+    if (!registered$3) return;
+    for (var i = 0; i < _rows.length; i++) {
+      if (Lampa.ContentRows && Lampa.ContentRows.remove) {
+        Lampa.ContentRows.remove(_rows[i]);
+      }
+    }
+    _rows = [];
+    registered$3 = false;
   }
 
   /**
@@ -4397,6 +5280,10 @@
   var origFull = null;
   var origPush = null;
   var origPerson = null;
+  var origBgChange = null;
+  var origFullRoute = null;
+  var origCategoryRoute = null;
+  var origActorCallback = null;
 
   /**
    * Дістає slug персони з кеша за ID
@@ -4421,7 +5308,7 @@
       // ========== 0. Перехоплюємо Background.change ==========
       // Для карток мереж (SVG логотипи) — не міняємо фон, бо data URI виглядає погано
       if (Lampa.Background && typeof Lampa.Background.change === 'function') {
-        var origBgChange = Lampa.Background.change;
+        origBgChange = Lampa.Background.change;
         Lampa.Background.change = function (url) {
           if (typeof url === 'string' && url.indexOf('data:image/svg') === 0) return;
           return origBgChange(url);
@@ -4435,7 +5322,7 @@
       if (Lampa.Router && Lampa.Router.routes) {
         for (var ri = 0; ri < Lampa.Router.routes.length; ri++) {
           if (Lampa.Router.routes[ri].name === 'full') {
-            var origFullRoute = Lampa.Router.routes[ri].callback;
+            origFullRoute = Lampa.Router.routes[ri].callback;
             Lampa.Router.routes[ri].callback = function (data) {
               // Трейлер — граємо відео напряму
               if (data && data._openTrailers && data.youtube_id) {
@@ -4498,7 +5385,7 @@
       if (Lampa.Router && Lampa.Router.routes) {
         for (ri = 0; ri < Lampa.Router.routes.length; ri++) {
           if (Lampa.Router.routes[ri].name === 'category_full') {
-            var origCategoryRoute = Lampa.Router.routes[ri].callback;
+            origCategoryRoute = Lampa.Router.routes[ri].callback;
             Lampa.Router.routes[ri].callback = function (data) {
               if (data && data._trailersLine) {
                 Lampa.Activity.push({
@@ -4574,7 +5461,7 @@
           }
         }
         if (actorRouteIdx >= 0) {
-          var origActorCallback = Lampa.Router.routes[actorRouteIdx].callback;
+          origActorCallback = Lampa.Router.routes[actorRouteIdx].callback;
           Lampa.Router.routes[actorRouteIdx].callback = function (data) {
             var base = origActorCallback(data);
             if (data.source === 'kinobaza') {
@@ -4649,6 +5536,51 @@
   }
 
   /**
+   * Видаляє override для Lampa.Api.full
+   * Викликати при destroy() плагіна
+   */
+  function unregisterSourceOverride() {
+    if (!registered$2) return;
+    try {
+      if (origFull) {
+        Lampa.Api.full = origFull;
+        origFull = null;
+      }
+      if (origPush) {
+        Lampa.Activity.push = origPush;
+        origPush = null;
+      }
+      if (origPerson) {
+        Lampa.Api.person = origPerson;
+        origPerson = null;
+      }
+      if (origBgChange && Lampa.Background) {
+        Lampa.Background.change = origBgChange;
+        origBgChange = null;
+      }
+      if (Lampa.Router && Lampa.Router.routes) {
+        for (var ri = 0; ri < Lampa.Router.routes.length; ri++) {
+          if (Lampa.Router.routes[ri].name === 'full' && origFullRoute) {
+            Lampa.Router.routes[ri].callback = origFullRoute;
+          }
+          if (Lampa.Router.routes[ri].name === 'category_full' && origCategoryRoute) {
+            Lampa.Router.routes[ri].callback = origCategoryRoute;
+          }
+          if (Lampa.Router.routes[ri].name === 'actor' && origActorCallback) {
+            Lampa.Router.routes[ri].callback = origActorCallback;
+          }
+        }
+        origFullRoute = null;
+        origCategoryRoute = null;
+        origActorCallback = null;
+      }
+    } catch (e) {
+      // мовчки ігноруємо
+    }
+    registered$2 = false;
+  }
+
+  /**
    * MyPerson Override Listener
    * Перехоплює клік на "Особи" в штатному меню Lampa
    * та перенаправляє на kinobaza_myperson компонент
@@ -4659,6 +5591,28 @@
    */
 
   var registered$1 = false;
+  var onMenuEvent$1 = function onMenuEvent(e) {
+    try {
+      if (e.type !== 'action') return;
+      if (e.action !== 'myperson') return;
+
+      // Перевіряємо чи обрано kinobaza
+      var currentSource = Lampa.Storage && Lampa.Storage.field ? Lampa.Storage.field('source') : '';
+      if (currentSource !== 'kinobaza') return;
+
+      // Запобігаємо стандартній поведінці (TMDB/Account persons)
+      e.abort();
+
+      // Відкриваємо наш компонент списку осіб
+      if (Lampa.Router) {
+        Lampa.Router.call('kinobaza_myperson', {
+          title: Lampa.Lang.translate('kinobaza_myperson') || 'Особи'
+        });
+      }
+    } catch (err) {
+      // мовчки ігноруємо помилки в listener
+    }
+  };
 
   /**
    * Реєструє myperson override listener
@@ -4669,29 +5623,19 @@
 
     // Listener на menu action — перехоплює клік "Особи"
     if (Lampa.Listener) {
-      Lampa.Listener.follow('menu', function (e) {
-        try {
-          if (e.type !== 'action') return;
-          if (e.action !== 'myperson') return;
-
-          // Перевіряємо чи обрано kinobaza
-          var currentSource = Lampa.Storage && Lampa.Storage.field ? Lampa.Storage.field('source') : '';
-          if (currentSource !== 'kinobaza') return;
-
-          // Запобігаємо стандартній поведінці (TMDB/Account persons)
-          e.abort();
-
-          // Відкриваємо наш компонент списку осіб
-          if (Lampa.Router) {
-            Lampa.Router.call('kinobaza_myperson', {
-              title: Lampa.Lang.translate('kinobaza_myperson') || 'Особи'
-            });
-          }
-        } catch (err) {
-          // мовчки ігноруємо помилки в listener
-        }
-      });
+      Lampa.Listener.follow('menu', onMenuEvent$1);
     }
+  }
+
+  /**
+   * Видаляє myperson override listener
+   */
+  function unregisterMyPersonOverride() {
+    if (!registered$1) return;
+    if (Lampa.Listener) {
+      Lampa.Listener.remove('menu', onMenuEvent$1);
+    }
+    registered$1 = false;
   }
 
   /**
@@ -5022,7 +5966,7 @@
 
     // ==================== 4. CSS ====================
 
-    Lampa.Template.add('kinobaza_trailers_css', '\n        <style>\n        .card.card--trailer,\n        .card-more.more--trailers {\n            width: 25.7em;\n        }\n\n        .card.card--trailer .card__view {\n            padding-bottom: 56%;\n            margin-bottom: 0;\n        }\n\n        .card.card--trailer .card__details {\n            margin-top: 0.8em;\n        }\n\n        .card.card--trailer .card__play {\n            position: absolute;\n            top: 1.4em;\n            left: 1.5em;\n            background: #000000b8;\n            width: 2.2em;\n            height: 2.2em;\n            border-radius: 100%;\n            text-align: center;\n            padding-top: 0.6em;\n        }\n\n        .card.card--trailer .card__play img {\n            width: 0.9em;\n            height: 1em;\n        }\n\n        .card-more.more--trailers .card-more__box {\n            padding-bottom: 56%;\n        }\n\n        .category-full--trailers .card {\n            margin-bottom: 1.5em;\n        }\n\n        .category-full--trailers .card {\n            width: 33.3%;\n        }\n\n        @media screen and (max-width: 767px) {\n            .category-full--trailers .card {\n                width: 50%;\n            }\n        }\n\n        @media screen and (max-width: 400px) {\n            .category-full--trailers .card {\n                width: 100%;\n            }\n        }\n        </style>\n    ');
+    Lampa.Template.add('kinobaza_trailers_css', '\n        <style id="kinobaza_trailers_style">\n        .card.card--trailer,\n        .card-more.more--trailers {\n            width: 25.7em;\n        }\n\n        .card.card--trailer .card__view {\n            padding-bottom: 56%;\n            margin-bottom: 0;\n        }\n\n        .card.card--trailer .card__details {\n            margin-top: 0.8em;\n        }\n\n        .card.card--trailer .card__play {\n            position: absolute;\n            top: 1.4em;\n            left: 1.5em;\n            background: #000000b8;\n            width: 2.2em;\n            height: 2.2em;\n            border-radius: 100%;\n            text-align: center;\n            padding-top: 0.6em;\n        }\n\n        .card.card--trailer .card__play img {\n            width: 0.9em;\n            height: 1em;\n        }\n\n        .card-more.more--trailers .card-more__box {\n            padding-bottom: 56%;\n        }\n\n        .category-full--trailers .card {\n            margin-bottom: 1.5em;\n        }\n\n        .category-full--trailers .card {\n            width: 33.3%;\n        }\n\n        @media screen and (max-width: 767px) {\n            .category-full--trailers .card {\n                width: 50%;\n            }\n        }\n\n        @media screen and (max-width: 400px) {\n            .category-full--trailers .card {\n                width: 100%;\n            }\n        }\n        </style>\n    ');
     if (!$('#kinobaza_trailers_style').length) {
       $('body').append(Lampa.Template.get('kinobaza_trailers_css', {}, true));
     }
@@ -5047,7 +5991,7 @@
     // ==================== 6. MENU BUTTON ====================
 
     function add() {
-      var button = $('<li class="menu__item selector">\n            <div class="menu__ico">\n                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">\n                <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>\n                </svg>\n            </div>\n            <div class="menu__text">' + Lampa.Lang.translate('kinobaza_trailers_title') + '</div>\n        </li>');
+      var button = $('<li class="menu__item selector kinobaza-menu-trailers">\n            <div class="menu__ico">\n                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">\n                <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>\n                </svg>\n            </div>\n            <div class="menu__text">' + Lampa.Lang.translate('kinobaza_trailers_title') + '</div>\n        </li>');
       button.on('hover:enter', function () {
         Lampa.Activity.push({
           url: '',
@@ -5058,10 +6002,14 @@
       });
       $('.menu .menu__list').eq(0).append(button);
     }
+    var _onAppReady = function onAppReady(e) {
+      if (e.type === 'ready') {
+        add();
+        Lampa.Listener.remove('app', _onAppReady);
+      }
+    };
     if (window.appready) add();else {
-      Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') add();
-      });
+      Lampa.Listener.follow('app', _onAppReady);
     }
   }
 
@@ -5188,7 +6136,7 @@
     comp.use({
       onCreate: function onCreate() {
         releasesApi.getReleases(object.page || 1, function (json) {
-          var items = card.mapList(json.data || []);
+          var items = cardMapper.mapList(json.data || []);
           var total = json.total || 0;
           var pages = Math.ceil(total / 30) || 1;
           overrideYear(items, json.data || []);
@@ -5200,7 +6148,7 @@
       },
       onNext: function onNext(resolve, reject) {
         releasesApi.getReleases(this.object.page, function (json) {
-          var items = card.mapList(json.data || []);
+          var items = cardMapper.mapList(json.data || []);
           overrideYear(items, json.data || []);
           resolve({
             results: items
@@ -5251,7 +6199,7 @@
 
     // ============== 2. TEMPLATES ==============
 
-    Lampa.Template.add('kinobaza_releases_css', "<style>\n        .kinobaza-releases-grid {\n            display: grid;\n            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));\n            gap: 12px;\n            padding: 16px;\n        }\n    </style>");
+    Lampa.Template.add('kinobaza_releases_css', "<style id=\"kinobaza_releases_style\">\n        .kinobaza-releases-grid {\n            display: grid;\n            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));\n            gap: 12px;\n            padding: 16px;\n        }\n    </style>");
 
     // ============== 3. CSS INJECTION ==============
 
@@ -5277,7 +6225,7 @@
     // ============== 6. MENU BUTTON ==============
 
     function add() {
-      var button = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\">\n                <svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M20 3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H20C21.1 21 22 20.1 22 19V5C22 3.9 21.1 3 20 3ZM10 17V7L17 12L10 17Z\" fill=\"currentColor\"/>\n                </svg>\n            </div>\n            <div class=\"menu__text\">".concat(Lampa.Lang.translate('kinobaza_releases_title'), "</div>\n        </li>"));
+      var button = $("<li class=\"menu__item selector kinobaza-menu-releases\">\n            <div class=\"menu__ico\">\n                <svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M20 3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H20C21.1 21 22 20.1 22 19V5C22 3.9 21.1 3 20 3ZM10 17V7L17 12L10 17Z\" fill=\"currentColor\"/>\n                </svg>\n            </div>\n            <div class=\"menu__text\">".concat(Lampa.Lang.translate('kinobaza_releases_title'), "</div>\n        </li>"));
       button.on('hover:enter', function () {
         Lampa.Activity.push({
           url: '',
@@ -5288,10 +6236,14 @@
       });
       $('.menu .menu__list').eq(0).append(button);
     }
+    var _onAppReady = function onAppReady(e) {
+      if (e.type === 'ready') {
+        add();
+        Lampa.Listener.remove('app', _onAppReady);
+      }
+    };
     if (window.appready) add();else {
-      Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') add();
-      });
+      Lampa.Listener.follow('app', _onAppReady);
     }
   }
 
@@ -5547,7 +6499,7 @@
         }
         Api$1.getCollectionItems(object.url, object.page || 1, function (data) {
           if (data && data.data) {
-            data.results = card.mapList(data.data);
+            data.results = cardMapper.mapList(data.data);
           }
           this.build(data);
         }.bind(this), this.empty.bind(this));
@@ -5559,7 +6511,7 @@
         }
         Api$1.getCollectionItems(object.url, this.object.page, function (data) {
           if (data && data.data) {
-            data.results = card.mapList(data.data);
+            data.results = cardMapper.mapList(data.data);
           }
           resolve(data);
         }, reject);
@@ -5636,7 +6588,7 @@
     // ==================== MENU BUTTON ====================
 
     function add() {
-      var button = $('<li class="menu__item selector">' + '<div class="menu__ico">' + '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' + '<path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' + '</svg>' + '</div>' + '<div class="menu__text">' + Lampa.Lang.translate('kinobaza_collections') + '</div>' + '</li>');
+      var button = $('<li class="menu__item selector kinobaza-menu-collections">' + '<div class="menu__ico">' + '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' + '<path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' + '</svg>' + '</div>' + '<div class="menu__text">' + Lampa.Lang.translate('kinobaza_collections') + '</div>' + '</li>');
       button.on('hover:enter', function () {
         Lampa.Activity.push({
           url: '',
@@ -5647,12 +6599,16 @@
       });
       $('.menu .menu__list').eq(0).append(button);
     }
+    var _onAppReady = function onAppReady(e) {
+      if (e.type === 'ready') {
+        add();
+        Lampa.Listener.remove('app', _onAppReady);
+      }
+    };
     if (window.appready) {
       add();
     } else {
-      Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') add();
-      });
+      Lampa.Listener.follow('app', _onAppReady);
     }
   }
 
@@ -6627,6 +7583,27 @@
    *   4. menu.show() — показує Select.show() з фільтрами КіноБази
    */
   var registered = false;
+  var onMenuEvent = function onMenuEvent(e) {
+    try {
+      // Тільки action події
+      if (e.type !== 'action') return;
+      if (e.action !== 'filter') return;
+
+      // Перевіряємо чи обрано kinobaza
+      var currentSource = Lampa.Storage && typeof Lampa.Storage.field === 'function' ? Lampa.Storage.field('source') : '';
+      if (currentSource !== 'kinobaza') return;
+
+      // Запобігаємо стандартній поведінці Lampa Filter
+      e.abort();
+
+      // Показуємо власне фільтр-меню КіноБази
+      if (menu && typeof menu.show === 'function') {
+        menu.show();
+      }
+    } catch (err) {
+      // мовчки ігноруємо помилки в listener
+    }
+  };
 
   /**
    * Реєструє listener на menu action
@@ -6636,30 +7613,21 @@
     registered = true;
     try {
       if (!Lampa.Listener) return;
-      Lampa.Listener.follow('menu', function (e) {
-        try {
-          // Тільки action події
-          if (e.type !== 'action') return;
-          if (e.action !== 'filter') return;
-
-          // Перевіряємо чи обрано kinobaza
-          var currentSource = Lampa.Storage && typeof Lampa.Storage.field === 'function' ? Lampa.Storage.field('source') : '';
-          if (currentSource !== 'kinobaza') return;
-
-          // Запобігаємо стандартній поведінці Lampa Filter
-          e.abort();
-
-          // Показуємо власне фільтр-меню КіноБази
-          if (menu && typeof menu.show === 'function') {
-            menu.show();
-          }
-        } catch (err) {
-          // мовчки ігноруємо помилки в listener
-        }
-      });
+      Lampa.Listener.follow('menu', onMenuEvent);
     } catch (err) {
       // мовчки ігноруємо
     }
+  }
+
+  /**
+   * Видаляє listener
+   */
+  function unregister() {
+    if (!registered) return;
+    if (Lampa.Listener) {
+      Lampa.Listener.remove('menu', onMenuEvent);
+    }
+    registered = false;
   }
 
   /**
@@ -6684,6 +7652,2536 @@
     window.kinobaza_discover_ready = true;
     register();
   })();
+
+  /**
+   * Перевірка конфлікту з синхронізацією CUB (Куб)
+   * @returns {boolean} - true якщо CUB синхронізація активна
+   */
+  function isCubActive() {
+    try {
+      var cubUse = window.lampa_settings && window.lampa_settings.account_use;
+      var cubSync = Lampa.Account && Lampa.Account.Permit && Lampa.Account.Permit.sync;
+      return !!(cubUse && cubSync);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Перевірити та попередити про конфлікт CUB
+   * @param {function} onCancel - колбек для скидання тогла
+   * @returns {boolean} - true якщо безпечно (конфлікту немає)
+   */
+  function checkConflict(onCancel) {
+    if (isCubActive()) {
+      showCubConflictModal(onCancel);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Показати модальне вікно про конфлікт
+   * @param {function} onCancel
+   */
+  function showCubConflictModal(onCancel) {
+    if (typeof Lampa.Modal === 'undefined') return;
+    Lampa.Modal.open({
+      title: 'Конфлікт синхронізації',
+      size: 'small',
+      html: $('<div class="about">' + '<p>У вас увімкнена синхронізація Куб (CUB).</p>' + '<p style="margin-top: 10px;">Одночасна робота синхронізації КіноБази та Куб небезпечна — ' + 'це може призвести до конфліктів та втрати даних.</p>' + '<p style="margin-top: 10px;">Для безпеки ви повинні <b>вимкнути синхронізацію Куб</b> ' + 'перед увімкненням синхронізації КіноБази.</p>' + '</div>'),
+      buttons: [{
+        name: 'Відкрити налаштування',
+        onSelect: function onSelect() {
+          Lampa.Modal.close();
+          if (onCancel) onCancel();
+
+          // Відкриваємо settings і переходимо на компонент 'account'
+          if (Lampa.Controller && Lampa.Settings) {
+            Lampa.Controller.toggle('settings');
+            Lampa.Settings.create('account');
+          }
+        }
+      }, {
+        name: 'Скасувати',
+        onSelect: function onSelect() {
+          Lampa.Modal.close();
+          if (onCancel) onCancel();
+        }
+      }],
+      onBack: function onBack() {
+        Lampa.Modal.close();
+        if (onCancel) onCancel();
+      }
+    });
+  }
+  var guard = {
+    isCubActive: isCubActive,
+    checkConflict: checkConflict,
+    showCubConflictModal: showCubConflictModal
+  };
+
+  function isCardTV(card) {
+    if (!card) return false;
+    return !!(card.number_of_seasons || card.seasons || card.first_air_date || card.original_name || card.name);
+  }
+
+  /**
+   * Трансляція подій Lampa.Favorite у команди для API КіноБази
+   * @param {object} e - подія Lampa.Favorite (e.type, e.action, e.card)
+   * @returns {object|null} - команда { method, endpoint, body, type, action, card_id }
+   */
+  function toKinoBazaAction(e, isTVOverride) {
+    if (!e || !e.card) return null;
+    var cardId = e.card.themoviedb_id || e.card.id;
+    e.card.kinobaza_id;
+    var isTV = typeof isTVOverride !== 'undefined' ? isTVOverride : isCardTV(e.card);
+    var type = e.type; // 'like', 'wath', 'book', 'viewed', 'scheduled', 'continued', 'thrown', 'follow', 'history'
+    var action = e.action; // 'add', 'added', 'remove'
+
+    var isAdd = action === 'add' || action === 'added';
+    var isRemove = action === 'remove';
+
+    // Мапінг для фільмів
+    if (!isTV) {
+      if (type === 'like') {
+        return {
+          method: 'POST',
+          endpoint: isAdd ? "/titles/{id}/favorite" : "/titles/{id}/unfavorite",
+          type: 'favorite',
+          action: isAdd ? 'add' : 'remove',
+          card_id: cardId
+        };
+      }
+      if (type === 'wath' || type === 'book' || type === 'scheduled' || type === 'continued' || type === 'look') {
+        return {
+          method: 'POST',
+          endpoint: isAdd ? "/titles/{id}/watchlist" : "/titles/{id}/unwatchlist",
+          type: 'watchlist',
+          action: isAdd ? 'add' : 'remove',
+          card_id: cardId
+        };
+      }
+      if (type === 'viewed') {
+        return {
+          method: 'POST',
+          endpoint: isAdd ? "/titles/{id}/seenlist" : "/titles/{id}/unseenlist",
+          type: 'seenlist',
+          action: isAdd ? 'add' : 'remove',
+          card_id: cardId
+        };
+      }
+      if (type === 'thrown') {
+        return {
+          method: 'POST',
+          endpoint: isAdd ? "/titles/{id}/blacklist" : "/titles/{id}/unblacklist",
+          type: 'blacklist',
+          action: isAdd ? 'add' : 'remove',
+          card_id: cardId
+        };
+      }
+    }
+
+    // Мапінг для серіалів
+    if (isTV) {
+      if (type === 'like') {
+        return {
+          method: 'POST',
+          endpoint: isAdd ? "/titles/{id}/favorite" : "/titles/{id}/unfavorite",
+          type: 'favorite',
+          action: isAdd ? 'add' : 'remove',
+          card_id: cardId
+        };
+      }
+      if (type === 'wath' || type === 'book') {
+        return {
+          method: 'POST',
+          endpoint: isAdd ? "/titles/{id}/watchlist" : "/titles/{id}/unwatchlist",
+          type: 'watchlist',
+          action: isAdd ? 'add' : 'remove',
+          card_id: cardId
+        };
+      }
+      if (type === 'follow') {
+        return {
+          method: 'POST',
+          endpoint: isAdd ? "/titles/{id}/follow" : "/titles/{id}/unfollow",
+          type: 'follow',
+          action: isAdd ? 'add' : 'remove',
+          card_id: cardId
+        };
+      }
+      // Статуси серіалу
+      if (type === 'scheduled' && isAdd) {
+        return {
+          method: 'POST',
+          endpoint: "/titles/{id}/status",
+          body: {
+            tv_status: 'watching'
+          },
+          type: 'status',
+          action: 'add',
+          card_id: cardId
+        };
+      }
+      if (type === 'viewed' && isAdd) {
+        return {
+          method: 'POST',
+          endpoint: "/titles/{id}/status",
+          body: {
+            tv_status: 'completed'
+          },
+          type: 'status',
+          action: 'add',
+          card_id: cardId
+        };
+      }
+      if (type === 'continued' && isAdd) {
+        return {
+          method: 'POST',
+          endpoint: "/titles/{id}/status",
+          body: {
+            tv_status: 'paused'
+          },
+          type: 'status',
+          action: 'add',
+          card_id: cardId
+        };
+      }
+      if (type === 'thrown' && isAdd) {
+        return {
+          method: 'POST',
+          endpoint: "/titles/{id}/status",
+          body: {
+            tv_status: 'dropped'
+          },
+          type: 'status',
+          action: 'add',
+          card_id: cardId
+        };
+      }
+      // Якщо видалили з будь-якого списку статусів
+      if (isRemove && (type === 'scheduled' || type === 'viewed' || type === 'continued' || type === 'thrown')) {
+        return {
+          method: 'POST',
+          endpoint: "/titles/{id}/removeStatus",
+          type: 'status',
+          action: 'remove',
+          card_id: cardId
+        };
+      }
+    }
+    return null;
+  }
+  var mapper = {
+    toKinoBazaAction: toKinoBazaAction,
+    isCardTV: isCardTV
+  };
+
+  var LOG_KEY = 'kinobaza_sync_log';
+
+  /**
+   * Отримати лог конфліктів для активного профілю
+   * @returns {Array}
+   */
+  function getConflictLog() {
+    var key = storage.getProfileKey(LOG_KEY);
+    var val = Lampa.Storage.get(key, '[]');
+    return Array.isArray(val) ? val : [];
+  }
+
+  /**
+   * Записати конфлікт у лог
+   * @param {string} title - назва тайтлу
+   * @param {string} detail - опис конфлікту (наприклад, "Lampa: watchlist, KinoBaza: seenlist. Перемогла КіноБаза.")
+   */
+  function logConflict(title, detail) {
+    var key = storage.getProfileKey(LOG_KEY);
+    var log = getConflictLog();
+
+    // Тримаємо останні 100 записів
+    if (log.length >= 100) {
+      log.shift();
+    }
+    log.push({
+      title: title,
+      detail: detail,
+      timestamp: Date.now()
+    });
+    Lampa.Storage.set(key, log);
+    Lampa.Listener.send('kinobaza:sync:conflict', {
+      title: title,
+      detail: detail
+    });
+  }
+
+  /**
+   * Очистити лог конфліктів
+   */
+  function clearConflictLog() {
+    var key = storage.getProfileKey(LOG_KEY);
+    Lampa.Storage.set(key, []);
+  }
+  var conflict = {
+    getConflictLog: getConflictLog,
+    logConflict: logConflict,
+    clearConflictLog: clearConflictLog
+  };
+
+  var isImportingState = false;
+  function isImporting() {
+    return isImportingState;
+  }
+
+  /**
+   * Завантажити всі елементи з певного типу списку КіноБази
+   * @param {number} listType
+   * @returns {Promise<Array>}
+   */
+  function loadAllFromList(_x) {
+    return _loadAllFromList.apply(this, arguments);
+  }
+  /**
+   * Виконати повний імпорт даних з КіноБази в Lampa
+   * @param {object} [stats] - об'єкт для збору статистики
+   */
+  function _loadAllFromList() {
+    _loadAllFromList = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(listType) {
+      var page, results, resp, _t;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            page = 1;
+            results = [];
+          case 1:
+            _context.p = 2;
+            _context.n = 3;
+            return api$1.getTitles({
+              list_type: listType,
+              page: page
+            });
+          case 3:
+            resp = _context.v;
+            if (!(!resp || !resp.data || !resp.data.length)) {
+              _context.n = 4;
+              break;
+            }
+            return _context.a(3, 8);
+          case 4:
+            results = results.concat(resp.data);
+            if (!(resp.data.length < 30)) {
+              _context.n = 5;
+              break;
+            }
+            return _context.a(3, 8);
+          case 5:
+            page++;
+            _context.n = 7;
+            break;
+          case 6:
+            _context.p = 6;
+            _t = _context.v;
+            console.error('KinoBaza Importer', "Error loading list ".concat(listType, " page ").concat(page), _t);
+            return _context.a(3, 8);
+          case 7:
+            _context.n = 1;
+            break;
+          case 8:
+            return _context.a(2, results);
+        }
+      }, _callee, null, [[2, 6]]);
+    }));
+    return _loadAllFromList.apply(this, arguments);
+  }
+  function pullFull() {
+    return _pullFull.apply(this, arguments);
+  }
+  /**
+   * Інкрементальний фоновий pull (зчитує тільки першу сторінку останніх змін)
+   */
+  function _pullFull() {
+    _pullFull = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+      var stats,
+        isManual,
+        _yield$Promise$all,
+        _yield$Promise$all2,
+        favs,
+        watch,
+        seen,
+        black,
+        follows,
+        kbItemsMap,
+        processItems,
+        localCards,
+        kbProcessed,
+        _iterator,
+        _step,
+        _step$value,
+        kbEntry,
+        resolved,
+        kbTmdbIds,
+        _loop,
+        _i,
+        _kbProcessed,
+        _args3 = arguments,
+        _t2,
+        _t3;
+      return _regenerator().w(function (_context3) {
+        while (1) switch (_context3.n) {
+          case 0:
+            stats = _args3.length > 0 && _args3[0] !== undefined ? _args3[0] : {
+              found: 0,
+              "new": 0,
+              conflicts: 0
+            };
+            isManual = _args3.length > 1 && _args3[1] !== undefined ? _args3[1] : false;
+            if (!isImportingState) {
+              _context3.n = 1;
+              break;
+            }
+            return _context3.a(2, new Set());
+          case 1:
+            isImportingState = true;
+            Lampa.Listener.send('kinobaza:sync:start');
+            Lampa.Listener.send('kinobaza:sync:icon', {
+              state: 'syncing'
+            });
+            _context3.p = 2;
+            _context3.n = 3;
+            return Promise.all([loadAllFromList(10),
+            // Favorites
+            loadAllFromList(11),
+            // Watchlist
+            loadAllFromList(27),
+            // Seenlist
+            loadAllFromList(28),
+            // Blacklist
+            loadAllFromList(51) // Follows
+            ]);
+          case 3:
+            _yield$Promise$all = _context3.v;
+            _yield$Promise$all2 = _slicedToArray(_yield$Promise$all, 5);
+            favs = _yield$Promise$all2[0];
+            watch = _yield$Promise$all2[1];
+            seen = _yield$Promise$all2[2];
+            black = _yield$Promise$all2[3];
+            follows = _yield$Promise$all2[4];
+            // Об'єднуємо всі отримані елементи в одну карту за ID КіноБази
+            kbItemsMap = new Map();
+            processItems = function processItems(items, typeKey, statusVal) {
+              items.forEach(function (item) {
+                if (!item || !item.id) return;
+                if (!kbItemsMap.has(item.id)) {
+                  kbItemsMap.set(item.id, {
+                    raw: item,
+                    myFavorite: false,
+                    myWatchlist: false,
+                    mySeenlist: false,
+                    myBlacklist: false,
+                    myFollow: false,
+                    myStatus: ''
+                  });
+                }
+                var entry = kbItemsMap.get(item.id);
+                if (typeKey === 'favorite') entry.myFavorite = true;
+                if (typeKey === 'watchlist') entry.myWatchlist = true;
+                if (typeKey === 'seenlist') entry.mySeenlist = true;
+                if (typeKey === 'blacklist') entry.myBlacklist = true;
+                if (typeKey === 'follow') entry.myFollow = true;
+                if (statusVal) entry.myStatus = statusVal;
+              });
+            };
+            processItems(favs, 'favorite');
+            processItems(watch, 'watchlist');
+            processItems(seen, 'seenlist');
+            processItems(black, 'blacklist');
+            processItems(follows, 'follow');
+
+            // Додатково завантажуємо статуси (watching/paused/dropped)
+            seen.forEach(function (item) {
+              if (item.number_of_episodes > 0) {
+                // Серіал у seenlist має статус completed за замовчуванням
+                processItems([item], 'seenlist', 'completed');
+              }
+            });
+            stats.found = kbItemsMap.size;
+
+            // 2. Отримуємо поточний локальний стан Lampa.Favorite
+            Lampa.Favorite.all(); // { like, wath, book, look, viewed, scheduled, continued, thrown }
+            localCards = Lampa.Favorite.full().card || []; // 3. Резолвимо тайтли та будуємо список змін
+            kbProcessed = [];
+            _iterator = _createForOfIteratorHelper(kbItemsMap.entries());
+            _context3.p = 4;
+            _iterator.s();
+          case 5:
+            if ((_step = _iterator.n()).done) {
+              _context3.n = 8;
+              break;
+            }
+            _step$value = _slicedToArray(_step.value, 2), _step$value[0], kbEntry = _step$value[1];
+            _context3.n = 6;
+            return resolver.resolveForImport(kbEntry.raw);
+          case 6:
+            resolved = _context3.v;
+            if (resolved && resolved.themoviedb_id) {
+              kbProcessed.push({
+                resolved: resolved,
+                entry: kbEntry
+              });
+            }
+          case 7:
+            _context3.n = 5;
+            break;
+          case 8:
+            _context3.n = 10;
+            break;
+          case 9:
+            _context3.p = 9;
+            _t2 = _context3.v;
+            _iterator.e(_t2);
+          case 10:
+            _context3.p = 10;
+            _iterator.f();
+            return _context3.f(10);
+          case 11:
+            // 4. Застосовуємо зміни до Lampa.Favorite (КіноБаза = джерело істини)
+            kbTmdbIds = new Set(kbProcessed.map(function (p) {
+              return p.resolved.themoviedb_id;
+            })); // Видаляємо з Lampa те, чого немає на КіноБазі (конфлікт: видалено на КіноБазі)
+            if (!isManual) {
+              localCards.forEach(function (card) {
+                if (card.source === 'kinobaza' && !kbTmdbIds.has(card.id)) {
+                  // Видаляємо з усіх категорій
+                  var categories = ['like', 'wath', 'book', 'look', 'viewed', 'scheduled', 'continued', 'thrown'];
+                  categories.forEach(function (cat) {
+                    if (Lampa.Favorite.check(card)[cat]) {
+                      Lampa.Favorite.remove(cat, card);
+                      stats.conflicts++;
+                      conflict.logConflict(card.title, "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u043E \u0437 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \"".concat(cat, "\" (\u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456\u0439 \u043D\u0430 \u041A\u0456\u043D\u043E\u0411\u0430\u0437\u0456)"));
+                    }
+                  });
+                }
+              });
+            }
+
+            // Додаємо або оновлюємо категорії в Lampa відповідно до КіноБази
+            _loop = /*#__PURE__*/_regenerator().m(function _loop() {
+              var _kbProcessed$_i, resolved, entry, mappedCard, isTV, currentStatus, syncCategory, status;
+              return _regenerator().w(function (_context2) {
+                while (1) switch (_context2.n) {
+                  case 0:
+                    _kbProcessed$_i = _kbProcessed[_i], resolved = _kbProcessed$_i.resolved, entry = _kbProcessed$_i.entry;
+                    // Створюємо Lampa картку з деталей КіноБази
+                    mappedCard = cardMapper.mapOne(entry.raw);
+                    mappedCard.id = resolved.themoviedb_id;
+                    mappedCard.kinobaza_id = resolved.kinobaza_id;
+                    mappedCard.slug = resolved.slug;
+                    mappedCard.needsEnrichment = false;
+                    isTV = resolved.is_tv;
+                    currentStatus = Lampa.Favorite.check(mappedCard); // Функція безпечного додавання/видалення
+                    syncCategory = function syncCategory(catName, shouldHave) {
+                      var has = currentStatus[catName];
+                      if (shouldHave && !has) {
+                        Lampa.Favorite.add(catName, mappedCard);
+                        stats["new"]++;
+                      } else if (!shouldHave && has) {
+                        Lampa.Favorite.remove(catName, mappedCard);
+                      }
+                    }; // Мапінг категорій
+                    syncCategory('like', entry.myFavorite);
+                    syncCategory('wath', entry.myWatchlist);
+                    if (!isTV) {
+                      // Для фільмів
+                      syncCategory('viewed', entry.mySeenlist);
+                      syncCategory('thrown', entry.myBlacklist);
+                    } else {
+                      // Для серіалів
+                      status = entry.myStatus || entry.raw.myStatus;
+                      syncCategory('scheduled', status === 'watching');
+                      syncCategory('viewed', status === 'completed');
+                      syncCategory('continued', status === 'paused');
+                      syncCategory('thrown', status === 'dropped');
+                    }
+                  case 1:
+                    return _context2.a(2);
+                }
+              }, _loop);
+            });
+            _i = 0, _kbProcessed = kbProcessed;
+          case 12:
+            if (!(_i < _kbProcessed.length)) {
+              _context3.n = 14;
+              break;
+            }
+            return _context3.d(_regeneratorValues(_loop()), 13);
+          case 13:
+            _i++;
+            _context3.n = 12;
+            break;
+          case 14:
+            // Зберігаємо час успішної синхронізації
+            storage.setToken(storage.getToken()); // тригерить оновлення
+            Lampa.Storage.set(storage.getProfileKey('kinobaza_sync_last_pull'), Date.now());
+            Lampa.Listener.send('kinobaza:sync:complete');
+            Lampa.Listener.send('kinobaza:sync:icon', {
+              state: 'idle'
+            });
+            return _context3.a(2, kbTmdbIds);
+          case 15:
+            _context3.p = 15;
+            _t3 = _context3.v;
+            console.error('KinoBaza Importer', 'pullFull error', _t3);
+            Lampa.Listener.send('kinobaza:sync:error');
+            Lampa.Listener.send('kinobaza:sync:icon', {
+              state: 'error'
+            });
+            return _context3.a(2, new Set());
+          case 16:
+            _context3.p = 16;
+            isImportingState = false;
+            return _context3.f(16);
+          case 17:
+            return _context3.a(2);
+        }
+      }, _callee2, null, [[4, 9, 10, 11], [2, 15, 16, 17]]);
+    }));
+    return _pullFull.apply(this, arguments);
+  }
+  function pullIncremental() {
+    return _pullIncremental.apply(this, arguments);
+  }
+  function _pullIncremental() {
+    _pullIncremental = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+      var resp, _iterator2, _step2, _loop2, _t4, _t5;
+      return _regenerator().w(function (_context5) {
+        while (1) switch (_context5.n) {
+          case 0:
+            if (!isImportingState) {
+              _context5.n = 1;
+              break;
+            }
+            return _context5.a(2);
+          case 1:
+            isImportingState = true;
+            _context5.p = 2;
+            parseInt(Lampa.Storage.get(storage.getProfileKey('kinobaza_sync_last_pull'), '0'), 10); // Отримуємо останню сторінку позначених тайтлів користувача
+            _context5.n = 3;
+            return api$1.getTitles({
+              show_my: true,
+              order_by: 'user_updated_desc',
+              page: 1
+            });
+          case 3:
+            resp = _context5.v;
+            if (!(!resp || !resp.data || !resp.data.length)) {
+              _context5.n = 4;
+              break;
+            }
+            isImportingState = false;
+            return _context5.a(2);
+          case 4:
+            _iterator2 = _createForOfIteratorHelper(resp.data);
+            _context5.p = 5;
+            _loop2 = /*#__PURE__*/_regenerator().m(function _loop2() {
+              var item, resolved, _mappedCard, isTV, _currentStatus, syncCategory, status;
+              return _regenerator().w(function (_context4) {
+                while (1) switch (_context4.n) {
+                  case 0:
+                    item = _step2.value;
+                    _context4.n = 1;
+                    return resolver.resolveForImport(item);
+                  case 1:
+                    resolved = _context4.v;
+                    if (resolved && resolved.themoviedb_id) {
+                      _mappedCard = cardMapper.mapOne(item);
+                      _mappedCard.id = resolved.themoviedb_id;
+                      _mappedCard.kinobaza_id = resolved.kinobaza_id;
+                      _mappedCard.slug = resolved.slug;
+                      _mappedCard.needsEnrichment = false;
+                      isTV = mapper.isCardTV(_mappedCard);
+                      _currentStatus = Lampa.Favorite.check(_mappedCard);
+                      syncCategory = function syncCategory(catName, shouldHave) {
+                        var has = _currentStatus[catName];
+                        if (shouldHave && !has) {
+                          Lampa.Favorite.add(catName, _mappedCard);
+                        } else if (!shouldHave && has) {
+                          Lampa.Favorite.remove(catName, _mappedCard);
+                        }
+                      };
+                      syncCategory('like', item.myFavorite);
+                      syncCategory('wath', item.myWatchlist);
+                      if (!isTV) {
+                        syncCategory('viewed', item.mySeenlist);
+                        syncCategory('thrown', item.myBlacklist);
+                      } else {
+                        status = item.myStatus;
+                        syncCategory('scheduled', status === 'watching');
+                        syncCategory('viewed', status === 'completed');
+                        syncCategory('continued', status === 'paused');
+                        syncCategory('thrown', status === 'dropped');
+                      }
+                    }
+                  case 2:
+                    return _context4.a(2);
+                }
+              }, _loop2);
+            });
+            _iterator2.s();
+          case 6:
+            if ((_step2 = _iterator2.n()).done) {
+              _context5.n = 8;
+              break;
+            }
+            return _context5.d(_regeneratorValues(_loop2()), 7);
+          case 7:
+            _context5.n = 6;
+            break;
+          case 8:
+            _context5.n = 10;
+            break;
+          case 9:
+            _context5.p = 9;
+            _t4 = _context5.v;
+            _iterator2.e(_t4);
+          case 10:
+            _context5.p = 10;
+            _iterator2.f();
+            return _context5.f(10);
+          case 11:
+            Lampa.Storage.set(storage.getProfileKey('kinobaza_sync_last_pull'), Date.now());
+            _context5.n = 13;
+            break;
+          case 12:
+            _context5.p = 12;
+            _t5 = _context5.v;
+            console.error('KinoBaza Importer', 'pullIncremental error', _t5);
+          case 13:
+            _context5.p = 13;
+            isImportingState = false;
+            return _context5.f(13);
+          case 14:
+            return _context5.a(2);
+        }
+      }, _callee3, null, [[5, 9, 10, 11], [2, 12, 13, 14]]);
+    }));
+    return _pullIncremental.apply(this, arguments);
+  }
+  var importer = {
+    pullFull: pullFull,
+    pullIncremental: pullIncremental,
+    isImporting: isImporting
+  };
+
+  var QUEUE_KEY = 'kinobaza_sync_queue';
+  var isFlushing = false;
+
+  /**
+   * Отримати чергу для активного профілю
+   * @returns {Array}
+   */
+  function getQueue() {
+    var key = storage.getProfileKey(QUEUE_KEY);
+    var val = Lampa.Storage.get(key, '[]');
+    return Array.isArray(val) ? val : [];
+  }
+
+  /**
+   * Зберегти чергу для активного профілю
+   * @param {Array} queue
+   */
+  function saveQueue(queue) {
+    var key = storage.getProfileKey(QUEUE_KEY);
+    Lampa.Storage.set(key, queue);
+  }
+
+  /**
+   * Додати команду в чергу
+   * @param {object} command - { method, endpoint, body, type, action, card_id, kinobaza_id }
+   */
+  function enqueue(command) {
+    if (!command) return;
+    var queue = getQueue();
+
+    // Запобігання дублюванню / оптимізація взаємовиключень
+    var duplicateIdx = queue.findIndex(function (item) {
+      return item.card_id === command.card_id && item.type === command.type;
+    });
+    if (duplicateIdx > -1) {
+      var existing = queue[duplicateIdx];
+      if (existing.action !== command.action) {
+        // Взаємовиключні операції (наприклад, add та remove) -> видаляємо обидва
+        queue.splice(duplicateIdx, 1);
+        saveQueue(queue);
+        Lampa.Listener.send('kinobaza:sync:icon', {
+          state: queue.length ? 'pending' : 'idle'
+        });
+        return;
+      } else {
+        // Однаковий статус -> не дублюємо
+        return;
+      }
+    }
+
+    // Перевірка ліміту в 200 елементів
+    if (queue.length >= 200) {
+      queue.shift(); // видаляємо найстаріший
+      if (typeof Lampa.Noty !== 'undefined') {
+        Lampa.Noty.show('Чергу синхронізації переповнено. Найстаріші зміни втрачено.', {
+          style: 'warning'
+        });
+      }
+    }
+    command.timestamp = Date.now();
+    command.retries = 0;
+    queue.push(command);
+    saveQueue(queue);
+    Lampa.Listener.send('kinobaza:sync:queued', {
+      command: command
+    });
+    Lampa.Listener.send('kinobaza:sync:icon', {
+      state: 'pending'
+    });
+  }
+
+  /**
+   * Очистити чергу
+   */
+  function clearQueue() {
+    saveQueue([]);
+    Lampa.Listener.send('kinobaza:sync:icon', {
+      state: 'idle'
+    });
+  }
+
+  /**
+   * Обробити чергу (FIFO) з лімітом запитів та затримкою
+   */
+  function flush() {
+    return _flush.apply(this, arguments);
+  }
+  function _flush() {
+    _flush = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+      var queue, delay, _loop, _ret;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.n) {
+          case 0:
+            if (!isFlushing) {
+              _context2.n = 1;
+              break;
+            }
+            return _context2.a(2);
+          case 1:
+            queue = getQueue();
+            if (queue.length) {
+              _context2.n = 2;
+              break;
+            }
+            return _context2.a(2);
+          case 2:
+            if (!(typeof window !== 'undefined' && navigator && !navigator.onLine)) {
+              _context2.n = 3;
+              break;
+            }
+            return _context2.a(2);
+          case 3:
+            isFlushing = true;
+            Lampa.Listener.send('kinobaza:sync:start');
+            Lampa.Listener.send('kinobaza:sync:icon', {
+              state: 'syncing'
+            });
+            delay = function delay(ms) {
+              return new Promise(function (resolve) {
+                return setTimeout(resolve, ms);
+              });
+            };
+            _loop = /*#__PURE__*/_regenerator().m(function _loop() {
+              var command, card, target, path, status, _t, _t2;
+              return _regenerator().w(function (_context) {
+                while (1) switch (_context.n) {
+                  case 0:
+                    if (!(typeof window !== 'undefined' && navigator && !navigator.onLine)) {
+                      _context.n = 1;
+                      break;
+                    }
+                    return _context.a(2, 0);
+                  case 1:
+                    command = queue[0]; // Спроба розв'язати kinobaza_id, якщо його немає, але є Lampa картка
+                    if (!(!command.kinobaza_id && command.card_id)) {
+                      _context.n = 6;
+                      break;
+                    }
+                    _context.p = 2;
+                    card = (typeof Lampa !== 'undefined' && Lampa.Favorite && Lampa.Favorite.full && Lampa.Favorite.full().card || []).find(function (c) {
+                      return (c.themoviedb_id || c.id) === command.card_id;
+                    });
+                    if (!card) {
+                      _context.n = 4;
+                      break;
+                    }
+                    _context.n = 3;
+                    return resolver.resolveForExport(card);
+                  case 3:
+                    target = _context.v;
+                    if (target) {
+                      command.kinobaza_id = target.kinobaza_id;
+                      command.slug = target.slug;
+                      saveQueue(queue);
+                    }
+                  case 4:
+                    _context.n = 6;
+                    break;
+                  case 5:
+                    _context.p = 5;
+                    _t = _context.v;
+                    console.error('KinoBaza Queue', 'Resolve fallback in flush failed', _t);
+                  case 6:
+                    path = command.endpoint.replace('{id}', command.kinobaza_id);
+                    _context.p = 7;
+                    _context.n = 8;
+                    return new Promise(function (resolve, reject) {
+                      api$1.post(path, command.body || {}, resolve, reject);
+                    });
+                  case 8:
+                    // Успішно виконано -> видаляємо з черги
+                    queue.shift();
+                    saveQueue(queue);
+                    _context.n = 13;
+                    break;
+                  case 9:
+                    _context.p = 9;
+                    _t2 = _context.v;
+                    // Обробка помилок
+                    status = _t2 ? _t2.status : 0;
+                    if (!(status === 429 || status >= 500 || status === 0)) {
+                      _context.n = 12;
+                      break;
+                    }
+                    // Тимчасова помилка (rate limit, сервер оффлайн або відсутність мережі)
+                    command.retries++;
+                    if (!(command.retries > 10)) {
+                      _context.n = 10;
+                      break;
+                    }
+                    // Видаляємо після 10 невдалих спроб
+                    queue.shift();
+                    saveQueue(queue);
+                    if (typeof Lampa.Noty !== 'undefined') {
+                      Lampa.Noty.show("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u0430\u0442\u0443\u0441 \u0434\u043B\u044F \u0442\u0430\u0439\u0442\u043B\u0443.", {
+                        style: 'error'
+                      });
+                    }
+                    _context.n = 11;
+                    break;
+                  case 10:
+                    return _context.a(2, 0);
+                  case 11:
+                    _context.n = 13;
+                    break;
+                  case 12:
+                    // Помилка 4xx (крім 429) -> некоректний запит, видаляємо з черги
+                    queue.shift();
+                    saveQueue(queue);
+                  case 13:
+                    _context.n = 14;
+                    return delay(350);
+                  case 14:
+                    return _context.a(2);
+                }
+              }, _loop, null, [[7, 9], [2, 5]]);
+            });
+          case 4:
+            if (!(queue.length > 0)) {
+              _context2.n = 7;
+              break;
+            }
+            return _context2.d(_regeneratorValues(_loop()), 5);
+          case 5:
+            _ret = _context2.v;
+            if (!(_ret === 0)) {
+              _context2.n = 6;
+              break;
+            }
+            return _context2.a(3, 7);
+          case 6:
+            _context2.n = 4;
+            break;
+          case 7:
+            isFlushing = false;
+            queue = getQueue();
+            if (queue.length === 0) {
+              Lampa.Listener.send('kinobaza:sync:complete');
+              Lampa.Listener.send('kinobaza:sync:flushed');
+              Lampa.Listener.send('kinobaza:sync:icon', {
+                state: 'idle'
+              });
+            } else {
+              Lampa.Listener.send('kinobaza:sync:error');
+              Lampa.Listener.send('kinobaza:sync:icon', {
+                state: 'pending'
+              });
+            }
+          case 8:
+            return _context2.a(2);
+        }
+      }, _callee);
+    }));
+    return _flush.apply(this, arguments);
+  }
+  var queue = {
+    getQueue: getQueue,
+    enqueue: enqueue,
+    clearQueue: clearQueue,
+    flush: flush,
+    isFlushing: isFlushing
+  };
+
+  /**
+   * Виконати команду експорту (надсилання на КіноБазу)
+   * @param {object} command - команда { method, endpoint, body, type, action, card_id, kinobaza_id }
+   * @returns {Promise<void>}
+   */
+  function execute(_x) {
+    return _execute.apply(this, arguments);
+  }
+  function _execute() {
+    _execute = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(command) {
+      var path, body, _t;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            if (!(!command || !command.kinobaza_id)) {
+              _context.n = 1;
+              break;
+            }
+            return _context.a(2);
+          case 1:
+            path = command.endpoint.replace('{id}', command.kinobaza_id);
+            body = command.body || {};
+            _context.p = 2;
+            _context.n = 3;
+            return new Promise(function (resolve, reject) {
+              api$1.post(path, body, resolve, reject);
+            });
+          case 3:
+            _context.n = 5;
+            break;
+          case 4:
+            _context.p = 4;
+            _t = _context.v;
+            console.error('KinoBaza Exporter', 'execute error, enqueuing', _t);
+            // Додаємо в офлайн-чергу при помилці
+            queue.enqueue(command);
+            throw _t;
+          case 5:
+            return _context.a(2);
+        }
+      }, _callee, null, [[2, 4]]);
+    }));
+    return _execute.apply(this, arguments);
+  }
+  var exporter = {
+    execute: execute
+  };
+
+  function start() {
+    // Спочатку перевірка на CUB-конфлікт
+    if (!guard.checkConflict()) return;
+    if (typeof Lampa.Modal === 'undefined') return;
+    Lampa.Modal.open({
+      title: 'Синхронізація КіноБаза',
+      size: 'small',
+      html: $('<div class="about">' + '<p>Виконати повну синхронізацію статусів переглядів та списків між Lampa та КіноБазою?</p>' + '<p style="margin-top: 10px; opacity: 0.8; font-size: 0.9em;">Це об\'єднає ваші локальні закладки Lampa та дані акаунта КіноБази. Процес може зайняти кілька хвилин.</p>' + '</div>'),
+      buttons: [{
+        name: 'Підтвердити',
+        onSelect: function onSelect() {
+          Lampa.Modal.close();
+          showProgressModal();
+        }
+      }, {
+        name: 'Скасувати',
+        onSelect: function onSelect() {
+          Lampa.Modal.close();
+        }
+      }],
+      onBack: function onBack() {
+        Lampa.Modal.close();
+      }
+    });
+  }
+  function buildProgressUI() {
+    return $('<div class="kinobaza-manual-sync">' + '<div class="sync-phase" data-phase="0" style="margin-bottom: 8px;">' + '<span class="sync-status" style="margin-right: 8px;">●</span> Завантаження з КіноБази...' + '</div>' + '<div class="sync-phase" data-phase="1" style="margin-bottom: 8px; opacity: 0.5;">' + '<span class="sync-status" style="margin-right: 8px;">○</span> Розпізнавання тайтлів' + '</div>' + '<div class="sync-phase" data-phase="2" style="margin-bottom: 8px; opacity: 0.5;">' + '<span class="sync-status" style="margin-right: 8px;">○</span> Об\'єднання даних' + '</div>' + '<div class="sync-phase" data-phase="3" style="margin-bottom: 8px; opacity: 0.5;">' + '<span class="sync-status" style="margin-right: 8px;">○</span> Надсилання в КіноБазу' + '</div>' + '<div class="sync-phase" data-phase="4" style="margin-bottom: 15px; opacity: 0.5;">' + '<span class="sync-status" style="margin-right: 8px;">○</span> Застосування до Lampa' + '</div>' + '<div class="sync-progress-bar" style="background: rgba(255,255,255,0.08); height: 8px; border-radius: 4px; overflow: hidden; position: relative;">' + '<div class="sync-progress-fill" style="background: #005BBB; width: 0%; height: 100%; transition: width 0.3s ease;"></div>' + '</div>' + '<div class="sync-stats" style="margin-top: 15px; font-size: 0.9em; opacity: 0.8; border-top: solid 1px rgba(255,255,255,0.08); padding-top: 10px;">' + 'Оброблено: <span class="stat-found">0</span> | Нових у Lampa: <span class="stat-new">0</span> | Злито конфліктів: <span class="stat-conflicts">0</span>' + '</div>' + '</div>');
+  }
+  function showProgressModal() {
+    var $ui = buildProgressUI();
+    var modal = Lampa.Modal.open({
+      title: 'Синхронізація КіноБаза',
+      size: 'medium',
+      html: $ui,
+      buttons: [],
+      // Без кнопок під час виконання
+      onBack: function onBack() {
+        if (typeof Lampa.Noty !== 'undefined') {
+          Lampa.Noty.show('Будь ласка, зачекайте завершення синхронізації.', {
+            style: 'warning'
+          });
+        }
+      }
+    });
+    runSyncPhases(modal, $ui);
+  }
+  function runSyncPhases(_x, _x2) {
+    return _runSyncPhases.apply(this, arguments);
+  }
+  function _runSyncPhases() {
+    _runSyncPhases = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(modal, $ui) {
+      var stats, setPhase, kbTmdbIds, localCards, categories, lampaOnly, _iterator, _step, _card, priority, _i2, _lampaOnly, card, target, activeCat, _iterator2, _step2, cat, actionCmd, _t, _t2, _t3;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            stats = {
+              found: 0,
+              "new": 0,
+              conflicts: 0,
+              pushed: 0
+            };
+            setPhase = function setPhase(phaseIdx, status, progressPercent) {
+              $ui.find('.sync-phase').each(function (idx) {
+                var $p = $(this);
+                if (idx === phaseIdx) {
+                  $p.css('opacity', '1');
+                  if (status === 'active') {
+                    $p.find('.sync-status').text('●').css('color', '#FFD700');
+                  } else if (status === 'done') {
+                    $p.find('.sync-status').text('✓').css('color', '#4CAF50');
+                  }
+                } else if (idx < phaseIdx) {
+                  $p.css('opacity', '0.7');
+                  $p.find('.sync-status').text('✓').css('color', '#4CAF50');
+                } else {
+                  $p.css('opacity', '0.5');
+                  $p.find('.sync-status').text('○').css('color', '');
+                }
+              });
+              $ui.find('.sync-progress-fill').css('width', progressPercent + '%');
+              $ui.find('.stat-found').text(stats.found);
+              $ui.find('.stat-new').text(stats["new"]);
+              $ui.find('.stat-conflicts').text(stats.conflicts);
+            };
+            _context.p = 1;
+            // --- ФАЗА 1: Pull з КіноБази ---
+            setPhase(0, 'active', 10);
+            // Викликаємо повний імпорт у тихій системній манері (isManual = true)
+            _context.n = 2;
+            return importer.pullFull(stats, true);
+          case 2:
+            kbTmdbIds = _context.v;
+            setPhase(0, 'done', 25);
+
+            // --- ФАЗА 2: Резолв ID ---
+            setPhase(1, 'active', 30);
+            // Збираємо Lampa-only елементи
+            Lampa.Favorite.all(); // { like, wath, book, look, viewed, scheduled, continued, thrown }
+            localCards = Lampa.Favorite.full().card || [];
+            categories = ['like', 'wath', 'book', 'look', 'viewed', 'scheduled', 'continued', 'thrown']; // Знайдемо унікальні картки Lampa-only
+            lampaOnly = [];
+            _iterator = _createForOfIteratorHelper(localCards);
+            try {
+              for (_iterator.s(); !(_step = _iterator.n()).done;) {
+                _card = _step.value;
+                if (!kbTmdbIds.has(_card.id)) {
+                  lampaOnly.push(_card);
+                }
+              }
+            } catch (err) {
+              _iterator.e(err);
+            } finally {
+              _iterator.f();
+            }
+            setPhase(1, 'done', 50);
+
+            // --- ФАЗА 3: Merge (Об'єднання даних) ---
+            setPhase(2, 'active', 55);
+            // Lossy Merge Lampa-priority:
+            // Якщо фільм одночасно є у кількох категоріях, ми залишаємо тільки з найвищим пріоритетом
+            // viewed > thrown > continued > scheduled > wath > book > look
+            priority = ['viewed', 'thrown', 'continued', 'scheduled', 'wath', 'book', 'look'];
+            lampaOnly.forEach(function (card) {
+              var keepCat = null;
+              for (var _i = 0, _priority = priority; _i < _priority.length; _i++) {
+                var cat = _priority[_i];
+                if (Lampa.Favorite.check(card)[cat]) {
+                  if (keepCat === null) {
+                    keepCat = cat;
+                  } else {
+                    // Видаляємо дублікати нижчого пріоритету
+                    Lampa.Favorite.remove(cat, card);
+                    stats.conflicts++;
+                  }
+                }
+              }
+            });
+            setPhase(2, 'done', 70);
+
+            // --- ФАЗА 4: Push в КіноБазу ---
+            setPhase(3, 'active', 75);
+            // Надсилаємо Lampa-only тайтли на КіноБазу
+            _i2 = 0, _lampaOnly = lampaOnly;
+          case 3:
+            if (!(_i2 < _lampaOnly.length)) {
+              _context.n = 17;
+              break;
+            }
+            card = _lampaOnly[_i2];
+            _context.n = 4;
+            return resolver.resolveForExport(card);
+          case 4:
+            target = _context.v;
+            if (target) {
+              _context.n = 5;
+              break;
+            }
+            return _context.a(3, 16);
+          case 5:
+            // Знаходимо активну категорію
+            activeCat = null;
+            _iterator2 = _createForOfIteratorHelper(categories);
+            _context.p = 6;
+            _iterator2.s();
+          case 7:
+            if ((_step2 = _iterator2.n()).done) {
+              _context.n = 9;
+              break;
+            }
+            cat = _step2.value;
+            if (!Lampa.Favorite.check(card)[cat]) {
+              _context.n = 8;
+              break;
+            }
+            activeCat = cat;
+            return _context.a(3, 9);
+          case 8:
+            _context.n = 7;
+            break;
+          case 9:
+            _context.n = 11;
+            break;
+          case 10:
+            _context.p = 10;
+            _t = _context.v;
+            _iterator2.e(_t);
+          case 11:
+            _context.p = 11;
+            _iterator2.f();
+            return _context.f(11);
+          case 12:
+            if (!activeCat) {
+              _context.n = 16;
+              break;
+            }
+            actionCmd = mapper.toKinoBazaAction({
+              type: activeCat,
+              action: 'add',
+              card: card
+            }, target.is_tv);
+            if (!actionCmd) {
+              _context.n = 16;
+              break;
+            }
+            actionCmd.kinobaza_id = target.kinobaza_id;
+            actionCmd.slug = target.slug;
+            _context.p = 13;
+            _context.n = 14;
+            return exporter.execute(actionCmd);
+          case 14:
+            stats.pushed++;
+            _context.n = 16;
+            break;
+          case 15:
+            _context.p = 15;
+            _t2 = _context.v;
+            console.error('KinoBaza Manual Sync', 'Push item failed', card.title, _t2);
+          case 16:
+            _i2++;
+            _context.n = 3;
+            break;
+          case 17:
+            setPhase(3, 'done', 90);
+
+            // --- ФАЗА 5: Застосування до Lampa ---
+            setPhase(4, 'active', 95);
+            // Перечитуємо збережені закладки
+            Lampa.Favorite.read();
+            setPhase(4, 'done', 100);
+
+            // Показ результату
+            showSummary(stats);
+            _context.n = 19;
+            break;
+          case 18:
+            _context.p = 18;
+            _t3 = _context.v;
+            console.error('KinoBaza Manual Sync', 'Sync process failed', _t3);
+            Lampa.Listener.send('kinobaza:sync:error');
+            Lampa.Modal.close();
+            Lampa.Modal.open({
+              title: 'Помилка синхронізації',
+              size: 'small',
+              html: $('<div class="about">' + '<h2 style="color: #f44336; margin-bottom: 10px;">Помилка синхронізації</h2>' + '<p>Під час синхронізації сталася помилка. Перевірте з\'єднання з інтернетом або спробуйте пізніше.</p>' + '</div>'),
+              buttons: [{
+                name: 'Закрити',
+                onSelect: function onSelect() {
+                  Lampa.Modal.close();
+                  Lampa.Controller.toggle('settings');
+                }
+              }],
+              onBack: function onBack() {
+                Lampa.Modal.close();
+                Lampa.Controller.toggle('settings');
+              }
+            });
+          case 19:
+            return _context.a(2);
+        }
+      }, _callee, null, [[13, 15], [6, 10, 11, 12], [1, 18]]);
+    }));
+    return _runSyncPhases.apply(this, arguments);
+  }
+  function showSummary(stats) {
+    Lampa.Modal.close();
+    Lampa.Modal.open({
+      title: 'Синхронізація КіноБаза',
+      size: 'small',
+      html: $('<div class="about">' + '<h2 style="color: #4CAF50; margin-bottom: 10px;">Синхронізацію завершено успішно!</h2>' + '<p style="margin-bottom: 8px;">Дані об\'єднано та оновлено.</p>' + '<ul style="line-height: 1.6; margin-left: 15px; list-style-type: disc;">' + "<li>\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0442\u0430\u0439\u0442\u043B\u0456\u0432 \u043D\u0430 \u041A\u0456\u043D\u043E\u0411\u0430\u0437\u0456: <b>".concat(stats.found, "</b></li>") + "<li>\u0414\u043E\u0434\u0430\u043D\u043E \u043D\u043E\u0432\u0438\u0445 \u0443 Lampa: <b>".concat(stats["new"], "</b></li>") + "<li>\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u0437 Lampa \u043D\u0430 \u041A\u0456\u043D\u043E\u0411\u0430\u0437\u0443: <b>".concat(stats.pushed, "</b></li>") + "<li>\u0412\u0438\u0440\u0456\u0448\u0435\u043D\u043E \u043A\u043E\u043D\u0444\u043B\u0456\u043A\u0442\u0456\u0432 / \u043E\u0447\u0438\u0449\u0435\u043D\u043E \u0434\u0443\u0431\u043B\u0456\u0432: <b>".concat(stats.conflicts, "</b></li>") + '</ul>' + '</div>'),
+      buttons: [{
+        name: 'Закрити',
+        onSelect: function onSelect() {
+          Lampa.Modal.close();
+          Lampa.Controller.toggle('settings');
+        }
+      }],
+      onBack: function onBack() {
+        Lampa.Modal.close();
+        Lampa.Controller.toggle('settings');
+      }
+    });
+  }
+  var manual = {
+    start: start
+  };
+
+  var watchedCache = new Set(); // Кеш хешів серій, відправлених як "переглянуто"
+  var hashMetaCache = new Map(); // Кеш метаданих за хешем (hash -> { card, season, episode })
+
+  /**
+   * Допоміжна функція для вилучення сезону та серії з playdata
+   */
+  function extractSeasonEpisode(playdata) {
+    if (!playdata) return null;
+    if (typeof playdata.season !== 'undefined' && typeof playdata.episode !== 'undefined') {
+      return {
+        season: parseInt(playdata.season, 10),
+        episode: parseInt(playdata.episode, 10)
+      };
+    }
+    var title = playdata.title || '';
+    var match = title.match(/s(\d+)\s*e(\d+)/i);
+    if (match) return {
+      season: parseInt(match[1], 10),
+      episode: parseInt(match[2], 10)
+    };
+    match = title.match(/(\d+)\s*x\s*(\d+)/i);
+    if (match) return {
+      season: parseInt(match[1], 10),
+      episode: parseInt(match[2], 10)
+    };
+    match = title.match(/(\d+)\s*сезон/i);
+    var epMatch = title.match(/(\d+)\s*(?:серия|серія|эпизод|епізод)/i);
+    if (match && epMatch) return {
+      season: parseInt(match[1], 10),
+      episode: parseInt(epMatch[1], 10)
+    };
+
+    // Спроба знайти в імені файлу/посилання URL
+    var url = playdata.url || '';
+    match = url.match(/s(\d+)\s*e(\d+)/i);
+    if (match) return {
+      season: parseInt(match[1], 10),
+      episode: parseInt(match[2], 10)
+    };
+    return null;
+  }
+
+  /**
+   * Отримати ID епізоду з КіноБази за сезоном та номером серії
+   * @param {object} card
+   * @param {number} season
+   * @param {number} episode
+   * @returns {Promise<number|null>}
+   */
+  function resolveEpisodeId(_x, _x2, _x3) {
+    return _resolveEpisodeId.apply(this, arguments);
+  }
+  /**
+   * Обробити зміну прогресу таймлайну (серії або фільму)
+   * @param {string} hash
+   * @param {number} percent
+   */
+  function _resolveEpisodeId() {
+    _resolveEpisodeId = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(card, season, episode) {
+      var target, data, ep, _t2;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.n) {
+          case 0:
+            _context2.n = 1;
+            return resolver.resolveForExport(card);
+          case 1:
+            target = _context2.v;
+            if (!(!target || !target.slug)) {
+              _context2.n = 2;
+              break;
+            }
+            return _context2.a(2, null);
+          case 2:
+            _context2.p = 2;
+            _context2.n = 3;
+            return api$1.getEpisodes(target.slug, season);
+          case 3:
+            data = _context2.v;
+            if (!(data && data.data)) {
+              _context2.n = 4;
+              break;
+            }
+            ep = data.data.find(function (item) {
+              return item.episode === episode && item.season === season;
+            });
+            return _context2.a(2, ep ? ep.id : null);
+          case 4:
+            _context2.n = 6;
+            break;
+          case 5:
+            _context2.p = 5;
+            _t2 = _context2.v;
+            console.error('KinoBaza Listeners', 'resolveEpisodeId error', _t2);
+          case 6:
+            return _context2.a(2, null);
+        }
+      }, _callee2, null, [[2, 5]]);
+    }));
+    return _resolveEpisodeId.apply(this, arguments);
+  }
+  function handleTimelineUpdate(_x4, _x5) {
+    return _handleTimelineUpdate.apply(this, arguments);
+  } // Посилання на слухачі для можливості видалення при destroy
+  function _handleTimelineUpdate() {
+    _handleTimelineUpdate = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(hash, percent) {
+      var realtimeKey, realtime, meta, card, isTV, season, episode, epId, command, movieHash, target, _command, _t3;
+      return _regenerator().w(function (_context3) {
+        while (1) switch (_context3.n) {
+          case 0:
+            console.log('[KinoBaza Sync] handleTimelineUpdate called - Hash:', hash, 'Percent:', percent);
+
+            // Перевіряємо, чи увімкнена realtime синхронізація
+            realtimeKey = storage.getProfileKey('kinobaza_sync_realtime');
+            realtime = Lampa.Storage.get(realtimeKey, false);
+            if (realtime) {
+              _context3.n = 1;
+              break;
+            }
+            return _context3.a(2);
+          case 1:
+            meta = hashMetaCache.get(hash);
+            if (!(!meta || !meta.card)) {
+              _context3.n = 2;
+              break;
+            }
+            return _context3.a(2);
+          case 2:
+            card = meta.card;
+            isTV = mapper.isCardTV(card);
+            if (!isTV) {
+              _context3.n = 10;
+              break;
+            }
+            season = meta.season;
+            episode = meta.episode;
+            if (!(season === undefined || episode === undefined)) {
+              _context3.n = 3;
+              break;
+            }
+            return _context3.a(2);
+          case 3:
+            if (!(percent >= 90)) {
+              _context3.n = 9;
+              break;
+            }
+            if (!watchedCache.has(hash)) {
+              _context3.n = 4;
+              break;
+            }
+            return _context3.a(2);
+          case 4:
+            watchedCache.add(hash);
+            console.log('[KinoBaza Sync] Mark watched - S' + season + 'E' + episode + ' (Card: ' + (card.title || card.name) + ')');
+            _context3.n = 5;
+            return resolveEpisodeId(card, season, episode);
+          case 5:
+            epId = _context3.v;
+            if (!epId) {
+              _context3.n = 9;
+              break;
+            }
+            command = {
+              method: 'POST',
+              endpoint: "/episodes/".concat(epId, "/watch"),
+              type: 'episode_watch',
+              action: 'add',
+              card_id: card.id,
+              kinobaza_id: epId
+            };
+            _context3.p = 6;
+            _context3.n = 7;
+            return exporter.execute(command);
+          case 7:
+            _context3.n = 9;
+            break;
+          case 8:
+            _context3.p = 8;
+            _t3 = _context3.v;
+            console.error('KinoBaza Listeners', 'Failed to sync episode watch', _t3);
+          case 9:
+            _context3.n = 16;
+            break;
+          case 10:
+            // Для фільмів: якщо переглянуто більше 90%, позначаємо seenlist
+            movieHash = Lampa.Utils.hash(card.original_title);
+            if (!(hash === movieHash)) {
+              _context3.n = 16;
+              break;
+            }
+            if (!(percent >= 90)) {
+              _context3.n = 16;
+              break;
+            }
+            if (!watchedCache.has(hash)) {
+              _context3.n = 11;
+              break;
+            }
+            return _context3.a(2);
+          case 11:
+            watchedCache.add(hash);
+            _context3.n = 12;
+            return resolver.resolveForExport(card);
+          case 12:
+            target = _context3.v;
+            if (!target) {
+              _context3.n = 16;
+              break;
+            }
+            _command = {
+              method: 'POST',
+              endpoint: "/titles/".concat(target.kinobaza_id, "/seenlist"),
+              type: 'seenlist',
+              action: 'add',
+              card_id: card.id,
+              kinobaza_id: target.kinobaza_id,
+              slug: target.slug
+            };
+            _context3.p = 13;
+            _context3.n = 14;
+            return exporter.execute(_command);
+          case 14:
+            _context3.n = 16;
+            break;
+          case 15:
+            _context3.p = 15;
+            _context3.v;
+          case 16:
+            return _context3.a(2);
+        }
+      }, _callee3, null, [[13, 15], [6, 8]]);
+    }));
+    return _handleTimelineUpdate.apply(this, arguments);
+  }
+  var activeListeners$1 = {
+    favoriteChangeAdd: null,
+    favoriteChangeAdded: null,
+    favoriteChangeRemove: null,
+    playerStart: null,
+    timelineUpdate: null
+  };
+
+  /**
+   * Ініціалізація слухачів
+   */
+  function init$4() {
+    try {
+      console.log('[KinoBaza Sync] Initializing listeners using Lampa native event API...');
+
+      // Спільний обробник подій закладок
+      var handleFavoriteChange = /*#__PURE__*/function () {
+        var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(action, e) {
+          var realtime, mappedEvent, target, command, _t;
+          return _regenerator().w(function (_context) {
+            while (1) switch (_context.n) {
+              case 0:
+                if (!importer.isImporting()) {
+                  _context.n = 1;
+                  break;
+                }
+                return _context.a(2);
+              case 1:
+                realtime = Lampa.Storage.get(storage.getProfileKey('kinobaza_sync_realtime'), false);
+                if (realtime) {
+                  _context.n = 2;
+                  break;
+                }
+                return _context.a(2);
+              case 2:
+                if (!(action === 'remove' && e.method !== 'id')) {
+                  _context.n = 3;
+                  break;
+                }
+                return _context.a(2);
+              case 3:
+                if (!(!e.card || !e.card.id)) {
+                  _context.n = 4;
+                  break;
+                }
+                return _context.a(2);
+              case 4:
+                // Map the event object to what mapper.toKinoBazaAction expects
+                mappedEvent = {
+                  type: e.where,
+                  action: action === 'add' || action === 'added' ? 'add' : 'remove',
+                  card: e.card
+                };
+                _context.n = 5;
+                return resolver.resolveForExport(e.card);
+              case 5:
+                target = _context.v;
+                command = mapper.toKinoBazaAction(mappedEvent, target ? target.is_tv : undefined);
+                if (command) {
+                  _context.n = 6;
+                  break;
+                }
+                return _context.a(2);
+              case 6:
+                if (target) {
+                  _context.n = 7;
+                  break;
+                }
+                command.kinobaza_id = 0;
+                command.slug = '';
+                queue.enqueue(command);
+                return _context.a(2);
+              case 7:
+                command.kinobaza_id = target.kinobaza_id;
+                command.slug = target.slug;
+                _context.p = 8;
+                _context.n = 9;
+                return exporter.execute(command);
+              case 9:
+                _context.n = 11;
+                break;
+              case 10:
+                _context.p = 10;
+                _t = _context.v;
+              case 11:
+                return _context.a(2);
+            }
+          }, _callee, null, [[8, 10]]);
+        }));
+        return function handleFavoriteChange(_x6, _x7) {
+          return _ref.apply(this, arguments);
+        };
+      }();
+      activeListeners$1.favoriteChangeAdd = function (e) {
+        return handleFavoriteChange('add', e);
+      };
+      activeListeners$1.favoriteChangeAdded = function (e) {
+        return handleFavoriteChange('added', e);
+      };
+      activeListeners$1.favoriteChangeRemove = function (e) {
+        return handleFavoriteChange('remove', e);
+      };
+      Lampa.Favorite.listener.follow('add', activeListeners$1.favoriteChangeAdd);
+      Lampa.Favorite.listener.follow('added', activeListeners$1.favoriteChangeAdded);
+      Lampa.Favorite.listener.follow('remove', activeListeners$1.favoriteChangeRemove);
+
+      // 2. Слухач старту програвача (Lampa.Player.listener)
+      activeListeners$1.playerStart = function (data) {
+        console.log('[KinoBaza Sync] Native Player:start event received', data);
+        var card = data && data.card || Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie);
+        if (!card) return;
+        var timeline = data && data.timeline;
+        var hash = timeline && timeline.hash;
+        if (hash) {
+          var se = extractSeasonEpisode(data);
+          hashMetaCache.set(hash, {
+            card: card,
+            season: se ? se.season : undefined,
+            episode: se ? se.episode : undefined
+          });
+          console.log('[KinoBaza Sync] Cached hash metadata:', hash, 'S' + (se ? se.season : '?') + 'E' + (se ? se.episode : '?'));
+        }
+      };
+      if (Lampa.Player && Lampa.Player.listener) {
+        Lampa.Player.listener.follow('start', activeListeners$1.playerStart);
+      }
+
+      // 3. Слухач оновлення таймлайну (Lampa.Timeline.listener)
+      activeListeners$1.timelineUpdate = function (e) {
+        if (e && e.data && e.data.hash && e.data.road) {
+          var hash = e.data.hash;
+          var percent = parseFloat(e.data.road.percent || 0);
+          handleTimelineUpdate(hash, percent);
+        }
+      };
+      if (Lampa.Timeline && Lampa.Timeline.listener) {
+        Lampa.Timeline.listener.follow('update', activeListeners$1.timelineUpdate);
+      }
+    } catch (err) {
+      console.error('KinoBaza Listeners', 'init error', err);
+    }
+  }
+
+  /**
+   * Очищення слухачів при вивантаженні
+   */
+  function destroy$3() {
+    try {
+      if (activeListeners$1.favoriteChangeAdd) {
+        Lampa.Favorite.listener.remove('add', activeListeners$1.favoriteChangeAdd);
+      }
+      if (activeListeners$1.favoriteChangeAdded) {
+        Lampa.Favorite.listener.remove('added', activeListeners$1.favoriteChangeAdded);
+      }
+      if (activeListeners$1.favoriteChangeRemove) {
+        Lampa.Favorite.listener.remove('remove', activeListeners$1.favoriteChangeRemove);
+      }
+      if (activeListeners$1.playerStart && Lampa.Player && Lampa.Player.listener) {
+        Lampa.Player.listener.remove('start', activeListeners$1.playerStart);
+      }
+      if (activeListeners$1.timelineUpdate && Lampa.Timeline && Lampa.Timeline.listener) {
+        Lampa.Timeline.listener.remove('update', activeListeners$1.timelineUpdate);
+      }
+    } catch (e) {
+      console.error('KinoBaza Listeners destroy error', e);
+    }
+    watchedCache.clear();
+    hashMetaCache.clear();
+  }
+  var listeners = {
+    init: init$4,
+    destroy: destroy$3,
+    handleTimelineUpdate: handleTimelineUpdate,
+    resolveEpisodeId: resolveEpisodeId
+  };
+
+  var PULL_INTERVAL_MS = 1000 * 60 * 30; // 30 хвилин
+  var pullTimer = null;
+  var isInitialized = false;
+  var onProfileSelect = null;
+  var pullCallback = null;
+
+  /**
+   * Ініціалізація та запуск системи синхронізації
+   */
+  function init$3() {
+    if (isInitialized) return;
+    isInitialized = true;
+    try {
+      // 1. Встановлюємо правильний контекст для початкового активного профілю
+      var activeProfileId = storage.getActiveProfileId();
+      switchProfileContext(activeProfileId);
+
+      // 2. Ініціалізація слухачів подій та таймлайну
+      listeners.init();
+
+      // 3. Слухач перемикання профілів Lampa
+      onProfileSelect = function onProfileSelect(e) {
+        if (e && e.profile) {
+          handleProfileSelect(e.profile);
+        }
+      };
+      Lampa.Listener.follow('profile_select', onProfileSelect);
+
+      // 4. Слухач відновлення мережі для відправки черги
+      if (typeof window !== 'undefined') {
+        window.addEventListener('online', handleOnline);
+      }
+
+      // 5. Запуск первинних операцій, якщо є токен
+      if (storage.hasToken()) {
+        startSyncServices();
+      }
+
+      // Налаштування початкового стану іконки
+      var q = queue.getQueue();
+      Lampa.Listener.send('kinobaza:sync:icon', {
+        state: q.length ? 'pending' : 'idle'
+      });
+    } catch (err) {
+      console.error('KinoBaza Sync Engine', 'init error', err);
+    }
+  }
+
+  /**
+   * Перемкнути локальний контекст даних Lampa на вибраний профіль
+   * @param {number} profileId
+   */
+  function switchProfileContext(profileId) {
+    var tokenKey = storage.getProfileKey('kinobaza_token', profileId);
+    var realtimeKey = storage.getProfileKey('kinobaza_sync_realtime', profileId);
+    var userDataKey = storage.getProfileKey('kinobaza_user_data', profileId);
+
+    // Якщо профіль відрізняється від дефолтного (id !== 0)
+    if (profileId !== 0) {
+      var token = Lampa.Storage.get(tokenKey, '');
+      var realtime = Lampa.Storage.get(realtimeKey, false);
+      var userData = Lampa.Storage.get(userDataKey, '{}');
+      Lampa.Storage.set('kinobaza_token', token);
+      Lampa.Storage.set('kinobaza_sync_realtime', realtime);
+      Lampa.Storage.set('kinobaza_user_data', userData);
+    }
+  }
+
+  /**
+   * Обробка зміни профілю
+   * @param {object} profile - Lampa profile object
+   */
+  function handleProfileSelect(profile) {
+    var newProfileId = typeof profile.id !== 'undefined' ? profile.id : 0;
+    console.log('KinoBaza Sync Engine', 'switching profile to id:', newProfileId);
+
+    // Зупиняємо сервіси попереднього профілю
+    stopSyncServices();
+
+    // Очищаємо сесійні кеші
+    resolver.sessionCache.clear();
+    listeners.destroy();
+
+    // Перемикаємо контекст сховища
+    switchProfileContext(newProfileId);
+
+    // Переініціалізовуємо слухачі
+    listeners.init();
+
+    // Якщо новий профіль авторизований — запускаємо сервіси
+    if (storage.hasToken()) {
+      startSyncServices();
+    } else {
+      Lampa.Listener.send('kinobaza:sync:icon', {
+        state: 'idle'
+      });
+    }
+
+    // Оновлюємо інтерфейс налаштувань відповідно до нового профілю
+    if (typeof Lampa.Settings !== 'undefined' && typeof Lampa.Settings.update === 'function') {
+      Lampa.Settings.update();
+    }
+  }
+
+  /**
+   * Запустити фонові сервіси синхронізації (черга, фоновий pull, таймери)
+   */
+  function startSyncServices() {
+    // Обробка черги
+    queue.flush();
+
+    // Запуск фонового pull
+    importer.pullIncremental();
+
+    // Налаштування таймера фонового pull
+    stopPeriodicPull();
+    startPeriodicPull();
+  }
+
+  /**
+   * Зупинити фонові сервіси синхронізації
+   */
+  function stopSyncServices() {
+    stopPeriodicPull();
+  }
+
+  /**
+   * Запуск фонового таймера періодичного pull
+   */
+  function startPeriodicPull() {
+    pullCallback = function pullCallback() {
+      if (storage.hasToken()) {
+        importer.pullIncremental();
+      }
+    };
+    if (typeof Lampa.Timer !== 'undefined' && typeof Lampa.Timer.add === 'function') {
+      Lampa.Timer.add(PULL_INTERVAL_MS, pullCallback);
+    } else {
+      pullTimer = setInterval(pullCallback, PULL_INTERVAL_MS);
+    }
+  }
+
+  /**
+   * Зупинка фонового таймера
+   */
+  function stopPeriodicPull() {
+    if (pullTimer) {
+      clearInterval(pullTimer);
+      pullTimer = null;
+    }
+    if (pullCallback && typeof Lampa.Timer !== 'undefined' && typeof Lampa.Timer.remove === 'function') {
+      Lampa.Timer.remove(pullCallback);
+    }
+  }
+
+  /**
+   * Обробка відновлення інтернет-зв'язку
+   */
+  function handleOnline() {
+    if (storage.hasToken()) {
+      queue.flush();
+    }
+  }
+
+  /**
+   * Увімкнути realtime синхронізацію
+   */
+  function startRealtime() {
+    if (storage.hasToken()) {
+      queue.flush();
+    }
+  }
+
+  /**
+   * Вимкнути realtime синхронізацію
+   */
+  function stopRealtime() {
+    // додаткові дії не потрібні, listeners перевіряють статус самостійно
+  }
+
+  /**
+   * Вивантаження плагіна
+   */
+  function destroy$2() {
+    stopSyncServices();
+    listeners.destroy();
+    resolver.sessionCache.clear();
+    if (onProfileSelect) {
+      Lampa.Listener.remove('profile_select', onProfileSelect);
+      onProfileSelect = null;
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', handleOnline);
+    }
+    isInitialized = false;
+  }
+  var syncModule = {
+    init: init$3,
+    destroy: destroy$2,
+    startRealtime: startRealtime,
+    stopRealtime: stopRealtime,
+    handleProfileSelect: handleProfileSelect
+  };
+
+  /**
+   * init() — пустий.
+   * Параметри синхронізації тепер реєструються в settings/settings.js
+   * (kinobaza_profile_settings component).
+   * Ця функція залишена для сумісності — syncSettings.init() викликається з kinobaza.js
+   * і просто нічого не робить.
+   */
+  function init$2() {
+    // Nothing — params registered in settings/settings.js
+  }
+
+  /**
+   * onChange для trigger "Синхронізація в реальному часі"
+   * Використовується в settings/settings.js для kinobaza_profile_settings
+   *
+   * @param {string|boolean} value
+   */
+  function onSyncRealtimeChange(value) {
+    var isTrue = value === 'true' || value === true || value === '1';
+    if (isTrue) {
+      var ok = guard.checkConflict(function () {
+        // Скидаємо назад у false при конфлікті
+        Lampa.Storage.set('kinobaza_sync_realtime', false);
+        Lampa.Storage.set(storage.getProfileKey('kinobaza_sync_realtime'), false);
+
+        // Оновлюємо інтерфейс налаштувань якщо він відкритий
+        if (typeof Lampa.Settings !== 'undefined' && typeof Lampa.Settings.update === 'function') {
+          Lampa.Settings.update();
+        }
+      });
+      if (ok) {
+        Lampa.Storage.set(storage.getProfileKey('kinobaza_sync_realtime'), true);
+        syncModule.startRealtime();
+      }
+    } else {
+      Lampa.Storage.set(storage.getProfileKey('kinobaza_sync_realtime'), false);
+    }
+  }
+
+  /**
+   * onChange для кнопки "Синхронізувати зараз"
+   * Використовується в settings/settings.js для kinobaza_profile_settings
+   */
+  function onSyncManualClick() {
+    manual.start();
+  }
+  var syncSettings = {
+    init: init$2,
+    onSyncRealtimeChange: onSyncRealtimeChange,
+    onSyncManualClick: onSyncManualClick
+  };
+
+  var USER_KEY = 'kinobaza_user_data';
+  var onSettingsOpen = null;
+  var onSettingsOpenKinobaza = null;
+
+  // SVG іконка КіноБаза (спрощена версія)
+  var ICON_SVG = "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.0\" width=\"933.333\" height=\"933.333\" viewBox=\"0 0 700 700\">    <defs>        <linearGradient id=\"myGradient\" gradientTransform=\"rotate(90)\">            <stop offset=\"0%\" stop-color=\"#005BBB\"/>            <stop offset=\"50%\" stop-color=\"#005BBB\"/>            <stop offset=\"50%\" stop-color=\"#FFD500\"/>            <stop offset=\"100%\" stop-color=\"#FFD500\"/>        </linearGradient>    </defs>    <path fill=\"url('#myGradient')\" d=\"M53 47.1c-15 1.5-25.4 6.6-37.2 18.1-4.5 4.4-10.5 14.4-13 21.6L.5 93.5v514l2.2 5.9c7.5 19.9 24.6 35 43.8 38.7 4.5.9 83.1 1.2 304 1.2 270.9 0 298.6-.2 304.8-1.7 11.4-2.7 22.3-9.4 30.4-18.6 3-3.5 9.5-13.5 10-15.5.1-.5 1.2-4.2 2.3-8 2-7 2-7.9 1.8-262l-.3-255-2.3-6.2c-7-18.7-22.5-32.9-41.3-37.9-6-1.6-26.2-1.7-301.4-1.8-162.2-.1-297.9.2-301.5.5zm73 48.5c2.5 1.2 5.9 3.7 7.6 5.5 5.8 6.4 6.3 8.9 6.4 37.7 0 16.4-.4 27.7-1.1 30.6-1.4 5.5-6.7 11.9-12.3 14.9-3.9 2.1-5.2 2.2-33.1 2.2-28.5 0-29.1 0-33.5-2.3-5.4-2.9-8.5-6.3-11.3-12.2-1.9-4.2-2-6.3-2-32 0-31 .4-33.1 7.7-40.3 6.1-5.8 8.8-6.2 39.6-6.2 25.8 0 27.8.2 32 2.1zm374 .2c5.4 2.9 8.5 6.3 11.3 12.2 2 4.4 2 5.6 2 102 0 95.4 0 97.6-2 102-2.5 5.8-8.6 11.6-13.7 13.3-3.4 1.1-29.2 1.3-148.6 1.2-132.1-.1-144.8-.3-148-1.8-6.9-3.3-12.4-9.8-13.6-16.2-1-5.2-1.1-187.2-.2-194.8 1.2-9 7.5-16.6 15.7-19 3.6-1.1 32.1-1.3 148.5-1.3l144.1.1 4.5 2.3zm139-.5c5.2 2.5 10.3 7.6 12.4 12.5 1.8 4 2 6.8 1.9 32.5 0 26.8-.1 28.4-2.1 32.4-1.2 2.3-3.8 5.8-5.9 7.8-6 5.8-9.9 6.4-40.8 6.1-25.3-.2-27.3-.3-31-2.3-4.2-2.2-8-5.9-11.1-10.8-1.7-2.6-1.9-5.5-2.2-30-.4-31 .1-35.2 5.4-41.4 7.1-8.2 9.9-8.8 43.4-8.6 22.9 0 27 .3 30 1.8zM126.6 235.8c5.6 2.9 10.9 9.3 12.3 14.8 1.5 6 1.4 54.8-.1 59.8-1.5 4.9-7.1 11.2-12.2 13.8-3.9 2.1-5.5 2.2-31.6 2.4-31 .1-34.4-.4-40.6-6.4-7.4-7.1-7.8-9.2-7.7-40.2 0-25.8.1-27.8 2.1-32.3 2.5-5.5 7.1-10.2 12.6-12.6 3.4-1.5 7.6-1.7 32.5-1.6 27.4.1 28.8.2 32.7 2.3zm512.4-.6c5 2.2 9.9 7.3 12.3 12.7 1.9 4.3 2.1 6.4 2 32.3v27.6l-2.7 5.6c-3 6-8.4 10.6-14.6 12.3-1.9.6-15.9.9-31 .8-25.9-.1-27.7-.2-31.5-2.2-5.5-2.9-10.1-8-11.9-13-1.9-5.4-2.3-53.6-.5-60.7 1.6-6.4 7.6-13 14-15.4 4.5-1.7 7.9-1.8 32.7-1.7 22.8.1 28.3.4 31.2 1.7zM126.5 375.7c4.2 2.2 8 5.9 11.1 10.8 1.7 2.6 1.9 5.5 2.2 30 .3 17.6 0 28.8-.8 32.1-1.3 6.1-6.3 12.5-12.4 15.6-3.9 2.1-5.3 2.2-33.1 2.2-32.1.1-33-.1-39.7-6.8-6.6-6.5-7.1-9.3-7.2-37.6-.1-14 .3-27.5.8-30 1.5-7.9 8.8-15.7 16.7-17.8 1.9-.4 15.8-.8 30.9-.7 25.9.1 27.7.2 31.5 2.2zm372.8-.3c5.2 2.6 9.6 7.2 12 12.6 1.9 4.3 2 7 2.1 98.5.1 51.7-.2 96.6-.6 99.9-1.2 9-7.5 16.5-16.1 19.1-5.4 1.6-285.9 1.9-292.1.3-9.2-2.3-16.1-10.1-17.3-19.4-1.4-10.3-.8-192.4.6-196.5 2.3-7 8.5-13.3 15.6-15.6 1.9-.6 55.8-.9 147.5-.9 139.6.1 144.6.2 148.3 2zm138.7-.6c8.4 3.7 13.7 10.4 14.8 18.8.9 7.4.8 49.5-.2 54.9-.9 4.3-4.7 10.2-9 13.6-5.2 4.1-9.6 4.6-38.6 4.5-26.2-.2-27.7-.3-31.6-2.4-5.1-2.6-10.7-8.9-12.2-13.8-1.5-5-1.6-53.8-.1-59.8 1.2-5 6.6-11.9 11-14.1 1.5-.9 4.5-1.9 6.6-2.3 5.7-1.3 56.3-.7 59.3.6zM126.5 515.7c4.1 2.2 8.8 6.8 11.5 11.3 2 3.3 2.8 56.1 1 62.7-1.5 5.3-6.9 11.7-12.4 14.6-3.9 2.1-5.2 2.2-33.1 2.2-26.5 0-29.3-.2-32.8-1.9-5.2-2.6-9.6-7.2-12-12.6-1.9-4.1-2-6.7-2-31.5 0-29 .4-32.4 5.1-38 3.3-3.9 8.1-7.1 12.3-8.2 1.9-.5 15.8-.9 30.9-.8 26 .1 27.7.2 31.5 2.2zm512.5-.5c5 2.2 9.9 7.3 12.3 12.7 1.9 4.3 2 6.5 2 32.1 0 25.3-.1 27.9-2 32-2.4 5.4-6.8 10-12 12.6-3.4 1.7-6.5 1.9-31.8 2-25.4.1-28.4-.1-32.5-1.8-5.1-2.2-9.2-5.7-12.3-10.8-2.1-3.3-2.2-4.8-2.5-31.5-.2-19.4 0-29.2.8-32.2 2.2-7.5 9.8-14.6 17.5-16.3 1.7-.3 15.2-.6 30-.5 22.1.1 27.6.4 30.5 1.7z\"/></svg>";
+
+  /**
+   * Отримати збережені дані користувача
+   */
+  function getUserData() {
+    try {
+      var val = Lampa.Storage.get(USER_KEY, '{}');
+      return _typeof(val) === 'object' && val !== null ? val : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /**
+   * Зберегти дані користувача
+   */
+  function saveUserData(data) {
+    Lampa.Storage.set(USER_KEY, data);
+  }
+
+  /**
+   * Видалити дані користувача
+   */
+  function clearUserData() {
+    Lampa.Storage.set(USER_KEY, '{}');
+  }
+
+  /**
+   * Замінити аватар в хедері на Kinobaza avatar
+   */
+  function setProfileAvatar(avatar) {
+    var profileEl = $('.open--profile');
+    if (!profileEl.length) return;
+    if ($('#kinobaza_profile').length) return;
+    profileEl.hide();
+    var kbProfile = $('<div class="head__action selector open--profile" id="kinobaza_profile">' + '<img src="https://i.kinobaza.com.ua/avatars/' + avatar + '">' + '</div>');
+    profileEl.before(kbProfile);
+    kbProfile.on('hover:enter', function (e) {
+      e.stopPropagation();
+      Lampa.Controller.toggle('settings');
+      Lampa.Listener.send('settings_open_kinobaza');
+    });
+  }
+
+  /**
+   * Відновити оригінальний аватар Lampa (CUB)
+   */
+  function restoreProfileAvatar() {
+    $('#kinobaza_profile').remove();
+    $('.open--profile').show();
+  }
+
+  /**
+   * Авторизація
+   */
+  function login(email, password) {
+    if (!email || !password) {
+      Lampa.Noty.show(Lampa.Lang.translate('kinobaza_auth_error') + ': email або пароль порожній');
+      return;
+    }
+    api$1.login(email, password).then(function (data) {
+      if (!data || !data.token) {
+        Lampa.Noty.show(Lampa.Lang.translate('kinobaza_auth_error'));
+        return;
+      }
+      storage.setToken(data.token);
+      saveUserData({
+        name: data.name || '',
+        email: data.email || '',
+        id: data.id || 0,
+        avatar: data.avatar || ''
+      });
+      Lampa.Storage.set('kinobaza_password', '');
+      if (data.avatar) {
+        setProfileAvatar(data.avatar);
+      }
+      if (typeof Lampa.Settings !== 'undefined' && typeof Lampa.Settings.update === 'function') {
+        Lampa.Settings.update();
+      }
+      Lampa.Noty.show(Lampa.Lang.translate('kinobaza_auth_success'));
+    })["catch"](function () {
+      Lampa.Noty.show(Lampa.Lang.translate('kinobaza_auth_error'));
+    });
+  }
+
+  /**
+   * Вихід
+   */
+  function logout() {
+    storage.removeToken();
+    clearUserData();
+    restoreProfileAvatar();
+    Lampa.Storage.set('kinobaza_email', '');
+    Lampa.Storage.set('kinobaza_password', '');
+    if (typeof Lampa.Settings !== 'undefined' && typeof Lampa.Settings.update === 'function') {
+      Lampa.Settings.update();
+    }
+    Lampa.Noty.show(Lampa.Lang.translate('kinobaza_logout'));
+  }
+
+  /**
+   * Ініціалізація: реєстрація компонентів налаштувань + параметрів
+   */
+  function init$1() {
+    // 0. Зареєструвати переклади
+    Lampa.Lang.add({
+      kinobaza_email: {
+        uk: 'Email',
+        ru: 'Email',
+        en: 'Email',
+        be: 'Email'
+      },
+      kinobaza_password: {
+        uk: 'Пароль',
+        ru: 'Пароль',
+        en: 'Password',
+        be: 'Пароль'
+      },
+      kinobaza_login: {
+        uk: 'Увійти',
+        ru: 'Войти',
+        en: 'Sign In',
+        be: 'Увайсці'
+      },
+      kinobaza_logout: {
+        uk: 'Вийти',
+        ru: 'Выйти',
+        en: 'Sign Out',
+        be: 'Выйсці'
+      },
+      kinobaza_auth_success: {
+        uk: 'Авторизація успішна',
+        ru: 'Авторизация успешна',
+        en: 'Login successful',
+        be: 'Аўтарызацыя паспяховая'
+      },
+      kinobaza_auth_error: {
+        uk: 'Помилка авторизації',
+        ru: 'Ошибка авторизации',
+        en: 'Login failed',
+        be: 'Памылка аўтарызації'
+      },
+      kinobaza_card_settings: {
+        uk: 'Картка',
+        ru: 'Карточка',
+        en: 'Card',
+        be: 'Картка'
+      },
+      kinobaza_card_disable_ratings: {
+        uk: 'Вимкнути рейтинги',
+        ru: 'Отключить рейтинги',
+        en: 'Disable ratings',
+        be: 'Вамкнуць рэйтынгі'
+      },
+      kinobaza_card_disable_votes: {
+        uk: 'Вимкнути оцінки',
+        ru: 'Отключить оценки',
+        en: 'Disable votes',
+        be: 'Вамкнуць ацэнкі'
+      },
+      // Нові переклади
+      kinobaza_profile: {
+        uk: 'Профіль',
+        ru: 'Профиль',
+        en: 'Profile',
+        be: 'Профіль'
+      },
+      kinobaza_sync_realtime: {
+        uk: 'Синхронізація в реальному часі',
+        ru: 'Синхронизация в реальном времени',
+        en: 'Real-time sync',
+        be: 'Сінхранізацыя ў рэальным часе'
+      },
+      kinobaza_sync_manual: {
+        uk: 'Синхронізувати зараз',
+        ru: 'Синхронизировать сейчас',
+        en: 'Sync now',
+        be: 'Сінхранізаваць зараз'
+      }
+    });
+
+    // Шаблони для вкладених компонентів (не реєструються через addComponent)
+    Lampa.Template.add('settings_kinobaza_profile_settings', '<div></div>');
+    Lampa.Template.add('settings_kinobaza_card_settings', '<div></div>');
+
+    // 1. Реєстрація головного компонента налаштувань (перед "Інтерфейс")
+    Lampa.SettingsApi.addComponent({
+      component: 'kinobaza_settings',
+      icon: ICON_SVG,
+      name: Lampa.Lang.translate('kinobaza_title') || 'КіноБаза',
+      before: 'interface'
+    });
+
+    // 2. Top-level параметри (kinobaza_settings) — дві кнопки
+    // 2a. Профіль → відкриває kinobaza_profile_settings
+    Lampa.SettingsApi.addParam({
+      component: 'kinobaza_settings',
+      param: {
+        name: 'kinobaza_profile_btn',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('kinobaza_profile')
+      },
+      onChange: function onChange() {
+        Lampa.Settings.create('kinobaza_profile_settings', {
+          onBack: function onBack() {
+            Lampa.Settings.create('kinobaza_settings');
+          }
+        });
+      }
+    });
+
+    // 2b. Картка → відкриває kinobaza_card_settings
+    Lampa.SettingsApi.addParam({
+      component: 'kinobaza_settings',
+      param: {
+        name: 'kinobaza_card_settings_btn',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('kinobaza_card_settings')
+      },
+      onChange: function onChange() {
+        Lampa.Settings.create('kinobaza_card_settings', {
+          onBack: function onBack() {
+            Lampa.Settings.create('kinobaza_settings');
+          }
+        });
+      }
+    });
+
+    // 3. Profile sub-menu (kinobaza_profile_settings)
+    // Всі параметри реєструються одразу; приховуються/показуються в listener open
+    // 3a. Email
+    Lampa.SettingsApi.addParam({
+      component: 'kinobaza_profile_settings',
+      param: {
+        name: 'kinobaza_email',
+        type: 'input',
+        "default": '',
+        values: '',
+        placeholder: ''
+      },
+      field: {
+        name: Lampa.Lang.translate('kinobaza_email')
+      }
+    });
+
+    // 3b. Пароль
+    Lampa.SettingsApi.addParam({
+      component: 'kinobaza_profile_settings',
+      param: {
+        name: 'kinobaza_password',
+        type: 'input',
+        "default": '',
+        values: '',
+        placeholder: ''
+      },
+      field: {
+        name: Lampa.Lang.translate('kinobaza_password')
+      }
+    });
+
+    // 3c. Кнопка "Увійти"
+    Lampa.SettingsApi.addParam({
+      component: 'kinobaza_profile_settings',
+      param: {
+        name: 'kinobaza_login_btn',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('kinobaza_login')
+      },
+      onChange: function onChange() {
+        var email = Lampa.Storage.field('kinobaza_email') || '';
+        var password = Lampa.Storage.field('kinobaza_password') || '';
+        login(email, password);
+      }
+    });
+
+    // 3d. Ім'я користувача (static текст, показується тільки коли авторизований)
+    Lampa.SettingsApi.addParam({
+      component: 'kinobaza_profile_settings',
+      param: {
+        name: 'kinobaza_user_info',
+        type: 'static'
+      },
+      field: {
+        name: ''
+      },
+      onRender: function onRender(item) {
+        item.attr('data-name', 'kinobaza_user_info');
+        if (storage.hasToken()) {
+          var u = getUserData();
+          if (u && u.name) item.find('.settings-param__name').text(u.name + (u.email ? ' (' + u.email + ')' : ''));
+        }
+      }
+    });
+
+    // 3e. Кнопка "Вийти" (показується тільки коли авторизований)
+    Lampa.SettingsApi.addParam({
+      component: 'kinobaza_profile_settings',
+      param: {
+        name: 'kinobaza_logout_btn',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('kinobaza_logout')
+      },
+      onChange: function onChange() {
+        logout();
+        Lampa.Settings.create('kinobaza_settings');
+      }
+    });
+
+    // 3f. Синхронізація в реальному часі
+    Lampa.SettingsApi.addParam({
+      component: 'kinobaza_profile_settings',
+      param: {
+        name: 'kinobaza_sync_realtime',
+        type: 'trigger',
+        "default": false
+      },
+      field: {
+        name: Lampa.Lang.translate('kinobaza_sync_realtime'),
+        description: 'Миттєве надсилання змін (додавання в обране, відмітки переглядів) на КіноБазу.'
+      },
+      onChange: syncSettings.onSyncRealtimeChange
+    });
+
+    // 3f. Синхронізувати зараз
+    Lampa.SettingsApi.addParam({
+      component: 'kinobaza_profile_settings',
+      param: {
+        name: 'kinobaza_sync_manual',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('kinobaza_sync_manual'),
+        description: 'Виконати повне двостороннє об\'єднання всіх списків та історії переглядів.'
+      },
+      onChange: syncSettings.onSyncManualClick
+    });
+
+    // 4. Card sub-menu (kinobaza_card_settings)
+    Lampa.SettingsApi.addParam({
+      component: 'kinobaza_card_settings',
+      param: {
+        name: 'kinobaza_card_disable_ratings',
+        type: 'trigger',
+        "default": false
+      },
+      field: {
+        name: Lampa.Lang.translate('kinobaza_card_disable_ratings')
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'kinobaza_card_settings',
+      param: {
+        name: 'kinobaza_card_disable_votes',
+        type: 'trigger',
+        "default": false
+      },
+      field: {
+        name: Lampa.Lang.translate('kinobaza_card_disable_votes')
+      }
+    });
+
+    // 6. Слухач відкриття profile — ховає/показує поля залежно від авторизації
+    onSettingsOpen = function onSettingsOpen(e) {
+      if (e.name !== 'kinobaza_profile_settings') return;
+      var body = e.body.find('.scroll__body > div');
+      var loggedIn = storage.hasToken();
+      if (loggedIn) {
+        // Видалити поля логіну
+        body.find('[data-name="kinobaza_email"]').remove();
+        body.find('[data-name="kinobaza_password"]').remove();
+        body.find('[data-name="kinobaza_login_btn"]').remove();
+        // Оновити ім'я користувача
+        var u = getUserData();
+        if (u && u.name) {
+          body.find('[data-name="kinobaza_user_info"] .settings-param__name').text(u.name + (u.email ? ' (' + u.email + ')' : ''));
+        }
+      } else {
+        // Видалити logged-in блоки
+        body.find('[data-name="kinobaza_user_info"]').remove();
+        body.find('[data-name="kinobaza_logout_btn"]').remove();
+        body.find('[data-name="kinobaza_sync_realtime"]').remove();
+        body.find('[data-name="kinobaza_sync_manual"]').remove();
+      }
+    };
+    Lampa.Settings.listener.follow('open', onSettingsOpen);
+
+    // 7. Якщо користувач вже авторизований — відновити аватар
+    if (storage.hasToken()) {
+      var u = getUserData();
+      if (u && u.avatar) {
+        setTimeout(function () {
+          setProfileAvatar(u.avatar);
+        }, 500);
+      }
+    }
+
+    // 8. Слухач: клік по аватару → навігація в налаштування Кінобази
+    onSettingsOpenKinobaza = function onSettingsOpenKinobaza() {
+      var checkExist = setInterval(function () {
+        var el = $('.settings').find('[data-component="kinobaza_settings"]');
+        if (el.length) {
+          clearInterval(checkExist);
+          setTimeout(function () {
+            el.trigger('hover:enter');
+          }, 100);
+        }
+      }, 50);
+      setTimeout(function () {
+        clearInterval(checkExist);
+      }, 5000);
+    };
+    Lampa.Listener.follow('settings_open_kinobaza', onSettingsOpenKinobaza);
+  }
+
+  /**
+   * Деініціалізація
+   */
+  function destroy$1() {
+    if (onSettingsOpen) {
+      Lampa.Settings.listener.remove('open', onSettingsOpen);
+      onSettingsOpen = null;
+    }
+    if (onSettingsOpenKinobaza) {
+      Lampa.Listener.remove('settings_open_kinobaza', onSettingsOpenKinobaza);
+      onSettingsOpenKinobaza = null;
+    }
+    restoreProfileAvatar();
+    if (Lampa.SettingsApi) {
+      Lampa.SettingsApi.removeComponent('kinobaza_settings');
+      Lampa.SettingsApi.removeParams('kinobaza_profile_settings');
+      Lampa.SettingsApi.removeParams('kinobaza_card_settings');
+    }
+  }
+  var settings = {
+    init: init$1,
+    destroy: destroy$1,
+    login: login,
+    logout: logout
+  };
+
+  var currentSyncState = 'idle';
+  var checkInterval = null;
+  var activeListeners = {};
+  function init() {
+    try {
+      activeListeners.syncStart = function () {
+        return setState('syncing');
+      };
+      activeListeners.syncComplete = function () {
+        return setState('idle');
+      };
+      activeListeners.syncError = function () {
+        return setState('error');
+      };
+      activeListeners.syncQueued = function () {
+        return setState('pending');
+      };
+      activeListeners.syncFlushed = function () {
+        return setState('idle');
+      };
+      activeListeners.syncIcon = function (e) {
+        if (e && e.state) {
+          setState(e.state);
+        }
+      };
+
+      // Слухачі для зміни стану
+      Lampa.Listener.follow('kinobaza:sync:start', activeListeners.syncStart);
+      Lampa.Listener.follow('kinobaza:sync:complete', activeListeners.syncComplete);
+      Lampa.Listener.follow('kinobaza:sync:error', activeListeners.syncError);
+      Lampa.Listener.follow('kinobaza:sync:queued', activeListeners.syncQueued);
+      Lampa.Listener.follow('kinobaza:sync:flushed', activeListeners.syncFlushed);
+      Lampa.Listener.follow('kinobaza:sync:icon', activeListeners.syncIcon);
+
+      // Додатковий інтервал для гарантії відновлення класу при рендері аватара
+      checkInterval = setInterval(function () {
+        var el = $('#kinobaza_profile');
+        if (el.length && !el.hasClass("kinobaza-sync--".concat(currentSyncState))) {
+          applyStyles(el, currentSyncState);
+        }
+      }, 1000);
+    } catch (err) {
+      console.error('KinoBaza Head Indicator', 'init error', err);
+    }
+  }
+  function destroy() {
+    if (checkInterval) {
+      clearInterval(checkInterval);
+      checkInterval = null;
+    }
+    if (Lampa.Listener) {
+      if (activeListeners.syncStart) Lampa.Listener.remove('kinobaza:sync:start', activeListeners.syncStart);
+      if (activeListeners.syncComplete) Lampa.Listener.remove('kinobaza:sync:complete', activeListeners.syncComplete);
+      if (activeListeners.syncError) Lampa.Listener.remove('kinobaza:sync:error', activeListeners.syncError);
+      if (activeListeners.syncQueued) Lampa.Listener.remove('kinobaza:sync:queued', activeListeners.syncQueued);
+      if (activeListeners.syncFlushed) Lampa.Listener.remove('kinobaza:sync:flushed', activeListeners.syncFlushed);
+      if (activeListeners.syncIcon) Lampa.Listener.remove('kinobaza:sync:icon', activeListeners.syncIcon);
+    }
+  }
+  function applyStyles(el, state) {
+    el.removeClass('kinobaza-sync--syncing kinobaza-sync--error kinobaza-sync--idle kinobaza-sync--pending icon--blink');
+    switch (state) {
+      case 'idle':
+        el.addClass('kinobaza-sync--idle');
+        break;
+      case 'syncing':
+        el.addClass('kinobaza-sync--syncing icon--blink');
+        break;
+      case 'error':
+        el.addClass('kinobaza-sync--error');
+        break;
+      case 'pending':
+        el.addClass('kinobaza-sync--pending');
+        break;
+    }
+  }
+  function setState(state) {
+    currentSyncState = state;
+    var el = $('#kinobaza_profile');
+    if (!el.length) return;
+    applyStyles(el, state);
+    if (state === 'error') {
+      setTimeout(function () {
+        if (currentSyncState === 'error') {
+          setState('idle');
+        }
+      }, 10000);
+    }
+  }
+  var headerIndicator = {
+    init: init,
+    destroy: destroy,
+    setState: setState
+  };
 
   /**
    * Додає 'kinobaza' в селектор джерела (source)
@@ -6716,7 +10214,7 @@
       if (!Lampa.Manifest) return;
       var manifest = {
         type: 'video',
-        version: '0.4',
+        version: '0.5',
         name: Lampa.Lang.translate('kinobaza_title') || 'КіноБаза',
         component: 'kinobaza',
         description: 'Контент-провайдер КіноБаза (kinobaza.com.ua)'
@@ -6732,7 +10230,7 @@
    */
   function loadStyles() {
     if (!$('#kinobaza_style').length) {
-      Lampa.Template.add('kinobaza_css', "\n            <style id=\"kinobaza_style\">\n            @charset 'UTF-8';.full-start__rate.rate--metacritic>div:first-child{background:#6c3 !important;color:#000;-webkit-border-radius:.3em;border-radius:.3em;font-weight:700;padding:0 .4em}.full-start__rate.rate--rotten>div:first-child{background:#c33 !important;color:#000;-webkit-border-radius:.3em;border-radius:.3em;font-weight:700;padding:0 .4em}.full-descr__info.full--releases{-webkit-flex-basis:100%;-ms-flex-preferred-size:100%;flex-basis:100%;margin-top:1em}.full-descr__info.full--releases .full-descr__info-name{font-size:1.1em;margin-bottom:.5em}.full-descr__info.full--releases .full-descr__info-body{font-size:1em;line-height:1.6}.full-persons--dub .card{border:solid .2em rgba(102,204,102,0.3)}.full-persons--dub .card.focus{border-color:rgba(102,204,102,0.8)}.full-discuss--reviews .discuss-item{border-left:solid .2em #fc3}.full-discuss--comments .discuss-item{border-left:solid .2em #6cf}.kb_jobs{position:absolute;top:1.4em;left:2.5em;padding:.35em .55em;background:rgba(0,0,0,0.75);color:#fff;font-size:.75em;-webkit-border-radius:.3em;border-radius:.3em;z-index:1;pointer-events:none;white-space:nowrap}.kb_jobs--first{left:-0.8em}.kinobaza-single-network{padding:.2em .3em}.kinobaza-single-network.focus{background-color:rgba(0,0,0,0.45) !important;-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.65);box-shadow:0 0 0 .2em rgba(255,255,255,0.65)}.kinobaza-network-logo-wrap{display:inline-block;width:60px;height:1.2em;overflow:hidden;vertical-align:middle}.kinobaza-network-logo{width:100%;height:100%;-o-object-fit:contain;object-fit:contain;vertical-align:top}.items-line--type-trailers .card--wide{width:34.3em}.items-line--type-trailers .card--wide .card__view{padding-bottom:56%;background:#111}.items-line--type-trailers .card--wide .card__img{-o-object-fit:cover;object-fit:cover;background:#222}.items-line--type-networks .card--wide{width:34.3em;-webkit-border-radius:.6em;border-radius:.6em;overflow:hidden}.items-line--type-networks .card--wide .card__view{padding-bottom:56%;background:transparent;-webkit-border-radius:0;border-radius:0}.items-line--type-networks .card--wide.focus .card__view::after,.items-line--type-networks .card--wide.hover .card__view::after{-webkit-border-radius:.6em;border-radius:.6em}.items-line--type-networks .card--wide .card__img{width:100% !important;height:100% !important;-o-object-fit:contain !important;object-fit:contain !important;padding:1.5em;background:rgba(255,255,255,0.04);-webkit-border-radius:0;border-radius:0}.items-line--type-networks .card--wide .card__promo{display:none !important}.items-line--type-networks .card--wide .card__title{display:none}\n            </style>\n        ");
+      Lampa.Template.add('kinobaza_css', "\n            <style id=\"kinobaza_style\">\n            @charset 'UTF-8';.full-start__rate.rate--custom{display:-webkit-inline-box !important;display:-webkit-inline-flex !important;display:-ms-inline-flexbox !important;display:inline-flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important;background:rgba(255,255,255,0.08) !important;border:1px solid rgba(255,255,255,0.12) !important;-webkit-border-radius:.35em !important;border-radius:.35em !important;padding:.25em .45em !important;margin-right:.5em !important;vertical-align:middle !important;font-size:1.1em !important;-webkit-transition:all .2s ease !important;-o-transition:all .2s ease !important;transition:all .2s ease !important}.full-start__rate.rate--custom:hover{background:rgba(255,255,255,0.14) !important;border-color:rgba(255,255,255,0.22) !important;-webkit-transform:translateY(-1px);-ms-transform:translateY(-1px);transform:translateY(-1px)}.full-start__rate.rate--custom>div:first-child{width:auto !important;height:auto !important;background:transparent !important;-webkit-border-radius:0 !important;border-radius:0 !important;display:-webkit-box !important;display:-webkit-flex !important;display:-ms-flexbox !important;display:flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important;-webkit-box-pack:center !important;-webkit-justify-content:center !important;-ms-flex-pack:center !important;justify-content:center !important;margin-right:.3em !important;padding:0 !important}.full-start__rate.rate--custom .rate__icon{display:-webkit-box !important;display:-webkit-flex !important;display:-ms-flexbox !important;display:flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important}.full-start__rate.rate--custom .rate__icon svg{width:1.2em !important;height:1.2em !important;display:block !important;fill:#fff !important}.full-start__rate.rate--custom .rate__value{font-size:.85em !important;font-weight:700 !important;color:#fff !important;line-height:1 !important;padding:0 .1em !important}.full-start__rate.rate--custom .source--name{margin-left:.3em !important;font-size:.55em !important;text-transform:uppercase !important;letter-spacing:.05em !important;opacity:.6 !important;line-height:1 !important;padding:0 !important}.full-start-new__rating-breakdown{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;margin:-0.5em;margin-bottom:.8em;min-height:1.6em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;font-size:1.15em;color:rgba(255,255,255,0.6)}.full-start-new__rating-breakdown>div{padding:.5em}.full-descr__info.full--releases{-webkit-flex-basis:100%;-ms-flex-preferred-size:100%;flex-basis:100%;margin-top:1em}.full-descr__info.full--releases .full-descr__info-name{font-size:1.1em;margin-bottom:.5em}.full-descr__info.full--releases .full-descr__info-body{font-size:1em;line-height:1.6}.full-persons--dub .card{border:solid .2em rgba(102,204,102,0.3)}.full-persons--dub .card.focus{border-color:rgba(102,204,102,0.8)}.full-discuss--reviews .discuss-item{border-left:solid .2em #fc3}.full-discuss--comments .discuss-item{border-left:solid .2em #6cf}.kb_jobs{position:absolute;top:1.4em;left:2.5em;padding:.35em .55em;background:rgba(0,0,0,0.75);color:#fff;font-size:.75em;-webkit-border-radius:.3em;border-radius:.3em;z-index:1;pointer-events:none;white-space:nowrap}.kb_jobs--first{left:-0.8em}.kinobaza-single-network{padding:.2em .3em}.kinobaza-single-network.focus{background-color:rgba(0,0,0,0.45) !important;-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.65);box-shadow:0 0 0 .2em rgba(255,255,255,0.65)}.kinobaza-network-logo-wrap{display:inline-block;width:60px;height:1.2em;overflow:hidden;vertical-align:middle}.kinobaza-network-logo{width:100%;height:100%;-o-object-fit:contain;object-fit:contain;vertical-align:top}.items-line--type-trailers .card--wide{width:34.3em}.items-line--type-trailers .card--wide .card__view{padding-bottom:56%;background:#111}.items-line--type-trailers .card--wide .card__img{-o-object-fit:cover;object-fit:cover;background:#222}.items-line--type-networks .card--wide{width:34.3em;-webkit-border-radius:.6em;border-radius:.6em;overflow:hidden}.items-line--type-networks .card--wide .card__view{padding-bottom:56%;background:transparent;-webkit-border-radius:0;border-radius:0}.items-line--type-networks .card--wide.focus .card__view::after,.items-line--type-networks .card--wide.hover .card__view::after{-webkit-border-radius:.6em;border-radius:.6em}.items-line--type-networks .card--wide .card__img{width:100% !important;height:100% !important;-o-object-fit:contain !important;object-fit:contain !important;padding:1.5em;background:rgba(255,255,255,0.04);-webkit-border-radius:0;border-radius:0}.items-line--type-networks .card--wide .card__promo{display:none !important}.items-line--type-networks .card--wide .card__title{display:none}#kinobaza_profile{-webkit-transition:border-color .3s ease,opacity .3s ease,-webkit-box-shadow .3s ease;transition:border-color .3s ease,opacity .3s ease,-webkit-box-shadow .3s ease;-o-transition:border-color .3s ease,box-shadow .3s ease,opacity .3s ease;transition:border-color .3s ease,box-shadow .3s ease,opacity .3s ease;transition:border-color .3s ease,box-shadow .3s ease,opacity .3s ease,-webkit-box-shadow .3s ease;border:solid .15em transparent;-webkit-box-sizing:border-box;box-sizing:border-box}#kinobaza_profile.kinobaza-sync--idle{border-color:transparent;-webkit-box-shadow:none;box-shadow:none}#kinobaza_profile.kinobaza-sync--syncing{border-color:#ffd700;-webkit-box-shadow:0 0 .5em #ffd700;box-shadow:0 0 .5em #ffd700}#kinobaza_profile.kinobaza-sync--error{border-color:#f44336;-webkit-box-shadow:0 0 .5em #f44336;box-shadow:0 0 .5em #f44336}#kinobaza_profile.kinobaza-sync--pending{border-color:#ff9800;-webkit-box-shadow:0 0 .5em #ff9800;box-shadow:0 0 .5em #ff9800}\n            </style>\n        ");
       $('body').append(Lampa.Template.get('kinobaza_css', {}, true));
     }
   }
@@ -6768,10 +10266,69 @@
   }
 
   /**
+   * Знайти збережену картку в базі закладок Lampa за будь-яким ID
+   */
+  function findDbCard(card) {
+    if (!Lampa.Favorite || typeof Lampa.Favorite.full !== 'function') return null;
+    var fav = Lampa.Favorite.full();
+    if (!fav || !fav.card) return null;
+    return fav.card.find(function (c) {
+      if (c.source !== 'kinobaza') return false;
+      return c.id === card.id || c.kinobaza_id && c.kinobaza_id === card.id || c.themoviedb_id && c.themoviedb_id === card.id || card.kinobaza_id && c.id === card.kinobaza_id || card.themoviedb_id && c.id === card.themoviedb_id || card.kinobaza_id && c.kinobaza_id === card.kinobaza_id || card.themoviedb_id && c.themoviedb_id === card.themoviedb_id;
+    });
+  }
+
+  /**
+   * Декорування Favorite API для прозорої трансляції Kinobaza ID <-> TMDB ID
+   */
+  function overrideFavoriteApi() {
+    try {
+      if (!Lampa.Favorite) return;
+      var originalCheck = Lampa.Favorite.check;
+      Lampa.Favorite.check = function (card) {
+        if (card && card.source === 'kinobaza') {
+          var dbCard = findDbCard(card);
+          if (dbCard) return originalCheck(dbCard);
+        }
+        return originalCheck(card);
+      };
+      var originalAdd = Lampa.Favorite.add;
+      Lampa.Favorite.add = function (where, card, limit) {
+        if (card && card.source === 'kinobaza') {
+          var dbCard = findDbCard(card);
+          if (dbCard) return originalAdd(where, dbCard, limit);
+        }
+        return originalAdd(where, card, limit);
+      };
+      var originalRemove = Lampa.Favorite.remove;
+      Lampa.Favorite.remove = function (where, card) {
+        if (card && card.source === 'kinobaza') {
+          var dbCard = findDbCard(card);
+          if (dbCard) return originalRemove(where, dbCard);
+        }
+        return originalRemove(where, card);
+      };
+      var originalToggle = Lampa.Favorite.toggle;
+      Lampa.Favorite.toggle = function (where, card) {
+        if (card && card.source === 'kinobaza') {
+          var dbCard = findDbCard(card);
+          if (dbCard) return originalToggle(where, dbCard);
+        }
+        return originalToggle(where, card);
+      };
+    } catch (e) {
+      console.error('Kinobaza', 'failed to override Favorite API', e);
+    }
+  }
+
+  /**
    * Головна функція запуску плагіна
    */
   function startPlugin() {
     window.plugin_kinobaza_ready = true;
+
+    // Декорування API обраного
+    overrideFavoriteApi();
 
     // Міграція старих закладок
     migrateOldBookmarks();
@@ -6817,6 +10374,13 @@
     // 5. Реєстрація Manifest
     registerManifest();
 
+    // 5.5. Ініціалізація компонента налаштувань (логін, аватар)
+    settings.init();
+
+    // Ініціалізація системи синхронізації
+    syncModule.init();
+    headerIndicator.init();
+
     // 6. Реєстрація listener для вставки акторів дубляжу через DOM
     registerFullListener();
 
@@ -6844,10 +10408,61 @@
     loadStyles();
   }
 
-  // ============== GUARD ==============
+  // ============== DESTRUCTOR ==============
 
-  if (!window.plugin_kinobaza_ready) {
-    startPlugin();
+  window.plugin_kinobaza_destroy = function () {
+    try {
+      // 1. Unregister listeners
+      if (typeof unregisterFullListener === 'function') unregisterFullListener();
+      if (typeof unregisterFullStartListener === 'function') unregisterFullStartListener();
+      if (typeof unregisterAnimeOverride === 'function') unregisterAnimeOverride();
+      if (typeof unregisterCartoonOverride === 'function') unregisterCartoonOverride();
+      if (typeof unregisterMyPersonOverride === 'function') unregisterMyPersonOverride();
+      if (typeof unregisterSourceOverride === 'function') unregisterSourceOverride();
+      if (typeof unregisterContentRows === 'function') unregisterContentRows();
+      if (typeof unregister === 'function') unregister();
+
+      // 2. Destroy sub-modules
+      if (settings && typeof settings.destroy === 'function') settings.destroy();
+      if (syncModule && typeof syncModule.destroy === 'function') syncModule.destroy();
+      if (headerIndicator && typeof headerIndicator.destroy === 'function') headerIndicator.destroy();
+
+      // 3. Clean up DOM elements (stylesheets and menu buttons)
+      $('#kinobaza_style').remove();
+      $('#kinobaza-collections-style').remove();
+      $('#kinobaza_trailers_style').remove();
+      $('#kinobaza_releases_style').remove();
+      $('.kinobaza-menu-trailers').remove();
+      $('.kinobaza-menu-releases').remove();
+      $('.kinobaza-menu-collections').remove();
+
+      // 4. Delete registered sources
+      if (Lampa.Api && Lampa.Api.sources) {
+        delete Lampa.Api.sources.kinobaza;
+        delete Lampa.Api.sources.kinobaza_anime;
+        delete Lampa.Api.sources.kinobaza_cartoons;
+      }
+
+      // 5. Reset ready flags
+      window.plugin_kinobaza_ready = false;
+      window.plugin_kinobaza_collections_ready = false;
+      window.plugin_kinobaza_trailers_ready = false;
+      window.plugin_kinobaza_releases_ready = false;
+      window.plugin_kinobaza_myperson_ready = false;
+      window.kinobaza_discover_ready = false;
+      console.log('Kinobaza', 'plugin destroyed successfully');
+    } catch (e) {
+      console.error('Kinobaza', 'failed to destroy plugin', e);
+    }
+  };
+
+  // ============== GUARD & HOT-RELOAD ==============
+
+  if (window.plugin_kinobaza_ready) {
+    if (typeof window.plugin_kinobaza_destroy === 'function') {
+      window.plugin_kinobaza_destroy();
+    }
   }
+  startPlugin();
 
 })();
