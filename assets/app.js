@@ -608,7 +608,7 @@
     if (el.donate) {
       const donateHref = state.lang === "uk"
         ? "https://lampame.donatik.me"
-        : "https://t.me/tribute/app?startapp=d5WS";
+        : "https://lampame.gumroad.com/coffee";
       el.donate.href = donateHref;
       el.donate.textContent = t("donate");
       el.donate.setAttribute(
