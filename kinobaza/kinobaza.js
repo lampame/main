@@ -456,6 +456,12 @@
         ru: 'Рецензии',
         en: 'Reviews'
       },
+      kinobaza_director_movies: {
+        uk: 'Роботи того ж режисера',
+        ru: 'Работы того же режисера',
+        en: 'Works of the Same Director',
+        be: 'Работы таго ж рэжысёра'
+      },
       kinobaza_trailers: {
         uk: 'Трейлери',
         ru: 'Трейлеры',
@@ -525,7 +531,9 @@
    * CDN:     https://i.kinobaza.com.ua/{size}/{path}
    * Auth:    Bearer token (опціональний)
    */
-  var BASE_URL$4 = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
+  var PROXY_BASE = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua';
+  var CDN_BASE = 'https://i.kinobaza.com.ua';
+  var BASE_URL$4 = PROXY_BASE + '/api/v1';
   var network$5 = new Lampa.Reguest();
 
   /**
@@ -537,7 +545,7 @@
   function cdn(path) {
     var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'w300';
     if (!path) return '';
-    return 'https://i.kinobaza.com.ua/' + size + '/' + path.replace(/^\//, '');
+    return CDN_BASE + '/' + size + '/' + path.replace(/^\//, '');
   }
 
   /**
@@ -577,20 +585,7 @@
   }
 
   /**
-   * Отримує заголовки для запиту
-   * @returns {object}
-   */
-  function getHeaders$2() {
-    var headers = {};
-    var token = storage.getToken();
-    if (token) {
-      headers['Authorization'] = 'Bearer ' + token;
-    }
-    return headers;
-  }
-
-  /**
-   * Виконує GET-запит
+   * Виконує GET-запит (без авторизації — публічні ендпоінти)
    * @param {string} path   - шлях (напр. '/titles')
    * @param {object} params - query параметри
    * @param {function} resolve
@@ -605,8 +600,35 @@
       resolve(json);
     }, function (a, c) {
       if (reject) reject(a, c);
+    }, false, {});
+  }
+
+  /**
+   * Виконує GET-запит з Bearer авторизацією
+   * Скасовує запит якщо токен відсутній
+   * @param {string} path
+   * @param {object} params
+   * @param {function} resolve
+   * @param {function} reject
+   */
+  function getAuth(path) {
+    var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var resolve = arguments.length > 2 ? arguments[2] : undefined;
+    var reject = arguments.length > 3 ? arguments[3] : undefined;
+    var token = storage.getToken();
+    if (!token) {
+      if (reject) reject('no_token');
+      return;
+    }
+    var u = buildUrl$a(path, params);
+    network$5.silent(u, function (json) {
+      resolve(json);
+    }, function (a, c) {
+      if (reject) reject(a, c);
     }, false, {
-      headers: getHeaders$2()
+      headers: {
+        Authorization: 'Bearer ' + token
+      }
     });
   }
 
@@ -630,16 +652,14 @@
   function getTitle(slug) {
     if (slug && slug.toString().startsWith('tt')) {
       return new Promise(function (resolve, reject) {
-        var u = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/titles/' + slug + '?api_key=ygrn3a6sajxcdgex7cyh';
+        var u = PROXY_BASE + '/api/titles/' + slug + '?api_key=ygrn3a6sajxcdgex7cyh';
         network$5.silent(u, function (data) {
           if (data && data.id) {
             resolve(data);
           } else {
             reject();
           }
-        }, reject, false, {
-          headers: getHeaders$2()
-        });
+        }, reject, false, {});
       });
     }
     return new Promise(function (resolve, reject) {
@@ -784,24 +804,48 @@
   }
 
   // Окремий network для POST запитів (щоб не конфліктував чергою silent)
-  var authNetwork = new Lampa.Reguest();
-  authNetwork.timeout(15000);
+  var authNetwork$1 = new Lampa.Reguest();
+  authNetwork$1.timeout(15000);
 
   /**
-   * Виконує POST-запит з form-urlencoded даними
+   * Виконує POST-запит (без авторизації — публічні ендпоінти, логін)
    * @param {string} path     - шлях (напр. '/login')
    * @param {object} formData - об'єкт {key: value}
    * @param {function} resolve
    * @param {function} reject
    */
-  function post(path, formData, resolve, reject) {
+  function post$1(path, formData, resolve, reject) {
     var u = BASE_URL$4 + path;
-    authNetwork.silent(u, function (json) {
+    authNetwork$1.silent(u, function (json) {
+      resolve(json);
+    }, function (a, c) {
+      if (reject) reject(a, c);
+    }, formData, {});
+  }
+
+  /**
+   * Виконує POST-запит з Bearer авторизацією
+   * Скасовує запит якщо токен відсутній
+   * @param {string} path
+   * @param {object} formData
+   * @param {function} resolve
+   * @param {function} reject
+   */
+  function postAuth(path, formData, resolve, reject) {
+    var token = storage.getToken();
+    if (!token) {
+      if (reject) reject('no_token');
+      return;
+    }
+    var u = BASE_URL$4 + path;
+    authNetwork$1.silent(u, function (json) {
       resolve(json);
     }, function (a, c) {
       if (reject) reject(a, c);
     }, formData, {
-      headers: getHeaders$2()
+      headers: {
+        Authorization: 'Bearer ' + token
+      }
     });
   }
 
@@ -813,7 +857,7 @@
    */
   function login$1(email, password) {
     return new Promise(function (resolve, reject) {
-      post('/login', {
+      post$1('/login', {
         email: email,
         password: password
       }, resolve, reject);
@@ -826,7 +870,7 @@
    */
   function fetchProfile() {
     return new Promise(function (resolve, reject) {
-      get$1('/me', {}, resolve, reject);
+      getAuth('/me', {}, resolve, reject);
     });
   }
   var api$1 = {
@@ -842,10 +886,14 @@
     getComments: getComments,
     getReviews: getReviews,
     getDubPersons: getDubPersons,
-    post: post,
+    post: post$1,
+    postAuth: postAuth,
+    getAuth: getAuth,
     login: login$1,
     fetchProfile: fetchProfile,
     clear: clear$5,
+    PROXY_BASE: PROXY_BASE,
+    CDN_BASE: CDN_BASE,
     BASE_URL: BASE_URL$4
   };
 
@@ -1079,6 +1127,7 @@
       // Рекомендації / колекції
       recommendations: data.recommendations || [],
       collectionMovies: data.collectionMovies || [],
+      directorMovies: data.directorMovies || [],
       // Зображення
       images: data.images || [],
       images_posters: mapImages(data.images, 'w300'),
@@ -1308,36 +1357,59 @@
   }
 
   /**
-   * Маппінг відео/трейлерів
-   * @param {string} trailer  — youtube ID трейлера
-   * @param {array|null} videos — k6.l0[]
-   * @returns {array}
+   * Маппінг відео/трейлерів у формат Lampa.full
+   *
+   * Lampa full/start/trailers.js очікує:
+   *   { results: [{ key, name, site, type, official, youtube, iso_639_1, icon, url }] }
+   * Перевірка: videos && videos.results.length
+   *
+   * trailers.js завжди додає ' - ' + date в subtitle через Utils.parseTime().
+   * Не задаємо published_at — parseToDate(undefined) → new Date() → сьогодні.
+   *
+   * @param {string} trailer  — youtube ID трейлера (data.trailer)
+   * @param {array|null} videos — k6.l0[] (data.videos)
+   * @returns {object} — { results: [...] }
    */
   function mapVideos(trailer, videos) {
-    var result = [];
+    var results = [];
+    var pubDate = new Date().toISOString();
     if (trailer) {
-      result.push({
-        id: trailer,
+      results.push({
         key: trailer,
+        name: Lampa.Lang.translate('title_trailers') || 'Трейлер',
         site: 'YouTube',
         type: 'Trailer',
-        name: 'Трейлер'
+        official: true,
+        youtube: true,
+        iso_639_1: 'uk',
+        published_at: pubDate,
+        icon: 'https://img.youtube.com/vi/' + trailer + '/default.jpg',
+        url: 'https://www.youtube.com/watch?v=' + trailer
       });
     }
     if (videos && Array.isArray(videos)) {
       videos.forEach(function (v) {
         if (v.id) {
-          result.push({
-            id: v.id,
+          var title = v.title || '';
+          var isOfficial = title.toLowerCase().indexOf('офіцій') !== -1 || title.toLowerCase().indexOf('official') !== -1;
+          results.push({
             key: v.id,
+            name: title,
             site: 'YouTube',
-            type: v.title || 'Video',
-            name: v.title || ''
+            type: 'Trailer',
+            official: isOfficial,
+            youtube: true,
+            iso_639_1: v.language || 'uk',
+            published_at: pubDate,
+            icon: 'https://img.youtube.com/vi/' + v.id + '/default.jpg',
+            url: 'https://www.youtube.com/watch?v=' + v.id
           });
         }
       });
     }
-    return result;
+    return {
+      results: results
+    };
   }
 
   /**
@@ -1502,6 +1574,7 @@
     mapOne: mapOne,
     mapList: mapList,
     mapFull: mapFull,
+    mapVideos: mapVideos,
     mapPerson: mapPerson$1,
     mapPersonSearch: mapPersonSearch,
     mapPersonSearchList: mapPersonSearchList,
@@ -1523,8 +1596,7 @@
    * Пагінація: курсор (after)
    * Без автентифікації
    */
-
-  var BASE_URL$3 = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
+  var BASE_URL$3 = api$1.BASE_URL;
   var network$4 = new Lampa.Reguest();
 
   /**
@@ -1616,7 +1688,7 @@
             return _context.a(2, sessionCache.get(formattedId));
           case 2:
             _context.p = 2;
-            url = "https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/titles/".concat(formattedId, "?api_key=ygrn3a6sajxcdgex7cyh");
+            url = "".concat(api$1.PROXY_BASE, "/api/titles/").concat(formattedId, "?api_key=ygrn3a6sajxcdgex7cyh");
             _context.n = 3;
             return fetch(url);
           case 3:
@@ -3936,6 +4008,10 @@
         title: Lampa.Lang.translate('title_recomendations'),
         results: cardMapper.mapList(data.recommendations || [])
       },
+      directorMovies: {
+        title: Lampa.Lang.translate('kinobaza_director_movies'),
+        results: cardMapper.mapList(data.directorMovies || [])
+      },
       collection: {
         title: Lampa.Lang.translate('title_collection'),
         results: cardMapper.mapList(data.collectionMovies || [])
@@ -3944,22 +4020,14 @@
         results: []
       },
       discuss: null,
-      videos: {
-        results: data.videos ? data.videos.map(function (v) {
-          return {
-            key: v.id,
-            site: 'YouTube',
-            type: v.title || 'Trailer',
-            name: v.title || ''
-          };
-        }) : []
-      },
+      videos: cardMapper.mapVideos(data.trailer, data.videos),
       reactions: {
         result: []
       },
       episodes: null
     };
     Lampa.Utils.addSource(result.recomend, 'kinobaza');
+    Lampa.Utils.addSource(result.directorMovies, 'kinobaza');
     Lampa.Utils.addSource(result.collection, 'kinobaza');
 
     // НЕ додаємо episodes в початковий результат — Lampa викличе seasons() при потребі
@@ -4600,6 +4668,23 @@
         }
       }
 
+      // 0. Director Movies — перед Recommendations
+      var recomendIdx = -1;
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i] && rows[i][0] === 'cards' && rows[i][1].title === Lampa.Lang.translate('title_recomendations')) {
+          recomendIdx = i;
+          break;
+        }
+      }
+      var insertDirectorIdx = recomendIdx >= 0 ? recomendIdx : cardsIdx;
+      var directorData = e.data && e.data.directorMovies;
+      if (directorData && directorData.results && directorData.results.length) {
+        rows.splice(insertDirectorIdx, 0, ['cards', directorData]);
+        // Зсуваємо індекси після вставки
+        if (insertDirectorIdx <= personIdx) personIdx++;
+        if (insertDirectorIdx <= cardsIdx) cardsIdx++;
+      }
+
       // 1. Дубляж — завжди першим
       if (movie.hasDubInfo) {
         api$1.getDubPersons(movie.kinobaza_id || movie.id).then(function (dubData) {
@@ -4615,7 +4700,7 @@
               name: a.name_uk || a.name_en || '',
               original_name: a.name_en || '',
               profile_path: poster,
-              poster: poster ? a.poster_tmdb ? Lampa.TMDB.image('t/p/w276_and_h350_face/' + a.poster_tmdb.replace(/^\//, '')) : 'https://i.kinobaza.com.ua/w300/' + a.poster_kinobaza : './img/img_broken.svg',
+              poster: poster ? a.poster_tmdb ? Lampa.TMDB.image('t/p/w276_and_h350_face/' + a.poster_tmdb.replace(/^\//, '')) : api$1.cdn(a.poster_kinobaza, 'w300') : './img/img_broken.svg',
               character: a.character || '',
               source: 'kinobaza',
               gender: a.gender || 2
@@ -4882,6 +4967,31 @@
               });
               $tags.append($netTag);
             }
+          }
+        }
+      }
+
+      // 7. TV series — number_of_seasons
+      if (movie.number_of_seasons > 0) {
+        var $details = $full.find('.full-start-new__details');
+        if ($details.length && !$details.find('.full--seasons').length) {
+          var seasonsText = Lampa.Lang.translate('title_seasons') + ': ' + movie.number_of_seasons;
+          var $seasonsSpan = $('<span class="full--seasons">' + seasonsText + '</span>');
+          var $episodesSpan = $details.find('span').filter(function () {
+            return $(this).text().indexOf(Lampa.Lang.translate('title_episodes')) === 0;
+          });
+
+          // 7a. Якщо number_of_episodes_released відрізняється — показуємо "released / total"
+          var totalEp = movie.number_of_episodes || 0;
+          var releasedEp = movie.number_of_episodes_released || 0;
+          if ($episodesSpan.length && releasedEp > 0 && releasedEp !== totalEp) {
+            var epKey = Lampa.Lang.translate('title_episodes') || 'Епізоди';
+            $episodesSpan.text(epKey + ': ' + releasedEp + ' / ' + totalEp);
+          }
+          if ($episodesSpan.length) {
+            $episodesSpan.before($seasonsSpan);
+          } else {
+            $details.append($seasonsSpan);
           }
         }
       }
@@ -6025,8 +6135,7 @@
    * Без автентифікації
    * Відповідь: { total: number, data: [k6.d0] }
    */
-
-  var BASE_URL$2 = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
+  var BASE_URL$2 = api$1.BASE_URL;
   var network$2 = new Lampa.Reguest();
 
   /**
@@ -6258,24 +6367,10 @@
    * Endpoints:
    *   GET /lists?order_by=date_added_desc&type=1&page={page}
    *   GET /titles?list_type=13&list_id={id}&page={page}
+   * Всі ендпоінти публічні — без автентифікації
    */
-  var BASE_URL$1 = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
+  var BASE_URL$1 = api$1.BASE_URL;
   var network$1 = new Lampa.Reguest();
-
-  /**
-   * Заголовки з Bearer токеном (опціонально)
-   */
-  function getHeaders$1() {
-    var token = storage.getToken();
-    if (token) {
-      return {
-        headers: {
-          Authorization: 'Bearer ' + token
-        }
-      };
-    }
-    return {};
-  }
 
   /**
    * GET /lists?order_by=date_added_desc&type=1&page={page}
@@ -6295,7 +6390,7 @@
       }
     }, function (a, c) {
       if (reject) reject(a, c);
-    }, false, getHeaders$1());
+    }, false, {});
   }
 
   /**
@@ -6321,7 +6416,7 @@
       }
     }, function (a, c) {
       if (reject) reject(a, c);
-    }, false, getHeaders$1());
+    }, false, {});
   }
 
   /**
@@ -6621,24 +6716,13 @@
   /**
    * Kinobaza MyPerson API
    * GET /persons — список осіб з пагінацією
+   * POST /persons/{id}/favorite — підписатися
+   * POST /persons/{id}/unfavorite — відписатися
    */
-  var BASE_URL = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua/api/v1';
+  var BASE_URL = api$1.BASE_URL;
   var network = new Lampa.Reguest();
-
-  /**
-   * Заголовки з Bearer токеном (опціонально)
-   */
-  function getHeaders() {
-    var token = storage.getToken();
-    if (token) {
-      return {
-        headers: {
-          Authorization: 'Bearer ' + token
-        }
-      };
-    }
-    return {};
-  }
+  var authNetwork = new Lampa.Reguest();
+  authNetwork.timeout(15000);
 
   /**
    * Додає параметри до URL
@@ -6661,7 +6745,7 @@
   }
 
   /**
-   * Виконує GET-запит
+   * Виконує GET-запит (без авторизації — публічні ендпоінти)
    */
   function get(path, params, resolve, reject) {
     var u = buildUrl(path, params);
@@ -6674,7 +6758,33 @@
       }
     }, function (a, c) {
       if (reject) reject(a, c);
-    }, false, getHeaders());
+    }, false, {});
+  }
+
+  /**
+   * Виконує POST-запит з Bearer авторизацією
+   * Скасовує запит якщо токен відсутній
+   * @param {string} path
+   * @param {object} formData
+   * @param {function} resolve
+   * @param {function} reject
+   */
+  function post(path, formData, resolve, reject) {
+    var token = storage.getToken();
+    if (!token) {
+      if (reject) reject('no_token');
+      return;
+    }
+    var u = BASE_URL + path;
+    authNetwork.silent(u, function (json) {
+      resolve(json);
+    }, function (a, c) {
+      if (reject) reject(a, c);
+    }, formData, {
+      headers: {
+        Authorization: 'Bearer ' + token
+      }
+    });
   }
 
   /**
@@ -6705,7 +6815,7 @@
       }
     }, function (a, c) {
       if (reject) reject(a, c);
-    }, false, getHeaders());
+    }, false, {});
   }
 
   /**
@@ -6718,6 +6828,28 @@
       page: page || 1
     }, resolve, reject);
   }
+
+  /**
+   * POST /persons/{id}/favorite — підписатися на персону
+   * @param {number} id
+   * @returns {Promise<k6.v>}
+   */
+  function favoritePerson(id) {
+    return new Promise(function (resolve, reject) {
+      post('/persons/' + id + '/favorite', {}, resolve, reject);
+    });
+  }
+
+  /**
+   * POST /persons/{id}/unfavorite — відписатися від персони
+   * @param {number} id
+   * @returns {Promise<k6.v>}
+   */
+  function unfavoritePerson(id) {
+    return new Promise(function (resolve, reject) {
+      post('/persons/' + id + '/unfavorite', {}, resolve, reject);
+    });
+  }
   function clear() {
     network.clear();
   }
@@ -6725,6 +6857,8 @@
     getPersons: getPersons,
     getPerson: getPerson,
     getPersonTitles: getPersonTitles,
+    favoritePerson: favoritePerson,
+    unfavoritePerson: unfavoritePerson,
     clear: clear
   };
 
@@ -6750,7 +6884,7 @@
     if (isRealTmdb) {
       posterUrl = Lampa.TMDB.image('t/p/w300/' + item.poster_tmdb.replace(/^\//, ''));
     } else if (item.poster_kinobaza) {
-      posterUrl = 'https://i.kinobaza.com.ua/w300/' + item.poster_kinobaza.replace(/^\//, '');
+      posterUrl = api$1.cdn(item.poster_kinobaza, 'w300');
     } else if (item.poster_tmdb) {
       posterUrl = Lampa.TMDB.image('t/p/w300/' + item.poster_tmdb.replace(/^\//, ''));
     } else {
@@ -6918,7 +7052,7 @@
       if (item.poster_tmdb && item.poster_tmdb.charAt(0) === '/') {
         poster = Lampa.TMDB.image('t/p/w300/' + item.poster_tmdb.replace(/^\//, ''));
       } else if (item.poster_kinobaza) {
-        poster = 'https://i.kinobaza.com.ua/w300/' + item.poster_kinobaza.replace(/^\//, '');
+        poster = api$1.cdn(item.poster_kinobaza, 'w300');
       }
       var jobCode = 0;
       if (item.jobs && item.jobs.length) {
@@ -6974,7 +7108,7 @@
       if (data.poster_tmdb && data.poster_tmdb.charAt(0) === '/') {
         photoUrl = Lampa.TMDB.image('t/p/w300/' + data.poster_tmdb.replace(/^\//, ''));
       } else if (data.poster_kinobaza) {
-        photoUrl = 'https://i.kinobaza.com.ua/w300/' + data.poster_kinobaza.replace(/^\//, '');
+        photoUrl = api$1.cdn(data.poster_kinobaza, 'w300');
       }
       var img = $h[0].querySelector('.person-start__img');
       if (img) {
@@ -6984,9 +7118,58 @@
         });
       }
 
-      // Hide subscribe button
-      var subBtn = $h[0].querySelector('.button--subscribe');
-      if (subBtn) subBtn.style.display = 'none';
+      // Subscribe — toggle підписки на персону через Kinobaza API
+      // POST /persons/{id}/favorite та /persons/{id}/unfavorite
+      var $subBtn = $h.find('.button--subscribe');
+      if (!$subBtn.length) {
+        // Button not found in template — create it next to info button
+        $subBtn = $('<div class="full-start__button selector button--subscribe">' + '<svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">' + '<path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>' + '<path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>' + '</svg><span></span></div>');
+        var $infoBtn = $h.find('.button--info');
+        if ($infoBtn.length) {
+          $infoBtn.after($subBtn);
+        } else {
+          var $bottom = $h.find('.person-start__bottom');
+          if ($bottom.length) $bottom.append($subBtn);
+        }
+      }
+      if ($subBtn.length) {
+        $subBtn.css('display', ''); // видаляємо inline style від hide (display:none)
+
+        var personId = data.id || 0;
+        var isFav = !!data.my_favorite;
+
+        // Початковий стан з API
+        if (isFav) $subBtn.addClass('active');
+        var subBtnEl = $subBtn[0];
+        var subSvg = subBtnEl.querySelector('svg');
+        var subPath = subSvg && subSvg.querySelector('path:nth-of-type(2)');
+        var subText = subBtnEl.querySelector('span');
+        if (subPath) subPath.setAttribute('fill', isFav ? 'currentColor' : 'transparent');
+        if (subText) subText.textContent = Lampa.Lang.translate(isFav ? 'title_unsubscribe' : 'title_subscribe');
+
+        // Toggle при кліку
+        $subBtn.off('hover:enter').on('hover:enter', function (e) {
+          e.stopPropagation();
+          var nowFav = $subBtn.hasClass('active');
+          if (nowFav) {
+            Api.unfavoritePerson(personId).then(function () {
+              $subBtn.removeClass('active');
+              if (subPath) subPath.setAttribute('fill', 'transparent');
+              if (subText) subText.textContent = Lampa.Lang.translate('title_subscribe');
+            })["catch"](function () {
+              Lampa.Noty.show(Lampa.Lang.translate('network_error'));
+            });
+          } else {
+            Api.favoritePerson(personId).then(function () {
+              $subBtn.addClass('active');
+              if (subPath) subPath.setAttribute('fill', 'currentColor');
+              if (subText) subText.textContent = Lampa.Lang.translate('title_unsubscribe');
+            })["catch"](function () {
+              Lampa.Noty.show(Lampa.Lang.translate('network_error'));
+            });
+          }
+        });
+      }
 
       // Info button → biography modal
       var infoBtn = $h[0].querySelector('.button--info');
@@ -7066,7 +7249,10 @@
             Lampa.Controller.toggle('head');
           },
           left: function left() {
-            Lampa.Controller.toggle('menu');
+            if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+          },
+          right: function right() {
+            if (Navigator.canmove('right')) Navigator.move('right');
           },
           down: function down() {
             Lampa.Controller.toggle('content');
@@ -8559,7 +8745,7 @@
                     _context.p = 7;
                     _context.n = 8;
                     return new Promise(function (resolve, reject) {
-                      api$1.post(path, command.body || {}, resolve, reject);
+                      api$1.postAuth(path, command.body || {}, resolve, reject);
                     });
                   case 8:
                     // Успішно виконано -> видаляємо з черги
@@ -8680,7 +8866,7 @@
             _context.p = 2;
             _context.n = 3;
             return new Promise(function (resolve, reject) {
-              api$1.post(path, body, resolve, reject);
+              api$1.postAuth(path, body, resolve, reject);
             });
           case 3:
             _context.n = 5;
@@ -9703,15 +9889,32 @@
   }
 
   /**
-   * Замінити аватар в хедері на Kinobaza avatar
+   * Замінити аватар в хедері на Kinobaza avatar.
+   *
+   * В Lampa завжди 2 .open--profile елементи:
+   *   1) head template (оригінал)
+   *   2) account/profile.js (модуль акаунта)
+   *
+   * Замінюємо ПЕРШИЙ (head template), ХОВАЄМО другий (account).
+   * restore: видаляємо наш, показуємо всі оригінальні.
    */
   function setProfileAvatar(avatar) {
-    var profileEl = $('.open--profile');
+    var profileEl = $('.open--profile').first();
     if (!profileEl.length) return;
-    if ($('#kinobaza_profile').length) return;
-    profileEl.hide();
+
+    // Зберігаємо outerHTML оригіналу для restore
+    if (!profileEl.data('kb-original-outer')) {
+      profileEl.data('kb-original-outer', profileEl[0].outerHTML);
+    }
+
+    // Новий елемент з аватаром
     var kbProfile = $('<div class="head__action selector open--profile" id="kinobaza_profile">' + '<img src="https://i.kinobaza.com.ua/avatars/' + avatar + '">' + '</div>');
-    profileEl.before(kbProfile);
+
+    // Замінюємо перший
+    profileEl.replaceWith(kbProfile);
+
+    // Ховаємо решту .open--profile (account/profile.js створює другий)
+    $('.open--profile').not('#kinobaza_profile').hide();
     kbProfile.on('hover:enter', function (e) {
       e.stopPropagation();
       Lampa.Controller.toggle('settings');
@@ -9723,7 +9926,16 @@
    * Відновити оригінальний аватар Lampa (CUB)
    */
   function restoreProfileAvatar() {
-    $('#kinobaza_profile').remove();
+    var kbProfile = $('#kinobaza_profile');
+    if (kbProfile.length) {
+      var originalHtml = kbProfile.data('kb-original-outer');
+      if (originalHtml) {
+        kbProfile.replaceWith(originalHtml);
+      } else {
+        kbProfile.remove();
+      }
+    }
+    // Показуємо всі оригінальні .open--profile (були приховані)
     $('.open--profile').show();
   }
 
@@ -10249,7 +10461,7 @@
       if (!Lampa.Manifest) return;
       var manifest = {
         type: 'video',
-        version: '0.5',
+        version: '0.6',
         name: Lampa.Lang.translate('kinobaza_title') || 'КіноБаза',
         component: 'kinobaza',
         description: 'Контент-провайдер КіноБаза (kinobaza.com.ua)'
@@ -10439,7 +10651,25 @@
     // 10. Реєстрація ContentRows інтеграції для всіх категорій
     registerContentRows();
 
-    // 11. Завантаження стилів
+    // 11. Wrapper для Select.show — прибирає дату з subtitle трейлерів
+    // Lampa's trailers.js завжди додає ' - ' + date в subtitle.
+    // Перехоплюємо Select.show для контексту YouTube, видаляємо дату.
+    var origSelectShow = Lampa.Select && Lampa.Select.show;
+    if (origSelectShow) {
+      Lampa.Select.show = function (params) {
+        if (params && params.title && params.title.indexOf('YouTube') === 0 && params.items) {
+          for (var i = 0; i < params.items.length; i++) {
+            var item = params.items[i];
+            if (item.subtitle) {
+              item.subtitle = item.subtitle.replace(/ - \d{1,2} \S+(?: \d{4})?$/, '');
+            }
+          }
+        }
+        return origSelectShow.call(this, params);
+      };
+    }
+
+    // 12. Завантаження стилів
     loadStyles();
   }
 
