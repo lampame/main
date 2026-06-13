@@ -7146,7 +7146,7 @@
   };
 
   var UKRAINIAN_THANKS_URL = 'https://lampame.donatik.me/';
-  var DEFAULT_THANKS_URL = 'https://t.me/tribute/app?startapp=d5WS';
+  var DEFAULT_THANKS_URL = 'https://lampame.gumroad.com/coffee';
   function getCurrentLanguage() {
     return String(Lampa.Storage.get('language', 'ru') || 'ru').toLowerCase();
   }
