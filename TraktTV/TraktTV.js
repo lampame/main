@@ -403,6 +403,7 @@
   var MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
   var inFlightRequests = new Map();
   var responseCache = new Map();
+  var RESPONSE_CACHE_MAX = 200;
   var AUTH_BLOCK_STORAGE_KEY = 'trakt_auth_blocked';
   var AUTH_RATE_LIMIT_STORAGE_KEY = 'trakt_auth_rate_limited_until';
 
@@ -981,6 +982,20 @@
       return Promise.reject(new Error(Lampa.Lang.translate('trakttv_unknown_content')));
     }
   }
+  function tmdbRequest(url) {
+    return new Promise(function (resolve, reject) {
+      try {
+        var network = new Lampa.Reguest();
+        network.silent(url, function (data) {
+          return resolve(data);
+        }, function () {
+          return reject(new Error('TMDB request failed'));
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
 
   // Функція для отримання інформації про серіал з TMDB або Trakt
   function getShowInfo(tmdbId) {
@@ -1049,8 +1064,7 @@
 
       // Використовуємо Lampa.TMDB для отримання інформації про серіал
       var url = Lampa.TMDB.api('tv/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'ru'));
-      var network = new Lampa.Reguest();
-      network.silent(url, function (data) {
+      tmdbRequest(url).then(function (data) {
         if (data && data.seasons) {
           // Знаходимо останній сезон (виключаючи спеціальні сезони з номером 0)
           var regularSeasons = data.seasons.filter(function (s) {
@@ -1063,7 +1077,7 @@
           // Якщо знайдено останній сезон, отримуємо інформацію про його епізоди
           if (lastSeasonData) {
             var seasonUrl = Lampa.TMDB.api('tv/' + tmdbId + '/season/' + lastSeasonData.season_number + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'ru'));
-            network.silent(seasonUrl, function (seasonData) {
+            return tmdbRequest(seasonUrl).then(function (seasonData) {
               if (seasonData && seasonData.episodes && seasonData.episodes.length > 0) {
                 // Знаходимо останній епізод сезону
                 var lastEpisodeData = seasonData.episodes.reduce(function (prev, current) {
@@ -1081,7 +1095,7 @@
                   last_episode: 1
                 });
               }
-            }, function () {
+            })["catch"](function () {
               // Якщо не вдалося отримати дані про епізоди, повертаємо хоча б номер сезону
               resolve({
                 last_season: lastSeasonData.season_number,
@@ -1100,7 +1114,7 @@
             last_episode: 1
           });
         }
-      }, function () {
+      })["catch"](function () {
         // У випадку помилки повертаємо значення за замовчуванням
         resolve({
           last_season: 1,
@@ -1432,6 +1446,12 @@
   }
   function setCachedResponse(cacheKey, value, ttlMs) {
     if (!cacheKey || !ttlMs) return;
+
+    // Evict oldest entry if at capacity
+    if (responseCache.size >= RESPONSE_CACHE_MAX && !responseCache.has(cacheKey)) {
+      var oldestKey = responseCache.keys().next().value;
+      if (oldestKey) responseCache["delete"](oldestKey);
+    }
     responseCache.set(cacheKey, {
       expiresAt: Date.now() + ttlMs,
       value: cloneValue(value)
@@ -3065,6 +3085,7 @@
           if (!Api$2) {
             logApiMissing$1();
             this.empty();
+            if (this.activity) this.activity.loader(false);
             return;
           }
           Api$2[type](params).then(function (data) {
@@ -3076,6 +3097,7 @@
             });
           })["catch"](function () {
             _this.empty();
+            if (_this.activity) _this.activity.loader(false);
           });
         },
         onNext: function onNext(resolve, reject) {
@@ -3086,6 +3108,7 @@
           }
           if (object.page <= total_pages) {
             waitload = true;
+            object.page++;
             var params = _objectSpread2({}, object);
             if ((type === 'list' || type === 'myListItems') && object.id) {
               params.id = object.id;
@@ -3184,6 +3207,7 @@
           }
         })["catch"](function () {
           _this3.empty();
+          if (_this3.activity) _this3.activity.loader(false);
         });
       };
       comp.next = function () {
@@ -3248,6 +3272,7 @@
           if (!Api$2) {
             logApiMissing$1();
             this.empty();
+            if (this.activity) this.activity.loader(false);
             return;
           }
           Api$2.recommendations(params).then(function (recommendations) {
@@ -3259,6 +3284,7 @@
             }
           })["catch"](function () {
             _this5.empty();
+            if (_this5.activity) _this5.activity.loader(false);
           });
         },
         onNext: function onNext(resolve, reject) {
@@ -3269,6 +3295,7 @@
           }
           if (object.page <= total_pages) {
             waitload = true;
+            object.page++;
             var params = _objectSpread2({}, object);
             params.limit = 36;
             if (!Api$2) {
@@ -3334,6 +3361,7 @@
           }
         })["catch"](function () {
           _this7.empty();
+          if (_this7.activity) _this7.activity.loader(false);
         });
       };
       comp.next = function () {
@@ -3717,13 +3745,15 @@
           params.page = params.page || 1;
           if (!Api$2 || !Api$2[apiMethod]) {
             this.empty();
+            if (this.activity) this.activity.loader(false);
             return;
           }
           Api$2[apiMethod](params).then(function (data) {
             total_pages = data && data.total_pages ? data.total_pages : 0;
             _this9.build(withActions(data, params.page));
           })["catch"](function () {
-            return _this9.empty();
+            _this9.empty();
+            if (_this9.activity) _this9.activity.loader(false);
           });
         },
         onNext: function onNext(resolve, reject) {
@@ -3734,6 +3764,7 @@
           }
           if (object.page <= total_pages) {
             waitload = true;
+            object.page++;
             var params = _objectSpread2({}, object);
             params.limit = 36;
             if (!Api$2 || !Api$2[apiMethod]) {
@@ -3786,7 +3817,8 @@
           _this1.build(withActions(data, params.page));
           if (_this1.activity.scroll) _this1.activity.scroll.onEnd = _this1.next.bind(_this1);
         })["catch"](function () {
-          return _this1.empty();
+          _this1.empty();
+          if (_this1.activity) _this1.activity.loader(false);
         });
       };
       comp.next = function () {
@@ -5228,17 +5260,17 @@
         uk: "Мінімальний відсоток перегляду для позначення епізоду на Trakt.TV",
         ro: "Procent minim de vizionare pentru a marca un episod pe Trakt.TV"
       },
-      trakttv_enable_logging: {
-        ru: "Включить логирование",
-        en: "Enable logging",
-        uk: "Увімкнути логування",
-        ro: "Activare jurnal (logging)"
+      trakttv_nav_sync: {
+        ru: "Синхронизация списков",
+        en: "Lists sync",
+        uk: "Синхронізація списків",
+        ro: "Sincronizare liste"
       },
-      trakttv_enable_logging_descr: {
-        ru: "Логирование для тестирования механизма отслеживания просмотра",
-        en: "Logging for testing the watch tracking mechanism",
-        uk: "Логування для тестування механізму відстеження перегляду",
-        ro: "Loguri pentru testarea mecanismului de urmărire a vizionării"
+      trakttv_nav_source: {
+        ru: "Настройки источника",
+        en: "Source settings",
+        uk: "Налаштування джерела",
+        ro: "Setări sursă"
       },
       trakttv_card_type_tv: {
         ru: "TV",
@@ -5562,6 +5594,7 @@
     var Template = Lampa.Template;
     var Empty = Lampa.Empty;
     this.activity = null;
+    this._destroyed = false;
     var scroll = new Scroll({
       mask: true,
       over: true,
@@ -5680,54 +5713,68 @@
       }));
       return _fetchTraktCalendar.apply(this, arguments);
     }
-    this.create = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-      var _this = this;
-      var traktData, episodes, groupedByDate, startDate, dates, i, d, y, m, day, hasAny;
-      return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
-          case 0:
-            if (this.activity) this.activity.loader(true);
-            _context.n = 1;
-            return fetchTraktCalendar();
-          case 1:
-            traktData = _context.v;
-            episodes = prepareTimetableData(traktData);
-            groupedByDate = groupEpisodesByDate(episodes);
-            startDate = new Date();
-            dates = [];
-            for (i = 0; i < DAYS; i++) {
-              d = new Date(startDate);
-              d.setDate(startDate.getDate() + i);
-              y = d.getFullYear();
-              m = String(d.getMonth() + 1).padStart(2, '0');
-              day = String(d.getDate()).padStart(2, '0');
-              dates.push("".concat(y, "-").concat(m, "-").concat(day));
-            }
-            hasAny = false;
-            dates.forEach(function (date) {
-              if ((groupedByDate[date] || []).length) hasAny = true;
-              _this.append(date, groupedByDate[date] || []);
-            });
-            if (!hasAny) this.empty();
-            scroll.minus(); // scroll готовий до рендеру
-            scroll.append(body); // додаємо body в scroll
-            html.append(scroll.render()); // додаємо scroll в html
+    this.create = /*#__PURE__*/function () {
+      var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(activityBody) {
+        var _this = this;
+        var traktData, episodes, groupedByDate, startDate, dates, i, d, y, m, day, hasAny;
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
+            case 0:
+              if (this.activity) this.activity.loader(true);
+              _context.n = 1;
+              return fetchTraktCalendar();
+            case 1:
+              traktData = _context.v;
+              if (!this._destroyed) {
+                _context.n = 2;
+                break;
+              }
+              return _context.a(2);
+            case 2:
+              episodes = prepareTimetableData(traktData);
+              groupedByDate = groupEpisodesByDate(episodes);
+              startDate = new Date();
+              dates = [];
+              for (i = 0; i < DAYS; i++) {
+                d = new Date(startDate);
+                d.setDate(startDate.getDate() + i);
+                y = d.getFullYear();
+                m = String(d.getMonth() + 1).padStart(2, '0');
+                day = String(d.getDate()).padStart(2, '0');
+                dates.push("".concat(y, "-").concat(m, "-").concat(day));
+              }
+              hasAny = false;
+              dates.forEach(function (date) {
+                if ((groupedByDate[date] || []).length) hasAny = true;
+                _this.append(date, groupedByDate[date] || []);
+              });
+              if (!hasAny) this.empty();
+              scroll.minus(); // scroll готовий до рендеру
+              scroll.append(body); // додаємо body в scroll
+              html.append(scroll.render()); // додаємо scroll в html
 
-            if (this.activity) this.activity.loader(false);
+              if (this.activity) this.activity.loader(false);
 
-            // Зберігаємо посилання для контролера
-            this.body = body;
-            this.scroll = scroll;
-            this.html = html;
+              // Зберігаємо посилання для контролера
+              this.body = body;
+              this.scroll = scroll;
+              this.html = html;
 
-            // Відразу активуємо фокус
-            if (this.activity && typeof this.activity.toggle === 'function') {
-              this.activity.toggle();
-            }
-            return _context.a(2, this.render());
-        }
-      }, _callee, this);
-    }));
+              // Відразу активуємо фокус
+              if (this.activity && typeof this.activity.toggle === 'function') {
+                this.activity.toggle();
+              }
+              if (activityBody) {
+                activityBody.append(html);
+              }
+              return _context.a(2, this.render());
+          }
+        }, _callee, this);
+      }));
+      return function (_x) {
+        return _ref.apply(this, arguments);
+      };
+    }();
     this.empty = function () {
       var empty = new Empty({
         descr: Lampa.Lang.translate('trakttv_no_upcoming')
@@ -5842,8 +5889,14 @@
       return html;
     };
     this.destroy = function () {
+      this._destroyed = true;
       scroll.destroy();
       html.remove();
+      this.body = null;
+      this.html = null;
+      this.scroll = null;
+      this.activity = null;
+      last = null;
     };
   }
 
@@ -6310,7 +6363,9 @@
   /**
    * Модуль для роботи з меню TraktTV
    */
+  var menuAdded = false;
   function addMenuItems() {
+    if (menuAdded) return;
     var t = function t(key) {
       var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
       try {
@@ -6410,7 +6465,7 @@
       if (!menuItem) return;
       var shouldShow = Lampa.Storage.get(key) === true;
       var alreadyAdded = menuItem.parent().length > 0;
-      if (shouldShow && !alreadyAdded) menuList.append(menuItem);
+      if (shouldShow && !alreadyAdded) menuList.find('[data-component="interface"]').before(menuItem);
       if (!shouldShow && alreadyAdded) menuItem.remove();
     }
     var combineButton = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(menuTitle, "</div>\n    </li>"));
@@ -6452,13 +6507,14 @@
         }
       });
     });
-    menuList.append(combineButton);
+    menuList.find('[data-component="interface"]').before(combineButton);
 
     // Перевіряємо кожен елемент локального сховища і додаємо відповідні пункти меню
     items.forEach(function (item) {
       var key = item.component;
       syncSideMenuItem(key);
     });
+    menuAdded = true;
   }
 
   var PAGE_LIMIT = 100;
@@ -7129,13 +7185,41 @@
   function logApiMissing() {
     logDebugOnce(API_MISSING_LOG_KEY$1, 'API bridge is unavailable in config');
   }
+
+  // ─────────────────────────────────────────────────────
+  //  MAIN — register all components and params
+  // ─────────────────────────────────────────────────────
+
   function main() {
-    // Додаємо компонент Trakt.TV у налаштування
+    // 1. Register main component in settings
     Lampa.SettingsApi.addComponent({
       component: 'trakt',
       name: 'Trakt.TV',
-      icon: icons.TRAKT_ICON
+      icon: icons.TRAKT_ICON,
+      before: 'interface'
     });
+
+    // 2. Register sub-component templates (hidden from main menu)
+    //    These are only accessible via navigation from the main 'trakt' component.
+    Lampa.Template.add('settings_trakt_sync', '<div></div>');
+    Lampa.Template.add('settings_trakt_progress', '<div></div>');
+    Lampa.Template.add('settings_trakt_source', '<div></div>');
+
+    // 3. Main component params
+    addMainParams();
+
+    // 4. Sub-component params
+    addSyncParams();
+    addProgressParams();
+    addSourceParams();
+  }
+
+  // ─────────────────────────────────────────────────────
+  //  MAIN COMPONENT — 'trakt'
+  // ─────────────────────────────────────────────────────
+
+  function addMainParams() {
+    // ── Thanks / donation ──
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -7151,172 +7235,130 @@
       }
     });
 
-    // Користувацька інфа
+    // ── Auth: login / logout combined ──
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
-        name: 'trakt_userinfo',
-        type: 'static'
+        name: 'trakt_auth',
+        type: 'button'
       },
       field: {
         name: ''
       },
       onRender: function onRender(item) {
-        item.empty();
         var token = Lampa.Storage.get('trakt_token');
+        var nameEl = item.find('.settings-param__name');
         if (!token) {
-          item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthMissed'), "</div>"));
+          nameEl.html('<span class="trakt-auth-label">' + Lampa.Lang.translate('trakttvAuthMissed') + '</span>');
           return;
         }
-        // Показати лоадер
-        var loading = $("<div class=\"settings-param__value\">".concat(Lampa.Lang.translate('loading'), "</div>"));
-        item.append(loading);
+
+        // Show loading while fetching user info
+        nameEl.html('<span class="trakt-auth-label">' + Lampa.Lang.translate('loading') + '…</span>');
         if (!Api$1) {
           logApiMissing();
+          nameEl.html('<span class="trakt-auth-label">Trakt.TV</span>');
           return;
         }
         Api$1.get('/users/me').then(function (user) {
-          loading.remove();
-          var vipEnabled = !!(user && user.vip);
-          var vipStatusKey = vipEnabled ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
-          var vipClass = vipEnabled ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
-          item.append("<div class=\"settings-param__name\"><b>".concat(Lampa.Lang.translate('trakttv_user_info'), "</b></div>"));
-          item.append("<div class=\"settings-param__value trakt-userinfo-name\">".concat(Lampa.Lang.translate('trakttv_username'), ": ").concat((user === null || user === void 0 ? void 0 : user.username) || '-', "</div>"));
-          item.append("\n                    <div class=\"settings-param__value trakt-userinfo-vip\">\n                        <span class=\"trakt-userinfo-vip__label\">".concat(Lampa.Lang.translate('trakttv_vip_status'), ":</span>\n                        <span class=\"trakt-vip-badge ").concat(vipClass, "\">").concat(Lampa.Lang.translate(vipStatusKey), "</span>\n                    </div>\n                "));
+          if (user && user.username) {
+            var vipBadge = user.vip ? ' <span class="trakt-vip-badge trakt-vip-badge--enabled">' + Lampa.Lang.translate('trakttv_vip_enabled') + '</span>' : '';
+            nameEl.html('<span class="trakt-auth-label trakt-auth-label--user">' + Lampa.Lang.translate('trakttv_username') + ': <b>' + user.username + '</b>' + vipBadge + '</span>');
+          } else {
+            nameEl.html('<span class="trakt-auth-label">Trakt.TV</span>');
+          }
         })["catch"](function () {
-          loading.remove();
-          item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthError'), "</div>"));
+          nameEl.html('<span class="trakt-auth-label">Trakt.TV</span>');
         });
-      }
-    });
-
-    // Кнопка авторизації — чистий Device OAuth
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_login',
-        type: 'button'
-      },
-      field: {
-        name: Lampa.Lang.translate('trakttvLogin')
-      },
-      onRender: function onRender(item) {
-        var status = $('<div class="settings-param__status"></div>');
-        item.find('.settings-param__value').append(status);
-        if (!Lampa.Storage.get('trakt_token')) {
-          item.show();
-          status.removeClass('active error wait').addClass('wait');
-        } else {
-          item.hide();
-        }
       },
       onChange: function onChange() {
-        if (Lampa.Storage.get('trakt_token')) return;
-
-        // Device OAuth only
-        if (!Api$1) {
-          logApiMissing();
-          return;
-        }
-        (Api$1 && Api$1.auth.device.login()).then(function (data) {
-          // Expect raw body: { device_code, user_code, verification_url, interval, expires_in }
-          if (!data || !data.user_code || !data.verification_url) {
-            Lampa.Bell.push({
-              text: Lampa.Lang.translate('trakttvAuthError')
-            });
-            return;
-          }
-          var safeVerification = String(data.verification_url || '');
-          var safeUserCode = String(data.user_code || '');
-          var activateUrl = "https://trakt.tv/activate/".concat(safeUserCode);
-          var qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=' + encodeURIComponent(activateUrl);
-          var modal = $("\n                        <div class=\"about trakt-device-auth\">\n                            <div class=\"trakt-device-auth__inner\">\n                                <div class=\"trakt-device-auth__qr-col\">\n                                    <div class=\"trakt-device-auth__qr-container\">\n                                        <a href=\"".concat(activateUrl, "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"trakt-device-auth__qr-link\">\n                                            <img src=\"").concat(qrCodeUrl, "\" alt=\"Trakt.TV QR Code\" class=\"trakt-device-auth__qr-image\">\n                                        </a>\n                                        <div class=\"trakt-device-auth__qr-caption\">").concat(Lampa.Lang.translate('trakttv_scan_qr_code'), "</div>\n                                    </div>\n                                </div>\n                                <div class=\"trakt-device-auth__info-col\">\n                                    <div class=\"about__text trakt-device-auth__verification\">").concat(safeVerification, "</div>\n                                    <div class=\"about__text trakt-device-auth__code\">").concat(Lampa.Lang.translate('trakttv_code'), ": <strong>").concat(safeUserCode, "</strong></div>\n                                    <div class=\"modal__button selector trakt-check-btn\">").concat(Lampa.Lang.translate('trakttv_check_now'), "</div>\n                                </div>\n                            </div>\n                        </div>\n                    "));
-          modal.find('.trakt-device-auth__qr-image').on('error', function () {
-            modal.find('.trakt-device-auth__qr-container').addClass('trakt-device-auth__qr-container--hidden');
-          });
-          Lampa.Modal.open({
-            title: Lampa.Lang.translate('trakttv_auth'),
-            html: modal,
-            size: Lampa.Platform.screen('mobile') ? 'medium' : 'small',
-            select: modal.find('.trakt-check-btn')[0],
-            onSelect: function onSelect() {
-              if (checkNowHandler) checkNowHandler();
-            },
-            scroll: {
-              nopadding: true
-            },
-            onBack: function onBack() {
-              if (currentPollTimeoutId) {
-                clearTimeout(currentPollTimeoutId);
-                currentPollTimeoutId = null;
-              }
-              Lampa.Storage.set('trakt_active_device_auth', false);
-              Lampa.Storage.set('trakt_active_device_auth_started_at', null);
-              Lampa.Modal.close();
-              Lampa.Controller.toggle('settings_component');
-            }
-          });
-
-          // If already polling due to a previous attempt, do not start a new one
-          // This check is crucial to prevent multiple polling loops
-          if (Lampa.Storage.get('trakt_active_device_auth') === true) {
-            var startedAt = Number(Lampa.Storage.get('trakt_active_device_auth_started_at') || 0);
-            var isStale = !startedAt || Date.now() - startedAt > 20 * 60 * 1000;
-            if (isStale) {
-              Lampa.Storage.set('trakt_active_device_auth', false);
-              Lampa.Storage.set('trakt_active_device_auth_started_at', null);
-            } else {
-              logDebug('Device auth already active, skip duplicate start');
-              return;
-            }
-          }
-
-          // Mark as active and start polling
-          Lampa.Storage.set('trakt_active_device_auth', true);
-          Lampa.Storage.set('trakt_active_device_auth_started_at', Date.now());
-          pollAuth(data, Lampa.Modal); // Pass Lampa.Modal to pollAuth for direct control
-        })["catch"](function (error) {
-          logError('Device auth init failed', error, {
-            debugOnly: true
-          });
+        var token = Lampa.Storage.get('trakt_token');
+        if (!token) {
+          startDeviceAuth();
+        } else {
+          if (Api$1) Api$1.auth.logout();
           Lampa.Bell.push({
-            text: Lampa.Lang.translate('trakttvAuthError')
+            text: Lampa.Lang.translate('trakttvLogoutNoty')
           });
-        });
+          Lampa.Settings.update();
+        }
       }
     });
 
-    // Кнопка logout
+    // ── Navigation: Lists sync ──
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
-        name: 'trakt_logout',
+        name: 'nav_trakt_sync',
         type: 'button'
       },
       field: {
-        name: Lampa.Lang.translate('trakttvLogout')
-      },
-      onRender: function onRender(item) {
-        if (Lampa.Storage.get('trakt_token')) {
-          item.show();
-        } else {
-          item.hide();
-        }
+        name: t$1('trakttv_nav_sync', 'Lists sync')
       },
       onChange: function onChange() {
-        if (!Api$1) {
-          logApiMissing();
-          return;
-        }
-        Api$1 && Api$1.auth.logout();
-        Lampa.Bell.push({
-          text: Lampa.Lang.translate('trakttvLogoutNoty')
+        Lampa.Settings.create('trakt_sync', {
+          onBack: function onBack() {
+            Lampa.Settings.create('trakt');
+          }
         });
-        Lampa.Settings.update();
       }
     });
 
-    // Кнопка повного очищення Trakt
+    // ── Navigation: Progress settings ──
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'nav_trakt_progress',
+        type: 'button'
+      },
+      field: {
+        name: t$1('trakt_progress_section', 'Progress settings')
+      },
+      onChange: function onChange() {
+        Lampa.Settings.create('trakt_progress', {
+          onBack: function onBack() {
+            Lampa.Settings.create('trakt');
+          }
+        });
+      }
+    });
+
+    // ── Navigation: Source settings ──
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'nav_trakt_source',
+        type: 'button'
+      },
+      field: {
+        name: t$1('trakttv_nav_source', 'Source settings')
+      },
+      onChange: function onChange() {
+        Lampa.Settings.create('trakt_source', {
+          onBack: function onBack() {
+            Lampa.Settings.create('trakt');
+          }
+        });
+      }
+    });
+
+    // ── Top Shelf (Apple TV only) ──
+    if (Lampa.Platform.is('apple_tv') === true) {
+      Lampa.SettingsApi.addParam({
+        component: 'trakt',
+        param: {
+          name: 'trakttv_topshelf',
+          type: 'trigger',
+          "default": false
+        },
+        field: {
+          name: Lampa.Lang.translate('trakttv_topshelf'),
+          description: Lampa.Lang.translate('trakttv_topshelf_descr')
+        }
+      });
+    }
+
+    // ── Full clear ──
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -7325,9 +7367,6 @@
       },
       field: {
         name: Lampa.Lang.translate('trakttvFullClear')
-      },
-      onRender: function onRender(item) {
-        item.show();
       },
       onChange: function onChange() {
         Object.keys(localStorage).forEach(function (key) {
@@ -7350,22 +7389,15 @@
         Lampa.Settings.update();
       }
     });
+  }
+
+  // ─────────────────────────────────────────────────────
+  //  SUB-COMPONENT — 'trakt_sync'  (Lists sync)
+  // ─────────────────────────────────────────────────────
+
+  function addSyncParams() {
     Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_bookmarks_sync_section',
-        type: 'static'
-      },
-      field: {
-        name: ''
-      },
-      onRender: function onRender(item) {
-        item.empty();
-        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakt_bookmarks_sync_section', 'Bookmarks sync'), "</b></div>"));
-      }
-    });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
+      component: 'trakt_sync',
       param: {
         name: 'trakt_bookmarks_mode',
         type: 'select',
@@ -7380,7 +7412,7 @@
       }
     });
     Lampa.SettingsApi.addParam({
-      component: 'trakt',
+      component: 'trakt_sync',
       param: {
         name: 'trakt_bookmarks_favorite_type',
         type: 'select',
@@ -7393,7 +7425,7 @@
       }
     });
     Lampa.SettingsApi.addParam({
-      component: 'trakt',
+      component: 'trakt_sync',
       param: {
         name: 'trakt_bookmarks_import',
         type: 'button'
@@ -7409,7 +7441,7 @@
       }
     });
     Lampa.SettingsApi.addParam({
-      component: 'trakt',
+      component: 'trakt_sync',
       param: {
         name: 'trakt_bookmarks_export',
         type: 'button'
@@ -7424,87 +7456,15 @@
         startBookmarksExportFlow();
       }
     });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_progress_section',
-        type: 'static'
-      },
-      field: {
-        name: ''
-      },
-      onRender: function onRender(item) {
-        item.empty();
-        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakt_progress_section', 'Progress configuration'), "</b></div>"));
-      }
-    });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_source_section',
-        type: 'static'
-      },
-      field: {
-        name: ''
-      },
-      onRender: function onRender(item) {
-        item.empty();
-        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakttv_source_section', 'TraktTV source filters'), "</b></div>"));
-      }
-    });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_source_ignore_watched',
-        type: 'trigger',
-        "default": false
-      },
-      field: {
-        name: t$1('trakttv_source_ignore_watched', 'Source: ignore watched'),
-        description: t$1('trakttv_source_ignore_watched_descr', 'Applies to all TraktTV source feeds (categories, recommendations, search)')
-      }
-    });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_source_ignore_watchlisted',
-        type: 'trigger',
-        "default": false
-      },
-      field: {
-        name: t$1('trakttv_source_ignore_watchlisted', 'Source: ignore watchlisted'),
-        description: t$1('trakttv_source_ignore_watchlisted_descr', 'Applies to all TraktTV source feeds (categories, recommendations, search)')
-      }
-    });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakttv_show_tv_progress',
-        type: 'trigger',
-        "default": true
-      },
-      field: {
-        name: Lampa.Lang.translate('trakttv_show_tv_progress')
-      }
-    });
-    if (Lampa.Platform.is('apple_tv') === true) {
-      Lampa.SettingsApi.addParam({
-        component: 'trakt',
-        param: {
-          name: 'trakttv_topshelf',
-          type: 'trigger',
-          "default": false
-        },
-        field: {
-          name: Lampa.Lang.translate('trakttv_topshelf'),
-          description: Lampa.Lang.translate('trakttv_topshelf_descr')
-        }
-      });
-    }
+  }
 
-    // Параметр для ввімкнення/вимкнення відстеження перегляду
+  // ─────────────────────────────────────────────────────
+  //  SUB-COMPONENT — 'trakt_progress'  (Progress settings)
+  // ─────────────────────────────────────────────────────
+
+  function addProgressParams() {
     Lampa.SettingsApi.addParam({
-      component: 'trakt',
+      component: 'trakt_progress',
       param: {
         name: 'trakt_enable_watching',
         type: 'trigger',
@@ -7515,10 +7475,19 @@
         description: Lampa.Lang.translate('trakttv_enable_watching_descr')
       }
     });
-
-    // Параметр для вибору мінімального відсотку перегляду
     Lampa.SettingsApi.addParam({
-      component: 'trakt',
+      component: 'trakt_progress',
+      param: {
+        name: 'trakttv_show_tv_progress',
+        type: 'trigger',
+        "default": true
+      },
+      field: {
+        name: Lampa.Lang.translate('trakttv_show_tv_progress')
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt_progress',
       param: {
         name: 'trakt_min_progress',
         type: 'select',
@@ -7539,347 +7508,120 @@
         description: Lampa.Lang.translate('trakttv_min_progress_threshold_descr')
       }
     });
+  }
 
-    // Параметр для ввімкнення/вимкнення логування
+  // ─────────────────────────────────────────────────────
+  //  SUB-COMPONENT — 'trakt_source'  (Source filters)
+  // ─────────────────────────────────────────────────────
+
+  function addSourceParams() {
     Lampa.SettingsApi.addParam({
-      component: 'trakt',
+      component: 'trakt_source',
       param: {
-        name: 'trakt_enable_logging',
+        name: 'trakt_source_ignore_watched',
         type: 'trigger',
         "default": false
       },
       field: {
-        name: Lampa.Lang.translate('trakttv_enable_logging'),
-        description: Lampa.Lang.translate('trakttv_enable_logging_descr')
+        name: t$1('trakttv_source_ignore_watched', 'Source: ignore watched'),
+        description: t$1('trakttv_source_ignore_watched_descr', 'Applies to all TraktTV source feeds (categories, recommendations, search)')
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt_source',
+      param: {
+        name: 'trakt_source_ignore_watchlisted',
+        type: 'trigger',
+        "default": false
+      },
+      field: {
+        name: t$1('trakttv_source_ignore_watchlisted', 'Source: ignore watchlisted'),
+        description: t$1('trakttv_source_ignore_watchlisted_descr', 'Applies to all TraktTV source feeds (categories, recommendations, search)')
       }
     });
   }
-  function t$1(key, fallback) {
-    if (typeof Lampa === 'undefined' || !Lampa || !Lampa.Lang || typeof Lampa.Lang.translate !== 'function') {
-      return fallback || key;
-    }
-    var translated = Lampa.Lang.translate(key);
-    if (!translated || translated === key) {
-      return fallback || translated || key;
-    }
-    return translated;
-  }
-  function ensureBookmarksSyncAvailable() {
-    if (!Lampa.Storage.get('trakt_token')) {
-      Lampa.Bell.push({
-        text: t$1('trakt_bookmarks_auth_required', 'Login to Trakt.TV first')
-      });
-      return false;
-    }
-    if (!Api$1) {
-      logApiMissing();
-      Lampa.Bell.push({
-        text: t$1('trakt_bookmarks_sync_failed', 'Bookmarks sync failed')
-      });
-      return false;
-    }
-    if (!Lampa.Favorite) {
-      Lampa.Bell.push({
-        text: t$1('trakt_bookmarks_local_unavailable', 'Local bookmarks are unavailable')
-      });
-      return false;
-    }
-    return true;
-  }
-  function getBookmarksSyncMode() {
-    var mode = Lampa.Storage.field('trakt_bookmarks_mode');
-    return mode === 'my_lists' ? 'my_lists' : 'watchlist';
-  }
-  function getSupportedFavoriteTypes() {
-    var types = bookmarksSync && Array.isArray(bookmarksSync.supportedFavoriteTypes) ? bookmarksSync.supportedFavoriteTypes : DEFAULT_BOOKMARKS_SYNC_TYPES;
-    return types.length ? types : DEFAULT_BOOKMARKS_SYNC_TYPES;
-  }
-  function getFavoriteTypeTitle() {
-    var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'book';
-    return t$1("title_".concat(type), type);
-  }
-  function getBookmarksFavoriteTypeValues() {
-    var values = {};
-    getSupportedFavoriteTypes().forEach(function (type) {
-      values[type] = getFavoriteTypeTitle(type);
-    });
-    return values;
-  }
-  function getBookmarksFavoriteType() {
-    var type = (Lampa.Storage.field('trakt_bookmarks_favorite_type') || 'book').toString().trim().toLowerCase();
-    var supportedTypes = getSupportedFavoriteTypes();
-    return supportedTypes.indexOf(type) > -1 ? type : 'book';
-  }
-  function buildProgressBar(percent) {
-    var total = 12;
-    var safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
-    var filled = Math.round(safePercent / 100 * total);
-    return '[' + '#'.repeat(filled) + '-'.repeat(Math.max(0, total - filled)) + ']';
-  }
-  function formatSyncProgressText(operation) {
-    var payload = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var favoriteType = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'book';
-    var percent = Math.max(0, Math.min(100, Number(payload.percent) || 0));
-    var bar = buildProgressBar(percent);
-    var favoriteTypeTitle = getFavoriteTypeTitle(favoriteType);
-    var phaseText = '';
-    switch (payload.phase) {
-      case 'loading_source':
-        phaseText = t$1('trakt_bookmarks_progress_loading_source', 'Loading source') + " (p".concat(payload.page || 1, ")");
-        break;
-      case 'loading_target':
-        phaseText = t$1('trakt_bookmarks_progress_loading_target', 'Loading target') + " (p".concat(payload.page || 1, ")");
-        break;
-      case 'processing_import':
-        phaseText = t$1('trakt_bookmarks_progress_import', 'Importing');
-        break;
-      case 'processing_export':
-        phaseText = t$1('trakt_bookmarks_progress_export', 'Exporting');
-        break;
-      default:
-        phaseText = t$1('trakt_bookmarks_progress_prepare', 'Preparing');
-        break;
-    }
-    var counter = '';
-    if (payload.total) {
-      counter = " ".concat(payload.processed || 0, "/").concat(payload.total);
-    }
-    return "".concat(bar, " ").concat(percent, "% ").concat(phaseText).concat(counter, " \xB7 ").concat(favoriteTypeTitle);
-  }
-  function formatSyncSummary(operation) {
-    var summary = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var favoriteType = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'book';
-    var prefix = operation === 'import' ? t$1('trakt_bookmarks_import_done', 'Import completed') : t$1('trakt_bookmarks_export_done', 'Export completed');
-    var favoriteTypeTitle = getFavoriteTypeTitle(summary.favorite_type || favoriteType);
-    return "".concat(prefix, " (").concat(favoriteTypeTitle, "): ").concat(t$1('trakt_bookmarks_added', 'Added'), " ").concat(summary.added || 0, ", ").concat(t$1('trakt_bookmarks_duplicates', 'Duplicates'), " ").concat(summary.duplicates || 0, ", ").concat(t$1('trakt_bookmarks_skipped_unsupported', 'Skipped'), " ").concat(summary.skipped_unsupported || 0, ", ").concat(t$1('trakt_bookmarks_failed', 'Failed'), " ").concat(summary.failed || 0);
-  }
-  function selectMyList(title, _onSelect) {
-    if (!Api$1) return;
-    Api$1.myLists({
-      page: 1,
-      limit: 100
-    }).then(function (response) {
-      var lists = response && Array.isArray(response.results) ? response.results.filter(function (list) {
-        return !!list.id;
-      }) : [];
-      if (!lists.length) {
-        Lampa.Bell.push({
-          text: t$1('trakt_bookmarks_no_lists', 'No personal lists found')
-        });
-        return;
-      }
-      var items = lists.map(function (list) {
-        var listTitle = list.list_title || list.title || list.name || String(list.id);
-        var itemCount = Number(list.item_count) || 0;
-        return {
-          title: "".concat(listTitle, " (").concat(itemCount, ")"),
-          listId: list.id,
-          listTitle: listTitle
-        };
-      });
-      items.push({
-        title: t$1('cancel', 'Cancel'),
-        cancel: true
-      });
-      Lampa.Select.show({
-        title: title,
-        items: items,
-        onSelect: function onSelect(item) {
-          if (!item || item.cancel) {
-            if (Lampa.Controller) Lampa.Controller.toggle('settings_component');
-            return;
-          }
-          if (Lampa.Controller) Lampa.Controller.toggle('settings_component');
-          _onSelect && _onSelect(item);
-        },
-        onBack: function onBack() {
-          if (Lampa.Controller) Lampa.Controller.toggle('settings_component');
-        }
-      });
-    })["catch"](function () {
-      Lampa.Bell.push({
-        text: t$1('trakt_bookmarks_lists_load_error', 'Failed to load personal lists')
-      });
-    });
-  }
-  function runBookmarksSyncOperation(_x) {
-    return _runBookmarksSyncOperation.apply(this, arguments);
-  }
-  function _runBookmarksSyncOperation() {
-    _runBookmarksSyncOperation = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(operation) {
-      var _ref,
-        _ref$source,
-        source,
-        _ref$target,
-        target,
-        _ref$listId,
-        listId,
-        _ref$favoriteType,
-        favoriteType,
-        resolvedFavoriteType,
-        favoriteTypeTitle,
-        isCanceled,
-        startActionText,
-        startText,
-        summary,
-        _args = arguments,
-        _t,
-        _t2;
-      return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
-          case 0:
-            _ref = _args.length > 1 && _args[1] !== undefined ? _args[1] : {}, _ref$source = _ref.source, source = _ref$source === void 0 ? 'watchlist' : _ref$source, _ref$target = _ref.target, target = _ref$target === void 0 ? 'watchlist' : _ref$target, _ref$listId = _ref.listId, listId = _ref$listId === void 0 ? null : _ref$listId, _ref$favoriteType = _ref.favoriteType, favoriteType = _ref$favoriteType === void 0 ? 'book' : _ref$favoriteType;
-            if (ensureBookmarksSyncAvailable()) {
-              _context.n = 1;
-              break;
-            }
-            return _context.a(2);
-          case 1:
-            if (!isBookmarksSyncRunning) {
-              _context.n = 2;
-              break;
-            }
-            Lampa.Bell.push({
-              text: t$1('trakt_bookmarks_operation_in_progress', 'Bookmarks sync already in progress')
-            });
-            return _context.a(2);
-          case 2:
-            resolvedFavoriteType = getSupportedFavoriteTypes().indexOf(favoriteType) > -1 ? favoriteType : getBookmarksFavoriteType();
-            favoriteTypeTitle = getFavoriteTypeTitle(resolvedFavoriteType);
-            isBookmarksSyncRunning = true;
-            isCanceled = false;
-            startActionText = operation === 'import' ? t$1('trakt_bookmarks_import_start', 'Starting import') : t$1('trakt_bookmarks_export_start', 'Starting export');
-            startText = "".concat(startActionText, ": ").concat(favoriteTypeTitle);
-            Lampa.Loading.start(function () {
-              isCanceled = true;
-            }, startText);
-            _context.p = 3;
-            if (!(operation === 'import')) {
-              _context.n = 5;
-              break;
-            }
-            _context.n = 4;
-            return bookmarksSync.importBookmarks({
-              api: Api$1,
-              favorite: Lampa.Favorite,
-              source: source,
-              listId: listId,
-              favoriteType: resolvedFavoriteType,
-              checkCancel: function checkCancel() {
-                return isCanceled;
-              },
-              onProgress: function onProgress(payload) {
-                Lampa.Loading.setText(formatSyncProgressText(operation, payload, resolvedFavoriteType));
-              }
-            });
-          case 4:
-            _t = _context.v;
-            _context.n = 7;
-            break;
-          case 5:
-            _context.n = 6;
-            return bookmarksSync.exportBookmarks({
-              api: Api$1,
-              favorite: Lampa.Favorite,
-              target: target,
-              listId: listId,
-              favoriteType: resolvedFavoriteType,
-              checkCancel: function checkCancel() {
-                return isCanceled;
-              },
-              onProgress: function onProgress(payload) {
-                Lampa.Loading.setText(formatSyncProgressText(operation, payload, resolvedFavoriteType));
-              }
-            });
-          case 6:
-            _t = _context.v;
-          case 7:
-            summary = _t;
-            Lampa.Bell.push({
-              text: formatSyncSummary(operation, summary, resolvedFavoriteType)
-            });
-            logDebug('Bookmarks sync summary', {
-              operation: operation,
-              summary: summary
-            });
-            _context.n = 9;
-            break;
-          case 8:
-            _context.p = 8;
-            _t2 = _context.v;
-            if (_t2 && _t2.code === 'canceled') {
-              Lampa.Bell.push({
-                text: t$1('trakt_bookmarks_canceled', 'Operation canceled')
-              });
-            } else {
-              Lampa.Bell.push({
-                text: t$1('trakt_bookmarks_sync_failed', 'Bookmarks sync failed')
-              });
-              logError('Bookmarks sync failed', {
-                operation: operation,
-                error: _t2
-              }, {
-                debugOnly: true
-              });
-            }
-          case 9:
-            _context.p = 9;
-            Lampa.Loading.stop();
-            isBookmarksSyncRunning = false;
-            return _context.f(9);
-          case 10:
-            return _context.a(2);
-        }
-      }, _callee, null, [[3, 8, 9, 10]]);
-    }));
-    return _runBookmarksSyncOperation.apply(this, arguments);
-  }
-  function startBookmarksImportFlow() {
-    if (!ensureBookmarksSyncAvailable()) return;
-    var favoriteType = getBookmarksFavoriteType();
-    var favoriteTypeTitle = getFavoriteTypeTitle(favoriteType);
-    if (getBookmarksSyncMode() === 'my_lists') {
-      selectMyList("".concat(t$1('trakt_bookmarks_import_select_list', 'Select source list'), ": ").concat(favoriteTypeTitle), function (item) {
-        runBookmarksSyncOperation('import', {
-          source: 'my_list',
-          listId: item.listId,
-          favoriteType: favoriteType
-        });
-      });
-      return;
-    }
-    runBookmarksSyncOperation('import', {
-      source: 'watchlist',
-      favoriteType: favoriteType
-    });
-  }
-  function startBookmarksExportFlow() {
-    if (!ensureBookmarksSyncAvailable()) return;
-    var favoriteType = getBookmarksFavoriteType();
-    var favoriteTypeTitle = getFavoriteTypeTitle(favoriteType);
-    if (getBookmarksSyncMode() === 'my_lists') {
-      selectMyList("".concat(t$1('trakt_bookmarks_export_select_list', 'Select target list'), ": ").concat(favoriteTypeTitle), function (item) {
-        runBookmarksSyncOperation('export', {
-          target: 'my_list',
-          listId: item.listId,
-          favoriteType: favoriteType
-        });
-      });
-      return;
-    }
-    runBookmarksSyncOperation('export', {
-      target: 'watchlist',
-      favoriteType: favoriteType
-    });
-  }
+
+  // ─────────────────────────────────────────────────────
+  //  DEVICE AUTH — extracted from inline for reuse
+  // ─────────────────────────────────────────────────────
+
   var currentPollTimeoutId = null;
   var visibilityHandler = null;
   var pollInFlight = false;
   var checkNowHandler = null;
+  function startDeviceAuth() {
+    if (Lampa.Storage.get('trakt_token')) return;
+    if (!Api$1) {
+      logApiMissing();
+      return;
+    }
+    (Api$1 && Api$1.auth.device.login()).then(function (data) {
+      if (!data || !data.user_code || !data.verification_url) {
+        Lampa.Bell.push({
+          text: Lampa.Lang.translate('trakttvAuthError')
+        });
+        return;
+      }
+      var safeVerification = String(data.verification_url || '');
+      var safeUserCode = String(data.user_code || '');
+      var activateUrl = 'https://trakt.tv/activate/' + safeUserCode;
+      var qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=' + encodeURIComponent(activateUrl);
+      var modal = $(['<div class="about trakt-device-auth">', '  <div class="trakt-device-auth__inner">', '    <div class="trakt-device-auth__qr-col">', '      <div class="trakt-device-auth__qr-container">', '        <a href="' + activateUrl + '" target="_blank" rel="noopener noreferrer" class="trakt-device-auth__qr-link">', '          <img src="' + qrCodeUrl + '" alt="Trakt.TV QR Code" class="trakt-device-auth__qr-image">', '        </a>', '        <div class="trakt-device-auth__qr-caption">' + Lampa.Lang.translate('trakttv_scan_qr_code') + '</div>', '      </div>', '    </div>', '    <div class="trakt-device-auth__info-col">', '      <div class="about__text trakt-device-auth__verification">' + safeVerification + '</div>', '      <div class="about__text trakt-device-auth__code">' + Lampa.Lang.translate('trakttv_code') + ': <strong>' + safeUserCode + '</strong></div>', '      <div class="modal__button selector trakt-check-btn">' + Lampa.Lang.translate('trakttv_check_now') + '</div>', '    </div>', '  </div>', '</div>'].join(''));
+      modal.find('.trakt-device-auth__qr-image').on('error', function () {
+        modal.find('.trakt-device-auth__qr-container').addClass('trakt-device-auth__qr-container--hidden');
+      });
+      Lampa.Modal.open({
+        title: Lampa.Lang.translate('trakttv_auth'),
+        html: modal,
+        size: Lampa.Platform.screen('mobile') ? 'medium' : 'small',
+        select: modal.find('.trakt-check-btn')[0],
+        onSelect: function onSelect() {
+          if (checkNowHandler) checkNowHandler();
+        },
+        scroll: {
+          nopadding: true
+        },
+        onBack: function onBack() {
+          if (currentPollTimeoutId) {
+            clearTimeout(currentPollTimeoutId);
+            currentPollTimeoutId = null;
+          }
+          Lampa.Storage.set('trakt_active_device_auth', false);
+          Lampa.Storage.set('trakt_active_device_auth_started_at', null);
+          Lampa.Modal.close();
+          Lampa.Controller.toggle('settings_component');
+        }
+      });
+      if (Lampa.Storage.get('trakt_active_device_auth') === true) {
+        var startedAt = Number(Lampa.Storage.get('trakt_active_device_auth_started_at') || 0);
+        var isStale = !startedAt || Date.now() - startedAt > 20 * 60 * 1000;
+        if (isStale) {
+          Lampa.Storage.set('trakt_active_device_auth', false);
+          Lampa.Storage.set('trakt_active_device_auth_started_at', null);
+        } else {
+          logDebug('Device auth already active, skip duplicate start');
+          return;
+        }
+      }
+      Lampa.Storage.set('trakt_active_device_auth', true);
+      Lampa.Storage.set('trakt_active_device_auth_started_at', Date.now());
+      pollAuth(data, Lampa.Modal);
+    })["catch"](function (error) {
+      logError('Device auth init failed', error, {
+        debugOnly: true
+      });
+      Lampa.Bell.push({
+        text: Lampa.Lang.translate('trakttvAuthError')
+      });
+    });
+  }
 
-  // Centralized error handling and polling stop
-  function handlePollingError(modalInstance, messageKey, defaultMessage, code) {
-    var stop = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : true;
+  // ─────────────────────────────────────────────────────
+  //  POLLING — unchanged from original
+  // ─────────────────────────────────────────────────────
+
+  function handlePollingError(modalInstance, messageKey, defaultMessage, code, stop) {
+    if (stop === undefined) stop = true;
     logWarn('Device auth polling stopped', {
       code: code
     }, {
@@ -7906,8 +7648,6 @@
       text: Lampa.Lang.translate(messageKey) || defaultMessage
     });
   }
-
-  // Function to handle successful authentication
   function handleAuthSuccess(modalInstance, response) {
     logDebug('Device auth succeeded');
     if (currentPollTimeoutId) {
@@ -7954,8 +7694,8 @@
     }
     return '';
   }
-  function parseRetryAfterMs() {
-    var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  function parseRetryAfterMs(headers) {
+    if (!headers) headers = {};
     var value = headers && headers['retry-after'];
     if (!value) return null;
     var numeric = Number(value);
@@ -7968,8 +7708,6 @@
     }
     return null;
   }
-
-  // Окрема функція для poll авторизації
   function pollAuth(data, modalInstance) {
     var originalIntervalSec = Number(data && data.interval);
     var originalIntervalMs = Number.isFinite(originalIntervalSec) && originalIntervalSec > 0 ? originalIntervalSec * 1000 : 5000;
@@ -7985,8 +7723,6 @@
       stepMs: currentPollingStepMs,
       expiresMs: expiresMs
     });
-
-    // Clear any existing poll timeout before starting a new one
     if (currentPollTimeoutId) {
       clearTimeout(currentPollTimeoutId);
       currentPollTimeoutId = null;
@@ -7999,8 +7735,6 @@
     };
     var executePoll = function executePoll() {
       currentPollTimeoutId = null;
-
-      // Check for timeout BEFORE making the API call
       if (Date.now() - startTime >= expiresMs) {
         logWarn('Device auth polling timeout', {
           expiresMs: expiresMs
@@ -8091,8 +7825,6 @@
         }
       });
     };
-
-    // Wire up "Check now" via onSelect callback
     checkNowHandler = function checkNowHandler() {
       if (pollInFlight) return;
       if (currentPollTimeoutId) {
@@ -8101,8 +7833,6 @@
       }
       executePoll();
     };
-
-    // Stop polling when tab is hidden; resume when visible again
     if (visibilityHandler) {
       document.removeEventListener('visibilitychange', visibilityHandler);
     }
@@ -8113,7 +7843,6 @@
           currentPollTimeoutId = null;
         }
       } else {
-        // Tab visible again — restart a normal poll cycle
         if (!currentPollTimeoutId && Lampa.Storage.get('trakt_active_device_auth') === true) {
           currentPollingStepMs = originalIntervalMs;
           scheduleNext(originalIntervalMs);
@@ -8121,9 +7850,315 @@
       }
     };
     document.addEventListener('visibilitychange', visibilityHandler);
-
-    // First poll after interval — never immediately
     scheduleNext(originalIntervalMs);
+  }
+
+  // ─────────────────────────────────────────────────────
+  //  HELPERS — translation, bookmarks sync, etc.
+  // ─────────────────────────────────────────────────────
+
+  function t$1(key, fallback) {
+    if (typeof Lampa === 'undefined' || !Lampa || !Lampa.Lang || typeof Lampa.Lang.translate !== 'function') {
+      return fallback || key;
+    }
+    var translated = Lampa.Lang.translate(key);
+    if (!translated || translated === key) {
+      return fallback || translated || key;
+    }
+    return translated;
+  }
+  function ensureBookmarksSyncAvailable() {
+    if (!Lampa.Storage.get('trakt_token')) {
+      Lampa.Bell.push({
+        text: t$1('trakt_bookmarks_auth_required', 'Login to Trakt.TV first')
+      });
+      return false;
+    }
+    if (!Api$1) {
+      logApiMissing();
+      Lampa.Bell.push({
+        text: t$1('trakt_bookmarks_sync_failed', 'Bookmarks sync failed')
+      });
+      return false;
+    }
+    if (!Lampa.Favorite) {
+      Lampa.Bell.push({
+        text: t$1('trakt_bookmarks_local_unavailable', 'Local bookmarks are unavailable')
+      });
+      return false;
+    }
+    return true;
+  }
+  function getBookmarksSyncMode() {
+    var mode = Lampa.Storage.field('trakt_bookmarks_mode');
+    return mode === 'my_lists' ? 'my_lists' : 'watchlist';
+  }
+  function getSupportedFavoriteTypes() {
+    var types = bookmarksSync && Array.isArray(bookmarksSync.supportedFavoriteTypes) ? bookmarksSync.supportedFavoriteTypes : DEFAULT_BOOKMARKS_SYNC_TYPES;
+    return types.length ? types : DEFAULT_BOOKMARKS_SYNC_TYPES;
+  }
+  function getFavoriteTypeTitle(type) {
+    if (type === undefined) type = 'book';
+    return t$1('title_' + type, type);
+  }
+  function getBookmarksFavoriteTypeValues() {
+    var values = {};
+    getSupportedFavoriteTypes().forEach(function (type) {
+      values[type] = getFavoriteTypeTitle(type);
+    });
+    return values;
+  }
+  function getBookmarksFavoriteType() {
+    var type = (Lampa.Storage.field('trakt_bookmarks_favorite_type') || 'book').toString().trim().toLowerCase();
+    var supportedTypes = getSupportedFavoriteTypes();
+    return supportedTypes.indexOf(type) > -1 ? type : 'book';
+  }
+  function buildProgressBar(percent) {
+    var total = 12;
+    var safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
+    var filled = Math.round(safePercent / 100 * total);
+    return '[' + '#'.repeat(filled) + '-'.repeat(Math.max(0, total - filled)) + ']';
+  }
+  function formatSyncProgressText(operation, payload, favoriteType) {
+    if (favoriteType === undefined) favoriteType = 'book';
+    var percent = Math.max(0, Math.min(100, Number(payload.percent) || 0));
+    var bar = buildProgressBar(percent);
+    var favoriteTypeTitle = getFavoriteTypeTitle(favoriteType);
+    var phaseText = '';
+    switch (payload.phase) {
+      case 'loading_source':
+        phaseText = t$1('trakt_bookmarks_progress_loading_source', 'Loading source') + ' (p' + (payload.page || 1) + ')';
+        break;
+      case 'loading_target':
+        phaseText = t$1('trakt_bookmarks_progress_loading_target', 'Loading target') + ' (p' + (payload.page || 1) + ')';
+        break;
+      case 'processing_import':
+        phaseText = t$1('trakt_bookmarks_progress_import', 'Importing');
+        break;
+      case 'processing_export':
+        phaseText = t$1('trakt_bookmarks_progress_export', 'Exporting');
+        break;
+      default:
+        phaseText = t$1('trakt_bookmarks_progress_prepare', 'Preparing');
+        break;
+    }
+    var counter = '';
+    if (payload.total) {
+      counter = ' ' + (payload.processed || 0) + '/' + payload.total;
+    }
+    return bar + ' ' + percent + '% ' + phaseText + counter + ' · ' + favoriteTypeTitle;
+  }
+  function formatSyncSummary(operation, summary, favoriteType) {
+    if (favoriteType === undefined) favoriteType = 'book';
+    var prefix = operation === 'import' ? t$1('trakt_bookmarks_import_done', 'Import completed') : t$1('trakt_bookmarks_export_done', 'Export completed');
+    var favoriteTypeTitle = getFavoriteTypeTitle(summary.favorite_type || favoriteType);
+    return prefix + ' (' + favoriteTypeTitle + '): ' + t$1('trakt_bookmarks_added', 'Added') + ' ' + (summary.added || 0) + ', ' + t$1('trakt_bookmarks_duplicates', 'Duplicates') + ' ' + (summary.duplicates || 0) + ', ' + t$1('trakt_bookmarks_skipped_unsupported', 'Skipped') + ' ' + (summary.skipped_unsupported || 0) + ', ' + t$1('trakt_bookmarks_failed', 'Failed') + ' ' + (summary.failed || 0);
+  }
+  function selectMyList(title, _onSelect) {
+    if (!Api$1) return;
+    Api$1.myLists({
+      page: 1,
+      limit: 100
+    }).then(function (response) {
+      var lists = response && Array.isArray(response.results) ? response.results.filter(function (list) {
+        return !!list.id;
+      }) : [];
+      if (!lists.length) {
+        Lampa.Bell.push({
+          text: t$1('trakt_bookmarks_no_lists', 'No personal lists found')
+        });
+        return;
+      }
+      var items = lists.map(function (list) {
+        var listTitle = list.list_title || list.title || list.name || String(list.id);
+        var itemCount = Number(list.item_count) || 0;
+        return {
+          title: listTitle + ' (' + itemCount + ')',
+          listId: list.id,
+          listTitle: listTitle
+        };
+      });
+      items.push({
+        title: t$1('cancel', 'Cancel'),
+        cancel: true
+      });
+      Lampa.Select.show({
+        title: title,
+        items: items,
+        onSelect: function onSelect(item) {
+          if (!item || item.cancel) {
+            if (Lampa.Controller) Lampa.Controller.toggle('settings_component');
+            return;
+          }
+          if (Lampa.Controller) Lampa.Controller.toggle('settings_component');
+          _onSelect && _onSelect(item);
+        },
+        onBack: function onBack() {
+          if (Lampa.Controller) Lampa.Controller.toggle('settings_component');
+        }
+      });
+    })["catch"](function () {
+      Lampa.Bell.push({
+        text: t$1('trakt_bookmarks_lists_load_error', 'Failed to load personal lists')
+      });
+    });
+  }
+  function runBookmarksSyncOperation(_x, _x2) {
+    return _runBookmarksSyncOperation.apply(this, arguments);
+  }
+  function _runBookmarksSyncOperation() {
+    _runBookmarksSyncOperation = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(operation, opts) {
+      var source, target, listId, favoriteType, resolvedFavoriteType, favoriteTypeTitle, isCanceled, startActionText, startText, summary, _t, _t2;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            if (opts === undefined) opts = {};
+            source = opts.source || 'watchlist';
+            target = opts.target || 'watchlist';
+            listId = opts.listId || null;
+            favoriteType = opts.favoriteType || 'book';
+            if (ensureBookmarksSyncAvailable()) {
+              _context.n = 1;
+              break;
+            }
+            return _context.a(2);
+          case 1:
+            if (!isBookmarksSyncRunning) {
+              _context.n = 2;
+              break;
+            }
+            Lampa.Bell.push({
+              text: t$1('trakt_bookmarks_operation_in_progress', 'Bookmarks sync already in progress')
+            });
+            return _context.a(2);
+          case 2:
+            resolvedFavoriteType = getSupportedFavoriteTypes().indexOf(favoriteType) > -1 ? favoriteType : getBookmarksFavoriteType();
+            favoriteTypeTitle = getFavoriteTypeTitle(resolvedFavoriteType);
+            isBookmarksSyncRunning = true;
+            isCanceled = false;
+            startActionText = operation === 'import' ? t$1('trakt_bookmarks_import_start', 'Starting import') : t$1('trakt_bookmarks_export_start', 'Starting export');
+            startText = startActionText + ': ' + favoriteTypeTitle;
+            Lampa.Loading.start(function () {
+              isCanceled = true;
+            }, startText);
+            _context.p = 3;
+            if (!(operation === 'import')) {
+              _context.n = 5;
+              break;
+            }
+            _context.n = 4;
+            return bookmarksSync.importBookmarks({
+              api: Api$1,
+              favorite: Lampa.Favorite,
+              source: source,
+              listId: listId,
+              favoriteType: resolvedFavoriteType,
+              checkCancel: function checkCancel() {
+                return isCanceled;
+              },
+              onProgress: function onProgress(payload) {
+                Lampa.Loading.setText(formatSyncProgressText(operation, payload, resolvedFavoriteType));
+              }
+            });
+          case 4:
+            _t = _context.v;
+            _context.n = 7;
+            break;
+          case 5:
+            _context.n = 6;
+            return bookmarksSync.exportBookmarks({
+              api: Api$1,
+              favorite: Lampa.Favorite,
+              target: target,
+              listId: listId,
+              favoriteType: resolvedFavoriteType,
+              checkCancel: function checkCancel() {
+                return isCanceled;
+              },
+              onProgress: function onProgress(payload) {
+                Lampa.Loading.setText(formatSyncProgressText(operation, payload, resolvedFavoriteType));
+              }
+            });
+          case 6:
+            _t = _context.v;
+          case 7:
+            summary = _t;
+            Lampa.Bell.push({
+              text: formatSyncSummary(operation, summary, resolvedFavoriteType)
+            });
+            logDebug('Bookmarks sync summary', {
+              operation: operation,
+              summary: summary
+            });
+            _context.n = 9;
+            break;
+          case 8:
+            _context.p = 8;
+            _t2 = _context.v;
+            if (_t2 && _t2.code === 'canceled') {
+              Lampa.Bell.push({
+                text: t$1('trakt_bookmarks_canceled', 'Operation canceled')
+              });
+            } else {
+              Lampa.Bell.push({
+                text: t$1('trakt_bookmarks_sync_failed', 'Bookmarks sync failed')
+              });
+              logError('Bookmarks sync failed', {
+                operation: operation,
+                error: _t2
+              }, {
+                debugOnly: true
+              });
+            }
+          case 9:
+            _context.p = 9;
+            Lampa.Loading.stop();
+            isBookmarksSyncRunning = false;
+            return _context.f(9);
+          case 10:
+            return _context.a(2);
+        }
+      }, _callee, null, [[3, 8, 9, 10]]);
+    }));
+    return _runBookmarksSyncOperation.apply(this, arguments);
+  }
+  function startBookmarksImportFlow() {
+    if (!ensureBookmarksSyncAvailable()) return;
+    var favoriteType = getBookmarksFavoriteType();
+    var favoriteTypeTitle = getFavoriteTypeTitle(favoriteType);
+    if (getBookmarksSyncMode() === 'my_lists') {
+      selectMyList(t$1('trakt_bookmarks_import_select_list', 'Select source list') + ': ' + favoriteTypeTitle, function (item) {
+        runBookmarksSyncOperation('import', {
+          source: 'my_list',
+          listId: item.listId,
+          favoriteType: favoriteType
+        });
+      });
+      return;
+    }
+    runBookmarksSyncOperation('import', {
+      source: 'watchlist',
+      favoriteType: favoriteType
+    });
+  }
+  function startBookmarksExportFlow() {
+    if (!ensureBookmarksSyncAvailable()) return;
+    var favoriteType = getBookmarksFavoriteType();
+    var favoriteTypeTitle = getFavoriteTypeTitle(favoriteType);
+    if (getBookmarksSyncMode() === 'my_lists') {
+      selectMyList(t$1('trakt_bookmarks_export_select_list', 'Select target list') + ': ' + favoriteTypeTitle, function (item) {
+        runBookmarksSyncOperation('export', {
+          target: 'my_list',
+          listId: item.listId,
+          favoriteType: favoriteType
+        });
+      });
+      return;
+    }
+    runBookmarksSyncOperation('export', {
+      target: 'watchlist',
+      favoriteType: favoriteType
+    });
   }
   var config = {
     main: main
@@ -8684,7 +8719,7 @@
             _context5.p = 3;
             doFinish = /*#__PURE__*/function () {
               var _ref9 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
-                var type, tmdbId, search, e, traktId, res, _tmdbId, _search, _e, traktShowId, season, episode, seasons, _e2, last, titleCandidates, found, _iterator3, _step3, s, _iterator4, _step4, ep, _iterator5, _step5, title, epHash, _e3, _res, _t2, _t3, _t4;
+                var type, tmdbId, search, e, traktId, res, _tmdbId, _search, _e, traktShowId, season, episode, seasons, _e2, last, titleCandidates, found, _iterator5, _step5, s, _iterator6, _step6, ep, _iterator7, _step7, title, epHash, _e3, _res, _t2, _t3, _t4;
                 return _regenerator().w(function (_context4) {
                   while (1) switch (_context4.n) {
                     case 0:
@@ -8760,39 +8795,39 @@
                       // Try map by timeline hash using all known title variants.
                       last = Lampa.Storage.get('trakt_last_card', media) || media;
                       titleCandidates = collectTitleCandidates(media, last);
-                      _iterator3 = _createForOfIteratorHelper(seasons);
+                      _iterator5 = _createForOfIteratorHelper(seasons);
                       _context4.p = 9;
-                      _iterator3.s();
+                      _iterator5.s();
                     case 10:
-                      if ((_step3 = _iterator3.n()).done) {
+                      if ((_step5 = _iterator5.n()).done) {
                         _context4.n = 27;
                         break;
                       }
-                      s = _step3.value;
+                      s = _step5.value;
                       if (s.episodes) {
                         _context4.n = 11;
                         break;
                       }
                       return _context4.a(3, 26);
                     case 11:
-                      _iterator4 = _createForOfIteratorHelper(s.episodes);
+                      _iterator6 = _createForOfIteratorHelper(s.episodes);
                       _context4.p = 12;
-                      _iterator4.s();
+                      _iterator6.s();
                     case 13:
-                      if ((_step4 = _iterator4.n()).done) {
+                      if ((_step6 = _iterator6.n()).done) {
                         _context4.n = 22;
                         break;
                       }
-                      ep = _step4.value;
-                      _iterator5 = _createForOfIteratorHelper(titleCandidates);
+                      ep = _step6.value;
+                      _iterator7 = _createForOfIteratorHelper(titleCandidates);
                       _context4.p = 14;
-                      _iterator5.s();
+                      _iterator7.s();
                     case 15:
-                      if ((_step5 = _iterator5.n()).done) {
+                      if ((_step7 = _iterator7.n()).done) {
                         _context4.n = 17;
                         break;
                       }
-                      title = _step5.value;
+                      title = _step7.value;
                       epHash = Lampa.Utils.hash([s.number, s.number > 10 ? ':' : '', ep.number, title].join(''));
                       if (!(media.hash && epHash === media.hash)) {
                         _context4.n = 16;
@@ -8811,10 +8846,10 @@
                     case 18:
                       _context4.p = 18;
                       _t2 = _context4.v;
-                      _iterator5.e(_t2);
+                      _iterator7.e(_t2);
                     case 19:
                       _context4.p = 19;
-                      _iterator5.f();
+                      _iterator7.f();
                       return _context4.f(19);
                     case 20:
                       if (!found) {
@@ -8831,10 +8866,10 @@
                     case 23:
                       _context4.p = 23;
                       _t3 = _context4.v;
-                      _iterator4.e(_t3);
+                      _iterator6.e(_t3);
                     case 24:
                       _context4.p = 24;
-                      _iterator4.f();
+                      _iterator6.f();
                       return _context4.f(24);
                     case 25:
                       if (!found) {
@@ -8851,10 +8886,10 @@
                     case 28:
                       _context4.p = 28;
                       _t4 = _context4.v;
-                      _iterator3.e(_t4);
+                      _iterator5.e(_t4);
                     case 29:
                       _context4.p = 29;
-                      _iterator3.f();
+                      _iterator5.f();
                       return _context4.f(29);
                     case 30:
                       if (!(!season || !episode)) {
@@ -8965,13 +9000,15 @@
 
       // Слідкуємо за оновленнями Timeline
       if (window.Lampa && Lampa.Timeline && Lampa.Timeline.listener) {
-        Lampa.Timeline.listener.follow('update', this.processTimelineUpdate.bind(this));
+        this._onTimelineUpdate = this.processTimelineUpdate.bind(this);
+        Lampa.Timeline.listener.follow('update', this._onTimelineUpdate);
         slog('Timeline listener attached');
       }
 
       // Слідкуємо за стартом програвача для збереження поточної картки
       if (window.Lampa && Lampa.Player && Lampa.Player.listener) {
-        Lampa.Player.listener.follow('start', this.onPlayerStart.bind(this));
+        this._onPlayerStart = this.onPlayerStart.bind(this);
+        Lampa.Player.listener.follow('start', this._onPlayerStart);
         slog('Player listener attached');
       }
     },
@@ -9279,6 +9316,69 @@
       }
       slog('No matching episode found');
       return null;
+    },
+    /**
+     * Очищує ресурси модуля: зупиняє таймери, очищає кеш та знімає слухачі подій
+     */
+    destroy: function destroy() {
+      isInitialized$1 = false;
+      isAddingShowToWatching = false;
+
+      // Clear all pending intent timers
+      var _iterator3 = _createForOfIteratorHelper(intentTimers),
+        _step3;
+      try {
+        for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+          var _step3$value = _slicedToArray(_step3.value, 2),
+            timerId = _step3$value[1];
+          clearTimeout(timerId);
+        }
+      } catch (err) {
+        _iterator3.e(err);
+      } finally {
+        _iterator3.f();
+      }
+      intentTimers.clear();
+
+      // Clear caches
+      completionCache.clear();
+      hashMetaCache.clear();
+
+      // Clear lock queues — resolve all pending locks to prevent hanging
+      var _iterator4 = _createForOfIteratorHelper(lockQueues),
+        _step4;
+      try {
+        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+          var _step4$value = _slicedToArray(_step4.value, 2),
+            queue = _step4$value[1];
+          queue.forEach(function (resolve) {
+            return resolve();
+          });
+        }
+      } catch (err) {
+        _iterator4.e(err);
+      } finally {
+        _iterator4.f();
+      }
+      lockQueues.clear();
+
+      // Clear request tracking
+      Object.keys(requestInProgress).forEach(function (key) {
+        return delete requestInProgress[key];
+      });
+
+      // Remove Timeline listener
+      if (this._onTimelineUpdate && window.Lampa && Lampa.Timeline && Lampa.Timeline.listener && Lampa.Timeline.listener.remove) {
+        Lampa.Timeline.listener.remove('update', this._onTimelineUpdate);
+        delete this._onTimelineUpdate;
+      }
+
+      // Remove Player listener
+      if (this._onPlayerStart && window.Lampa && Lampa.Player && Lampa.Player.listener && Lampa.Player.listener.remove) {
+        Lampa.Player.listener.remove('start', this._onPlayerStart);
+        delete this._onPlayerStart;
+      }
+      slog('watching.destroy');
     }
   };
 
@@ -9357,25 +9457,38 @@
         return;
       }
       isInitialized = true;
+      this._cleanups = [];
 
       // Следим за готовностью приложения
       if (window.appready) this.onAppReady();else {
-        Lampa.Listener.follow('app', function (e) {
+        var _appHandler = function _appHandler(e) {
           if (e.type === 'ready') _this.onAppReady();
+        };
+        Lampa.Listener.follow('app', _appHandler);
+        this._cleanups.push(function () {
+          return Lampa.Listener.remove('app', _appHandler);
         });
       }
 
       // Додаємо кнопку watchlist на картку
-      Lampa.Listener.follow('full', function (e) {
+      var _fullHandler = function _fullHandler(e) {
         if (e.type === 'complite' && Lampa.Storage.get('trakt_token')) {
           _this.onFullCardReady(e);
         }
+      };
+      Lampa.Listener.follow('full', _fullHandler);
+      this._cleanups.push(function () {
+        return Lampa.Listener.remove('full', _fullHandler);
       });
-      Lampa.Listener.follow('line', function (e) {
+      var _lineHandler = function _lineHandler(e) {
         if (!e || !e.type) return;
         if (e.type === 'append' || e.type === 'visible' || e.type === 'toggle') {
           decorateUpnextLine(e);
         }
+      };
+      Lampa.Listener.follow('line', _lineHandler);
+      this._cleanups.push(function () {
+        return Lampa.Listener.remove('line', _lineHandler);
       });
 
       // Переадресація завершальних подій програвача на idempotent intent
@@ -9429,14 +9542,39 @@
             });
           }
         };
-        Lampa.Player.listener.follow('ended', routeFinishIntent);
-        Lampa.Player.listener.follow('stop', routeFinishIntent);
-        Lampa.Player.listener.follow('visibility', function (e) {
+        var _visibilityHandler = function _visibilityHandler(e) {
           if (e && e.hidden) routeFinishIntent({
             type: 'hidden'
           });
+        };
+        Lampa.Player.listener.follow('ended', routeFinishIntent);
+        Lampa.Player.listener.follow('stop', routeFinishIntent);
+        Lampa.Player.listener.follow('visibility', _visibilityHandler);
+        this._cleanups.push(function () {
+          return Lampa.Player.listener.remove('ended', routeFinishIntent);
+        });
+        this._cleanups.push(function () {
+          return Lampa.Player.listener.remove('stop', routeFinishIntent);
+        });
+        this._cleanups.push(function () {
+          return Lampa.Player.listener.remove('visibility', _visibilityHandler);
         });
       }
+    },
+    /**
+     * Видаляє всі обробники подій та скидає стан ініціалізації
+     * Дозволяє clean re-init without listener duplication
+     */
+    destroy: function destroy() {
+      if (this._cleanups && this._cleanups.length) {
+        for (var i = 0; i < this._cleanups.length; i++) {
+          try {
+            this._cleanups[i]();
+          } catch (e) {}
+        }
+        this._cleanups = [];
+      }
+      isInitialized = false;
     },
     /**
      * Обробник події готовності додатку
@@ -11655,9 +11793,10 @@
       return plugin && plugin.name === pluginName && plugin.component === 'trakt_context_lists';
     });
     if (exists) return;
-    Lampa.Manifest.plugins = {
+    Lampa.Manifest.plugins = Array.isArray(Lampa.Manifest.plugins) ? Lampa.Manifest.plugins : [];
+    Lampa.Manifest.plugins.push({
       type: 'video',
-      version: '3.0.0',
+      version: '3.0.1',
       name: pluginName,
       component: 'trakt_context_lists',
       onContextMenu: function onContextMenu() {
@@ -11675,7 +11814,7 @@
           });
         }, 0);
       }
-    };
+    });
   }
   function initTraktHeadButton() {
     if (typeof Lampa === 'undefined' || !Lampa.Head) return;
@@ -11687,6 +11826,13 @@
     var button = Lampa.Head.addIcon("<span class=\"trakt-head-icon\">".concat(iconSvg, "</span>"), openTraktSettings);
     button.addClass('trakt-head-action');
     window.trakt_head_button = button;
+
+    // Move before full--screen button in header
+    var headEl = Lampa.Head.render ? Lampa.Head.render() : null;
+    if (headEl && headEl.find) {
+      var fs = headEl.find('.full--screen');
+      if (fs.length) button.insertBefore(fs);
+    }
     var scheduleUpdate = function scheduleUpdate() {
       var delay = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
       if (window.trakt_head_status_timer) clearTimeout(window.trakt_head_status_timer);
@@ -11710,15 +11856,6 @@
       if (Lampa.Controller) Lampa.Controller.toggle('settings');
       setTimeout(function () {
         if (Lampa.Settings && typeof Lampa.Settings.create === 'function') {
-          // ВАЖЛИВО: від'єднуємо main.render перед Settings.create,
-          // щоб body.empty() всередині create не знищив jQuery event handlers
-          // на папці Extensions (data-component="plugins")
-          if (Lampa.Settings.main) {
-            var mainView = Lampa.Settings.main();
-            if (mainView && mainView.render) {
-              mainView.render().detach();
-            }
-          }
           Lampa.Settings.create('trakt');
         }
       }, 0);
