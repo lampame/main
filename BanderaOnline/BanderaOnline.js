@@ -892,7 +892,7 @@
         return /(^|\/\/)([^\/]*\.)?zetvideo\.[^\/]+(\/|$)/i.test(url || '');
       }
       function wrapStreamProxy(url) {
-        var base = 'https://lampame-streamproxyinternal.hf.space/m3u8-proxy?url=';
+        var base = 'https://proxy.m7-club.com/?url=';
         if (url.indexOf(base) === 0) return url;
         return base + url;
       }
