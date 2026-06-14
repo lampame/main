@@ -6465,7 +6465,7 @@
       if (!menuItem) return;
       var shouldShow = Lampa.Storage.get(key) === true;
       var alreadyAdded = menuItem.parent().length > 0;
-      if (shouldShow && !alreadyAdded) menuList.find('[data-component="interface"]').before(menuItem);
+      if (shouldShow && !alreadyAdded) menuList.append(menuItem);
       if (!shouldShow && alreadyAdded) menuItem.remove();
     }
     var combineButton = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(menuTitle, "</div>\n    </li>"));
@@ -6507,7 +6507,7 @@
         }
       });
     });
-    menuList.find('[data-component="interface"]').before(combineButton);
+    menuList.append(combineButton);
 
     // Перевіряємо кожен елемент локального сховища і додаємо відповідні пункти меню
     items.forEach(function (item) {
