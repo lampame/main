@@ -3893,6 +3893,19 @@
    * @param {function} onerror
    */
   function full(params, oncomplite, onerror) {
+    // Синхронізація Activity.id з card.id після завантаження повної картки.
+    // Lampa в full.js встановлює object.card = data.movie, але не оновлює object.id,
+    // через що Activity.active().id відрізняється від Activity.active().card.id.
+    // Обгортаємо oncomplite, щоб виправити це після обробки результату Lampa.
+    // kinobaza_id зберігається окремо в card.kinobaza_id — він не зачіпається.
+    var origOncomplite = oncomplite;
+    oncomplite = function oncomplite(result) {
+      origOncomplite(result);
+      if (result && result.movie && result.movie.id) {
+        params.id = result.movie.id;
+      }
+    };
+
     // Пріоритет: slug → imdb_id → card.slug → card.imdb_id → card.original_title/card.original_name
     var card = params.card || {};
     var lookupKey = params.slug || params.imdb_id || card.slug || card.imdb_id || '';
