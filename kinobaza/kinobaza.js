@@ -692,9 +692,15 @@
    */
   function getPerson$1(slug) {
     return new Promise(function (resolve, reject) {
-      get$1('/persons/' + encodeURIComponent(slug), {
+      var params = {
         include_user_links: 1
-      }, resolve, reject);
+      };
+      var token = storage.getToken();
+      if (token) {
+        getAuth('/persons/' + encodeURIComponent(slug), params, resolve, reject);
+      } else {
+        get$1('/persons/' + encodeURIComponent(slug), params, resolve, reject);
+      }
     });
   }
 
@@ -6807,15 +6813,32 @@
     var u = buildUrl('/persons/' + encodeURIComponent(slug), {
       include_user_links: 1
     });
-    network.silent(u, function (json) {
-      if (json && json.id) {
-        resolve(json);
-      } else {
-        if (reject) reject();
-      }
-    }, function (a, c) {
-      if (reject) reject(a, c);
-    }, false, {});
+    var token = storage.getToken();
+    if (token) {
+      authNetwork.silent(u, function (json) {
+        if (json && json.id) {
+          resolve(json);
+        } else {
+          if (reject) reject();
+        }
+      }, function (a, c) {
+        if (reject) reject(a, c);
+      }, false, {
+        headers: {
+          Authorization: 'Bearer ' + token
+        }
+      });
+    } else {
+      network.silent(u, function (json) {
+        if (json && json.id) {
+          resolve(json);
+        } else {
+          if (reject) reject();
+        }
+      }, function (a, c) {
+        if (reject) reject(a, c);
+      }, false, {});
+    }
   }
 
   /**
