@@ -328,6 +328,19 @@
   }
 
   /**
+   * Отримати ID користувача КіноБази (збережений з /me при логіні)
+   * @returns {number}
+   */
+  function getUserId() {
+    try {
+      var data = Lampa.Storage.get('kinobaza_user_data', '{}');
+      return data && _typeof(data) === 'object' && data.id ? data.id : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /**
    * Зареєструвати переклади
    *
    * ДОДАЄМО ТІЛЬКИ специфічні для КіноБази ключі.
@@ -519,6 +532,7 @@
     setToken: setToken,
     removeToken: removeToken,
     hasToken: hasToken,
+    getUserId: getUserId,
     registerTranslations: registerTranslations,
     TOKEN_KEY: TOKEN_KEY,
     getActiveProfileId: getActiveProfileId,
@@ -641,6 +655,19 @@
     var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     return new Promise(function (resolve, reject) {
       get$1('/titles', params, resolve, reject);
+    });
+  }
+
+  /**
+   * GET /titles — список тайтлів з пагінацією (авторизований)
+   * Використовується для user-specific списків (show_my, list_type для закладок)
+   * @param {object} params
+   * @returns {Promise<{total: number, data: [k6.d0]}>}
+   */
+  function getTitlesAuth() {
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    return new Promise(function (resolve, reject) {
+      getAuth('/titles', params, resolve, reject);
     });
   }
 
@@ -882,6 +909,7 @@
   var api$1 = {
     cdn: cdn,
     getTitles: getTitles,
+    getTitlesAuth: getTitlesAuth,
     getTitle: getTitle,
     getEpisodes: getEpisodes,
     getPerson: getPerson$1,
@@ -8178,6 +8206,7 @@
   /**
    * Завантажити всі елементи з певного типу списку КіноБази
    * @param {number} listType
+   * @param {boolean} [useAuth=false] — якщо true, використовує авторизований запит
    * @returns {Promise<Array>}
    */
   function loadAllFromList(_x) {
@@ -8189,16 +8218,24 @@
    */
   function _loadAllFromList() {
     _loadAllFromList = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(listType) {
-      var page, results, resp, _t;
+      var useAuth,
+        page,
+        results,
+        fetcher,
+        resp,
+        _args = arguments,
+        _t;
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
+            useAuth = _args.length > 1 && _args[1] !== undefined ? _args[1] : false;
             page = 1;
             results = [];
+            fetcher = useAuth ? api$1.getTitlesAuth : api$1.getTitles;
           case 1:
             _context.p = 2;
             _context.n = 3;
-            return api$1.getTitles({
+            return fetcher({
               list_type: listType,
               page: page
             });
@@ -8239,7 +8276,9 @@
     return _pullFull.apply(this, arguments);
   }
   /**
-   * Інкрементальний фоновий pull (зчитує тільки першу сторінку останніх змін)
+   * Переконатись що user_id збережено в localStorage.
+   * Якщо немає — пробуємо отримати з /me та зберегти.
+   * Викликається один раз, при наступних викликах повертає вже збережений ID.
    */
   function _pullFull() {
     _pullFull = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
@@ -8290,15 +8329,15 @@
             });
             _context3.p = 2;
             _context3.n = 3;
-            return Promise.all([loadAllFromList(10),
-            // Favorites
-            loadAllFromList(11),
-            // Watchlist
-            loadAllFromList(27),
-            // Seenlist
-            loadAllFromList(28),
-            // Blacklist
-            loadAllFromList(51) // Follows
+            return Promise.all([loadAllFromList(10, true),
+            // Favorites (user-specific)
+            loadAllFromList(11, true),
+            // Watchlist (user-specific)
+            loadAllFromList(27, true),
+            // Seenlist (user-specific)
+            loadAllFromList(28, true),
+            // Blacklist (user-specific)
+            loadAllFromList(51, true) // Follows (user-specific)
             ]);
           case 3:
             _yield$Promise$all = _context3.v;
@@ -8489,12 +8528,45 @@
     }));
     return _pullFull.apply(this, arguments);
   }
+  var resolveUserIdPromise = null;
+  function ensureUserId() {
+    var existing = storage.getUserId();
+    if (existing) return Promise.resolve(existing);
+    if (!resolveUserIdPromise) {
+      resolveUserIdPromise = api$1.fetchProfile().then(function (data) {
+        if (data && data.id) {
+          try {
+            var userData = Lampa.Storage.get('kinobaza_user_data', '{}');
+            if (_typeof(userData) !== 'object') userData = {};
+            userData.id = data.id;
+            Lampa.Storage.set('kinobaza_user_data', userData);
+          } catch (e) {}
+          return data.id;
+        }
+        return 0;
+      })["catch"](function () {
+        return 0;
+      });
+    }
+    return resolveUserIdPromise;
+  }
+
+  /**
+   * Інкрементальний фоновий pull (перша сторінка кожного персонального списку)
+   *
+   * Завантажує перші сторінки всіх user-specific списків КіноБази:
+   *   list_type=10 (Улюблені), 11 (Перегляну пізніше),
+   *   27 (Переглянуті), 28 (Чорний список), 51 (Стежу за серіалами)
+   *
+   * Оскільки API не має changelog-ендпоінта, це найкраще наближення
+   * до інкрементальної синхронізації: ~5 швидких запитів по 30 елементів.
+   */
   function pullIncremental() {
     return _pullIncremental.apply(this, arguments);
   }
   function _pullIncremental() {
     _pullIncremental = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-      var resp, _iterator2, _step2, _loop2, _t4, _t5;
+      var PERSONAL_LISTS, userId, commonParams, responses, allItems, totalItems, _iterator2, _step2, _loop2, item, _t4, _t5;
       return _regenerator().w(function (_context5) {
         while (1) switch (_context5.n) {
           case 0:
@@ -8506,26 +8578,74 @@
           case 1:
             isImportingState = true;
             _context5.p = 2;
-            parseInt(Lampa.Storage.get(storage.getProfileKey('kinobaza_sync_last_pull'), '0'), 10); // Отримуємо останню сторінку позначених тайтлів користувача
-            _context5.n = 3;
-            return api$1.getTitles({
-              show_my: true,
-              order_by: 'user_updated_desc',
-              page: 1
-            });
-          case 3:
-            resp = _context5.v;
-            if (!(!resp || !resp.data || !resp.data.length)) {
+            // Персональні списки, які мапляться на Lampa.Favorite категорії
+            PERSONAL_LISTS = [{
+              listType: 10,
+              key: 'favorite'
+            }, {
+              listType: 11,
+              key: 'watchlist'
+            }, {
+              listType: 27,
+              key: 'seenlist'
+            }, {
+              listType: 28,
+              key: 'blacklist'
+            }, {
+              listType: 51,
+              key: 'follow'
+            }]; // Якщо user_id ще не збережено — пробуємо підтягнути з /me
+            userId = storage.getUserId();
+            if (userId) {
               _context5.n = 4;
+              break;
+            }
+            _context5.n = 3;
+            return ensureUserId();
+          case 3:
+            userId = _context5.v;
+          case 4:
+            commonParams = {
+              page: 1
+            };
+            if (userId) commonParams.user_id = userId;
+
+            // Завантажуємо першу сторінку кожного списку паралельно
+            _context5.n = 5;
+            return Promise.all(PERSONAL_LISTS.map(function (cfg) {
+              var params = Object.assign({
+                list_type: cfg.listType
+              }, commonParams);
+              return api$1.getTitlesAuth(params).then(function (r) {
+                return r && r.data ? r.data : [];
+              })["catch"](function () {
+                return [];
+              });
+            }));
+          case 5:
+            responses = _context5.v;
+            // Об'єднуємо унікальні тайтли (за kinobaza id)
+            allItems = new Map();
+            responses.forEach(function (items) {
+              items.forEach(function (item) {
+                if (item && item.id) {
+                  allItems.set(item.id, item);
+                }
+              });
+            });
+            totalItems = allItems.size;
+            if (totalItems) {
+              _context5.n = 6;
               break;
             }
             isImportingState = false;
             return _context5.a(2);
-          case 4:
-            _iterator2 = _createForOfIteratorHelper(resp.data);
-            _context5.p = 5;
+          case 6:
+            parseInt(Lampa.Storage.get(storage.getProfileKey('kinobaza_sync_last_pull'), '0'), 10); // Обробляємо унікальні тайтли
+            _iterator2 = _createForOfIteratorHelper(allItems.values());
+            _context5.p = 7;
             _loop2 = /*#__PURE__*/_regenerator().m(function _loop2() {
-              var item, resolved, _mappedCard, isTV, _currentStatus, syncCategory, status;
+              var resolved, _mappedCard, isTV, _currentStatus, syncCategory, status;
               return _regenerator().w(function (_context4) {
                 while (1) switch (_context4.n) {
                   case 0:
@@ -8569,42 +8689,42 @@
               }, _loop2);
             });
             _iterator2.s();
-          case 6:
+          case 8:
             if ((_step2 = _iterator2.n()).done) {
-              _context5.n = 8;
+              _context5.n = 10;
               break;
             }
-            return _context5.d(_regeneratorValues(_loop2()), 7);
-          case 7:
-            _context5.n = 6;
-            break;
-          case 8:
-            _context5.n = 10;
-            break;
+            return _context5.d(_regeneratorValues(_loop2()), 9);
           case 9:
-            _context5.p = 9;
+            _context5.n = 8;
+            break;
+          case 10:
+            _context5.n = 12;
+            break;
+          case 11:
+            _context5.p = 11;
             _t4 = _context5.v;
             _iterator2.e(_t4);
-          case 10:
-            _context5.p = 10;
-            _iterator2.f();
-            return _context5.f(10);
-          case 11:
-            Lampa.Storage.set(storage.getProfileKey('kinobaza_sync_last_pull'), Date.now());
-            _context5.n = 13;
-            break;
           case 12:
             _context5.p = 12;
+            _iterator2.f();
+            return _context5.f(12);
+          case 13:
+            Lampa.Storage.set(storage.getProfileKey('kinobaza_sync_last_pull'), Date.now());
+            _context5.n = 15;
+            break;
+          case 14:
+            _context5.p = 14;
             _t5 = _context5.v;
             console.error('KinoBaza Importer', 'pullIncremental error', _t5);
-          case 13:
-            _context5.p = 13;
+          case 15:
+            _context5.p = 15;
             isImportingState = false;
-            return _context5.f(13);
-          case 14:
+            return _context5.f(15);
+          case 16:
             return _context5.a(2);
         }
-      }, _callee3, null, [[5, 9, 10, 11], [2, 12, 13, 14]]);
+      }, _callee3, null, [[7, 11, 12, 13], [2, 14, 15, 16]]);
     }));
     return _pullIncremental.apply(this, arguments);
   }
@@ -9459,7 +9579,7 @@
     }));
     return _handleTimelineUpdate.apply(this, arguments);
   }
-  var activeListeners$1 = {
+  var activeListeners = {
     favoriteChangeAdd: null,
     favoriteChangeAdded: null,
     favoriteChangeRemove: null,
@@ -9470,7 +9590,7 @@
   /**
    * Ініціалізація слухачів
    */
-  function init$4() {
+  function init$3() {
     try {
       console.log('[KinoBaza Sync] Initializing listeners using Lampa native event API...');
 
@@ -9552,21 +9672,21 @@
           return _ref.apply(this, arguments);
         };
       }();
-      activeListeners$1.favoriteChangeAdd = function (e) {
+      activeListeners.favoriteChangeAdd = function (e) {
         return handleFavoriteChange('add', e);
       };
-      activeListeners$1.favoriteChangeAdded = function (e) {
+      activeListeners.favoriteChangeAdded = function (e) {
         return handleFavoriteChange('added', e);
       };
-      activeListeners$1.favoriteChangeRemove = function (e) {
+      activeListeners.favoriteChangeRemove = function (e) {
         return handleFavoriteChange('remove', e);
       };
-      Lampa.Favorite.listener.follow('add', activeListeners$1.favoriteChangeAdd);
-      Lampa.Favorite.listener.follow('added', activeListeners$1.favoriteChangeAdded);
-      Lampa.Favorite.listener.follow('remove', activeListeners$1.favoriteChangeRemove);
+      Lampa.Favorite.listener.follow('add', activeListeners.favoriteChangeAdd);
+      Lampa.Favorite.listener.follow('added', activeListeners.favoriteChangeAdded);
+      Lampa.Favorite.listener.follow('remove', activeListeners.favoriteChangeRemove);
 
       // 2. Слухач старту програвача (Lampa.Player.listener)
-      activeListeners$1.playerStart = function (data) {
+      activeListeners.playerStart = function (data) {
         console.log('[KinoBaza Sync] Native Player:start event received', data);
         var card = data && data.card || Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie);
         if (!card) return;
@@ -9583,11 +9703,11 @@
         }
       };
       if (Lampa.Player && Lampa.Player.listener) {
-        Lampa.Player.listener.follow('start', activeListeners$1.playerStart);
+        Lampa.Player.listener.follow('start', activeListeners.playerStart);
       }
 
       // 3. Слухач оновлення таймлайну (Lampa.Timeline.listener)
-      activeListeners$1.timelineUpdate = function (e) {
+      activeListeners.timelineUpdate = function (e) {
         if (e && e.data && e.data.hash && e.data.road) {
           var hash = e.data.hash;
           var percent = parseFloat(e.data.road.percent || 0);
@@ -9595,7 +9715,7 @@
         }
       };
       if (Lampa.Timeline && Lampa.Timeline.listener) {
-        Lampa.Timeline.listener.follow('update', activeListeners$1.timelineUpdate);
+        Lampa.Timeline.listener.follow('update', activeListeners.timelineUpdate);
       }
     } catch (err) {
       console.error('KinoBaza Listeners', 'init error', err);
@@ -9605,22 +9725,22 @@
   /**
    * Очищення слухачів при вивантаженні
    */
-  function destroy$3() {
+  function destroy$2() {
     try {
-      if (activeListeners$1.favoriteChangeAdd) {
-        Lampa.Favorite.listener.remove('add', activeListeners$1.favoriteChangeAdd);
+      if (activeListeners.favoriteChangeAdd) {
+        Lampa.Favorite.listener.remove('add', activeListeners.favoriteChangeAdd);
       }
-      if (activeListeners$1.favoriteChangeAdded) {
-        Lampa.Favorite.listener.remove('added', activeListeners$1.favoriteChangeAdded);
+      if (activeListeners.favoriteChangeAdded) {
+        Lampa.Favorite.listener.remove('added', activeListeners.favoriteChangeAdded);
       }
-      if (activeListeners$1.favoriteChangeRemove) {
-        Lampa.Favorite.listener.remove('remove', activeListeners$1.favoriteChangeRemove);
+      if (activeListeners.favoriteChangeRemove) {
+        Lampa.Favorite.listener.remove('remove', activeListeners.favoriteChangeRemove);
       }
-      if (activeListeners$1.playerStart && Lampa.Player && Lampa.Player.listener) {
-        Lampa.Player.listener.remove('start', activeListeners$1.playerStart);
+      if (activeListeners.playerStart && Lampa.Player && Lampa.Player.listener) {
+        Lampa.Player.listener.remove('start', activeListeners.playerStart);
       }
-      if (activeListeners$1.timelineUpdate && Lampa.Timeline && Lampa.Timeline.listener) {
-        Lampa.Timeline.listener.remove('update', activeListeners$1.timelineUpdate);
+      if (activeListeners.timelineUpdate && Lampa.Timeline && Lampa.Timeline.listener) {
+        Lampa.Timeline.listener.remove('update', activeListeners.timelineUpdate);
       }
     } catch (e) {
       console.error('KinoBaza Listeners destroy error', e);
@@ -9629,8 +9749,8 @@
     hashMetaCache.clear();
   }
   var listeners = {
-    init: init$4,
-    destroy: destroy$3,
+    init: init$3,
+    destroy: destroy$2,
     handleTimelineUpdate: handleTimelineUpdate,
     resolveEpisodeId: resolveEpisodeId
   };
@@ -9644,7 +9764,7 @@
   /**
    * Ініціалізація та запуск системи синхронізації
    */
-  function init$3() {
+  function init$2() {
     if (isInitialized) return;
     isInitialized = true;
     try {
@@ -9818,7 +9938,7 @@
   /**
    * Вивантаження плагіна
    */
-  function destroy$2() {
+  function destroy$1() {
     stopSyncServices();
     listeners.destroy();
     resolver.sessionCache.clear();
@@ -9832,8 +9952,8 @@
     isInitialized = false;
   }
   var syncModule = {
-    init: init$3,
-    destroy: destroy$2,
+    init: init$2,
+    destroy: destroy$1,
     startRealtime: startRealtime,
     stopRealtime: stopRealtime,
     handleProfileSelect: handleProfileSelect
@@ -9846,7 +9966,7 @@
    * Ця функція залишена для сумісності — syncSettings.init() викликається з kinobaza.js
    * і просто нічого не робить.
    */
-  function init$2() {
+  function init$1() {
     // Nothing — params registered in settings/settings.js
   }
 
@@ -9886,14 +10006,13 @@
     manual.start();
   }
   var syncSettings = {
-    init: init$2,
+    init: init$1,
     onSyncRealtimeChange: onSyncRealtimeChange,
     onSyncManualClick: onSyncManualClick
   };
 
   var USER_KEY = 'kinobaza_user_data';
   var onSettingsOpen = null;
-  var onSettingsOpenKinobaza = null;
 
   // SVG іконка КіноБаза (спрощена версія)
   var ICON_SVG = "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.0\" width=\"933.333\" height=\"933.333\" viewBox=\"0 0 700 700\">    <defs>        <linearGradient id=\"myGradient\" gradientTransform=\"rotate(90)\">            <stop offset=\"0%\" stop-color=\"#005BBB\"/>            <stop offset=\"50%\" stop-color=\"#005BBB\"/>            <stop offset=\"50%\" stop-color=\"#FFD500\"/>            <stop offset=\"100%\" stop-color=\"#FFD500\"/>        </linearGradient>    </defs>    <path fill=\"url('#myGradient')\" d=\"M53 47.1c-15 1.5-25.4 6.6-37.2 18.1-4.5 4.4-10.5 14.4-13 21.6L.5 93.5v514l2.2 5.9c7.5 19.9 24.6 35 43.8 38.7 4.5.9 83.1 1.2 304 1.2 270.9 0 298.6-.2 304.8-1.7 11.4-2.7 22.3-9.4 30.4-18.6 3-3.5 9.5-13.5 10-15.5.1-.5 1.2-4.2 2.3-8 2-7 2-7.9 1.8-262l-.3-255-2.3-6.2c-7-18.7-22.5-32.9-41.3-37.9-6-1.6-26.2-1.7-301.4-1.8-162.2-.1-297.9.2-301.5.5zm73 48.5c2.5 1.2 5.9 3.7 7.6 5.5 5.8 6.4 6.3 8.9 6.4 37.7 0 16.4-.4 27.7-1.1 30.6-1.4 5.5-6.7 11.9-12.3 14.9-3.9 2.1-5.2 2.2-33.1 2.2-28.5 0-29.1 0-33.5-2.3-5.4-2.9-8.5-6.3-11.3-12.2-1.9-4.2-2-6.3-2-32 0-31 .4-33.1 7.7-40.3 6.1-5.8 8.8-6.2 39.6-6.2 25.8 0 27.8.2 32 2.1zm374 .2c5.4 2.9 8.5 6.3 11.3 12.2 2 4.4 2 5.6 2 102 0 95.4 0 97.6-2 102-2.5 5.8-8.6 11.6-13.7 13.3-3.4 1.1-29.2 1.3-148.6 1.2-132.1-.1-144.8-.3-148-1.8-6.9-3.3-12.4-9.8-13.6-16.2-1-5.2-1.1-187.2-.2-194.8 1.2-9 7.5-16.6 15.7-19 3.6-1.1 32.1-1.3 148.5-1.3l144.1.1 4.5 2.3zm139-.5c5.2 2.5 10.3 7.6 12.4 12.5 1.8 4 2 6.8 1.9 32.5 0 26.8-.1 28.4-2.1 32.4-1.2 2.3-3.8 5.8-5.9 7.8-6 5.8-9.9 6.4-40.8 6.1-25.3-.2-27.3-.3-31-2.3-4.2-2.2-8-5.9-11.1-10.8-1.7-2.6-1.9-5.5-2.2-30-.4-31 .1-35.2 5.4-41.4 7.1-8.2 9.9-8.8 43.4-8.6 22.9 0 27 .3 30 1.8zM126.6 235.8c5.6 2.9 10.9 9.3 12.3 14.8 1.5 6 1.4 54.8-.1 59.8-1.5 4.9-7.1 11.2-12.2 13.8-3.9 2.1-5.5 2.2-31.6 2.4-31 .1-34.4-.4-40.6-6.4-7.4-7.1-7.8-9.2-7.7-40.2 0-25.8.1-27.8 2.1-32.3 2.5-5.5 7.1-10.2 12.6-12.6 3.4-1.5 7.6-1.7 32.5-1.6 27.4.1 28.8.2 32.7 2.3zm512.4-.6c5 2.2 9.9 7.3 12.3 12.7 1.9 4.3 2.1 6.4 2 32.3v27.6l-2.7 5.6c-3 6-8.4 10.6-14.6 12.3-1.9.6-15.9.9-31 .8-25.9-.1-27.7-.2-31.5-2.2-5.5-2.9-10.1-8-11.9-13-1.9-5.4-2.3-53.6-.5-60.7 1.6-6.4 7.6-13 14-15.4 4.5-1.7 7.9-1.8 32.7-1.7 22.8.1 28.3.4 31.2 1.7zM126.5 375.7c4.2 2.2 8 5.9 11.1 10.8 1.7 2.6 1.9 5.5 2.2 30 .3 17.6 0 28.8-.8 32.1-1.3 6.1-6.3 12.5-12.4 15.6-3.9 2.1-5.3 2.2-33.1 2.2-32.1.1-33-.1-39.7-6.8-6.6-6.5-7.1-9.3-7.2-37.6-.1-14 .3-27.5.8-30 1.5-7.9 8.8-15.7 16.7-17.8 1.9-.4 15.8-.8 30.9-.7 25.9.1 27.7.2 31.5 2.2zm372.8-.3c5.2 2.6 9.6 7.2 12 12.6 1.9 4.3 2 7 2.1 98.5.1 51.7-.2 96.6-.6 99.9-1.2 9-7.5 16.5-16.1 19.1-5.4 1.6-285.9 1.9-292.1.3-9.2-2.3-16.1-10.1-17.3-19.4-1.4-10.3-.8-192.4.6-196.5 2.3-7 8.5-13.3 15.6-15.6 1.9-.6 55.8-.9 147.5-.9 139.6.1 144.6.2 148.3 2zm138.7-.6c8.4 3.7 13.7 10.4 14.8 18.8.9 7.4.8 49.5-.2 54.9-.9 4.3-4.7 10.2-9 13.6-5.2 4.1-9.6 4.6-38.6 4.5-26.2-.2-27.7-.3-31.6-2.4-5.1-2.6-10.7-8.9-12.2-13.8-1.5-5-1.6-53.8-.1-59.8 1.2-5 6.6-11.9 11-14.1 1.5-.9 4.5-1.9 6.6-2.3 5.7-1.3 56.3-.7 59.3.6zM126.5 515.7c4.1 2.2 8.8 6.8 11.5 11.3 2 3.3 2.8 56.1 1 62.7-1.5 5.3-6.9 11.7-12.4 14.6-3.9 2.1-5.2 2.2-33.1 2.2-26.5 0-29.3-.2-32.8-1.9-5.2-2.6-9.6-7.2-12-12.6-1.9-4.1-2-6.7-2-31.5 0-29 .4-32.4 5.1-38 3.3-3.9 8.1-7.1 12.3-8.2 1.9-.5 15.8-.9 30.9-.8 26 .1 27.7.2 31.5 2.2zm512.5-.5c5 2.2 9.9 7.3 12.3 12.7 1.9 4.3 2 6.5 2 32.1 0 25.3-.1 27.9-2 32-2.4 5.4-6.8 10-12 12.6-3.4 1.7-6.5 1.9-31.8 2-25.4.1-28.4-.1-32.5-1.8-5.1-2.2-9.2-5.7-12.3-10.8-2.1-3.3-2.2-4.8-2.5-31.5-.2-19.4 0-29.2.8-32.2 2.2-7.5 9.8-14.6 17.5-16.3 1.7-.3 15.2-.6 30-.5 22.1.1 27.6.4 30.5 1.7z\"/></svg>";
@@ -9925,57 +10044,6 @@
   }
 
   /**
-   * Замінити аватар в хедері на Kinobaza avatar.
-   *
-   * В Lampa завжди 2 .open--profile елементи:
-   *   1) head template (оригінал)
-   *   2) account/profile.js (модуль акаунта)
-   *
-   * Замінюємо ПЕРШИЙ (head template), ХОВАЄМО другий (account).
-   * restore: видаляємо наш, показуємо всі оригінальні.
-   */
-  function setProfileAvatar(avatar) {
-    var profileEl = $('.open--profile').first();
-    if (!profileEl.length) return;
-
-    // Зберігаємо outerHTML оригіналу для restore
-    if (!profileEl.data('kb-original-outer')) {
-      profileEl.data('kb-original-outer', profileEl[0].outerHTML);
-    }
-
-    // Новий елемент з аватаром
-    var kbProfile = $('<div class="head__action selector open--profile" id="kinobaza_profile">' + '<img src="https://i.kinobaza.com.ua/avatars/' + avatar + '">' + '</div>');
-
-    // Замінюємо перший
-    profileEl.replaceWith(kbProfile);
-
-    // Ховаємо решту .open--profile (account/profile.js створює другий)
-    $('.open--profile').not('#kinobaza_profile').hide();
-    kbProfile.on('hover:enter', function (e) {
-      e.stopPropagation();
-      Lampa.Controller.toggle('settings');
-      Lampa.Listener.send('settings_open_kinobaza');
-    });
-  }
-
-  /**
-   * Відновити оригінальний аватар Lampa (CUB)
-   */
-  function restoreProfileAvatar() {
-    var kbProfile = $('#kinobaza_profile');
-    if (kbProfile.length) {
-      var originalHtml = kbProfile.data('kb-original-outer');
-      if (originalHtml) {
-        kbProfile.replaceWith(originalHtml);
-      } else {
-        kbProfile.remove();
-      }
-    }
-    // Показуємо всі оригінальні .open--profile (були приховані)
-    $('.open--profile').show();
-  }
-
-  /**
    * Авторизація
    */
   function login(email, password) {
@@ -9996,9 +10064,6 @@
         avatar: data.avatar || ''
       });
       Lampa.Storage.set('kinobaza_password', '');
-      if (data.avatar) {
-        setProfileAvatar(data.avatar);
-      }
       if (typeof Lampa.Settings !== 'undefined' && typeof Lampa.Settings.update === 'function') {
         Lampa.Settings.update();
       }
@@ -10014,7 +10079,6 @@
   function logout() {
     storage.removeToken();
     clearUserData();
-    restoreProfileAvatar();
     Lampa.Storage.set('kinobaza_email', '');
     Lampa.Storage.set('kinobaza_password', '');
     if (typeof Lampa.Settings !== 'undefined' && typeof Lampa.Settings.update === 'function') {
@@ -10026,7 +10090,7 @@
   /**
    * Ініціалізація: реєстрація компонентів налаштувань + параметрів
    */
-  function init$1() {
+  function init() {
     // 0. Зареєструвати переклади
     Lampa.Lang.add({
       kinobaza_email: {
@@ -10316,48 +10380,16 @@
       }
     };
     Lampa.Settings.listener.follow('open', onSettingsOpen);
-
-    // 7. Якщо користувач вже авторизований — відновити аватар
-    if (storage.hasToken()) {
-      var u = getUserData();
-      if (u && u.avatar) {
-        setTimeout(function () {
-          setProfileAvatar(u.avatar);
-        }, 500);
-      }
-    }
-
-    // 8. Слухач: клік по аватару → навігація в налаштування Кінобази
-    onSettingsOpenKinobaza = function onSettingsOpenKinobaza() {
-      var checkExist = setInterval(function () {
-        var el = $('.settings').find('[data-component="kinobaza_settings"]');
-        if (el.length) {
-          clearInterval(checkExist);
-          setTimeout(function () {
-            el.trigger('hover:enter');
-          }, 100);
-        }
-      }, 50);
-      setTimeout(function () {
-        clearInterval(checkExist);
-      }, 5000);
-    };
-    Lampa.Listener.follow('settings_open_kinobaza', onSettingsOpenKinobaza);
   }
 
   /**
    * Деініціалізація
    */
-  function destroy$1() {
+  function destroy() {
     if (onSettingsOpen) {
       Lampa.Settings.listener.remove('open', onSettingsOpen);
       onSettingsOpen = null;
     }
-    if (onSettingsOpenKinobaza) {
-      Lampa.Listener.remove('settings_open_kinobaza', onSettingsOpenKinobaza);
-      onSettingsOpenKinobaza = null;
-    }
-    restoreProfileAvatar();
     if (Lampa.SettingsApi) {
       Lampa.SettingsApi.removeComponent('kinobaza_settings');
       Lampa.SettingsApi.removeParams('kinobaza_profile_settings');
@@ -10365,105 +10397,10 @@
     }
   }
   var settings = {
-    init: init$1,
-    destroy: destroy$1,
-    login: login,
-    logout: logout
-  };
-
-  var currentSyncState = 'idle';
-  var checkInterval = null;
-  var activeListeners = {};
-  function init() {
-    try {
-      activeListeners.syncStart = function () {
-        return setState('syncing');
-      };
-      activeListeners.syncComplete = function () {
-        return setState('idle');
-      };
-      activeListeners.syncError = function () {
-        return setState('error');
-      };
-      activeListeners.syncQueued = function () {
-        return setState('pending');
-      };
-      activeListeners.syncFlushed = function () {
-        return setState('idle');
-      };
-      activeListeners.syncIcon = function (e) {
-        if (e && e.state) {
-          setState(e.state);
-        }
-      };
-
-      // Слухачі для зміни стану
-      Lampa.Listener.follow('kinobaza:sync:start', activeListeners.syncStart);
-      Lampa.Listener.follow('kinobaza:sync:complete', activeListeners.syncComplete);
-      Lampa.Listener.follow('kinobaza:sync:error', activeListeners.syncError);
-      Lampa.Listener.follow('kinobaza:sync:queued', activeListeners.syncQueued);
-      Lampa.Listener.follow('kinobaza:sync:flushed', activeListeners.syncFlushed);
-      Lampa.Listener.follow('kinobaza:sync:icon', activeListeners.syncIcon);
-
-      // Додатковий інтервал для гарантії відновлення класу при рендері аватара
-      checkInterval = setInterval(function () {
-        var el = $('#kinobaza_profile');
-        if (el.length && !el.hasClass("kinobaza-sync--".concat(currentSyncState))) {
-          applyStyles(el, currentSyncState);
-        }
-      }, 1000);
-    } catch (err) {
-      console.error('KinoBaza Head Indicator', 'init error', err);
-    }
-  }
-  function destroy() {
-    if (checkInterval) {
-      clearInterval(checkInterval);
-      checkInterval = null;
-    }
-    if (Lampa.Listener) {
-      if (activeListeners.syncStart) Lampa.Listener.remove('kinobaza:sync:start', activeListeners.syncStart);
-      if (activeListeners.syncComplete) Lampa.Listener.remove('kinobaza:sync:complete', activeListeners.syncComplete);
-      if (activeListeners.syncError) Lampa.Listener.remove('kinobaza:sync:error', activeListeners.syncError);
-      if (activeListeners.syncQueued) Lampa.Listener.remove('kinobaza:sync:queued', activeListeners.syncQueued);
-      if (activeListeners.syncFlushed) Lampa.Listener.remove('kinobaza:sync:flushed', activeListeners.syncFlushed);
-      if (activeListeners.syncIcon) Lampa.Listener.remove('kinobaza:sync:icon', activeListeners.syncIcon);
-    }
-  }
-  function applyStyles(el, state) {
-    el.removeClass('kinobaza-sync--syncing kinobaza-sync--error kinobaza-sync--idle kinobaza-sync--pending icon--blink');
-    switch (state) {
-      case 'idle':
-        el.addClass('kinobaza-sync--idle');
-        break;
-      case 'syncing':
-        el.addClass('kinobaza-sync--syncing icon--blink');
-        break;
-      case 'error':
-        el.addClass('kinobaza-sync--error');
-        break;
-      case 'pending':
-        el.addClass('kinobaza-sync--pending');
-        break;
-    }
-  }
-  function setState(state) {
-    currentSyncState = state;
-    var el = $('#kinobaza_profile');
-    if (!el.length) return;
-    applyStyles(el, state);
-    if (state === 'error') {
-      setTimeout(function () {
-        if (currentSyncState === 'error') {
-          setState('idle');
-        }
-      }, 10000);
-    }
-  }
-  var headerIndicator = {
     init: init,
     destroy: destroy,
-    setState: setState
+    login: login,
+    logout: logout
   };
 
   /**
@@ -10497,7 +10434,7 @@
       if (!Lampa.Manifest) return;
       var manifest = {
         type: 'video',
-        version: '0.6',
+        version: '0.6a',
         name: Lampa.Lang.translate('kinobaza_title') || 'КіноБаза',
         component: 'kinobaza',
         description: 'Контент-провайдер КіноБаза (kinobaza.com.ua)'
@@ -10513,7 +10450,7 @@
    */
   function loadStyles() {
     if (!$('#kinobaza_style').length) {
-      Lampa.Template.add('kinobaza_css', "\n            <style id=\"kinobaza_style\">\n            @charset 'UTF-8';.full-start__rate.rate--custom{display:-webkit-inline-box !important;display:-webkit-inline-flex !important;display:-ms-inline-flexbox !important;display:inline-flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important;background:rgba(255,255,255,0.08) !important;border:1px solid rgba(255,255,255,0.12) !important;-webkit-border-radius:.35em !important;border-radius:.35em !important;padding:.25em .45em !important;margin-right:.5em !important;vertical-align:middle !important;font-size:1.1em !important;-webkit-transition:all .2s ease !important;-o-transition:all .2s ease !important;transition:all .2s ease !important}.full-start__rate.rate--custom:hover{background:rgba(255,255,255,0.14) !important;border-color:rgba(255,255,255,0.22) !important;-webkit-transform:translateY(-1px);-ms-transform:translateY(-1px);transform:translateY(-1px)}.full-start__rate.rate--custom>div:first-child{width:auto !important;height:auto !important;background:transparent !important;-webkit-border-radius:0 !important;border-radius:0 !important;display:-webkit-box !important;display:-webkit-flex !important;display:-ms-flexbox !important;display:flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important;-webkit-box-pack:center !important;-webkit-justify-content:center !important;-ms-flex-pack:center !important;justify-content:center !important;margin-right:.3em !important;padding:0 !important}.full-start__rate.rate--custom .rate__icon{display:-webkit-box !important;display:-webkit-flex !important;display:-ms-flexbox !important;display:flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important}.full-start__rate.rate--custom .rate__icon svg{width:1.2em !important;height:1.2em !important;display:block !important;fill:#fff !important}.full-start__rate.rate--custom .rate__value{font-size:.85em !important;font-weight:700 !important;color:#fff !important;line-height:1 !important;padding:0 .1em !important}.full-start__rate.rate--custom .source--name{margin-left:.3em !important;font-size:.55em !important;text-transform:uppercase !important;letter-spacing:.05em !important;opacity:.6 !important;line-height:1 !important;padding:0 !important}.full-start-new__rating-breakdown{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;margin:-0.5em;margin-bottom:.8em;min-height:1.6em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;font-size:1.15em;color:rgba(255,255,255,0.6)}.full-start-new__rating-breakdown>div{padding:.5em}.full-descr__info.full--releases{-webkit-flex-basis:100%;-ms-flex-preferred-size:100%;flex-basis:100%;margin-top:1em}.full-descr__info.full--releases .full-descr__info-name{font-size:1.1em;margin-bottom:.5em}.full-descr__info.full--releases .full-descr__info-body{font-size:1em;line-height:1.6}.full-persons--dub .card{border:solid .2em rgba(102,204,102,0.3)}.full-persons--dub .card.focus{border-color:rgba(102,204,102,0.8)}.full-discuss--reviews .discuss-item{border-left:solid .2em #fc3}.full-discuss--comments .discuss-item{border-left:solid .2em #6cf}.kb_jobs{position:absolute;top:1.4em;left:2.5em;padding:.35em .55em;background:rgba(0,0,0,0.75);color:#fff;font-size:.75em;-webkit-border-radius:.3em;border-radius:.3em;z-index:1;pointer-events:none;white-space:nowrap}.kb_jobs--first{left:-0.8em}.kinobaza-single-network{padding:.2em .3em}.kinobaza-single-network.focus{background-color:rgba(0,0,0,0.45) !important;-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.65);box-shadow:0 0 0 .2em rgba(255,255,255,0.65)}.kinobaza-network-logo-wrap{display:inline-block;width:60px;height:1.2em;overflow:hidden;vertical-align:middle}.kinobaza-network-logo{width:100%;height:100%;-o-object-fit:contain;object-fit:contain;vertical-align:top}.items-line--type-trailers .card--wide{width:34.3em}.items-line--type-trailers .card--wide .card__view{padding-bottom:56%;background:#111}.items-line--type-trailers .card--wide .card__img{-o-object-fit:cover;object-fit:cover;background:#222}.items-line--type-networks .card--wide{width:34.3em;-webkit-border-radius:.6em;border-radius:.6em;overflow:hidden}.items-line--type-networks .card--wide .card__view{padding-bottom:56%;background:transparent;-webkit-border-radius:0;border-radius:0}.items-line--type-networks .card--wide.focus .card__view::after,.items-line--type-networks .card--wide.hover .card__view::after{-webkit-border-radius:.6em;border-radius:.6em}.items-line--type-networks .card--wide .card__img{width:100% !important;height:100% !important;-o-object-fit:contain !important;object-fit:contain !important;padding:1.5em;background:rgba(255,255,255,0.04);-webkit-border-radius:0;border-radius:0}.items-line--type-networks .card--wide .card__promo{display:none !important}.items-line--type-networks .card--wide .card__title{display:none}#kinobaza_profile{-webkit-transition:border-color .3s ease,opacity .3s ease,-webkit-box-shadow .3s ease;transition:border-color .3s ease,opacity .3s ease,-webkit-box-shadow .3s ease;-o-transition:border-color .3s ease,box-shadow .3s ease,opacity .3s ease;transition:border-color .3s ease,box-shadow .3s ease,opacity .3s ease;transition:border-color .3s ease,box-shadow .3s ease,opacity .3s ease,-webkit-box-shadow .3s ease;border:solid .15em transparent;-webkit-box-sizing:border-box;box-sizing:border-box}#kinobaza_profile.kinobaza-sync--idle{border-color:transparent;-webkit-box-shadow:none;box-shadow:none}#kinobaza_profile.kinobaza-sync--syncing{border-color:#ffd700;-webkit-box-shadow:0 0 .5em #ffd700;box-shadow:0 0 .5em #ffd700}#kinobaza_profile.kinobaza-sync--error{border-color:#f44336;-webkit-box-shadow:0 0 .5em #f44336;box-shadow:0 0 .5em #f44336}#kinobaza_profile.kinobaza-sync--pending{border-color:#ff9800;-webkit-box-shadow:0 0 .5em #ff9800;box-shadow:0 0 .5em #ff9800}\n            </style>\n        ");
+      Lampa.Template.add('kinobaza_css', "\n            <style id=\"kinobaza_style\">\n            @charset 'UTF-8';.full-start__rate.rate--custom{display:-webkit-inline-box !important;display:-webkit-inline-flex !important;display:-ms-inline-flexbox !important;display:inline-flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important;background:rgba(255,255,255,0.08) !important;border:1px solid rgba(255,255,255,0.12) !important;-webkit-border-radius:.35em !important;border-radius:.35em !important;padding:.25em .45em !important;margin-right:.5em !important;vertical-align:middle !important;font-size:1.1em !important;-webkit-transition:all .2s ease !important;-o-transition:all .2s ease !important;transition:all .2s ease !important}.full-start__rate.rate--custom:hover{background:rgba(255,255,255,0.14) !important;border-color:rgba(255,255,255,0.22) !important;-webkit-transform:translateY(-1px);-ms-transform:translateY(-1px);transform:translateY(-1px)}.full-start__rate.rate--custom>div:first-child{width:auto !important;height:auto !important;background:transparent !important;-webkit-border-radius:0 !important;border-radius:0 !important;display:-webkit-box !important;display:-webkit-flex !important;display:-ms-flexbox !important;display:flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important;-webkit-box-pack:center !important;-webkit-justify-content:center !important;-ms-flex-pack:center !important;justify-content:center !important;margin-right:.3em !important;padding:0 !important}.full-start__rate.rate--custom .rate__icon{display:-webkit-box !important;display:-webkit-flex !important;display:-ms-flexbox !important;display:flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important}.full-start__rate.rate--custom .rate__icon svg{width:1.2em !important;height:1.2em !important;display:block !important;fill:#fff !important}.full-start__rate.rate--custom .rate__value{font-size:.85em !important;font-weight:700 !important;color:#fff !important;line-height:1 !important;padding:0 .1em !important}.full-start__rate.rate--custom .source--name{margin-left:.3em !important;font-size:.55em !important;text-transform:uppercase !important;letter-spacing:.05em !important;opacity:.6 !important;line-height:1 !important;padding:0 !important}.full-start-new__rating-breakdown{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;margin:-0.5em;margin-bottom:.8em;min-height:1.6em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;font-size:1.15em;color:rgba(255,255,255,0.6)}.full-start-new__rating-breakdown>div{padding:.5em}.full-descr__info.full--releases{-webkit-flex-basis:100%;-ms-flex-preferred-size:100%;flex-basis:100%;margin-top:1em}.full-descr__info.full--releases .full-descr__info-name{font-size:1.1em;margin-bottom:.5em}.full-descr__info.full--releases .full-descr__info-body{font-size:1em;line-height:1.6}.full-persons--dub .card{border:solid .2em rgba(102,204,102,0.3)}.full-persons--dub .card.focus{border-color:rgba(102,204,102,0.8)}.full-discuss--reviews .discuss-item{border-left:solid .2em #fc3}.full-discuss--comments .discuss-item{border-left:solid .2em #6cf}.kb_jobs{position:absolute;top:1.4em;left:2.5em;padding:.35em .55em;background:rgba(0,0,0,0.75);color:#fff;font-size:.75em;-webkit-border-radius:.3em;border-radius:.3em;z-index:1;pointer-events:none;white-space:nowrap}.kb_jobs--first{left:-0.8em}.kinobaza-single-network{padding:.2em .3em}.kinobaza-single-network.focus{background-color:rgba(0,0,0,0.45) !important;-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.65);box-shadow:0 0 0 .2em rgba(255,255,255,0.65)}.kinobaza-network-logo-wrap{display:inline-block;width:60px;height:1.2em;overflow:hidden;vertical-align:middle}.kinobaza-network-logo{width:100%;height:100%;-o-object-fit:contain;object-fit:contain;vertical-align:top}.items-line--type-trailers .card--wide{width:34.3em}.items-line--type-trailers .card--wide .card__view{padding-bottom:56%;background:#111}.items-line--type-trailers .card--wide .card__img{-o-object-fit:cover;object-fit:cover;background:#222}.items-line--type-networks .card--wide{width:34.3em;-webkit-border-radius:.6em;border-radius:.6em;overflow:hidden}.items-line--type-networks .card--wide .card__view{padding-bottom:56%;background:transparent;-webkit-border-radius:0;border-radius:0}.items-line--type-networks .card--wide.focus .card__view::after,.items-line--type-networks .card--wide.hover .card__view::after{-webkit-border-radius:.6em;border-radius:.6em}.items-line--type-networks .card--wide .card__img{width:100% !important;height:100% !important;-o-object-fit:contain !important;object-fit:contain !important;padding:1.5em;background:rgba(255,255,255,0.04);-webkit-border-radius:0;border-radius:0}.items-line--type-networks .card--wide .card__promo{display:none !important}.items-line--type-networks .card--wide .card__title{display:none}\n            </style>\n        ");
       $('body').append(Lampa.Template.get('kinobaza_css', {}, true));
     }
   }
@@ -10662,7 +10599,6 @@
 
     // Ініціалізація системи синхронізації
     syncModule.init();
-    headerIndicator.init();
 
     // 6. Реєстрація listener для вставки акторів дубляжу через DOM
     registerFullListener();
@@ -10726,7 +10662,6 @@
       // 2. Destroy sub-modules
       if (settings && typeof settings.destroy === 'function') settings.destroy();
       if (syncModule && typeof syncModule.destroy === 'function') syncModule.destroy();
-      if (headerIndicator && typeof headerIndicator.destroy === 'function') headerIndicator.destroy();
 
       // 3. Clean up DOM elements (stylesheets and menu buttons)
       $('#kinobaza_style').remove();
