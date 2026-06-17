@@ -11854,11 +11854,18 @@
     if (typeof Lampa === 'undefined') return;
     var open = function open() {
       if (Lampa.Controller) Lampa.Controller.toggle('settings');
-      setTimeout(function () {
-        if (Lampa.Settings && typeof Lampa.Settings.create === 'function') {
-          Lampa.Settings.create('trakt');
+      var checkExist = setInterval(function () {
+        var el = $('.settings').find('[data-component="trakt"]');
+        if (el.length) {
+          clearInterval(checkExist);
+          setTimeout(function () {
+            el.trigger('hover:enter');
+          }, 100);
         }
-      }, 0);
+      }, 50);
+      setTimeout(function () {
+        clearInterval(checkExist);
+      }, 3000);
     };
     if (Lampa.ParentalControl && typeof Lampa.ParentalControl.personal === 'function') {
       Lampa.ParentalControl.personal('settings', open, false, true);
