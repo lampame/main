@@ -546,6 +546,7 @@
    * Auth:    Bearer token (опціональний)
    */
   var PROXY_BASE = 'https://apx.lme.isroot.in/destination/https://kinobaza.com.ua';
+  var DIRECT_API = 'https://kinobaza.com.ua/api/v1';
   var CDN_BASE = 'https://i.kinobaza.com.ua';
   var BASE_URL$4 = PROXY_BASE + '/api/v1';
   var network$5 = new Lampa.Reguest();
@@ -580,7 +581,9 @@
    */
   function buildUrl$a(path) {
     var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var u = BASE_URL$4 + path;
+    var direct = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+    var base = direct ? DIRECT_API : BASE_URL$4;
+    var u = base + path;
     var _loop = function _loop(key) {
       if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
         if (Array.isArray(params[key])) {
@@ -609,7 +612,8 @@
     var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var resolve = arguments.length > 2 ? arguments[2] : undefined;
     var reject = arguments.length > 3 ? arguments[3] : undefined;
-    var u = buildUrl$a(path, params);
+    var direct = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
+    var u = buildUrl$a(path, params, direct);
     network$5.silent(u, function (json) {
       resolve(json);
     }, function (a, c) {
@@ -654,7 +658,7 @@
   function getTitles() {
     var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     return new Promise(function (resolve, reject) {
-      get$1('/titles', params, resolve, reject);
+      get$1('/titles', params, resolve, reject, true);
     });
   }
 
@@ -740,7 +744,7 @@
     return new Promise(function (resolve, reject) {
       get$1('/titles', {
         q: query
-      }, resolve, reject);
+      }, resolve, reject, true);
     });
   }
 
@@ -755,7 +759,7 @@
       get$1('/titles', {
         person_id: personId,
         page: page || 1
-      }, resolve, reject);
+      }, resolve, reject, true);
     });
   }
 
@@ -767,7 +771,7 @@
   function getLists() {
     var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     return new Promise(function (resolve, reject) {
-      get$1('/lists', params, resolve, reject);
+      get$1('/lists', params, resolve, reject, true);
     });
   }
 
@@ -809,7 +813,7 @@
       get$1('/persons', {
         title_id: titleId,
         type: 10
-      }, resolve, reject);
+      }, resolve, reject, true);
     });
   }
 
@@ -832,7 +836,7 @@
         q: query
       };
       if (page && page > 1) params.page = page;
-      get$1('/persons', params, resolve, reject);
+      get$1('/persons', params, resolve, reject, true);
     });
   }
 
@@ -927,6 +931,7 @@
     fetchProfile: fetchProfile,
     clear: clear$5,
     PROXY_BASE: PROXY_BASE,
+    DIRECT_API: DIRECT_API,
     CDN_BASE: CDN_BASE,
     BASE_URL: BASE_URL$4
   };
@@ -6182,7 +6187,7 @@
    * Без автентифікації
    * Відповідь: { total: number, data: [k6.d0] }
    */
-  var BASE_URL$2 = api$1.BASE_URL;
+  var BASE_URL$2 = api$1.DIRECT_API;
   var network$2 = new Lampa.Reguest();
 
   /**
@@ -6416,7 +6421,7 @@
    *   GET /titles?list_type=13&list_id={id}&page={page}
    * Всі ендпоінти публічні — без автентифікації
    */
-  var BASE_URL$1 = api$1.BASE_URL;
+  var BASE_URL$1 = api$1.DIRECT_API;
   var network$1 = new Lampa.Reguest();
 
   /**
@@ -6767,6 +6772,7 @@
    * POST /persons/{id}/unfavorite — відписатися
    */
   var BASE_URL = api$1.BASE_URL;
+  var DIRECT_BASE = api$1.DIRECT_API;
   var network = new Lampa.Reguest();
   var authNetwork = new Lampa.Reguest();
   authNetwork.timeout(15000);
@@ -6782,7 +6788,9 @@
    * Будує повний URL з query параметрами
    */
   function buildUrl(path, params) {
-    var u = BASE_URL + path;
+    var direct = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+    var base = direct ? DIRECT_BASE : BASE_URL;
+    var u = base + path;
     for (var key in params) {
       if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
         u = addParam(u, key + '=' + encodeURIComponent(params[key]));
@@ -6795,7 +6803,8 @@
    * Виконує GET-запит (без авторизації — публічні ендпоінти)
    */
   function get(path, params, resolve, reject) {
-    var u = buildUrl(path, params);
+    var direct = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
+    var u = buildUrl(path, params, direct);
     network.silent(u, function (json) {
       if (json && json.data) {
         json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
@@ -6843,7 +6852,7 @@
   function getPersons(page, resolve, reject) {
     get('/persons', {
       page: page || 1
-    }, resolve, reject);
+    }, resolve, reject, true);
   }
 
   /**
@@ -6890,7 +6899,7 @@
       order_by: 'date_desc',
       person_id: personId,
       page: page || 1
-    }, resolve, reject);
+    }, resolve, reject, true);
   }
 
   /**
