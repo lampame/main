@@ -391,15 +391,305 @@
     write('log', message, meta);
   }
 
-  var API_URL = 'https://apx.lme.isroot.in/trakt';
+  // ── Environment Detection + Request Routing + CORS Fallback ──────────────
+  // Smart TV platforms (Tizen, WebOS) can call api.trakt.tv directly (no CORS).
+  // Browser environments must go through a CORS proxy.
+  // OAuth paths ALWAYS go through the proxy (client_secret is server-side only).
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // ── Base URLs ─────────────────────────────────────────────────────────────
+
+  var PROXY_BASE_URL = 'https://apx.lme.isroot.in/trakt';
+  var DIRECT_BASE_URL = 'https://api.trakt.tv';
+
+  // ── Client ID for Direct API Calls ────────────────────────────────────────
+  // User-provided Trakt client ID, needed only when calling api.trakt.tv directly.
+  // Set at runtime via setClientId() or auto-loaded from Lampa.Storage.
+
+  var TRAKT_CLIENT_ID = '';
+  function setClientId(id) {
+    if (id && typeof id === 'string' && id.trim()) {
+      TRAKT_CLIENT_ID = id.trim();
+    }
+  }
+
+  // Auto-load from Lampa.Storage if available
+  try {
+    if (typeof Lampa !== 'undefined' && Lampa.Storage && typeof Lampa.Storage.field === 'function') {
+      var storedId = Lampa.Storage.field('trakt_client_id');
+      if (storedId) setClientId(storedId);
+    }
+  } catch (e) {/* noop — runs in non-Lampa context */}
+
+  // ── Environment Detection ─────────────────────────────────────────────────
+  // Cached in module-level boolean. Never persisted to storage.
+
+  var _corsFreeDetected = null;
+
+  /**
+   * Detect whether the current environment is CORS-free (Smart TV / local).
+   * Returns the cached boolean on subsequent calls.
+   * @returns {boolean}
+   */
+  function detectCorsFree() {
+    if (_corsFreeDetected !== null) return _corsFreeDetected;
+    try {
+      // 1. Protocol check — file/widget/local protocols are CORS-free
+      var protocol = (window.location.protocol || '').toLowerCase();
+      if (protocol === 'file:' || protocol === 'widget:' || protocol === 'local:') {
+        _corsFreeDetected = true;
+        return true;
+      }
+
+      // 2. User-Agent check — Smart TV platforms
+      var ua = navigator.userAgent || '';
+      if (/LampaApp|Tizen|WebOS|SmartTV/i.test(ua)) {
+        _corsFreeDetected = true;
+        return true;
+      }
+    } catch (e) {
+      // If detection fails, assume CORS-strict
+    }
+    _corsFreeDetected = false;
+    return false;
+  }
+
+  // ── CORS-Free mode flag ───────────────────────────────────────────────────
+  // Initialized from environment detection. Set to false on CORS fallback
+  // for the rest of the session.
+
+  var corsFreeMode = false;
+  (function initCorsFreeMode() {
+    corsFreeMode = detectCorsFree();
+  })();
+
+  // ── OAuth Path Detection ──────────────────────────────────────────────────
+  // OAuth ALWAYS goes through the proxy because the proxy holds the
+  // client_secret and refresh token logic server-side.
+
+  /**
+   * Check whether a path is an OAuth endpoint.
+   * @param {string} path
+   * @returns {boolean}
+   */
+  function isOAuthPath(path) {
+    return typeof path === 'string' && path.indexOf('/oauth/') !== -1;
+  }
+
+  // ── Base URL Resolution ───────────────────────────────────────────────────
+
+  /**
+   * Resolve which base URL to use for a given path.
+   * OAuth → proxy (always). CORS-free → direct. Otherwise → proxy.
+   * @param {string} path
+   * @returns {string}
+   */
+  function resolveBaseUrl(path) {
+    if (isOAuthPath(path)) return PROXY_BASE_URL;
+    if (corsFreeMode) return DIRECT_BASE_URL;
+    return PROXY_BASE_URL;
+  }
+
+  // ── CORS Error Detection ──────────────────────────────────────────────────
+
+  /**
+   * Check if an error represents a CORS block or network failure.
+   * jQuery ajax gives status 0 for CORS/network errors.
+   * TypeError handles native fetch network errors (cross-compatibility).
+   * Does NOT match 4xx/5xx — those are legitimate API responses.
+   * @param {Error} error
+   * @returns {boolean}
+   */
+  function isCorsOrNetworkError(error) {
+    if (!error) return false;
+    if (error.status === 0) return true;
+    if (error instanceof TypeError) return true;
+    return false;
+  }
+
+  // ── Response Header Parser ────────────────────────────────────────────────
+
+  /**
+   * Parse jQuery XHR response headers into a lowercase-keyed object.
+   * Matches the implementation in api.js (lines 1738-1758).
+   * @param {jqXHR} jqXHR
+   * @returns {Object}
+   */
+  function parseResponseHeaders(jqXHR) {
+    var headers = {};
+    if (!jqXHR || typeof jqXHR.getAllResponseHeaders !== 'function') {
+      return headers;
+    }
+    var raw = jqXHR.getAllResponseHeaders();
+    if (!raw) return headers;
+    raw.trim().split(/[\r\n]+/).forEach(function (line) {
+      var separatorIndex = line.indexOf(':');
+      if (separatorIndex <= 0) return;
+      var key = line.slice(0, separatorIndex).trim().toLowerCase();
+      var value = line.slice(separatorIndex + 1).trim();
+      if (key) headers[key] = value;
+    });
+    return headers;
+  }
+
+  // ── jQuery AJAX Helper (internal, not exported) ───────────────────────────
+
+  /**
+   * Wrapper around $.ajax with the same error shape as _performRequest in api.js.
+   * Always resolves with { data, status, headers }.
+   * Rejects with Error objects having { status, headers, response, originalError }.
+   * @param {string} method  - HTTP method (GET, POST, PUT, DELETE, etc.)
+   * @param {string} url     - Full request URL
+   * @param {Object} params  - Request body for POST/PUT
+   * @param {Object} headers - Request headers
+   * @returns {Promise<{data: *, status: number, headers: Object}>}
+   */
+  function doAjaxCall(method, url, params, headers) {
+    return new Promise(function (resolve, reject) {
+      var ajaxParams = {
+        url: url,
+        timeout: 15000,
+        headers: headers,
+        type: method,
+        dataType: 'json',
+        crossDomain: true
+      };
+      if (method === 'POST' || method === 'PUT') {
+        ajaxParams.data = JSON.stringify(params || {});
+        ajaxParams.contentType = 'application/json';
+        ajaxParams.processData = false;
+      }
+      $.ajax(ajaxParams).done(function (data, _textStatus, jqXHR) {
+        var status = jqXHR && typeof jqXHR.status === 'number' ? jqXHR.status : 200;
+        resolve({
+          data: data,
+          status: status,
+          headers: parseResponseHeaders(jqXHR)
+        });
+      }).fail(function (jqXHR) {
+        var status = jqXHR && jqXHR.status ? jqXHR.status : 0;
+        reject(Object.assign(new Error('TraktTV API Error'), {
+          status: status,
+          headers: parseResponseHeaders(jqXHR),
+          response: jqXHR && (jqXHR.responseJSON || jqXHR.responseText || null),
+          originalError: jqXHR || {}
+        }));
+      });
+    });
+  }
+
+  // ── Main Request Execution ────────────────────────────────────────────────
+  // Replaces _performRequest in api.js. Handles the entire request lifecycle
+  // including CORS fallback: direct → proxy on CORS/network error.
+
+  /**
+   * Execute an API request with intelligent routing and CORS fallback.
+   *
+   * Attempt strategy:
+   *   - CORS-free path: try DIRECT_BASE_URL first, fall back to PROXY_BASE_URL
+   *     on CORS/network error (switches session to CORS-strict).
+   *   - OAuth path: always PROXY_BASE_URL (single attempt).
+   *   - CORS-strict path: always PROXY_BASE_URL (single attempt).
+   *
+   * Result shape (matches _performRequest):
+   *   - withMeta=true:  { data, status, headers }
+   *   - withMeta=false: data (response body only)
+   *
+   * @param {string}  method          - HTTP method
+   * @param {string}  path            - API path (e.g. '/sync/history')
+   * @param {Object}  [params={}]     - Request body
+   * @param {Object}  [headers={}]    - Request headers
+   * @param {boolean} [unauthorized]  - Reserved for caller bookkeeping
+   * @param {Object}  [requestOptions={}] - Options (withMeta, etc.)
+   * @returns {Promise<*>}
+   */
+  function executeRequest(_x, _x2, _x3, _x4, _x5) {
+    return _executeRequest.apply(this, arguments);
+  }
+  function _executeRequest() {
+    _executeRequest = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(method, path, params, headers, unauthorized) {
+      var requestOptions,
+        baseUrl,
+        useDirect,
+        withMeta,
+        attempts,
+        lastError,
+        attempt,
+        currentBase,
+        currentUrl,
+        requestHeaders,
+        result,
+        _args = arguments,
+        _t;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            requestOptions = _args.length > 5 && _args[5] !== undefined ? _args[5] : {};
+            baseUrl = resolveBaseUrl(path);
+            useDirect = baseUrl === DIRECT_BASE_URL;
+            withMeta = !!(requestOptions && requestOptions.withMeta);
+            attempts = useDirect ? 2 : 1;
+            lastError = null;
+            attempt = 0;
+          case 1:
+            if (!(attempt < attempts)) {
+              _context.n = 8;
+              break;
+            }
+            currentBase = attempt === 0 ? baseUrl : PROXY_BASE_URL;
+            currentUrl = currentBase + path;
+            requestHeaders = _objectSpread2({}, headers || {}); // For direct API calls, add Trakt client ID for app identification
+            if (currentBase === DIRECT_BASE_URL && TRAKT_CLIENT_ID) {
+              requestHeaders['trakt-api-key'] = TRAKT_CLIENT_ID;
+            }
+            _context.p = 2;
+            _context.n = 3;
+            return doAjaxCall(method, currentUrl, params || {}, requestHeaders);
+          case 3:
+            result = _context.v;
+            if (!withMeta) {
+              _context.n = 4;
+              break;
+            }
+            return _context.a(2, result);
+          case 4:
+            return _context.a(2, result.data);
+          case 5:
+            _context.p = 5;
+            _t = _context.v;
+            lastError = _t;
+
+            // Only fallback on CORS/network error from direct attempt
+            if (!(useDirect && attempt === 0 && isCorsOrNetworkError(_t))) {
+              _context.n = 6;
+              break;
+            }
+            corsFreeMode = false; // switch session to CORS-strict
+            return _context.a(3, 7);
+          case 6:
+            throw _t;
+          case 7:
+            attempt++;
+            _context.n = 1;
+            break;
+          case 8:
+            throw lastError;
+          case 9:
+            return _context.a(2);
+        }
+      }, _callee, null, [[2, 5]]);
+    }));
+    return _executeRequest.apply(this, arguments);
+  }
+
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
   var DEVICE_AUTH_STALE_MS = 20 * 60 * 1000;
   var MAX_RETRY_ATTEMPTS = 2; // 3 спроби загалом
   var RETRY_BASE_DELAY_MS = 600;
   var RETRY_MAX_DELAY_MS = 15000;
-  var HOT_CACHE_TTL_FEED_MS = 25 * 1000;
-  var HOT_CACHE_TTL_USER_MS = 45 * 1000;
-  var HOT_CACHE_TTL_REFERENCE_MS = 5 * 60 * 1000;
+  var CACHE_TTL_FEED_MS = 5 * 60 * 1000;
+  var CACHE_TTL_PROGRESS_MS = 30 * 1000;
+  var CACHE_TTL_METADATA_MS = 60 * 60 * 1000;
   var MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
   var inFlightRequests = new Map();
   var responseCache = new Map();
@@ -1334,8 +1624,11 @@
   function normalizeRequestUrl() {
     var url = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
     var source = String(url || '').trim();
-    if (source.indexOf(API_URL) === 0) {
-      source = source.slice(API_URL.length);
+    if (source.indexOf(PROXY_BASE_URL) === 0) {
+      source = source.slice(PROXY_BASE_URL.length);
+    }
+    if (source.indexOf(DIRECT_BASE_URL) === 0) {
+      source = source.slice(DIRECT_BASE_URL.length);
     }
     var queryIndex = source.indexOf('?');
     var rawPath = queryIndex >= 0 ? source.slice(0, queryIndex) : source;
@@ -1422,17 +1715,22 @@
     var path = request.path || '';
     if (!path) return 0;
     if (/^\/(media|movies|shows)\/(trending|popular|anticipated)(\/|$)/.test(path)) {
-      return HOT_CACHE_TTL_FEED_MS;
+      return CACHE_TTL_FEED_MS;
     }
     if (/^\/recommendations(\/|$)/.test(path) || /^\/search(\/|$)/.test(path)) {
-      return HOT_CACHE_TTL_FEED_MS;
+      return CACHE_TTL_FEED_MS;
     }
     if (path === '/users/me' || /^\/users\/me\/lists(\/|$)/.test(path) || /^\/users\/me\/likes\/lists(\/|$)/.test(path)) {
-      return HOT_CACHE_TTL_USER_MS;
+      return CACHE_TTL_PROGRESS_MS;
     }
     if (/^\/networks(\/|$)/.test(path)) {
-      return HOT_CACHE_TTL_REFERENCE_MS;
+      return CACHE_TTL_METADATA_MS;
     }
+
+    // Static metadata: show/movie descriptions, TMDB resolution — 1 hour
+    if (/^\/shows\/\d+(\/|$)/.test(path)) return CACHE_TTL_METADATA_MS;
+    if (/^\/movies\/\d+(\/|$)/.test(path)) return CACHE_TTL_METADATA_MS;
+    if (/^\/search\/tmdb\/\d+/.test(path)) return CACHE_TTL_METADATA_MS;
     return 0;
   }
   function getCachedResponse(cacheKey) {
@@ -1837,48 +2135,10 @@
     var params = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var unauthorized = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
     var requestOptions = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
-    return new Promise(function (resolve, reject) {
-      var headers = ensureHeaders({
-        unauthorized: unauthorized
-      });
-      var withMeta = !!(requestOptions && requestOptions.withMeta);
-      var reqUrl = API_URL + url;
-      var ajaxParams = {
-        url: reqUrl,
-        timeout: 15000,
-        headers: headers,
-        type: method,
-        dataType: 'json',
-        crossDomain: true
-      };
-      if (method === 'POST' || method === 'PUT') {
-        ajaxParams.data = JSON.stringify(params);
-        ajaxParams.contentType = 'application/json';
-        ajaxParams.processData = false;
-      }
-      $.ajax(ajaxParams).done(function (data, _textStatus, jqXHR) {
-        var status = jqXHR && typeof jqXHR.status === 'number' ? jqXHR.status : 200;
-        var responseHeaders = parseResponseHeaders(jqXHR);
-        if (withMeta) {
-          resolve({
-            data: data,
-            status: status,
-            headers: responseHeaders
-          });
-        } else {
-          resolve(data);
-        }
-      }).fail(function (jqXHR) {
-        var status = jqXHR && jqXHR.status ? jqXHR.status : 0;
-        var responseHeaders = parseResponseHeaders(jqXHR);
-        reject(Object.assign(new Error('TraktTV API Error'), {
-          status: status,
-          headers: responseHeaders,
-          response: jqXHR && (jqXHR.responseJSON || jqXHR.responseText || null),
-          originalError: jqXHR || {}
-        }));
-      });
+    var headers = ensureHeaders({
+      unauthorized: unauthorized
     });
+    return executeRequest(method, url, params, headers, unauthorized, requestOptions);
   }
 
   /**
@@ -2151,22 +2411,6 @@
       total_pages: total_pages,
       page: page
     };
-  }
-  function parseResponseHeaders(jqXHR) {
-    var headers = {};
-    if (!jqXHR || typeof jqXHR.getAllResponseHeaders !== 'function') {
-      return headers;
-    }
-    var raw = jqXHR.getAllResponseHeaders();
-    if (!raw) return headers;
-    raw.trim().split(/[\r\n]+/).forEach(function (line) {
-      var separatorIndex = line.indexOf(':');
-      if (separatorIndex <= 0) return;
-      var key = line.slice(0, separatorIndex).trim().toLowerCase();
-      var value = line.slice(separatorIndex + 1).trim();
-      if (key) headers[key] = value;
-    });
-    return headers;
   }
   function toPositiveInt$1(value) {
     var parsed = parseInt(value, 10);
@@ -2441,7 +2685,7 @@
           state = _ref8.state,
           signup = _ref8.signup,
           prompt = _ref8.prompt;
-        var base = "".concat(API_URL, "oauth/authorize");
+        var base = "".concat(PROXY_BASE_URL, "/oauth/authorize");
         var qs = new URLSearchParams({
           redirect_uri: redirect_uri,
           response_type: 'code'
@@ -11681,6 +11925,10 @@
   function startPlugin() {
     window.plugin_trakt_ready = true;
 
+    // Initialize Trakt client_id for direct Smart TV API calls
+    // User-provided: created a dedicated key for the plugin
+    setClientId('da2f995ec6a243546438f011272eb0a6f457048473527e4ee35b633100175f35');
+
     // Establish global bridge only after window is available
     try {
       if (typeof window !== 'undefined') {
@@ -11796,7 +12044,7 @@
     Lampa.Manifest.plugins = Array.isArray(Lampa.Manifest.plugins) ? Lampa.Manifest.plugins : [];
     Lampa.Manifest.plugins.push({
       type: 'video',
-      version: '3.0.1',
+      version: '3.0.2',
       name: pluginName,
       component: 'trakt_context_lists',
       onContextMenu: function onContextMenu() {
