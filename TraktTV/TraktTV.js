@@ -12724,63 +12724,139 @@
   };
   function registerLazyLineLoader() {
     if (typeof Lampa === 'undefined' || !Lampa.Listener) return;
+    function loadLine(e, isRetry) {
+      if (e.line.destroyed) return;
+      if (isRetry) {
+        // Restore "Loading..." placeholder
+        e.line.scroll.clear();
+        if (e.line.items) {
+          Lampa.Arrays.destroy(e.line.items);
+          e.line.items = [];
+        }
+        var placeholderCard = {
+          id: 'placeholder_' + Math.random().toString(36).substr(2, 9),
+          title: Lampa.Lang.translate('loading') || 'Loading...',
+          card_type: 'movie',
+          type: 'movie',
+          poster: '',
+          image: '',
+          release_date: '',
+          params: {
+            placeholder: true
+          }
+        };
+        e.line.emit('createAndAppend', placeholderCard);
+        if (e.line.items && e.line.items.length) {
+          e.line.active = 0;
+          e.line.last = e.line.items[0].render(true);
+        }
+        var isFocused = Lampa.Controller.own(e.line);
+        if (isFocused) {
+          Lampa.Controller.collectionSet(e.line.scroll.render(true));
+          if (e.line.last) {
+            Lampa.Controller.collectionFocus(e.line.last[0], e.line.scroll.render(true));
+          }
+        }
+        Lampa.Layer.visible(e.line.scroll.render(true));
+      }
+      var definition = e.data.definition;
+      var page = 1;
+      var limit = 20;
+      loadFeedLine(definition, page, limit).then(function (lineData) {
+        if (e.line.destroyed) return;
+
+        // Clear the placeholder
+        e.line.scroll.clear();
+        if (e.line.items) {
+          Lampa.Arrays.destroy(e.line.items);
+          e.line.items = [];
+        }
+
+        // Update raw results
+        e.data.results = lineData.results;
+
+        // Render new cards
+        var viewSize = e.line.view || 7;
+        e.data.results.slice(0, viewSize).forEach(function (card) {
+          e.line.emit('createAndAppend', card);
+        });
+        if (e.line.items && e.line.items.length) {
+          e.line.active = 0;
+          e.line.last = e.line.items[0].render(true);
+        }
+        var isFocused = Lampa.Controller.own(e.line);
+        if (isFocused) {
+          Lampa.Controller.collectionSet(e.line.scroll.render(true));
+          if (e.line.last) {
+            Lampa.Controller.collectionFocus(e.line.last[0], e.line.scroll.render(true));
+          }
+        }
+
+        // Trigger visible update in Layer
+        Lampa.Layer.visible(e.line.scroll.render(true));
+      })["catch"](function (err) {
+        if (e.line.destroyed) return;
+        e.line.loading_started = false;
+        console.error('[TraktTV Debug] Lazy load failed:', {
+          title: definition.title,
+          path: definition.path,
+          status: err && err.status,
+          response: err && err.response,
+          responseText: err && err.originalError && err.originalError.responseText,
+          error: err
+        });
+        logWarn('Lazy line load failed', {
+          title: definition.title,
+          error: err
+        }, {
+          debugOnly: true
+        });
+
+        // Show Error card with retry on click
+        e.line.scroll.clear();
+        if (e.line.items) {
+          Lampa.Arrays.destroy(e.line.items);
+          e.line.items = [];
+        }
+        var errorCard = {
+          id: 'error_' + Math.random().toString(36).substr(2, 9),
+          title: Lampa.Lang.translate('title_error') || 'Помилка завантаження. Натисніть для повтору',
+          card_type: 'movie',
+          type: 'movie',
+          poster: '',
+          image: '',
+          release_date: '',
+          params: {
+            emit: {
+              onEnter: function onEnter() {
+                if (e.line.loading_started) return;
+                e.line.loading_started = true;
+                loadLine(e, true);
+              }
+            }
+          }
+        };
+        e.line.emit('createAndAppend', errorCard);
+        if (e.line.items && e.line.items.length) {
+          e.line.active = 0;
+          e.line.last = e.line.items[0].render(true);
+        }
+        var isFocused = Lampa.Controller.own(e.line);
+        if (isFocused) {
+          Lampa.Controller.collectionSet(e.line.scroll.render(true));
+          if (e.line.last) {
+            Lampa.Controller.collectionFocus(e.line.last[0], e.line.scroll.render(true));
+          }
+        }
+        Lampa.Layer.visible(e.line.scroll.render(true));
+      });
+    }
     Lampa.Listener.follow('line', function (e) {
       if (!e || !e.data || !e.data.lazy_load) return;
       if (e.type === 'visible' || e.type === 'toggle') {
         if (e.line.loading_started) return;
         e.line.loading_started = true;
-        var definition = e.data.definition;
-        var page = 1;
-        var limit = 20;
-        loadFeedLine(definition, page, limit).then(function (lineData) {
-          if (e.line.destroyed) return;
-
-          // Clear the placeholder
-          e.line.scroll.clear();
-          if (e.line.items) {
-            Lampa.Arrays.destroy(e.line.items);
-            e.line.items = [];
-          }
-
-          // Update raw results
-          e.data.results = lineData.results;
-
-          // Render new cards
-          var viewSize = e.line.view || 7;
-          e.data.results.slice(0, viewSize).forEach(function (card) {
-            e.line.emit('createAndAppend', card);
-          });
-          if (e.line.items && e.line.items.length) {
-            e.line.active = 0;
-            e.line.last = e.line.items[0].render(true);
-          }
-          var isFocused = Lampa.Controller.own(e.line);
-          if (isFocused) {
-            Lampa.Controller.collectionSet(e.line.scroll.render(true));
-            if (e.line.last) {
-              Lampa.Controller.collectionFocus(e.line.last[0], e.line.scroll.render(true));
-            }
-          }
-
-          // Trigger visible update in Layer
-          Lampa.Layer.visible(e.line.scroll.render(true));
-        })["catch"](function (err) {
-          e.line.loading_started = false;
-          console.error('[TraktTV Debug] Lazy load failed:', {
-            title: definition.title,
-            path: definition.path,
-            status: err && err.status,
-            response: err && err.response,
-            responseText: err && err.originalError && err.originalError.responseText,
-            error: err
-          });
-          logWarn('Lazy line load failed', {
-            title: definition.title,
-            error: err
-          }, {
-            debugOnly: true
-          });
-        });
+        loadLine(e, false);
       } else if (e.type === 'destroy') {
         e.line.destroyed = true;
       }
