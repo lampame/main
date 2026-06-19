@@ -549,7 +549,10 @@
       var ajaxParams = {
         url: url,
         timeout: 15000,
-        headers: headers,
+        headers: _objectSpread2(_objectSpread2({}, headers || {}), {}, {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }),
         type: method,
         dataType: 'json',
         crossDomain: true
@@ -12022,7 +12025,8 @@
         typeHint: typeHint,
         query: {
           genres: genre.slug
-        }
+        },
+        lazy: true
       };
     });
   }
@@ -12300,6 +12304,32 @@
   }
   function createPart(definition) {
     var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    if (definition.lazy) {
+      return function (call) {
+        var line = {
+          title: definition.title,
+          url: normalizePath(definition.path),
+          source: SOURCE_KEY,
+          results: [{
+            id: 'placeholder_' + Math.random().toString(36).substr(2, 9),
+            title: 'Loading...',
+            card_type: 'movie',
+            type: 'movie',
+            poster: '',
+            image: '',
+            release_date: '',
+            params: {
+              placeholder: true
+            }
+          }],
+          lazy_load: true,
+          definition: definition
+        };
+        var genres = definition.query && _typeof(definition.query) === 'object' ? String(definition.query.genres || '').trim() : '';
+        if (genres) line.genres = genres;
+        call(line);
+      };
+    }
     return function (call) {
       var page = Math.max(1, parseInt(params.page, 10) || 1);
       var limit = Math.max(1, parseInt(params.limit, 10) || DEFAULT_LIMIT);
@@ -12692,6 +12722,70 @@
     },
     clear: function clear() {}
   };
+  function registerLazyLineLoader() {
+    if (typeof Lampa === 'undefined' || !Lampa.Listener) return;
+    Lampa.Listener.follow('line', function (e) {
+      if (!e || !e.data || !e.data.lazy_load) return;
+      if (e.type === 'visible' || e.type === 'toggle') {
+        if (e.line.loading_started) return;
+        e.line.loading_started = true;
+        var definition = e.data.definition;
+        var page = 1;
+        var limit = 20;
+        loadFeedLine(definition, page, limit).then(function (lineData) {
+          if (e.line.destroyed) return;
+
+          // Clear the placeholder
+          e.line.scroll.clear();
+          if (e.line.items) {
+            Lampa.Arrays.destroy(e.line.items);
+            e.line.items = [];
+          }
+
+          // Update raw results
+          e.data.results = lineData.results;
+
+          // Render new cards
+          var viewSize = e.line.view || 7;
+          e.data.results.slice(0, viewSize).forEach(function (card) {
+            e.line.emit('createAndAppend', card);
+          });
+          if (e.line.items && e.line.items.length) {
+            e.line.active = 0;
+            e.line.last = e.line.items[0].render(true);
+          }
+          var isFocused = Lampa.Controller.own(e.line);
+          if (isFocused) {
+            Lampa.Controller.collectionSet(e.line.scroll.render(true));
+            if (e.line.last) {
+              Lampa.Controller.collectionFocus(e.line.last[0], e.line.scroll.render(true));
+            }
+          }
+
+          // Trigger visible update in Layer
+          Lampa.Layer.visible(e.line.scroll.render(true));
+        })["catch"](function (err) {
+          e.line.loading_started = false;
+          console.error('[TraktTV Debug] Lazy load failed:', {
+            title: definition.title,
+            path: definition.path,
+            status: err && err.status,
+            response: err && err.response,
+            responseText: err && err.originalError && err.originalError.responseText,
+            error: err
+          });
+          logWarn('Lazy line load failed', {
+            title: definition.title,
+            error: err
+          }, {
+            debugOnly: true
+          });
+        });
+      } else if (e.type === 'destroy') {
+        e.line.destroyed = true;
+      }
+    });
+  }
 
   // Helper getter: prefer module api, fallback to global bridge
   function getGlobalApi() {
@@ -12827,6 +12921,13 @@
       initContentRows();
     } catch (error) {
       logError('ContentRows initialization failed', error);
+    }
+
+    // Initialize lazy loading listener for content rows
+    try {
+      registerLazyLineLoader();
+    } catch (error) {
+      logError('Lazy line loader initialization failed', error);
     }
     if (window.appready) {
       initTraktHeadButton();
