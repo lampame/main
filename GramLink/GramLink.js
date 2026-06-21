@@ -930,10 +930,8 @@
      *   window.telegram.Api             — all TL API types
      */
 
-    // Production: commit hash — permanently cached, update when bundle changes.
-    // To switch to a tag: set BUNDLE_REF = 'v2.26.22' (after pushing the tag to TGSBundle).
-    var BUNDLE_REF = 'afbba130b8728d9f8ea585ca39e7161f3fa5e29f';
-    var BUNDLE_CDN = 'https://rawcdn.githack.com/lampame/TGSBundle/' + BUNDLE_REF + '/telegram.min.js';
+    var BUNDLE_REF = '653586b3ffec2f9003ec7e1806b5c2e41224eb64';
+    var BUNDLE_CDN = 'https://cdn.jsdelivr.net/gh/lampame/TGSBundle@' + BUNDLE_REF + '/telegram.min.js';
     var _loadPromise = null;
 
     /**
