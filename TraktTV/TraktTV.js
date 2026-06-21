@@ -13117,12 +13117,6 @@
     if (status === 'ok') button.addClass('trakt-head-action--ok');else button.addClass('trakt-head-action--error');
   }
   if (!window.plugin_trakt_ready) {
-    // Додаємо глобальний обробник unhandledrejection на самому початку
-    window.addEventListener('unhandledrejection', function (event) {
-      logError('Unhandled promise rejection', event.reason, {
-        debugOnly: true
-      });
-    });
     startPlugin();
   }
 
