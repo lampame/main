@@ -1036,7 +1036,7 @@
       return bytes;
     }
 
-    var VERSION = '0.0.3';
+    var VERSION = '0.0.41';
 
     // Storage keys
     var STORAGE_DC_ID = 'gramlink_dc_id';
@@ -2639,7 +2639,7 @@
       var qrPlaceholder = html.find('.gramlink-auth__qr-placeholder');
 
       // ponytail: phone auth button — replaces the old deeplink
-      html.find('.gramlink-auth__phone-btn').on('hover:enter', function () {
+      html.find('.gramlink-auth__phone-btn').on('hover:enter hover:click hover:touch', function () {
         cancelAuth();
         Lampa.Modal.close();
         setTimeout(function () {
@@ -2768,20 +2768,34 @@
     }
 
     // ── Phone number auth (one-device flow) ──────────────────────────
-    // ponytail: official Telegram keys — support SMS delivery unlike some custom API IDs
-    var TG_OFFICIAL_API_ID = 6;
-    var TG_OFFICIAL_API_HASH = 'eb06d4abfb49dc3eeb1aeb98ae0f581e';
+    // ponytail: platform-specific Telegram keys — Android uses 6, others 2040
+    function detectPhoneAuthKeys() {
+      var plat = 'Desktop';
+      if (typeof Lampa !== 'undefined' && Lampa.Platform && Lampa.Platform.is('android')) {
+        plat = 'Android';
+      }
+      console.log('GramLink', 'Phone auth platform:', plat);
+      return plat === 'Android' ? {
+        apiId: 6,
+        apiHash: 'eb06d4abfb49dc3eeb1aeb98ae0f581e',
+        platform: plat
+      } : {
+        apiId: 2040,
+        apiHash: 'b18441a1ff607e10a989891a5462e627',
+        platform: plat
+      };
+    }
     function startPhoneAuth(creds) {
       authCancelFlag = false;
-      // Use official Telegram API keys for phone auth (reliable SMS delivery)
+      var keys = detectPhoneAuthKeys();
       creds = {
-        apiId: TG_OFFICIAL_API_ID,
-        apiHash: TG_OFFICIAL_API_HASH
+        apiId: keys.apiId,
+        apiHash: keys.apiHash
       };
       var enabledCtrl = Lampa.Controller.enabled().name;
       Lampa.Input.edit({
         title: 'Phone number',
-        subtitle: 'Enter phone with country code (e.g. +380501234567)',
+        subtitle: '[' + keys.platform + '] Enter phone with country code (e.g. +380501234567)',
         value: '',
         free: true,
         nosave: true
@@ -2853,6 +2867,7 @@
                     if (idx === 0) {
                       // Enter code
                       Lampa.Modal.close();
+                      Lampa.Controller.toggle(enabledCtrl);
                       Lampa.Input.edit({
                         title: 'Login code',
                         subtitle: isCodeViaApp ? 'Code sent via Telegram' : 'Code sent via SMS',
@@ -2880,8 +2895,11 @@
                         phoneCodeHash: hash
                       })).then(function (resendResult) {
                         if (authCancelFlag) return;
-                        console.log('GramLink', 'resendCode result:', resendResult.type.className, 'hash:', resendResult.phoneCodeHash);
-                        showCodeUi(resendResult.phoneCodeHash, 'Check your Telegram or SMS');
+                        var sentType = resendResult.type;
+                        var resendLabel = 'Check your Telegram';
+                        if (sentType instanceof Api.auth.SentCodeTypeSms) resendLabel = 'Check SMS';else if (sentType instanceof Api.auth.SentCodeTypeCall) resendLabel = 'Answer incoming call';
+                        console.log('GramLink', 'resendCode result:', sentType.className, 'hash:', resendResult.phoneCodeHash);
+                        showCodeUi(resendResult.phoneCodeHash, resendLabel);
                       })["catch"](function (resendErr) {
                         if (authCancelFlag) return;
                         var msg = resendErr.errorMessage || resendErr.message || 'unknown';
@@ -2926,19 +2944,21 @@
                       nosave: true
                     }, function (val) {
                       if (val && String(val).trim()) {
-                        // ponytail: re-open modal with status (same pattern as QR flow)
-                        Lampa.Modal.open({
-                          title: 'Telegram Login',
-                          html: $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div style="font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password...</div>' + '</div>'),
-                          size: 'medium',
-                          onBack: function onBack() {
-                            cancelAuth();
-                            Lampa.Modal.close();
-                            Lampa.Controller.toggle(enabledCtrl);
-                            reject(new Error('AUTH_USER_CANCEL'));
-                          }
-                        });
+                        // ponytail: setTimeout lets Input.edit fully close before Modal.open
                         resolve(String(val).trim());
+                        setTimeout(function () {
+                          Lampa.Modal.open({
+                            title: 'Telegram Login',
+                            html: $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div style="font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password...</div>' + '</div>'),
+                            size: 'medium',
+                            onBack: function onBack() {
+                              cancelAuth();
+                              Lampa.Modal.close();
+                              Lampa.Controller.toggle(enabledCtrl);
+                              reject(new Error('AUTH_USER_CANCEL'));
+                            }
+                          });
+                        }, 200);
                       } else {
                         cancelAuth();
                         Lampa.Controller.toggle(enabledCtrl);
