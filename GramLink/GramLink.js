@@ -877,6 +877,63 @@
           en: 'Add plugins via URL to extend Lampa functionality',
           uk: 'Додавайте плагіни через URL для розширення функціоналу Lampa',
           ru: 'Добавляйте плагины через URL для расширения функционала Lampa'
+        },
+        // Device overlays
+        gramlink_device_reset: {
+          en: 'Reset device settings',
+          uk: 'Скинути налаштування пристрою',
+          ru: 'Сбросить настройки устройства'
+        },
+        gramlink_device_rename: {
+          en: 'Rename device',
+          uk: 'Перейменувати пристрій',
+          ru: 'Переименовать устройство'
+        },
+        gramlink_device_overlay_reset: {
+          en: 'Device overlays reset. Sync profile to apply.',
+          uk: 'Налаштування пристрою скинуто. Синхронізуйте профіль.',
+          ru: 'Настройки устройства сброшены. Синхронизируйте профиль.'
+        },
+        // Compat checker
+        gramlink_compat_title: {
+          en: 'Telegram Library Support',
+          uk: 'Підтримка бібліотеки Telegram',
+          ru: 'Поддержка библиотеки Telegram'
+        },
+        gramlink_compat_ok: {
+          en: 'Fully supported',
+          uk: 'Повністю підтримується',
+          ru: 'Полностью поддерживается'
+        },
+        gramlink_compat_partial: {
+          en: 'Partial — may run slower',
+          uk: 'Частково — може працювати повільніше',
+          ru: 'Частично — может работать медленнее'
+        },
+        gramlink_compat_fail: {
+          en: 'Not supported on this device',
+          uk: 'Не підтримується на цьому пристрої',
+          ru: 'Не поддерживается на этом устройстве'
+        },
+        gramlink_compat_blocked_label: {
+          en: 'Blocking issues',
+          uk: 'Блокуючі проблеми',
+          ru: 'Блокирующие проблемы'
+        },
+        gramlink_compat_warning_label: {
+          en: 'Warnings',
+          uk: 'Попередження',
+          ru: 'Предупреждения'
+        },
+        gramlink_compat_no_blockers: {
+          en: 'No blocking issues detected. Library can be loaded.',
+          uk: 'Блокуючих проблем не виявлено. Бібліотеку можна завантажити.',
+          ru: 'Блокирующих проблем не обнаружено. Библиотеку можно загрузить.'
+        },
+        gramlink_compat_hint_disclaimer: {
+          en: 'This check verifies only the runtime environment required by telegram.min.js. It does not test your network or Telegram API credentials.',
+          uk: 'Ця перевірка лише тестує середовище виконання, потрібне для telegram.min.js. Вона не перевіряє мережу чи Telegram API-креденшали.',
+          ru: 'Эта проверка только тестирует среду выполнения, необходимую для telegram.min.js. Она не проверяет сеть или Telegram API-креденшалы.'
         }
       });
     }
@@ -2107,6 +2164,173 @@
     }
 
     /**
+     * compat.js — GramJS compatibility checker
+     *
+     * Дві групи перевірок:
+     *   - Синтаксичні (BigInt literal, async/await, generators, ?.) — НЕ поліфляться,
+     *     падають ще на етапі парсингу бандла з SyntaxError. Виявляємо через new Function(snippet).
+     *   - Runtime API (WebAssembly, crypto.subtle, Map/Set, Proxy) — перевіряємо typeof,
+     *     деякі поліфляться, деякі ні (BigInt64Array, Proxy).
+     *
+     * @returns {Object} { supported, blockers, warnings, details }
+     */
+    function checkGramJSCompatibility() {
+      var blockers = [];
+      var warnings = [];
+      var details = {
+        syntax: {},
+        runtime: {}
+      };
+
+      // ── 1. Синтаксичні зонди
+      function canParse(snippet) {
+        try {
+          new Function(snippet);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      details.syntax.arrowFn = canParse('()=>{}');
+      details.syntax.letConst = canParse('let a=1; const b=2;');
+      details.syntax.templateLit = canParse('var x=`y`; var y=`${x}`;');
+      details.syntax.classKw = canParse('class X{}');
+      details.syntax.asyncAwait = canParse('async function f(){await 1;}');
+      details.syntax.generator = canParse('function* g(){yield 1;}');
+      details.syntax.bigIntLit = canParse('1n; 2n+3n;');
+      details.syntax.optChain = canParse('({})?.x; ({})?.[0]');
+      details.syntax.exponent = canParse('2**3;');
+      details.syntax.spread = canParse('var a=[1]; var b=[...a]; function f(...c){}');
+      details.syntax.destructuring = canParse('var {a}={a:1}; var [b]=[1];');
+      details.syntax.defaultParam = canParse('function f(a=1){}');
+
+      // ── 2. Runtime API перевірки
+      details.runtime.bigInt = typeof BigInt !== 'undefined';
+      details.runtime.bigInt64Array = typeof BigInt64Array !== 'undefined';
+      details.runtime.webAssembly = typeof WebAssembly !== 'undefined' && typeof WebAssembly.instantiate === 'function';
+      details.runtime.cryptoSubtle = !!(window.crypto && window.crypto.subtle && typeof window.crypto.subtle.digest === 'function');
+      details.runtime.cryptoRandom = !!(window.crypto && typeof window.crypto.getRandomValues === 'function');
+      details.runtime.textEncoder = typeof TextEncoder !== 'undefined';
+      details.runtime.textDecoder = typeof TextDecoder !== 'undefined';
+      details.runtime.promise = typeof Promise !== 'undefined';
+      details.runtime.mapSet = typeof Map !== 'undefined' && typeof Set !== 'undefined';
+      details.runtime.weakMap = typeof WeakMap !== 'undefined';
+      details.runtime.proxy = typeof Proxy !== 'undefined';
+      details.runtime.uint8Array = typeof Uint8Array !== 'undefined';
+      details.runtime.arrayFrom = typeof Array.from === 'function';
+      details.runtime.objectAssign = typeof Object.assign === 'function';
+
+      // ── 3. Класифікація: BLOCKERS vs WARNINGS
+      if (!details.syntax.bigIntLit || !details.runtime.bigInt) {
+        blockers.push('BigInt — 206× у бандлі, MTProto int128/int256, RSA, DH. Не поліфиться.');
+      }
+      if (!details.runtime.bigInt64Array) {
+        blockers.push('BigInt64Array — 6×, TDLib-подібна серіалізація. Не поліфиться.');
+      }
+      if (!details.syntax.asyncAwait) {
+        blockers.push('async/await — 64× async + 405× await. Синтаксично, не поліфиться.');
+      }
+      if (!details.syntax.generator) {
+        blockers.push('Generators (function*) — 11×, async iteration helpers. Не поліфиться.');
+      }
+      if (!details.syntax.arrowFn) {
+        blockers.push('Arrow functions — 246×, синтаксично.');
+      }
+      if (!details.syntax.optChain) {
+        blockers.push('Optional chaining (?.) — 2×, ES2020. Синтаксично.');
+      }
+      if (!details.syntax.exponent) {
+        blockers.push('Exponent operator (**) — 17×. Синтаксично.');
+      }
+      if (!details.runtime.cryptoSubtle) {
+        blockers.push('crypto.subtle — PBKDF2-SHA512 для 2FA, SHA-256, HMAC. Не поліфиться без Worker-fallback.');
+      }
+      if (!details.runtime.cryptoRandom) {
+        blockers.push('crypto.getRandomValues — генератор nonces у MTProto.');
+      }
+      if (!details.runtime.textEncoder || !details.runtime.textDecoder) {
+        blockers.push('TextEncoder/TextDecoder — UTF-8 серіалізація string\'ів у MTProto.');
+      }
+      if (!details.runtime.uint8Array) {
+        blockers.push('Uint8Array — бінарні дані всюди.');
+      }
+      if (!details.runtime.webAssembly) {
+        warnings.push('WebAssembly — AES-IGE fallback на pure-JS, ~5× повільніше.');
+      }
+      if (!details.runtime.proxy) {
+        warnings.push('Proxy — 1×, може зламати окремі reactive-обгортки.');
+      }
+      if (!details.runtime.mapSet) {
+        warnings.push('Map/Set — поліфляться core-js, але без них GramJS не стартане.');
+      }
+      if (!details.runtime.promise) {
+        blockers.push('Promise — 68×, основа асинхронного потоку.');
+      }
+      return {
+        supported: blockers.length === 0,
+        blockers: blockers,
+        warnings: warnings,
+        details: details
+      };
+    }
+    var _gramlinkCompatReport = null;
+    function getCompatReport() {
+      if (!_gramlinkCompatReport) _gramlinkCompatReport = checkGramJSCompatibility();
+      return _gramlinkCompatReport;
+    }
+    function showCompatReportModal() {
+      var report = getCompatReport();
+      var enabledCtrl = Lampa.Controller.enabled().name;
+      var closing = false; // re-entrance guard
+
+      var statusColor = report.supported ? report.warnings.length ? '#ffc107' : '#4caf50' : '#f44336';
+      var statusText = report.supported ? report.warnings.length ? Lampa.Lang.translate('gramlink_compat_partial') : Lampa.Lang.translate('gramlink_compat_ok') : Lampa.Lang.translate('gramlink_compat_fail');
+      var html = $('<div class="gramlink-compat" style="padding:1em;max-width:42em;margin:0 auto"></div>');
+      html.append('<div style="display:flex;align-items:center;gap:1em;padding:1em 1.2em;' + 'background:rgba(255,255,255,0.05);border-radius:0.6em;margin-bottom:1.5em">' + '<div style="width:1.2em;height:1.2em;border-radius:50%;flex-shrink:0;background:' + statusColor + ';box-shadow:0 0 .6em ' + statusColor + '80"></div>' + '<div style="flex:1">' + '<div style="font-size:1.2em;font-weight:600">' + statusText + '</div>' + '<div style="font-size:0.85em;color:rgba(255,255,255,0.5);margin-top:.2em">' + Lampa.Lang.translate('gramlink_compat_hint_disclaimer') + '</div>' + '</div></div>');
+      if (report.blockers.length > 0) {
+        html.append('<div style="font-size:1.1em;font-weight:600;margin-bottom:.8em;color:#f44336">' + Lampa.Lang.translate('gramlink_compat_blocked_label') + ' (' + report.blockers.length + ')</div>');
+        var bl = $('<ul style="list-style:none;padding:0;margin:0 0 1.5em"></ul>');
+        report.blockers.forEach(function (b) {
+          bl.append('<li style="padding:.6em .8em;margin-bottom:.4em;background:rgba(244,67,54,0.1);' + 'border-left:3px solid #f44336;border-radius:0 .4em .4em 0;font-size:.95em">' + b + '</li>');
+        });
+        html.append(bl);
+      } else {
+        html.append('<div style="padding:.8em 1em;background:rgba(76,175,80,0.1);border-left:3px solid #4caf50;' + 'border-radius:0 .4em .4em 0;font-size:.95em;margin-bottom:1.5em">' + Lampa.Lang.translate('gramlink_compat_no_blockers') + '</div>');
+      }
+      if (report.warnings.length > 0) {
+        html.append('<div style="font-size:1.1em;font-weight:600;margin-bottom:.8em;color:#ffc107">' + Lampa.Lang.translate('gramlink_compat_warning_label') + ' (' + report.warnings.length + ')</div>');
+        var wn = $('<ul style="list-style:none;padding:0;margin:0 0 1.5em"></ul>');
+        report.warnings.forEach(function (w) {
+          wn.append('<li style="padding:.6em .8em;margin-bottom:.4em;background:rgba(255,193,7,0.08);' + 'border-left:3px solid #ffc107;border-radius:0 .4em .4em 0;font-size:.95em">' + w + '</li>');
+        });
+        html.append(wn);
+      }
+
+      // ── Raw probe results (inline, scrollable — native Lampa pattern) ──
+      var d = report.details;
+      html.append('<div style="margin-top:1em;padding-top:0.8em;border-top:1px solid rgba(255,255,255,0.08)"></div>');
+      html.append('<div class="settings-param-title"><span>Raw probe results</span></div>');
+      html.append('<div style="display:grid;grid-template-columns:1fr 1fr;gap:1em;font-size:.85em;margin-top:.5em">' + '<div style="background:rgba(255,255,255,0.02);border-radius:.4em;padding:.5em .8em">' + '<div style="font-weight:600;margin-bottom:.4em;color:rgba(255,255,255,0.5)">Syntax</div>' + Object.keys(d.syntax).map(function (k) {
+        var v = d.syntax[k];
+        return '<div style="display:flex;justify-content:space-between;padding:.2em 0">' + '<span style="color:rgba(255,255,255,0.6)">' + k + '</span>' + '<span style="color:' + (v ? '#4caf50' : '#f44336') + '">' + (v ? "\u2713" : "\u2717") + '</span></div>';
+      }).join('') + '</div>' + '<div style="background:rgba(255,255,255,0.02);border-radius:.4em;padding:.5em .8em">' + '<div style="font-weight:600;margin-bottom:.4em;color:rgba(255,255,255,0.5)">Runtime</div>' + Object.keys(d.runtime).map(function (k) {
+        var v = d.runtime[k];
+        return '<div style="display:flex;justify-content:space-between;padding:.2em 0">' + '<span style="color:rgba(255,255,255,0.6)">' + k + '</span>' + '<span style="color:' + (v ? '#4caf50' : '#f44336') + '">' + (v ? "\u2713" : "\u2717") + '</span></div>';
+      }).join('') + '</div></div>');
+      Lampa.Modal.open({
+        title: Lampa.Lang.translate('gramlink_compat_title'),
+        html: html,
+        size: 'medium',
+        onBack: function onBack() {
+          if (closing) return;
+          closing = true;
+          Lampa.Modal.close();
+          Lampa.Controller.toggle(enabledCtrl);
+        }
+      });
+    }
+
+    /**
      * auth.js — QR + 2FA authorization flow via GramJS (no backend)
      *
      * Uses GramJS high-level API client.signInUserWithQrCode() which handles:
@@ -2327,13 +2551,81 @@
       var parts = name.trim().split(/\s+/);
       return parts.length >= 2 ? (parts[0][0] || '') + (parts[1][0] || '') : name.slice(0, 2);
     }
+
+    // ── Shared auth success handler ────────────────────────────────────
+    // ponytail: both QR and phone auth share the same credential extraction
+    function _onAuthSuccess(user, enabledCtrl) {
+      if (authCancelFlag || !user) return;
+      var activeClient = tgClient;
+      if (!activeClient || !activeClient.session) {
+        throw new Error('No active session after auth');
+      }
+      var dcId = activeClient.session.dcId;
+      var authKeyObj = activeClient.session.authKey;
+      if (!authKeyObj || typeof authKeyObj.getKey !== 'function') {
+        throw new Error('No auth key in session after auth');
+      }
+      var authKeyBytes = authKeyObj.getKey();
+      if (!dcId || !authKeyBytes || authKeyBytes.length !== 256) {
+        throw new Error('Invalid dcId or authKey after auth (key length: ' + (authKeyBytes ? authKeyBytes.length : 0) + ')');
+      }
+      function bytesToHex(bytes) {
+        var hex = '';
+        for (var i = 0; i < bytes.length; i++) {
+          var b = bytes[i];
+          hex += (b < 16 ? '0' : '') + b.toString(16);
+        }
+        return hex;
+      }
+      var authKeyHex = bytesToHex(authKeyBytes);
+      console.log('GramLink', 'Auth success — dcId:', dcId, 'key length:', authKeyHex.length);
+      GramLinkClient.getInstance().saveCredentials(dcId, authKeyHex);
+      cancelAuth();
+      Lampa.Modal.close();
+      Lampa.Noty.show('GramLink: Connecting to Telegram...');
+      Lampa.Settings.update();
+      var staleKeys = ['gramlink_channel_id', 'gramlink_sync_log_topic', 'gramlink_profiles_topic', 'gramlink_profiles_sync_topic', 'gramlink_backup_topic'];
+      staleKeys.forEach(function (k) {
+        Lampa.Storage.set(k, '');
+      });
+      GramLinkClient.getInstance().connect().then(function () {
+        Lampa.Noty.show('GramLink: Connected!');
+        Lampa.Settings.update();
+        autoEnsureSyncChannel();
+      })["catch"](function (err) {
+        console.error('GramLink', 'Post-auth connect failed:', err);
+        Lampa.Noty.show('GramLink: Connection failed — ' + (err.message || 'unknown error'));
+      });
+    }
+
+    // ── Shared auth error handler ──────────────────────────────────────
+    // ponytail: QR and phone auth show errors the same way
+    function _onAuthError(err) {
+      if (authCancelFlag) return;
+      if (err && err.message === 'AUTH_USER_CANCEL') return;
+      console.error('GramLink', 'Auth flow error:', err && (err.message || err.errorMessage));
+      Lampa.Noty.show('GramLink: Auth failed — ' + (err.message || err.errorMessage || 'unknown error'));
+    }
     function startLogin() {
+      // ── 0. Compatibility guard ──────────────────────────────────────
+      var compat = getCompatReport();
+      if (!compat.supported) {
+        Lampa.Noty.show(Lampa.Lang.translate('gramlink_compat_fail') + ' — ' + compat.blockers.length + ' blocking issue(s)');
+        showCompatReportModal();
+        return;
+      }
+
       // Cancel any previous auth session that may still be connected
       cancelAuth();
       authCancelFlag = false;
 
       // ── Modal HTML (preserves existing structure and CSS classes) ──────
-      var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div class="gramlink-auth__qr-placeholder" style="width:16em;height:16em;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:1em;margin:0 auto">' + '<svg viewBox="0 0 64 64" width="48" height="48" fill="rgba(255,255,255,0.3)">' + '<rect x="4" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="36" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="4" y="36" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="44" y="44" width="8" height="8" rx="1" fill="currentColor"/>' + '<rect x="36" y="44" width="4" height="8" rx="1" fill="currentColor"/>' + '<rect x="44" y="36" width="8" height="4" rx="1" fill="currentColor"/>' + '</svg>' + '</div>' + '<div class="gramlink-auth__qr-code" style="display:none;width:16em;height:16em;margin:0 auto"></div>' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="gs-status"></div>' + '</div>');
+      var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div class="gramlink-auth__qr-placeholder" style="width:16em;height:16em;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:1em;margin:0 auto">' + '<svg viewBox="0 0 64 64" width="48" height="48" fill="rgba(255,255,255,0.3)">' + '<rect x="4" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="36" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="4" y="36" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="44" y="44" width="8" height="8" rx="1" fill="currentColor"/>' + '<rect x="36" y="44" width="4" height="8" rx="1" fill="currentColor"/>' + '<rect x="44" y="36" width="8" height="4" rx="1" fill="currentColor"/>' + '</svg>' + '</div>' + '<div class="gramlink-auth__qr-code" style="display:none;width:16em;height:16em;margin:0 auto"></div>' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="gs-status"></div>' +
+      // ponytail: phone auth disabled — SendCodeTypeApp with next_type:none
+      // '<div class="gramlink-auth__phone-wrap" style="margin-top:1.2em;padding-top:1em;border-top:1px solid rgba(255,255,255,0.1)">' +
+      //     '<div class="simple-button selector gramlink-auth__phone-btn">Log in by phone number</div>' +
+      // '</div>' +
+      '</div>');
       var enabledCtrl = Lampa.Controller.enabled().name;
       Lampa.Modal.open({
         title: 'Telegram Authorization',
@@ -2348,6 +2640,15 @@
       var statusEl = html.find('#gs-status');
       var qrEl = html.find('.gramlink-auth__qr-code');
       var qrPlaceholder = html.find('.gramlink-auth__qr-placeholder');
+
+      // ponytail: phone auth button — replaces the old deeplink
+      html.find('.gramlink-auth__phone-btn').on('hover:enter', function () {
+        cancelAuth();
+        Lampa.Modal.close();
+        setTimeout(function () {
+          startPhoneAuth(creds);
+        }, 300);
+      });
 
       // ── 1. Validate API credentials ──────────────────────────────────
       var creds = getApiCredentials();
@@ -2409,9 +2710,6 @@
                   height: '14em'
                 });
               }, 100);
-              // ponytail: clickable deeplink for non-scannable environments
-              var linkEl = $('<a href="' + qrUrl + '" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:1em;padding:0.8em;background:rgba(255,255,255,0.1);border-radius:0.5em;color:#0088cc;font-size:0.85em">Open in Telegram</a>');
-              qrEl.after(linkEl);
             },
             // ── 2FA password callback ─────────────────────────
             password: function password(hint) {
@@ -2462,74 +2760,199 @@
           });
         });
       }).then(function (user) {
-        // ── 3. Auth succeeded — extract session credentials ─────────
-        if (authCancelFlag || !user) return;
-        var activeClient = tgClient;
-        if (!activeClient || !activeClient.session) {
-          throw new Error('No active session after auth');
-        }
-
-        // Read dcId from the active session (after any DC migration)
-        var dcId = activeClient.session.dcId;
-
-        // Read auth key bytes (256-byte MTProto session key)
-        var authKeyObj = activeClient.session.authKey;
-        if (!authKeyObj || typeof authKeyObj.getKey !== 'function') {
-          throw new Error('No auth key in session after auth');
-        }
-        var authKeyBytes = authKeyObj.getKey();
-        if (!dcId || !authKeyBytes || authKeyBytes.length !== 256) {
-          throw new Error('Invalid dcId or authKey after auth (key length: ' + (authKeyBytes ? authKeyBytes.length : 0) + ')');
-        }
-
-        // Convert auth key bytes to hex string (safe for Buffer or Uint8Array)
-        function bytesToHex(bytes) {
-          var hex = '';
-          for (var i = 0; i < bytes.length; i++) {
-            var b = bytes[i];
-            hex += (b < 16 ? '0' : '') + b.toString(16);
-          }
-          return hex;
-        }
-        var authKeyHex = bytesToHex(authKeyBytes);
-        console.log('GramLink', 'Auth success — dcId:', dcId, 'key length:', authKeyHex.length);
-
-        // Save via Client singleton (same storage keys as before)
-        GramLinkClient.getInstance().saveCredentials(dcId, authKeyHex);
-
-        // ── 4. Cleanup and connect ────────────────────────────────────
-        cancelAuth();
-        Lampa.Modal.close();
-        Lampa.Noty.show('GramLink: Connecting to Telegram...');
-        Lampa.Settings.update();
-
-        // Verify the saved session works by triggering a connection
-        // Clear stale channel data first — prevents heartbeat fails with old IDs
-        var staleKeys = ['gramlink_channel_id', 'gramlink_sync_log_topic', 'gramlink_profiles_topic', 'gramlink_profiles_sync_topic', 'gramlink_backup_topic'];
-        staleKeys.forEach(function (k) {
-          Lampa.Storage.set(k, '');
-        });
-        GramLinkClient.getInstance().connect().then(function () {
-          Lampa.Noty.show('GramLink: Connected!');
-          Lampa.Settings.update();
-          autoEnsureSyncChannel();
-        })["catch"](function (err) {
-          console.error('GramLink', 'Post-auth connect failed:', err);
-          Lampa.Noty.show('GramLink: Connection failed — ' + (err.message || 'unknown error'));
-        });
+        return _onAuthSuccess(user);
       })["catch"](function (err) {
-        // ── 5. Auth failed — show error ───────────────────────────────
-        if (authCancelFlag) return;
-        // AUTH_USER_CANCEL is our internal signal, not a real error
-        if (err && err.message === 'AUTH_USER_CANCEL') return;
-        console.error('GramLink', 'Auth flow error:', err && (err.message || err.errorMessage));
-
-        // Update status in modal if it's still open
+        _onAuthError(err);
         var msgEl = html.find('#gs-status');
         if (msgEl.length) {
           msgEl.text('Error: ' + (err.message || err.errorMessage || 'unknown'));
         }
-        Lampa.Noty.show('GramLink: Auth failed — ' + (err.message || err.errorMessage || 'unknown error'));
+      });
+    }
+
+    // ── Phone number auth (one-device flow) ──────────────────────────
+    function startPhoneAuth(creds) {
+      authCancelFlag = false;
+      var enabledCtrl = Lampa.Controller.enabled().name;
+      Lampa.Input.edit({
+        title: 'Phone number',
+        subtitle: 'Enter phone with country code (e.g. +380501234567)',
+        value: '',
+        free: true,
+        nosave: true
+      }, function (phone) {
+        if (!phone || !String(phone).trim()) {
+          Lampa.Controller.toggle(enabledCtrl);
+          return;
+        }
+        phone = String(phone).trim();
+        var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="gs-status"></div>' + '</div>');
+        Lampa.Modal.open({
+          title: 'Telegram Login',
+          html: html,
+          size: 'medium',
+          onBack: function onBack() {
+            cancelAuth();
+            Lampa.Modal.close();
+            Lampa.Controller.toggle(enabledCtrl);
+          }
+        });
+        var statusEl = html.find('#gs-status');
+        statusEl.text('Connecting...');
+        loadGramJS().then(function (tg) {
+          if (authCancelFlag) return;
+          var TelegramClient = tg.TelegramClient;
+          var MemorySession = tg.MemorySession;
+          var session = new MemorySession();
+          var client = new TelegramClient(session, creds.apiId, creds.apiHash, {
+            connectionRetries: 3,
+            useWSS: true,
+            deviceModel: 'Lampa Web',
+            systemVersion: '1.0',
+            appVersion: '1.0',
+            langCode: 'en',
+            systemLangCode: 'en'
+          });
+          try {
+            client.setLogLevel('error');
+          } catch (e) {}
+          tgClient = client;
+          return client.connect().then(function () {
+            if (authCancelFlag) return;
+            statusEl.text('Sending code...');
+            var Api = tg.Api;
+            return client.invoke(new Api.auth.SendCode({
+              phoneNumber: phone,
+              apiId: creds.apiId,
+              apiHash: creds.apiHash,
+              // ponytail: no CodeSettings flags — GramJS default, avoids
+              // Telegram trying device-specific delivery (flash call, app push)
+              settings: new Api.CodeSettings({})
+            })).then(function (sendResult) {
+              if (authCancelFlag) return;
+              var phoneCodeHash = sendResult.phoneCodeHash;
+              var sentType = sendResult.type;
+              var isCodeViaApp = sentType instanceof Api.auth.SentCodeTypeApp;
+              var isCodeViaSms = sentType instanceof Api.auth.SentCodeTypeSms;
+              console.log('GramLink', 'sendCode result:', 'type className:', sentType.className, 'phoneCodeHash:', phoneCodeHash, 'nextType:', sendResult.nextType ? sendResult.nextType.className : 'none', 'timeout:', sendResult.timeout);
+              var methodLabel = 'Check Telegram app';
+              if (isCodeViaSms) methodLabel = 'Check SMS';else if (sentType instanceof Api.auth.SentCodeTypeCall) methodLabel = 'Answer incoming call';else if (sentType instanceof Api.auth.SentCodeTypeMissedCall) methodLabel = 'Wait for missed call';
+
+              // ponytail: use Modal.update() so Lampa's bind() re-wires .selector events
+              var p = new Promise(function (resolve, reject) {
+                function showCodeUi(hash, label) {
+                  var ui = $('<div style="padding:1em;text-align:center">' + '<div>Code sent</div>' + '<div style="font-size:0.85em;color:rgba(255,255,255,0.4);margin-bottom:0.8em">' + label + '</div>' + '<div class="modal__button selector">Enter code</div>' + '<div class="modal__button selector" style="margin-top:0.4em;opacity:0.7">Resend code</div>' + '</div>');
+                  Lampa.Modal.update(ui);
+                  ui.find('.selector').on('click hover:enter', function (e) {
+                    var idx = ui.find('.selector').index(this);
+                    if (idx === 0) {
+                      // Enter code
+                      Lampa.Modal.close();
+                      Lampa.Input.edit({
+                        title: 'Login code',
+                        subtitle: isCodeViaApp ? 'Code sent via Telegram' : 'Code sent via SMS',
+                        value: '',
+                        free: true,
+                        nosave: true
+                      }, function (val) {
+                        if (val && String(val).trim()) {
+                          resolve({
+                            phoneCodeHash: String(hash),
+                            code: String(val).trim()
+                          });
+                        } else {
+                          cancelAuth();
+                          Lampa.Controller.toggle(enabledCtrl);
+                          reject(new Error('AUTH_USER_CANCEL'));
+                        }
+                      });
+                    } else {
+                      // Resend code
+                      ui.html('<div style="padding:1em;text-align:center"><div>Resending code...</div></div>');
+                      Lampa.Modal.update(ui);
+                      client.invoke(new Api.auth.ResendCode({
+                        phoneNumber: phone,
+                        phoneCodeHash: hash
+                      })).then(function (resendResult) {
+                        if (authCancelFlag) return;
+                        console.log('GramLink', 'resendCode result:', resendResult.type.className, 'hash:', resendResult.phoneCodeHash);
+                        showCodeUi(resendResult.phoneCodeHash, 'Check your Telegram or SMS');
+                      })["catch"](function (resendErr) {
+                        if (authCancelFlag) return;
+                        var msg = resendErr.errorMessage || resendErr.message || 'unknown';
+                        if (msg === 'SEND_CODE_UNAVAILABLE') {
+                          Lampa.Noty.show('SMS resend not available. Try QR code instead.');
+                        } else {
+                          Lampa.Noty.show('Resend failed: ' + msg);
+                        }
+                        showCodeUi(hash, label);
+                      });
+                    }
+                  });
+                }
+                showCodeUi(phoneCodeHash, methodLabel);
+              });
+              return p;
+            }).then(function (params) {
+              if (authCancelFlag) return;
+              statusEl.text('Signing in...');
+              return client.invoke(new Api.auth.SignIn({
+                phoneNumber: phone,
+                phoneCodeHash: params.phoneCodeHash,
+                phoneCode: params.code
+              })).then(function (signInResult) {
+                if (signInResult instanceof Api.auth.Authorization) {
+                  return signInResult.user;
+                }
+                throw new Error('Unexpected sign-in result');
+              })["catch"](function (err) {
+                if (err.errorMessage === 'PHONE_NUMBER_UNOCCUPIED' || err.errorMessage === 'PHONE_CODE_EXPIRED') {
+                  statusEl.text('Register in Telegram app first, then retry.');
+                  cancelAuth();
+                  Lampa.Controller.toggle(enabledCtrl);
+                  return;
+                }
+                if (err.errorMessage === 'SESSION_PASSWORD_NEEDED') {
+                  return new Promise(function (resolve, reject) {
+                    Lampa.Modal.close();
+                    Lampa.Input.edit({
+                      title: '2FA Password',
+                      value: '',
+                      free: true,
+                      nosave: true
+                    }, function (val) {
+                      if (val && String(val).trim()) {
+                        resolve(String(val).trim());
+                      } else {
+                        cancelAuth();
+                        Lampa.Controller.toggle(enabledCtrl);
+                        reject(new Error('AUTH_USER_CANCEL'));
+                      }
+                    });
+                  }).then(function (_password) {
+                    return client.signInWithPassword({
+                      apiId: creds.apiId,
+                      apiHash: creds.apiHash
+                    }, {
+                      password: function password() {
+                        return Promise.resolve(_password);
+                      },
+                      onError: function onError(pwErr) {
+                        Lampa.Noty.show('2FA error: ' + (pwErr.message || ''));
+                        return false;
+                      }
+                    });
+                  });
+                }
+                throw err;
+              });
+            });
+          });
+        }).then(function (user) {
+          return _onAuthSuccess(user);
+        })["catch"](function (err) {
+          _onAuthError(err);
+        });
       });
     }
 
@@ -3046,9 +3469,22 @@
       }, {
         key: 'gramlink_broadcast',
         label: 'gramlink_broadcast'
+      }, {
+        key: 'gramlink_device_label',
+        label: 'device_label'
       }],
       timestampPrefix: 'gramlink_ts_'
     };
+
+    // ─── Device Key Registry ──────────────────────────────────
+    // ponytail: flat prefix array, not a plugin system.
+    // Add new prefixes here as Lampa core adds new settings.
+    var DEVICE_KEY_PREFIXES = ['player', 'player_', 'subtitles_', 'video_quality_', 'navigation_', 'interface_', 'background_', 'glass_', 'card_', 'poster_', 'animation_', 'scroll_', 'request_caching', 'cache_images', 'mask', 'light_version', 'menu_always', 'black_style', 'gramlink_heartbeat', 'gramlink_broadcast'];
+    function isDeviceKey(key) {
+      return DEVICE_KEY_PREFIXES.some(function (p) {
+        return key === p || key.indexOf(p) === 0;
+      });
+    }
     function updateSyncTimestamp(label) {
       Lampa.Storage.set(SYNC_KEY_MANIFEST.timestampPrefix + label, String(Math.floor(Date.now() / 1000)));
     }
@@ -3059,6 +3495,32 @@
       SYNC_KEY_MANIFEST.storage.forEach(function (s) {
         Lampa.Storage.set(SYNC_KEY_MANIFEST.timestampPrefix + s.label, '0');
       });
+    }
+
+    // ponytail: no need to re-upload the whole profile.
+    // Just clear local device-scoped keys back to Lampa defaults.
+    function resetDeviceOverlay() {
+      var deviceId = getDeviceId();
+
+      // Clear device-scoped keys from localStorage
+      var keysToRemove = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && isDeviceKey(key)) keysToRemove.push(key);
+      }
+      keysToRemove.forEach(function (k) {
+        localStorage.removeItem(k);
+      });
+
+      // Publish reset delta so other devices know
+      var profilesSyncTopicId = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
+      if (profilesSyncTopicId) {
+        publishDeviceDelta(profilesSyncTopicId, 'device_setting', {
+          device_id: deviceId,
+          key: '__reset_overlay__',
+          value: null
+        }, 'all');
+      }
     }
     var BACKUP_PREFIX = 'gramlink_pbak_';
 
@@ -3342,6 +3804,21 @@
                 if (p.url === payload.plugin.url) p.status = payload.plugin.status;
               });
             }
+          } else if (sub === 'device_plugin_status') {
+            if (!data.device_overrides) data.device_overrides = {};
+            if (!data.device_overrides[payload.device_id]) data.device_overrides[payload.device_id] = {};
+            if (!data.device_overrides[payload.device_id].plugins_status) data.device_overrides[payload.device_id].plugins_status = {};
+            data.device_overrides[payload.device_id].plugins_status[payload.url] = payload.status;
+          } else if (sub === 'device_plugin_custom') {
+            if (!data.device_overrides) data.device_overrides = {};
+            if (!data.device_overrides[payload.device_id]) data.device_overrides[payload.device_id] = {};
+            if (!data.device_overrides[payload.device_id].plugins_custom) data.device_overrides[payload.device_id].plugins_custom = {};
+            data.device_overrides[payload.device_id].plugins_custom[payload.url] = payload.custom;
+          } else if (sub === 'device_setting') {
+            if (!data.device_overrides) data.device_overrides = {};
+            if (!data.device_overrides[payload.device_id]) data.device_overrides[payload.device_id] = {};
+            if (!data.device_overrides[payload.device_id].settings) data.device_overrides[payload.device_id].settings = {};
+            data.device_overrides[payload.device_id].settings[payload.key] = payload.value;
           }
         });
         return data;
@@ -3353,23 +3830,51 @@
     // ─── Apply profile data ─────────────────────────────────
 
     function applyProfileData(data, msgId) {
+      var deviceId = getDeviceId();
+      var override = data.device_overrides && data.device_overrides[deviceId];
+
+      // ── Bookmarks (always user-layer) ──
       if (data.bookmarks && data.bookmarks.favorite) {
         Lampa.Storage.set('favorite', data.bookmarks.favorite);
         if (Lampa.Favorite && Lampa.Favorite.read) {
           Lampa.Favorite.read();
         }
       }
+
+      // ── Timeline (always user-layer) ──
       if (data.timeline) {
         Lampa.Storage.set('file_view', data.timeline);
       }
+
+      // ── Plugins (user-layer registry + device-layer status/custom) ──
       if (data.plugins) {
-        Lampa.Storage.set('plugins', data.plugins);
+        var mergedPlugins = data.plugins.map(function (p) {
+          var deviceStatus = override && override.plugins_status && override.plugins_status[p.url];
+          var deviceCustom = override && override.plugins_custom && override.plugins_custom[p.url];
+          return {
+            url: p.url,
+            name: p.name,
+            status: deviceStatus !== undefined ? deviceStatus : p.status,
+            custom: deviceCustom !== undefined ? deviceCustom : p.custom
+          };
+        });
+        Lampa.Storage.set('plugins', mergedPlugins);
       }
-      if (data.settings) {
-        if (data.settings.sync_enabled !== undefined) Lampa.Storage.set('gramlink_sync_enabled', data.settings.sync_enabled);
-        if (data.settings.heartbeat !== undefined) Lampa.Storage.set('gramlink_heartbeat', data.settings.heartbeat);
-        if (data.settings.broadcast !== undefined) Lampa.Storage.set('gramlink_broadcast', data.settings.broadcast);
+
+      // ── Settings (user-layer defaults + device-layer override) ──
+      var userSettings = data.settings || {};
+      if (userSettings.sync_enabled !== undefined) Lampa.Storage.set('gramlink_sync_enabled', userSettings.sync_enabled);
+      if (userSettings.heartbeat !== undefined) Lampa.Storage.set('gramlink_heartbeat', userSettings.heartbeat);
+      if (userSettings.broadcast !== undefined) Lampa.Storage.set('gramlink_broadcast', userSettings.broadcast);
+
+      // Device-scoped settings override
+      if (override && override.settings) {
+        Object.keys(override.settings).forEach(function (key) {
+          Lampa.Storage.set(key, override.settings[key]);
+        });
       }
+
+      // ── Mark active ──
       Lampa.Storage.set(STORAGE_ACTIVE_PROFILE, String(msgId));
       Lampa.Storage.set(STORAGE_ACTIVE_PROFILE_TS, String(Math.floor(Date.now() / 1000)));
       Lampa.Noty.show('Profile activated');
@@ -3397,7 +3902,7 @@
           meta: {
             type: 'profile',
             timestamp: now,
-            version: 2
+            version: 3
           },
           payload: {
             profile: {
@@ -3426,7 +3931,8 @@
               updated: now
             },
             plugins: collectPlugins(),
-            settings: collectSettings()
+            settings: collectSettings(),
+            device_overrides: {}
           };
           if (!hasProfiles) {
             fileData.bookmarks = {
@@ -3492,7 +3998,7 @@
           meta: {
             type: 'profile',
             timestamp: now,
-            version: 2
+            version: 3
           },
           payload: {
             profile: {
@@ -3513,7 +4019,8 @@
           },
           timeline: collectTimeline(),
           plugins: collectPlugins(),
-          settings: collectSettings()
+          settings: collectSettings(),
+          device_overrides: {}
         };
         var fileJson = JSON.stringify(fileData, null, 2);
         var fileName = 'profile_' + profileName.replace(/[^a-zA-Z0-9]/g, '_') + '_' + now + '.json';
@@ -3568,6 +4075,24 @@
       };
     }
 
+    // Collect all device-scoped storage keys → { key: value }
+    function collectDeviceScopedSettings() {
+      var result = {};
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (!key) continue;
+        if (key.indexOf('gramlink_') === 0 && !isDeviceKey(key)) continue;
+        if (isDeviceKey(key)) {
+          try {
+            result[key] = JSON.parse(localStorage.getItem(key));
+          } catch (e) {
+            result[key] = localStorage.getItem(key);
+          }
+        }
+      }
+      return result;
+    }
+
     // ─── Delta publisher (called from outside) ──────────────
 
     function publishLocalDelta(profilesSyncTopicId, subtype, payload) {
@@ -3576,6 +4101,26 @@
       var activeProfileId = Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, '');
       if (!activeProfileId) return;
       client.publishDelta(profilesSyncTopicId, subtype, activeProfileId, payload);
+    }
+
+    // Publish a device-targeted delta (includes target_device_id for filtering)
+    function publishDeviceDelta(profilesSyncTopicId, subtype, payload, targetDeviceId) {
+      var client = GramLinkClient.getInstance();
+      if (!client.isConnected() || !profilesSyncTopicId) return;
+      var activeProfileId = Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, '');
+      if (!activeProfileId) return;
+      var msg = JSON.stringify({
+        meta: {
+          type: 'profile_delta',
+          subtype: subtype,
+          profile_msg_id: activeProfileId,
+          device_id: getDeviceId(),
+          target_device_id: targetDeviceId || 'all',
+          timestamp: Math.floor(Date.now() / 1000)
+        },
+        payload: payload || {}
+      });
+      client.publishRaw(profilesSyncTopicId, msg, true);
     }
 
     // ─── Startup auto-activation ────────────────────────────
@@ -3602,13 +4147,36 @@
           } catch (e) {
             return;
           }
+
+          // ── Start auto-activation with device overlays ──
           if (data.plugins) {
-            Lampa.Storage.set('plugins', data.plugins);
+            var deviceId = getDeviceId();
+            var override = data.device_overrides && data.device_overrides[deviceId];
+            var merged = data.plugins.map(function (p) {
+              var ds = override && override.plugins_status && override.plugins_status[p.url];
+              var dc = override && override.plugins_custom && override.plugins_custom[p.url];
+              return {
+                url: p.url,
+                name: p.name,
+                status: ds !== undefined ? ds : p.status,
+                custom: dc !== undefined ? dc : p.custom
+              };
+            });
+            Lampa.Storage.set('plugins', merged);
           }
           if (data.settings) {
-            if (data.settings.sync_enabled !== undefined) Lampa.Storage.set('gramlink_sync_enabled', data.settings.sync_enabled);
-            if (data.settings.heartbeat !== undefined) Lampa.Storage.set('gramlink_heartbeat', data.settings.heartbeat);
-            if (data.settings.broadcast !== undefined) Lampa.Storage.set('gramlink_broadcast', data.settings.broadcast);
+            var deviceId2 = getDeviceId();
+            var override2 = data.device_overrides && data.device_overrides[deviceId2];
+            var devSettings = override2 && override2.settings || {};
+            if (data.settings.sync_enabled !== undefined) Lampa.Storage.set('gramlink_sync_enabled', devSettings.gramlink_sync_enabled !== undefined ? devSettings.gramlink_sync_enabled : data.settings.sync_enabled);
+            if (data.settings.heartbeat !== undefined) Lampa.Storage.set('gramlink_heartbeat', devSettings.gramlink_heartbeat !== undefined ? devSettings.gramlink_heartbeat : data.settings.heartbeat);
+            if (data.settings.broadcast !== undefined) Lampa.Storage.set('gramlink_broadcast', devSettings.broadcast !== undefined ? devSettings.broadcast : data.settings.broadcast);
+
+            // Generic device-scoped keys from device_overrides.settings
+            Object.keys(devSettings).forEach(function (key) {
+              if (key === 'gramlink_sync_enabled' || key === 'gramlink_heartbeat' || key === 'gramlink_broadcast') return;
+              Lampa.Storage.set(key, devSettings[key]);
+            });
           }
         });
       })["catch"](function () {});
@@ -3622,6 +4190,11 @@
       if (!data || !data.meta || String(data.meta.profile_msg_id) !== String(activeId)) return;
       // Skip own messages to prevent feedback loop: delta → Favorite.add → listener → publishDelta → poll → delta...
       if (data.meta.device_id === getDeviceId()) return;
+      // Device-* delta must target this device or 'all'
+      if (data.meta.subtype && data.meta.subtype.indexOf('device_') === 0) {
+        var target = data.meta.target_device_id || 'all';
+        if (target !== 'all' && target !== getDeviceId()) return;
+      }
       var payload = data.payload;
       var sub = data.meta.subtype;
       if (sub === 'bookmark_add' && payload.card_id && payload.card) {
@@ -3658,6 +4231,14 @@
           });
         }
         Lampa.Storage.set('plugins', plugins);
+      } else if (sub === 'device_plugin_status') {
+        var plugins2 = Lampa.Storage.get('plugins', []);
+        plugins2.forEach(function (p) {
+          if (p.url === payload.url) p.status = payload.status;
+        });
+        Lampa.Storage.set('plugins', plugins2);
+      } else if (sub === 'device_setting') {
+        if (payload.key) Lampa.Storage.set(payload.key, payload.value);
       }
     }
     function refreshDeltas() {
@@ -3801,6 +4382,9 @@
       avatarColor: avatarColor,
       startAutoActivation: startAutoActivation,
       publishLocalDelta: publishLocalDelta,
+      publishDeviceDelta: publishDeviceDelta,
+      isDeviceKey: isDeviceKey,
+      collectDeviceScopedSettings: collectDeviceScopedSettings,
       applyDelta: applyDelta,
       refreshDeltas: refreshDeltas,
       softRefresh: softRefresh,
@@ -3809,6 +4393,7 @@
       updateSyncTimestamp: updateSyncTimestamp,
       getSyncTimestamp: getSyncTimestamp,
       clearSyncTimestamps: clearSyncTimestamps,
+      resetDeviceOverlay: resetDeviceOverlay,
       getCachedProfiles: getCachedProfiles,
       quickSwitchProfile: quickSwitchProfile,
       syncProfile: syncProfile,
@@ -4030,6 +4615,34 @@
             }
             startLogin();
           }
+        }
+      });
+
+      // ── Telegram Library Support — перевірка сумісності ──────
+      SettingsApi.addParam({
+        component: 'gramlink',
+        param: {
+          name: 'gramlink_compat_btn',
+          type: 'button'
+        },
+        field: {
+          name: Lampa.Lang.translate('gramlink_compat_title')
+        },
+        onRender: function onRender(item) {
+          var report = getCompatReport();
+          var cls = 'wait';
+          if (report.supported && report.warnings.length === 0) {
+            cls = 'active';
+          } else if (!report.supported) {
+            cls = 'error';
+          }
+          if (!item.find('.settings-param__status').length) {
+            item.prepend('<div class="settings-param__status"></div>');
+          }
+          item.find('.settings-param__status').removeClass('active error wait').addClass(cls);
+        },
+        onChange: function onChange() {
+          showCompatReportModal();
         }
       });
 
@@ -4939,6 +5552,16 @@
                 title: Lampa.Lang.translate('gramlink_backup_import') || 'Import Backup',
                 action: 'import'
               });
+              if (isThisDevice) {
+                items.push({
+                  title: 'Reset device overlays',
+                  action: 'reset_overlay'
+                });
+              }
+              items.push({
+                title: 'Rename device',
+                action: 'rename_device'
+              });
               items.push({
                 title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
                 cancel: true
@@ -4965,6 +5588,24 @@
                     exportBackup();
                   } else if (item.action === 'import') {
                     importBackup();
+                  } else if (item.action === 'reset_overlay') {
+                    Profiles.resetDeviceOverlay();
+                    Lampa.Noty.show('Device overlays reset');
+                  } else if (item.action === 'rename_device') {
+                    var currentName = Lampa.Storage.get('gramlink_device_label', getDeviceName());
+                    Lampa.Input.edit({
+                      title: 'Device name',
+                      value: currentName,
+                      free: true,
+                      nosave: true,
+                      align: 'center'
+                    }, function (name) {
+                      if (name && name.trim()) {
+                        Lampa.Storage.set('gramlink_device_label', name.trim());
+                        Lampa.Noty.show('Device renamed to ' + name.trim());
+                        refreshDevices();
+                      }
+                    });
                   }
                 }
               });
@@ -5129,17 +5770,14 @@
         Lampa.Storage.set('plugins', plugins);
         refreshPlugins();
 
-        // Publish delta
+        // Publish delta — device-layer (toggle is per-device, not per-user)
         var syncTopicId = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
         if (syncTopicId) {
-          Profiles.publishLocalDelta(syncTopicId, 'plugin_change', {
-            action: 'toggle',
-            plugin: {
-              url: plugins[idx].url,
-              name: plugins[idx].name,
-              status: plugins[idx].status
-            }
-          });
+          Profiles.publishDeviceDelta(syncTopicId, 'device_plugin_status', {
+            device_id: getDeviceId(),
+            url: plugins[idx].url,
+            status: plugins[idx].status
+          }, 'all');
         }
         Lampa.Noty.show((plugins[idx].name || 'Plugin') + ': ' + (plugins[idx].status === 1 ? 'on' : 'off'));
       }
@@ -5561,6 +6199,7 @@
       autoConnect();
       autoActivateProfile();
       setupProfileDeltaListeners();
+      setupDeviceSettingsListener();
       startDeltaPolling();
     }
     function startDeltaPolling() {
@@ -5619,6 +6258,36 @@
           duration: road.duration || 0,
           percent: road.percent || 0
         });
+      });
+    }
+
+    // ─── Device-scoped settings sync ──────────────────────────
+    // ponytail: auto-publish any device-scoped key change as device_setting delta
+
+    function setupDeviceSettingsListener() {
+      var lastDevicePublish = {};
+      Lampa.Storage.listener.follow('change', function (e) {
+        if (!e || !e.key) return;
+        // Only sync device-scoped keys
+        if (!Profiles.isDeviceKey(e.key)) return;
+        var profilesSyncTopicId = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
+        if (!profilesSyncTopicId) return;
+
+        // Throttle: at most once per 5s per key to avoid spam
+        var now = Date.now();
+        if (lastDevicePublish[e.key] && now - lastDevicePublish[e.key] < 5000) return;
+        lastDevicePublish[e.key] = now;
+        var value;
+        try {
+          value = JSON.parse(localStorage.getItem(e.key));
+        } catch (x) {
+          value = localStorage.getItem(e.key);
+        }
+        Profiles.publishDeviceDelta(profilesSyncTopicId, 'device_setting', {
+          device_id: getDeviceId(),
+          key: e.key,
+          value: value
+        }, 'all');
       });
     }
 
