@@ -2769,8 +2769,8 @@
 
     // ── Phone number auth (one-device flow) ──────────────────────────
     // ponytail: official Telegram keys — support SMS delivery unlike some custom API IDs
-    var TG_OFFICIAL_API_ID = 2040;
-    var TG_OFFICIAL_API_HASH = 'b18441a1ff607e10a989891a5462e627';
+    var TG_OFFICIAL_API_ID = 6;
+    var TG_OFFICIAL_API_HASH = 'eb06d4abfb49dc3eeb1aeb98ae0f581e';
     function startPhoneAuth(creds) {
       authCancelFlag = false;
       // Use official Telegram API keys for phone auth (reliable SMS delivery)
