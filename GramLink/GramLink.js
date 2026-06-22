@@ -1255,9 +1255,7 @@
       }, {
         key: "isConnected",
         value: function isConnected() {
-          // Return true if actively connected OR if credentials are saved (user was previously authed)
-          // This ensures Settings shows "Logout" even before auto-connect finishes on page reload
-          return this._connected && this.tgClient !== null || this.hasCredentials();
+          return this._connected && this.tgClient !== null;
         }
       }, {
         key: "isEnabled",
@@ -2135,6 +2133,22 @@
      *   8. SRP computed locally (100k PBKDF2-SHA512 + mod-exp) → auth.CheckPassword
      *   9. Success: save dcId + authKey hex, trigger Client.getInstance().connect()
      */
+
+    // ponytail: channel/topic constants duplicated from hub.js to avoid circular dep
+    var CHANNEL_TITLE = '🔄 Lampa Sync [DO NOT DELETE]';
+    var TOPICS = [{
+      name: 'sync-log',
+      key: 'gramlink_sync_log_topic'
+    }, {
+      name: 'profiles',
+      key: 'gramlink_profiles_topic'
+    }, {
+      name: 'profiles-sync',
+      key: 'gramlink_profiles_sync_topic'
+    }, {
+      name: 'backup',
+      key: 'gramlink_backup_topic'
+    }];
     var authCancelFlag = false;
     var tgClient = null; // Temporary GramJS client used during auth flow
 
@@ -2171,6 +2185,147 @@
         apiId: apiId,
         apiHash: apiHash
       };
+    }
+
+    // ponytail: background channel init — avoids "Sync channel not ready" error
+    function autoEnsureSyncChannel() {
+      var client = GramLinkClient.getInstance();
+      if (Lampa.Storage.get('gramlink_channel_id', '')) return;
+      Lampa.Bell.push({
+        text: 'GramLink: Setting up sync channel...'
+      });
+      client.findChannel(CHANNEL_TITLE).then(function (id) {
+        if (id) {
+          Lampa.Storage.set('gramlink_channel_id', id);
+          return ensureAllTopics();
+        }
+        return client.createChannel(CHANNEL_TITLE).then(function (peerId) {
+          if (!peerId) return;
+          Lampa.Storage.set('gramlink_channel_id', peerId);
+          return createAllTopics(peerId);
+        });
+      }).then(function () {
+        Lampa.Bell.push({
+          text: 'GramLink: Sync channel ready!'
+        });
+        autoCreateDefaultProfile();
+      })["catch"](function (err) {
+        console.warn('GramLink', 'Background channel init failed:', err && err.message);
+      });
+    }
+    function ensureAllTopics() {
+      var client = GramLinkClient.getInstance();
+      var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
+      var seq = Promise.resolve();
+      TOPICS.forEach(function (t) {
+        if (Lampa.Storage.get(t.key, '')) return;
+        seq = seq.then(function () {
+          // try find first, create as fallback
+          return client.findTopic(channelId, t.name).then(function (id) {
+            if (id) {
+              Lampa.Storage.set(t.key, id);
+              return;
+            }
+            return client.createTopic(channelId, t.name).then(function (topicId) {
+              if (topicId) Lampa.Storage.set(t.key, topicId);
+            });
+          });
+        });
+      });
+      return seq;
+    }
+    function createAllTopics(peerId) {
+      var client = GramLinkClient.getInstance();
+      var seq = Promise.resolve();
+      TOPICS.forEach(function (t) {
+        seq = seq.then(function () {
+          return client.createTopic(peerId, t.name).then(function (topicId) {
+            if (topicId) Lampa.Storage.set(t.key, topicId);
+          });
+        });
+      });
+      return seq;
+    }
+
+    // ponytail: auto-create default profile so user can use plugin immediately
+    function autoCreateDefaultProfile() {
+      var profilesTopicId = Lampa.Storage.get('gramlink_profiles_topic', '');
+      if (!profilesTopicId) return;
+      var client = GramLinkClient.getInstance();
+      if (!client.isConnected()) return;
+      var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
+      if (!channelId) return;
+      client.getMessages(channelId, profilesTopicId, 10).then(function (msgs) {
+        var hasProfiles = false;
+        msgs.forEach(function (m) {
+          if (!m.text) return;
+          try {
+            var d = JSON.parse(stripCodeFence(m.text));
+            if (d && d.meta && d.meta.type === 'profile') hasProfiles = true;
+          } catch (e) {}
+        });
+        if (!hasProfiles) createGeneralProfile(channelId, profilesTopicId, client);
+      })["catch"](function () {});
+    }
+    function createGeneralProfile(channelId, profilesTopicId, client) {
+      var name = 'General';
+      var avatar = avatarLetters(name);
+      var now = Math.floor(Date.now() / 1000);
+      var caption = JSON.stringify({
+        meta: {
+          type: 'profile',
+          timestamp: now,
+          version: 2
+        },
+        payload: {
+          profile: {
+            name: name,
+            avatar: avatar,
+            updated: now
+          }
+        }
+      });
+      function readJSON(key, def) {
+        try {
+          return Lampa.Storage.get(key, def);
+        } catch (e) {
+          return def;
+        }
+      }
+      var fileData = {
+        profile_meta: {
+          name: name,
+          avatar: avatar,
+          updated: now
+        },
+        bookmarks: {
+          favorite: readJSON('favorite', {})
+        },
+        timeline: readJSON('file_view', {}),
+        plugins: readJSON('plugins', []),
+        settings: {
+          sync_enabled: Lampa.Storage.get('gramlink_sync_enabled', false),
+          heartbeat: Lampa.Storage.get('gramlink_heartbeat', false),
+          broadcast: Lampa.Storage.get('gramlink_broadcast', false)
+        }
+      };
+      client.sendFile(channelId, profilesTopicId, JSON.stringify(fileData, null, 2), 'profile_General_' + now + '.json', caption).then(function (msgId) {
+        if (!msgId) return;
+        Lampa.Storage.set('gramlink_active_profile', String(msgId));
+        Lampa.Storage.set('gramlink_active_profile_ts', String(now));
+        Lampa.Storage.set('gramlink_active_profile_name', name);
+        // Reload to apply cached/imported data
+        setTimeout(function () {
+          window.location.reload();
+        }, 1500);
+      })["catch"](function (err) {
+        console.warn('GramLink', 'Auto-create profile failed:', err);
+      });
+    }
+    function avatarLetters(name) {
+      if (!name) return '??';
+      var parts = name.trim().split(/\s+/);
+      return parts.length >= 2 ? (parts[0][0] || '') + (parts[1][0] || '') : name.slice(0, 2);
     }
     function startLogin() {
       // Cancel any previous auth session that may still be connected
@@ -2254,6 +2409,9 @@
                   height: '14em'
                 });
               }, 100);
+              // ponytail: clickable deeplink for non-scannable environments
+              var linkEl = $('<a href="' + qrUrl + '" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:1em;padding:0.8em;background:rgba(255,255,255,0.1);border-radius:0.5em;color:#0088cc;font-size:0.85em">Open in Telegram</a>');
+              qrEl.after(linkEl);
             },
             // ── 2FA password callback ─────────────────────────
             password: function password(hint) {
@@ -2346,9 +2504,15 @@
         Lampa.Settings.update();
 
         // Verify the saved session works by triggering a connection
+        // Clear stale channel data first — prevents heartbeat fails with old IDs
+        var staleKeys = ['gramlink_channel_id', 'gramlink_sync_log_topic', 'gramlink_profiles_topic', 'gramlink_profiles_sync_topic', 'gramlink_backup_topic'];
+        staleKeys.forEach(function (k) {
+          Lampa.Storage.set(k, '');
+        });
         GramLinkClient.getInstance().connect().then(function () {
           Lampa.Noty.show('GramLink: Connected!');
           Lampa.Settings.update();
+          autoEnsureSyncChannel();
         })["catch"](function (err) {
           console.error('GramLink', 'Post-auth connect failed:', err);
           Lampa.Noty.show('GramLink: Connection failed — ' + (err.message || 'unknown error'));
@@ -3794,7 +3958,7 @@
           name: 'Reload now',
           onSelect: function onSelect() {
             Lampa.Modal.close();
-            Lampa.reload();
+            window.location.reload();
           }
         }, {
           name: 'Later',
@@ -3831,11 +3995,11 @@
           name: Lampa.Lang.translate('gramlink_settings_auth_login')
         },
         onRender: function onRender(item) {
-          item.find('.settings-param__name').text(GramLinkClient.getInstance().isConnected() ? Lampa.Lang.translate('gramlink_settings_auth_logout') : Lampa.Lang.translate('gramlink_settings_auth_login'));
+          item.find('.settings-param__name').text(GramLinkClient.getInstance().hasCredentials() ? Lampa.Lang.translate('gramlink_settings_auth_logout') : Lampa.Lang.translate('gramlink_settings_auth_login'));
         },
         onChange: function onChange() {
           var client = GramLinkClient.getInstance();
-          if (client.isConnected()) {
+          if (client.hasCredentials()) {
             Lampa.Modal.open({
               title: Lampa.Lang.translate('gramlink_settings_logout'),
               html: $('<div style="padding: 1em">' + Lampa.Lang.translate('gramlink_settings_logout_confirm') + '</div>'),
@@ -4674,6 +4838,13 @@
           var tabBtn = scroll.render().find('.gramlink-tab[data-tab="' + tabId + '"]')[0];
           if (tabBtn) Lampa.Controller.collectionFocus(tabBtn, scroll.render());
         }
+
+        // ponytail: safe scroll update — catch missing focus element on empty views
+        setTimeout(function () {
+          try {
+            scroll.update();
+          } catch (e) {}
+        }, 50);
       }
 
       // ─── Status update ────────────────────────────────────────
@@ -5351,7 +5522,7 @@
       window.plugin_gramlink_ready = true;
       var manifest = {
         type: 'plugin',
-        version: '0.0.1',
+        version: '0.0.2',
         author: '@lme_chat',
         name: 'GramLink',
         description: 'Telegram sync via MTProto',
@@ -5530,7 +5701,7 @@
         var client = GramLinkClient.getInstance();
         var activeId = Lampa.Storage.get('gramlink_active_profile', '');
         var activeName = Lampa.Storage.get('gramlink_active_profile_name', '');
-        if (!client.isConnected() || !activeId || !activeName) {
+        if (!client.hasCredentials() || !activeId || !activeName) {
           $profileBtn.hide();
           return;
         }
