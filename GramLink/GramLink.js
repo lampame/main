@@ -2243,7 +2243,7 @@
         blockers.push('Exponent operator (**) — 17×. Синтаксично.');
       }
       if (!details.runtime.cryptoSubtle) {
-        blockers.push('crypto.subtle — PBKDF2-SHA512 для 2FA, SHA-256, HMAC. Не поліфиться без Worker-fallback.');
+        warnings.push('crypto.subtle — немає (HTTP-контекст). TGSBundle має pure-JS fallback для SHA-1/256/512, HMAC, PBKDF2. Повільніше, але працює.');
       }
       if (!details.runtime.cryptoRandom) {
         blockers.push('crypto.getRandomValues — генератор nonces у MTProto.');
@@ -2620,12 +2620,7 @@
       authCancelFlag = false;
 
       // ── Modal HTML (preserves existing structure and CSS classes) ──────
-      var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div class="gramlink-auth__qr-placeholder" style="width:16em;height:16em;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:1em;margin:0 auto">' + '<svg viewBox="0 0 64 64" width="48" height="48" fill="rgba(255,255,255,0.3)">' + '<rect x="4" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="36" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="4" y="36" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="44" y="44" width="8" height="8" rx="1" fill="currentColor"/>' + '<rect x="36" y="44" width="4" height="8" rx="1" fill="currentColor"/>' + '<rect x="44" y="36" width="8" height="4" rx="1" fill="currentColor"/>' + '</svg>' + '</div>' + '<div class="gramlink-auth__qr-code" style="display:none;width:16em;height:16em;margin:0 auto"></div>' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="gs-status"></div>' +
-      // ponytail: phone auth disabled — SendCodeTypeApp with next_type:none
-      // '<div class="gramlink-auth__phone-wrap" style="margin-top:1.2em;padding-top:1em;border-top:1px solid rgba(255,255,255,0.1)">' +
-      //     '<div class="simple-button selector gramlink-auth__phone-btn">Log in by phone number</div>' +
-      // '</div>' +
-      '</div>');
+      var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div class="gramlink-auth__qr-placeholder" style="width:16em;height:16em;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:1em;margin:0 auto">' + '<svg viewBox="0 0 64 64" width="48" height="48" fill="rgba(255,255,255,0.3)">' + '<rect x="4" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="36" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="4" y="36" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="44" y="44" width="8" height="8" rx="1" fill="currentColor"/>' + '<rect x="36" y="44" width="4" height="8" rx="1" fill="currentColor"/>' + '<rect x="44" y="36" width="8" height="4" rx="1" fill="currentColor"/>' + '</svg>' + '</div>' + '<div class="gramlink-auth__qr-code" style="display:none;width:16em;height:16em;margin:0 auto"></div>' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="gs-status"></div>' + '<div class="gramlink-auth__phone-wrap" style="margin-top:1.2em;padding-top:1em;border-top:1px solid rgba(255,255,255,0.1)">' + '<div class="simple-button selector gramlink-auth__phone-btn">Log in by phone number</div>' + '</div>' + '</div>');
       var enabledCtrl = Lampa.Controller.enabled().name;
       Lampa.Modal.open({
         title: 'Telegram Authorization',
@@ -6160,7 +6155,7 @@
       window.plugin_gramlink_ready = true;
       var manifest = {
         type: 'plugin',
-        version: '0.0.2',
+        version: '0.0.3',
         author: '@lme_chat',
         name: 'GramLink',
         description: 'Telegram sync via MTProto',
