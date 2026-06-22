@@ -988,12 +988,41 @@
      */
 
     var BUNDLE_REF = '653586b3ffec2f9003ec7e1806b5c2e41224eb64';
-    var BUNDLE_CDN = 'https://cdn.jsdelivr.net/gh/lampame/TGSBundle@' + BUNDLE_REF + '/telegram.min.js';
+    var BUNDLE_URLS = ['https://cdn.jsdelivr.net/gh/lampame/TGSBundle@' + BUNDLE_REF + '/telegram.min.js', 'https://rawcdn.githack.com/lampame/TGSBundle/' + BUNDLE_REF + '/telegram.min.js', 'https://raw.githack.com/lampame/TGSBundle/main/telegram.min.js'];
     var _loadPromise = null;
+    function tryLoad(index) {
+      if (index >= BUNDLE_URLS.length) {
+        return Promise.reject(new Error('GramLink: All CDN URLs failed'));
+      }
+      return new Promise(function (resolve, reject) {
+        var script = document.createElement('script');
+        script.src = BUNDLE_URLS[index];
+        script.async = true;
+        script.onload = function () {
+          var tg = window.telegram;
+          if (!tg || !tg.TelegramClient) {
+            console.warn('GramLink', 'Bundle loaded but TelegramClient missing from:', BUNDLE_URLS[index]);
+            script.remove();
+            // ponytail: retry with next CDN fallback
+            tryLoad(index + 1).then(resolve, reject);
+            return;
+          }
+          console.log('GramLink', 'GramJS loaded from:', BUNDLE_URLS[index]);
+          resolve(tg);
+        };
+        script.onerror = function () {
+          console.warn('GramLink', 'Failed to load from:', BUNDLE_URLS[index]);
+          script.remove();
+          tryLoad(index + 1).then(resolve, reject);
+        };
+        document.head.appendChild(script);
+      });
+    }
 
     /**
      * Load the GramJS browser bundle.
      * Returns a Promise that resolves with window.telegram when ready.
+     * Tries multiple CDN URLs in order with fallback.
      * Safe to call multiple times — deduplicates via cached promise.
      */
     function loadGramJS() {
@@ -1001,26 +1030,9 @@
         return Promise.resolve(window.telegram);
       }
       if (_loadPromise) return _loadPromise;
-      _loadPromise = new Promise(function (resolve, reject) {
-        var script = document.createElement('script');
-        script.src = BUNDLE_CDN;
-        script.async = true;
-        script.onload = function () {
-          var tg = window.telegram;
-          if (!tg || !tg.TelegramClient) {
-            _loadPromise = null;
-            reject(new Error('GramLink: bundle loaded but window.telegram.TelegramClient not found'));
-            return;
-          }
-          console.log('GramLink', 'GramJS loaded. TelegramClient OK.');
-          resolve(tg);
-        };
-        script.onerror = function () {
-          _loadPromise = null;
-          console.error('GramLink', 'Failed to load bundle from:', BUNDLE_CDN);
-          reject(new Error('GramLink: Failed to load telegram.min.js'));
-        };
-        document.head.appendChild(script);
+      _loadPromise = tryLoad(0)["catch"](function (err) {
+        _loadPromise = null;
+        throw err;
       });
       return _loadPromise;
     }
@@ -2605,8 +2617,17 @@
     function _onAuthError(err) {
       if (authCancelFlag) return;
       if (err && err.message === 'AUTH_USER_CANCEL') return;
-      console.error('GramLink', 'Auth flow error:', err && (err.message || err.errorMessage));
-      Lampa.Noty.show('GramLink: Auth failed — ' + (err.message || err.errorMessage || 'unknown error'));
+      var msg = err && (err.message || err.errorMessage || '');
+      console.error('GramLink', 'Auth flow error:', msg);
+      var displayMsg = 'Auth failed';
+      if (msg.indexOf('FLOOD_WAIT') !== -1 || msg.indexOf('wait of') !== -1) {
+        var sec = msg.match(/\d+/);
+        sec = sec ? parseInt(sec[0]) : 0;
+        if (sec > 3600) displayMsg = 'Too many attempts. Try again in ' + Math.round(sec / 3600) + 'h';else if (sec > 60) displayMsg = 'Too many attempts. Try again in ' + Math.round(sec / 60) + 'min';else displayMsg = 'Too many attempts. Try again in ' + sec + 's';
+      } else {
+        displayMsg = msg;
+      }
+      Lampa.Noty.show('GramLink: ' + displayMsg);
     }
     function startLogin() {
       // ── 0. Compatibility guard ──────────────────────────────────────
