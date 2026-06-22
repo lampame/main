@@ -1036,6 +1036,8 @@
       return bytes;
     }
 
+    var VERSION = '0.0.3';
+
     // Storage keys
     var STORAGE_DC_ID = 'gramlink_dc_id';
     var STORAGE_AUTH_KEY = 'gramlink_auth_key_hex';
@@ -1240,7 +1242,7 @@
                 useWSS: true,
                 deviceModel: 'Lampa Web',
                 systemVersion: '1.0',
-                appVersion: '1.0',
+                appVersion: VERSION,
                 langCode: 'en',
                 systemLangCode: 'en'
               };
@@ -2669,7 +2671,7 @@
           useWSS: true,
           deviceModel: 'Lampa Web',
           systemVersion: '1.0',
-          appVersion: '1.0',
+          appVersion: VERSION,
           langCode: 'en',
           systemLangCode: 'en'
         });
@@ -2766,8 +2768,16 @@
     }
 
     // ── Phone number auth (one-device flow) ──────────────────────────
+    // ponytail: official Telegram keys — support SMS delivery unlike some custom API IDs
+    var TG_OFFICIAL_API_ID = 2040;
+    var TG_OFFICIAL_API_HASH = 'b18441a1ff607e10a989891a5462e627';
     function startPhoneAuth(creds) {
       authCancelFlag = false;
+      // Use official Telegram API keys for phone auth (reliable SMS delivery)
+      creds = {
+        apiId: TG_OFFICIAL_API_ID,
+        apiHash: TG_OFFICIAL_API_HASH
+      };
       var enabledCtrl = Lampa.Controller.enabled().name;
       Lampa.Input.edit({
         title: 'Phone number',
@@ -2804,7 +2814,7 @@
             useWSS: true,
             deviceModel: 'Lampa Web',
             systemVersion: '1.0',
-            appVersion: '1.0',
+            appVersion: VERSION,
             langCode: 'en',
             systemLangCode: 'en'
           });
@@ -2909,7 +2919,6 @@
                 }
                 if (err.errorMessage === 'SESSION_PASSWORD_NEEDED') {
                   return new Promise(function (resolve, reject) {
-                    Lampa.Modal.close();
                     Lampa.Input.edit({
                       title: '2FA Password',
                       value: '',
@@ -2917,6 +2926,18 @@
                       nosave: true
                     }, function (val) {
                       if (val && String(val).trim()) {
+                        // ponytail: re-open modal with status (same pattern as QR flow)
+                        Lampa.Modal.open({
+                          title: 'Telegram Login',
+                          html: $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div style="font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password...</div>' + '</div>'),
+                          size: 'medium',
+                          onBack: function onBack() {
+                            cancelAuth();
+                            Lampa.Modal.close();
+                            Lampa.Controller.toggle(enabledCtrl);
+                            reject(new Error('AUTH_USER_CANCEL'));
+                          }
+                        });
                         resolve(String(val).trim());
                       } else {
                         cancelAuth();
@@ -4753,7 +4774,7 @@
           description: Lampa.Lang.translate('gramlink_settings_about_desc')
         },
         onChange: function onChange() {
-          var html = '<div style="padding:1em">' + '<p>' + Lampa.Lang.translate('gramlink_about_description') + '</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_version') + ':</span> 1.0.0</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_author') + ':</span> @lampa</p>' + '</div>';
+          var html = '<div style="padding:1em">' + '<p>' + Lampa.Lang.translate('gramlink_about_description') + '</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_version') + ':</span> ' + VERSION + '</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_author') + ':</span> @lampa</p>' + '</div>';
           var enabledCtrl = Lampa.Controller.enabled().name;
           Lampa.Select.show({
             title: Lampa.Lang.translate('gramlink_settings_about'),
@@ -5193,7 +5214,7 @@
     function setupContextMenu() {
       var manifest = {
         type: 'video',
-        version: '1.0.0',
+        version: VERSION,
         name: 'Open on device',
         description: 'Open this content on another device',
         onContextMenu: function onContextMenu(object) {
@@ -6014,7 +6035,7 @@
             timestamp: Math.floor(Date.now() / 1000),
             device_id: getDeviceId(),
             device_name: getDeviceName(),
-            version: '1.0.0'
+            version: VERSION
           },
           storage: {}
         };
@@ -6155,7 +6176,7 @@
       window.plugin_gramlink_ready = true;
       var manifest = {
         type: 'plugin',
-        version: '0.0.3',
+        version: VERSION,
         author: '@lme_chat',
         name: 'GramLink',
         description: 'Telegram sync via MTProto',
