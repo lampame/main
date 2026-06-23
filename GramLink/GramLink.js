@@ -30,6 +30,32 @@
           uk: 'GramLink | Хаб синхронізації',
           ru: 'GramLink | Хаб синхронизации'
         },
+        // Settings — section titles
+        gramlink_settings_section_auth: {
+          en: 'Authorization',
+          uk: 'Авторизація',
+          ru: 'Авторизация'
+        },
+        gramlink_settings_section_connection: {
+          en: 'Connection',
+          uk: 'Підключення',
+          ru: 'Подключение'
+        },
+        gramlink_settings_section_sync: {
+          en: 'Synchronization',
+          uk: 'Синхронізація',
+          ru: 'Синхронизация'
+        },
+        gramlink_settings_section_tools: {
+          en: 'Tools',
+          uk: 'Інструменти',
+          ru: 'Инструменты'
+        },
+        gramlink_settings_section_about: {
+          en: 'About',
+          uk: 'Про плагін',
+          ru: 'О плагине'
+        },
         // Settings — connection
         gramlink_settings_api_id: {
           en: 'Telegram API ID',
@@ -934,6 +960,21 @@
           en: 'This check verifies only the runtime environment required by telegram.min.js. It does not test your network or Telegram API credentials.',
           uk: 'Ця перевірка лише тестує середовище виконання, потрібне для telegram.min.js. Вона не перевіряє мережу чи Telegram API-креденшали.',
           ru: 'Эта проверка только тестирует среду выполнения, необходимую для telegram.min.js. Она не проверяет сеть или Telegram API-креденшалы.'
+        },
+        gramlink_settings_avatar_style: {
+          en: 'Avatar style',
+          uk: 'Стиль аватара',
+          ru: 'Стиль аватара'
+        },
+        gramlink_settings_avatar_style_desc: {
+          en: 'Choose DiceBear avatar style for profiles',
+          uk: 'Виберіть стиль аватара DiceBear для профілів',
+          ru: 'Выберите стиль аватара DiceBear для профилей'
+        },
+        gramlink_avatar_none: {
+          en: 'Initials (default)',
+          uk: 'Ініціали (за замовчуванням)',
+          ru: 'Инициалы (по умолчанию)'
         }
       });
     }
@@ -1048,7 +1089,7 @@
       return bytes;
     }
 
-    var VERSION = '0.0.41';
+    var VERSION = '0.0.5';
 
     // Storage keys
     var STORAGE_DC_ID = 'gramlink_dc_id';
@@ -2593,6 +2634,10 @@
       }
       var authKeyHex = bytesToHex(authKeyBytes);
       console.log('GramLink', 'Auth success — dcId:', dcId, 'key length:', authKeyHex.length);
+
+      // Save user display name (username > firstName+lastName > phone)
+      var displayName = user.username || '' || [user.firstName, user.lastName].filter(Boolean).join(' ') || user.phone || 'User';
+      Lampa.Storage.set('gramlink_user_name', displayName);
       GramLinkClient.getInstance().saveCredentials(dcId, authKeyHex);
       cancelAuth();
       Lampa.Modal.close();
@@ -3484,18 +3529,6 @@
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
-    /**
-     * helpers.js — Shared utility functions for GramLink
-     */
-
-    function timeAgo(ts) {
-      var diff = Math.floor(Date.now() / 1000) - (ts || 0);
-      if (diff < 60) return 'now';
-      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-      return Math.floor(diff / 86400) + 'd ago';
-    }
-
     var _skipNextPublish = false;
     var STORAGE_ACTIVE_PROFILE = 'gramlink_active_profile';
     var STORAGE_ACTIVE_PROFILE_TS = 'gramlink_active_profile_ts';
@@ -3679,13 +3712,22 @@
 
     // ─── Avatar generation ──────────────────────────────────
 
+    var DICE_BEAR_BASE = 'https://api.dicebear.com/10.x/';
     function getAvatar(name) {
+      var style = Lampa.Storage.get('gramlink_avatar_style', 'fun-emoji');
+      if (!style) return getInitials(name);
+      return DICE_BEAR_BASE + style + '/svg?seed=' + encodeURIComponent(name) + '&borderRadius=50';
+    }
+    function getInitials(name) {
       if (!name) return '??';
       var parts = name.trim().split(/\s+/);
       if (parts.length >= 2) {
         return (parts[0][0] || '') + (parts[1][0] || '');
       }
       return name.slice(0, 2);
+    }
+    function isAvatarUrl(avatar) {
+      return avatar && avatar.indexOf(DICE_BEAR_BASE) === 0;
     }
     function avatarColor(name) {
       if (!name) return '#0088cc';
@@ -3725,7 +3767,7 @@
         var $grid = $('<div class="profile-grid"></div>');
 
         // 1. Add-card always first
-        var $addCard = $('<div class="profile-card profile-card--add selector" data-action="add">' + '<div>' + '<div class="profile-card__add-icon">+</div>' + '<div>' + (Lampa.Lang.translate('gramlink_create_profile') || 'Create profile') + '</div>' + '</div>' + '</div>');
+        var $addCard = $('<div class="profile-card profile-card--add selector" data-action="add">' + '<div class="profile-card__add-icon">+</div>' + '<div>' + (Lampa.Lang.translate('gramlink_create_profile') || 'Create profile') + '</div>' + '</div>');
         $grid.append($addCard);
 
         // 2. Profile cards
@@ -3734,14 +3776,18 @@
           var p = d.payload && d.payload.profile;
           if (!p) return;
           var isActive = String(activeId) === String(m.id);
-          var avatar = p.avatar || getAvatar(p.name);
+          var avatar = getAvatar(p.name);
           var avatarColorVal = avatarColor(p.name);
-
-          // Count bookmarks from stored data (approximate from file_view/favorite)
+          var isUrl = isAvatarUrl(avatar);
+          var avatarHtml = isUrl ? '<img src="' + avatar + '" alt="">' : '<div class="gramlink-avatar" style="background:' + avatarColorVal + ';border-radius:50%;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">' + avatar + '</div>';
           var nameSafe = (p.name || 'Unnamed').replace(/"/g, '&quot;');
-          var $card = $('<div class="profile-card selector' + (isActive ? ' profile-card--active' : '') + '" ' + 'data-id="' + m.id + '" ' + 'data-name="' + nameSafe + '" ' + 'data-active="' + isActive + '">' + '<div class="profile-card__header">' + '<div class="profile-card__name">' + '<div class="gramlink-avatar gramlink-avatar--list" style="background:' + avatarColorVal + '">' + avatar + '</div>' + '<span>' + (p.name || 'Unnamed') + '</span>' + '</div>' + '</div>' + '</div>');
+          var $card = $('<div class="profile-card selector' + (isActive ? ' profile-card--active' : '') + '" ' + 'data-id="' + m.id + '" ' + 'data-name="' + nameSafe + '" ' + 'data-active="' + isActive + '">' + '<div class="profile-card__avatar-wrap">' + avatarHtml + '</div>' + '<div class="profile-card__name">' + escHtml(p.name || 'Unnamed') + (isActive ? '<div class="profile-card__active-badge">● ' + (Lampa.Lang.translate('gramlink_profile_active') || 'Active') + '</div>' : '') + '</div>' + '</div>');
           $grid.append($card);
         });
+        function escHtml(str) {
+          if (!str) return '';
+          return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
         container.empty().append($grid);
 
         // Card click → switch profile (immediate)
@@ -3914,6 +3960,25 @@
             status: deviceStatus !== undefined ? deviceStatus : p.status,
             custom: deviceCustom !== undefined ? deviceCustom : p.custom
           };
+        });
+
+        // Safeguard: never lose GramLink when switching profiles
+        // Merge in any locally installed plugins NOT in the profile data
+        var localPlugins = collectPlugins();
+        var mergedUrls = {};
+        mergedPlugins.forEach(function (p) {
+          mergedUrls[p.url] = true;
+        });
+        localPlugins.forEach(function (lp) {
+          if (!mergedUrls[lp.url]) {
+            mergedPlugins.push({
+              url: lp.url,
+              name: lp.name,
+              status: lp.status !== undefined ? lp.status : 1,
+              custom: lp.custom
+            });
+            mergedUrls[lp.url] = true;
+          }
         });
         Lampa.Storage.set('plugins', mergedPlugins);
       }
@@ -4235,6 +4300,25 @@
               Lampa.Storage.set(key, devSettings[key]);
             });
           }
+
+          // ── Bookmarks & Timeline (never applied before) ──
+          if (data.bookmarks && data.bookmarks.favorite) {
+            Lampa.Storage.set('favorite', data.bookmarks.favorite);
+            if (Lampa.Favorite && Lampa.Favorite.read) {
+              Lampa.Favorite.read();
+            }
+          }
+          if (data.timeline) {
+            Lampa.Storage.set('file_view', data.timeline);
+          }
+
+          // ── Profile name from caption ──
+          try {
+            var captionText = target.text || '';
+            var captionParsed = JSON.parse(captionText.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim());
+            var captionName = captionParsed.payload && captionParsed.payload.profile && captionParsed.payload.profile.name;
+            if (captionName) Lampa.Storage.set('gramlink_active_profile_name', captionName);
+          } catch (e) {}
         });
       })["catch"](function () {});
     }
@@ -4437,6 +4521,7 @@
       applyProfileData: applyProfileData,
       getAvatar: getAvatar,
       avatarColor: avatarColor,
+      saveProfilesCache: saveProfilesCache,
       startAutoActivation: startAutoActivation,
       publishLocalDelta: publishLocalDelta,
       publishDeviceDelta: publishDeviceDelta,
@@ -4486,6 +4571,137 @@
         }]
       });
     }
+
+    // ─── Favourite categories (Lampa.Favorite) ──────────────────────
+
+    var FAV_CATEGORIES = ['like', 'wath', 'book', 'history', 'look', 'viewed', 'scheduled', 'continued', 'thrown'];
+    function emptyFavorite() {
+      var fav = {
+        card: []
+      };
+      FAV_CATEGORIES.forEach(function (c) {
+        fav[c] = [];
+      });
+      return fav;
+    }
+
+    // ─── Convert Cub bookmark dump → Lampa favorite dict ─────────────
+
+    function cubDumpToFavorite(rawText) {
+      var parsed;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch (e) {
+        return emptyFavorite();
+      }
+      var rows = parsed && parsed.bookmarks;
+      if (!rows || !rows.length) return emptyFavorite();
+      var fav = {
+        card: []
+      };
+      FAV_CATEGORIES.forEach(function (c) {
+        fav[c] = [];
+      });
+      var seenCards = {};
+      rows.forEach(function (b) {
+        if (!b.type || b.card_id == null) return;
+        if (!fav[b.type]) fav[b.type] = [];
+
+        // Avoid duplicate card_ids in the same category
+        if (fav[b.type].indexOf(b.card_id) < 0) {
+          fav[b.type].push(b.card_id);
+        }
+
+        // Parse card data once per unique card_id
+        if (!seenCards[b.card_id] && b.data) {
+          seenCards[b.card_id] = true;
+          try {
+            var card = typeof b.data === 'string' ? JSON.parse(b.data) : b.data;
+            fav.card.push(card);
+          } catch (e) {}
+        }
+      });
+      return fav;
+    }
+
+    // ─── Convert Cub timeline dump → Lampa file_view dict ────────────
+
+    function cubDumpToTimeline(rawText) {
+      var parsed;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch (e) {
+        return {};
+      }
+      var timelines = parsed && parsed.timelines;
+      if (!timelines) return {};
+      var result = {};
+      for (var hash in timelines) {
+        if (!Object.prototype.hasOwnProperty.call(timelines, hash)) continue;
+        var t = timelines[hash];
+        if (!t) continue;
+        result[hash] = {
+          time: t.time || 0,
+          duration: t.duration || 0,
+          percent: t.percent || 0
+        };
+      }
+      return result;
+    }
+
+    // ─── Filter Cub plugins for a specific profile ───────────────────
+
+    function filterPluginsForProfile(allPlugins, profileId) {
+      var result = [];
+      allPlugins.forEach(function (p) {
+        if (!p.url) return;
+        var profileIds = [];
+        try {
+          profileIds = JSON.parse(p.profiles);
+        } catch (e) {
+          return;
+        }
+        if (profileIds.indexOf(profileId) < 0) return;
+        result.push({
+          url: p.url,
+          name: p.name || p.url.split('/').pop().replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' '),
+          status: p.status !== undefined ? p.status : 1
+        });
+      });
+      return result;
+    }
+
+    // ─── Merge local + Cub plugins (GramLink safeguard) ──────────────
+
+    function mergeWithLocalPlugins(cubPlugins) {
+      var localPlugins = [];
+      try {
+        localPlugins = Lampa.Storage.get('plugins', []);
+      } catch (e) {}
+      var seen = {};
+      var result = [];
+
+      // Keep ALL local plugins first — GramLink lives here
+      localPlugins.forEach(function (p) {
+        var url = p.url || '';
+        if (!seen[url]) {
+          result.push(p);
+          seen[url] = true;
+        }
+      });
+
+      // Add Cub plugins that aren't already local
+      cubPlugins.forEach(function (p) {
+        if (!seen[p.url]) {
+          result.push(p);
+          seen[p.url] = true;
+        }
+      });
+      return result;
+    }
+
+    // ─── Main migration flow ─────────────────────────────────────────
+
     function doMigration(profilesTopicId) {
       var client = GramLinkClient.getInstance();
       if (!client.isConnected()) {
@@ -4500,95 +4716,232 @@
         }
         var profiles = result.profiles;
         var activeProfileId = Lampa.Account.Permit.account.profile.id;
-        var currentData = collectCurrentData();
         var imported = 0;
         var activatedId = null;
-        function processNext(index) {
-          if (index >= profiles.length) {
-            finishMigration(imported, activatedId);
-            return;
+        var activatedName = null;
+
+        // ── 1. Fetch ALL plugins once ──────────────────────────
+        Lampa.Account.Api.load('plugins/all').then(function (pluginResult) {
+          var allPlugins = pluginResult && pluginResult.secuses ? pluginResult.plugins || [] : [];
+
+          // ── 2. Process each profile sequentially ───────────
+          function processNext(index) {
+            if (index >= profiles.length) {
+              finishMigration(imported, activatedId, activatedName);
+              return;
+            }
+            var cubProfile = profiles[index];
+            var name = cubProfile.name || 'Profile ' + (index + 1);
+            var avatar = getAvatar(name);
+            var now = Math.floor(Date.now() / 1000);
+            var caption = JSON.stringify({
+              meta: {
+                type: 'profile',
+                timestamp: now,
+                version: 2,
+                source: 'cub',
+                source_id: cubProfile.id
+              },
+              payload: {
+                profile: {
+                  name: name,
+                  avatar: avatar,
+                  updated: now
+                }
+              }
+            });
+            Lampa.Noty.show('Importing "' + name + '" (' + (index + 1) + '/' + profiles.length + ')…');
+
+            // ── 2a. Fetch this profile's Bookmarks ─────────
+            var bookmarkPromise = Lampa.Account.Api.load('bookmarks/dump', {
+              headers: {
+                profile: cubProfile.id
+              },
+              dataType: 'text'
+            }).then(function (raw) {
+              return cubDumpToFavorite(raw);
+            })["catch"](function () {
+              return emptyFavorite();
+            });
+
+            // ── 2b. Fetch this profile's Timeline ──────────
+            var timelinePromise = Lampa.Account.Api.load('timeline/dump', {
+              headers: {
+                profile: cubProfile.id
+              },
+              dataType: 'text'
+            }).then(function (raw) {
+              return cubDumpToTimeline(raw);
+            })["catch"](function () {
+              return {};
+            });
+
+            // ── 2c. Wait for both, build + send file ──────
+            Promise.all([bookmarkPromise, timelinePromise]).then(function (results) {
+              var bookmarks = results[0];
+              var timeline = results[1];
+              var profilePlugins = mergeWithLocalPlugins(filterPluginsForProfile(allPlugins, cubProfile.id));
+              var fileData = {
+                profile_meta: {
+                  name: name,
+                  avatar: avatar,
+                  updated: now
+                },
+                bookmarks: {
+                  favorite: bookmarks
+                },
+                timeline: timeline,
+                plugins: profilePlugins,
+                settings: {
+                  sync_enabled: Lampa.Storage.get('gramlink_sync_enabled', false),
+                  heartbeat: Lampa.Storage.get('gramlink_heartbeat', false),
+                  broadcast: Lampa.Storage.get('gramlink_broadcast', false)
+                }
+              };
+              var fileJson = JSON.stringify(fileData, null, 2);
+              var fileName = 'profile_' + name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + now + '.json';
+              var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
+              client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
+                if (msgId) {
+                  imported++;
+                  if (String(cubProfile.id) === String(activeProfileId)) {
+                    activatedId = msgId;
+                    activatedName = name;
+                  }
+                }
+                processNext(index + 1);
+              })["catch"](function () {
+                processNext(index + 1);
+              });
+            })["catch"](function () {
+              // If both bookmark+timeline fail, still create profile with empty data
+              var profilePlugins = mergeWithLocalPlugins(filterPluginsForProfile(allPlugins, cubProfile.id));
+              var fileData = {
+                profile_meta: {
+                  name: name,
+                  avatar: avatar,
+                  updated: now
+                },
+                bookmarks: {
+                  favorite: emptyFavorite()
+                },
+                timeline: {},
+                plugins: profilePlugins,
+                settings: {
+                  sync_enabled: Lampa.Storage.get('gramlink_sync_enabled', false),
+                  heartbeat: Lampa.Storage.get('gramlink_heartbeat', false),
+                  broadcast: Lampa.Storage.get('gramlink_broadcast', false)
+                }
+              };
+              var fileJson = JSON.stringify(fileData, null, 2);
+              var fileName = 'profile_' + name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + now + '.json';
+              var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
+              client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
+                if (msgId) {
+                  imported++;
+                  if (String(cubProfile.id) === String(activeProfileId)) {
+                    activatedId = msgId;
+                    activatedName = name;
+                  }
+                }
+                processNext(index + 1);
+              })["catch"](function () {
+                processNext(index + 1);
+              });
+            });
           }
-          var cubProfile = profiles[index];
-          var name = cubProfile.name || 'Profile ' + (index + 1);
-          var avatar = getAvatar(name);
-          var now = Math.floor(Date.now() / 1000);
-          var caption = JSON.stringify({
-            meta: {
-              type: 'profile',
-              timestamp: now,
-              version: 2,
-              source: 'cub',
-              source_id: cubProfile.id
-            },
-            payload: {
-              profile: {
-                name: name,
-                avatar: avatar,
-                updated: now
-              }
-            }
-          });
-          var fileData = {
-            profile_meta: {
-              name: name,
-              avatar: avatar,
-              updated: now
-            },
-            bookmarks: {
-              favorite: currentData.favorite
-            },
-            timeline: currentData.timeline,
-            plugins: currentData.plugins,
-            settings: currentData.settings
-          };
-          var fileJson = JSON.stringify(fileData, null, 2);
-          var fileName = 'profile_' + name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + now + '.json';
-          var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
-          client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
-            if (msgId) {
-              imported++;
-              if (String(cubProfile.id) === String(activeProfileId)) {
-                activatedId = msgId;
-              }
-            }
-            processNext(index + 1);
-          })["catch"](function () {
-            processNext(index + 1);
-          });
-        }
-        processNext(0);
+          processNext(0);
+        })["catch"](function (e) {
+          console.error('GramLink', 'Migration fetch plugins error:', e);
+          Lampa.Noty.show('Failed to read Cub plugins');
+
+          // Still try to migrate profiles without plugins
+          fallbackMigration(profiles, activeProfileId, profilesTopicId);
+        });
       })["catch"](function (e) {
         console.error('GramLink', 'Migration fetch error:', e);
         Lampa.Noty.show('Failed to read Cub profiles: ' + (e.message || 'API error'));
       });
     }
-    function collectCurrentData() {
-      var result = {
-        favorite: {},
-        timeline: {},
-        plugins: [],
-        settings: {}
-      };
-      try {
-        result.favorite = Lampa.Storage.get('favorite', {});
-      } catch (e) {}
-      try {
-        result.timeline = Lampa.Storage.get('file_view', {});
-      } catch (e) {}
-      try {
-        result.plugins = Lampa.Storage.get('plugins', []);
-      } catch (e) {}
-      result.settings = {
-        sync_enabled: Lampa.Storage.get('gramlink_sync_enabled', false),
-        heartbeat: Lampa.Storage.get('gramlink_heartbeat', false),
-        broadcast: Lampa.Storage.get('gramlink_broadcast', false)
-      };
-      return result;
+
+    // ─── Fallback if plugins/all fails: migrate with local data ─────
+
+    function fallbackMigration(profiles, activeProfileId, profilesTopicId) {
+      var client = GramLinkClient.getInstance();
+      if (!client.isConnected()) return;
+      var imported = 0;
+      var activatedId = null;
+      var activatedName = null;
+      var now = Math.floor(Date.now() / 1000);
+      function processNext(index) {
+        if (index >= profiles.length) {
+          finishMigration(imported, activatedId, activatedName);
+          return;
+        }
+        var cubProfile = profiles[index];
+        var name = cubProfile.name || 'Profile ' + (index + 1);
+        var avatar = getAvatar(name);
+        var ts = now + index; // unique timestamp per profile
+
+        var caption = JSON.stringify({
+          meta: {
+            type: 'profile',
+            timestamp: ts,
+            version: 2,
+            source: 'cub',
+            source_id: cubProfile.id
+          },
+          payload: {
+            profile: {
+              name: name,
+              avatar: avatar,
+              updated: ts
+            }
+          }
+        });
+        var fileData = {
+          profile_meta: {
+            name: name,
+            avatar: avatar,
+            updated: ts
+          },
+          bookmarks: {
+            favorite: emptyFavorite()
+          },
+          timeline: {},
+          plugins: mergeWithLocalPlugins([]),
+          settings: {
+            sync_enabled: Lampa.Storage.get('gramlink_sync_enabled', false),
+            heartbeat: Lampa.Storage.get('gramlink_heartbeat', false),
+            broadcast: Lampa.Storage.get('gramlink_broadcast', false)
+          }
+        };
+        var fileJson = JSON.stringify(fileData, null, 2);
+        var fileName = 'profile_' + name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + ts + '.json';
+        var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
+        client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
+          if (msgId) {
+            imported++;
+            if (String(cubProfile.id) === String(activeProfileId)) {
+              activatedId = msgId;
+              activatedName = name;
+            }
+          }
+          processNext(index + 1);
+        })["catch"](function () {
+          processNext(index + 1);
+        });
+      }
+      processNext(0);
     }
-    function finishMigration(count, activatedId) {
+
+    // ─── Finish ──────────────────────────────────────────────────────
+
+    function finishMigration(count, activatedId, activatedName) {
       if (activatedId) {
         Lampa.Storage.set('gramlink_active_profile', String(activatedId));
         Lampa.Storage.set('gramlink_active_profile_ts', String(Math.floor(Date.now() / 1000)));
+        if (activatedName) Lampa.Storage.set('gramlink_active_profile_name', activatedName);
       }
       Lampa.Storage.set('account', '', true);
       Lampa.Storage.field('account_use', false);
@@ -4615,9 +4968,11 @@
       var SettingsApi = Lampa.SettingsApi || Lampa.Settings;
       if (!SettingsApi || !SettingsApi.addComponent) return;
 
-      // ── Шаблон для вкладеного компонента ────────────────
+      // ── Шаблони для вкладених компонентів ──────────────
       Lampa.Template.add('settings_gramlink_server', '<div></div>');
-
+      Lampa.Template.add('settings_gramlink_connection', '<div></div>');
+      Lampa.Template.add('settings_gramlink_sync_page', '<div></div>');
+      Lampa.Template.add('settings_gramlink_tools', '<div></div>');
       // ── Головний компонент (перед Interface) ────────────
       SettingsApi.addComponent({
         component: 'gramlink',
@@ -4626,18 +4981,28 @@
         icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' + '<path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.587.192l-8.533 7.77h-.001l.003.003-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.22c.309-1.239-.473-1.8-1.282-1.434z" fill="currentColor"/>' + '</svg>'
       });
 
-      // ── Кнопка авторизації (динамічна) ──────────────────
+      // ══════════════════════════════════════════════════════
+      //  ГОЛОВНА СТОРІНКА — навігація за розділами
+      // ══════════════════════════════════════════════════════
+
+      // ── 1. Авторизація ──────────────────────────────────
       SettingsApi.addParam({
         component: 'gramlink',
         param: {
-          name: 'gramlink_auth_btn',
+          name: 'gramlink_open_auth',
           type: 'button'
         },
         field: {
-          name: Lampa.Lang.translate('gramlink_settings_auth_login')
+          name: Lampa.Lang.translate('gramlink_settings_section_auth')
         },
         onRender: function onRender(item) {
-          item.find('.settings-param__name').text(GramLinkClient.getInstance().hasCredentials() ? Lampa.Lang.translate('gramlink_settings_auth_logout') : Lampa.Lang.translate('gramlink_settings_auth_login'));
+          var client = GramLinkClient.getInstance();
+          if (client.hasCredentials()) {
+            var userName = Lampa.Storage.get('gramlink_user_name', '');
+            item.find('.settings-param__name').text(Lampa.Lang.translate('gramlink_settings_auth_logout') + (userName ? ': ' + userName : ''));
+          } else {
+            item.find('.settings-param__name').text(Lampa.Lang.translate('gramlink_settings_section_auth'));
+          }
         },
         onChange: function onChange() {
           var client = GramLinkClient.getInstance();
@@ -4649,6 +5014,7 @@
                 name: Lampa.Lang.translate('gramlink_settings_logout'),
                 onSelect: function onSelect() {
                   client.logout();
+                  Lampa.Storage.set('gramlink_user_name', '');
                   Lampa.Modal.close();
                   Lampa.Settings.update();
                 }
@@ -4675,9 +5041,116 @@
         }
       });
 
-      // ── Telegram Library Support — перевірка сумісності ──────
+      // ── 2. Синхронізація ────────────────────────────────
       SettingsApi.addParam({
         component: 'gramlink',
+        param: {
+          name: 'gramlink_open_sync',
+          type: 'button'
+        },
+        field: {
+          name: Lampa.Lang.translate('gramlink_settings_section_sync')
+        },
+        onChange: function onChange() {
+          Lampa.Settings.create('gramlink_sync_page', {
+            onBack: function onBack() {
+              Lampa.Settings.create('gramlink');
+            }
+          });
+        }
+      });
+
+      // ── 3. Інструменти ──────────────────────────────────
+      SettingsApi.addParam({
+        component: 'gramlink',
+        param: {
+          name: 'gramlink_open_tools',
+          type: 'button'
+        },
+        field: {
+          name: Lampa.Lang.translate('gramlink_settings_section_tools')
+        },
+        onChange: function onChange() {
+          Lampa.Settings.create('gramlink_tools', {
+            onBack: function onBack() {
+              Lampa.Settings.create('gramlink');
+            }
+          });
+        }
+      });
+
+      // ── 4. Про плагін (відкривається одразу) ────────────
+      SettingsApi.addParam({
+        component: 'gramlink',
+        param: {
+          name: 'gramlink_open_about',
+          type: 'button'
+        },
+        field: {
+          name: Lampa.Lang.translate('gramlink_settings_section_about')
+        },
+        onChange: function onChange() {
+          var html = '<div style="padding:1em">' + '<p>' + Lampa.Lang.translate('gramlink_about_description') + '</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_version') + ':</span> ' + VERSION + '</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_author') + ':</span> @lampa</p>' + '</div>';
+          var enabledCtrl = Lampa.Controller.enabled().name;
+          Lampa.Select.show({
+            title: Lampa.Lang.translate('gramlink_settings_about'),
+            items: [{
+              title: html,
+              disabled: true
+            }],
+            onSelect: function onSelect() {
+              Lampa.Controller.toggle(enabledCtrl);
+            },
+            onBack: function onBack() {
+              Lampa.Controller.toggle(enabledCtrl);
+            }
+          });
+        }
+      });
+
+      // ── 5. Підключення ──────────────────────────────────
+      SettingsApi.addParam({
+        component: 'gramlink',
+        param: {
+          name: 'gramlink_open_connection',
+          type: 'button'
+        },
+        field: {
+          name: Lampa.Lang.translate('gramlink_settings_section_connection')
+        },
+        onChange: function onChange() {
+          Lampa.Settings.create('gramlink_connection', {
+            onBack: function onBack() {
+              Lampa.Settings.create('gramlink');
+            }
+          });
+        }
+      });
+
+      // ── 6. (moved to Tools) ─────────────────────────────
+      // ══════════════════════════════════════════════════════
+      //  ВКЛАДЕНА СТОРІНКА: Підключення
+      // ══════════════════════════════════════════════════════
+
+      SettingsApi.addParam({
+        component: 'gramlink_connection',
+        param: {
+          name: 'gramlink_open_server',
+          type: 'button'
+        },
+        field: {
+          name: Lampa.Lang.translate('gramlink_settings_server_type')
+        },
+        onChange: function onChange() {
+          Lampa.Settings.create('gramlink_server', {
+            onBack: function onBack() {
+              Lampa.Settings.create('gramlink_connection');
+            }
+          });
+        }
+      });
+      SettingsApi.addParam({
+        component: 'gramlink_connection',
         param: {
           name: 'gramlink_compat_btn',
           type: 'button'
@@ -4703,9 +5176,12 @@
         }
       });
 
-      // ── Перемикачі синхронізації ────────────────────────
+      // ══════════════════════════════════════════════════════
+      //  ВКЛАДЕНА СТОРІНКА: Синхронізація
+      // ══════════════════════════════════════════════════════
+
       SettingsApi.addParam({
-        component: 'gramlink',
+        component: 'gramlink_sync_page',
         param: {
           name: 'gramlink_sync_enabled',
           type: 'trigger',
@@ -4719,7 +5195,7 @@
         }
       });
       SettingsApi.addParam({
-        component: 'gramlink',
+        component: 'gramlink_sync_page',
         param: {
           name: 'gramlink_heartbeat',
           type: 'trigger',
@@ -4743,7 +5219,7 @@
         }
       });
       SettingsApi.addParam({
-        component: 'gramlink',
+        component: 'gramlink_sync_page',
         param: {
           name: 'gramlink_broadcast',
           type: 'trigger',
@@ -4756,10 +5232,54 @@
           Lampa.Storage.set('gramlink_broadcast', value);
         }
       });
-
-      // ── Import from Cub ─────────────────────────────────
       SettingsApi.addParam({
-        component: 'gramlink',
+        component: 'gramlink_sync_page',
+        param: {
+          name: 'gramlink_sync_timeout',
+          type: 'select',
+          values: {
+            5: '5',
+            10: '10',
+            30: '30',
+            60: '60'
+          },
+          "default": '10'
+        },
+        field: {
+          name: Lampa.Lang.translate('gramlink_settings_timeout'),
+          description: Lampa.Lang.translate('gramlink_settings_timeout_desc')
+        },
+        onChange: function onChange(value) {
+          Lampa.Storage.set('gramlink_sync_timeout', value);
+        }
+      });
+      SettingsApi.addParam({
+        component: 'gramlink_sync_page',
+        param: {
+          name: 'gramlink_poll_interval',
+          type: 'select',
+          values: {
+            5: '5',
+            10: '10',
+            30: '30'
+          },
+          "default": '10'
+        },
+        field: {
+          name: Lampa.Lang.translate('gramlink_settings_poll_interval'),
+          description: Lampa.Lang.translate('gramlink_settings_poll_interval_desc')
+        },
+        onChange: function onChange(value) {
+          Lampa.Storage.set('gramlink_poll_interval', value);
+        }
+      });
+
+      // ══════════════════════════════════════════════════════
+      //  ВКЛАДЕНА СТОРІНКА: Інструменти
+      // ══════════════════════════════════════════════════════
+
+      SettingsApi.addParam({
+        component: 'gramlink_tools',
         param: {
           name: 'gramlink_import_cub',
           type: 'button'
@@ -4778,9 +5298,32 @@
         }
       });
 
-      // ── Manage plugins button ──────────────────────────────
+      // ponytail: avatar style moved here from main page
       SettingsApi.addParam({
-        component: 'gramlink',
+        component: 'gramlink_tools',
+        param: {
+          name: 'gramlink_avatar_style',
+          type: 'button'
+        },
+        field: {
+          name: Lampa.Lang.translate('gramlink_settings_avatar_style'),
+          description: Lampa.Lang.translate('gramlink_settings_avatar_style_desc')
+        },
+        onRender: function onRender(item) {
+          var style = Lampa.Storage.get('gramlink_avatar_style', 'fun-emoji');
+          var label = style ? style.charAt(0).toUpperCase() + style.slice(1) : Lampa.Lang.translate('gramlink_avatar_none');
+          item.find('.settings-param__name').text(Lampa.Lang.translate('gramlink_settings_avatar_style'));
+          if (!item.find('.gramlink-avatar-preview').length) {
+            item.find('.settings-param__name').after('<span class="gramlink-avatar-preview" style="margin-left:0.5em;opacity:0.6"></span>');
+          }
+          item.find('.gramlink-avatar-preview').text(label);
+        },
+        onChange: function onChange() {
+          openAvatarStyleSelect();
+        }
+      });
+      SettingsApi.addParam({
+        component: 'gramlink_tools',
         param: {
           name: 'gramlink_manage_plugins',
           type: 'button'
@@ -4803,102 +5346,8 @@
         }
       });
 
-      // ── About page ───────────────────────────────────────
-      SettingsApi.addParam({
-        component: 'gramlink',
-        param: {
-          name: 'gramlink_about_btn',
-          type: 'button'
-        },
-        field: {
-          name: Lampa.Lang.translate('gramlink_settings_about'),
-          description: Lampa.Lang.translate('gramlink_settings_about_desc')
-        },
-        onChange: function onChange() {
-          var html = '<div style="padding:1em">' + '<p>' + Lampa.Lang.translate('gramlink_about_description') + '</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_version') + ':</span> ' + VERSION + '</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_author') + ':</span> @lampa</p>' + '</div>';
-          var enabledCtrl = Lampa.Controller.enabled().name;
-          Lampa.Select.show({
-            title: Lampa.Lang.translate('gramlink_settings_about'),
-            items: [{
-              title: html,
-              disabled: true
-            }],
-            onSelect: function onSelect() {
-              Lampa.Controller.toggle(enabledCtrl);
-            },
-            onBack: function onBack() {
-              Lampa.Controller.toggle(enabledCtrl);
-            }
-          });
-        }
-      });
-
-      // ── Sync timeout ─────────────────────────────────────
-      SettingsApi.addParam({
-        component: 'gramlink',
-        param: {
-          name: 'gramlink_sync_timeout',
-          type: 'select',
-          values: {
-            5: '5',
-            10: '10',
-            30: '30',
-            60: '60'
-          },
-          "default": '10'
-        },
-        field: {
-          name: Lampa.Lang.translate('gramlink_settings_timeout'),
-          description: Lampa.Lang.translate('gramlink_settings_timeout_desc')
-        },
-        onChange: function onChange(value) {
-          Lampa.Storage.set('gramlink_sync_timeout', value);
-        }
-      });
-
-      // ── Delta poll interval ──────────────────────────────
-      SettingsApi.addParam({
-        component: 'gramlink',
-        param: {
-          name: 'gramlink_poll_interval',
-          type: 'select',
-          values: {
-            5: '5',
-            10: '10',
-            30: '30'
-          },
-          "default": '10'
-        },
-        field: {
-          name: Lampa.Lang.translate('gramlink_settings_poll_interval'),
-          description: Lampa.Lang.translate('gramlink_settings_poll_interval_desc')
-        },
-        onChange: function onChange(value) {
-          Lampa.Storage.set('gramlink_poll_interval', value);
-        }
-      });
-
-      // ── Пункт "Сервер" (вкладений, останній) ────────────
-      SettingsApi.addParam({
-        component: 'gramlink',
-        param: {
-          name: 'gramlink_open_server',
-          type: 'button'
-        },
-        field: {
-          name: Lampa.Lang.translate('gramlink_settings_server_type')
-        },
-        onChange: function onChange() {
-          Lampa.Settings.create('gramlink_server', {
-            onBack: function onBack() {
-              Lampa.Settings.create('gramlink');
-            }
-          });
-        }
-      });
-
       // ═══════════════════════════════════════════════════════
-      //  Вкладена сторінка: Налаштування сервера
+      //  ВКЛАДЕНА СТОРІНКА: Налаштування сервера
       // ═══════════════════════════════════════════════════════
 
       SettingsApi.addParam({
@@ -4989,6 +5438,7 @@
                 name: Lampa.Lang.translate('gramlink_settings_server_confirm'),
                 onSelect: function onSelect() {
                   client.logout();
+                  Lampa.Storage.set('gramlink_user_name', '');
                   Lampa.Storage.set('gramlink_server_type', value);
                   if (value === 'custom') {
                     Lampa.Storage.set('gramlink_custom_host', Lampa.Storage.get('gramlink_custom_host', ''));
@@ -5151,6 +5601,43 @@
       } else {
         item.addClass('hide');
       }
+    }
+    function openAvatarStyleSelect() {
+      var DICE_BEAR_BASE = 'https://api.dicebear.com/10.x/';
+      var DICE_BEAR_STYLES = ['adventurer', 'adventurer-neutral', 'avataaars', 'avataaars-neutral', 'big-ears', 'big-ears-neutral', 'big-smile', 'bottts', 'bottts-neutral', 'croodles', 'croodles-neutral', 'disco', 'dylan', 'fun-emoji', 'glass', 'glyphs', 'icons', 'identicon', 'initial-face', 'initials', 'lorelei', 'lorelei-neutral', 'micah', 'miniavs', 'notionists', 'notionists-neutral', 'open-peeps', 'personas', 'pixel-art', 'pixel-art-neutral', 'rings', 'shape-grid', 'shapes', 'stripes', 'thumbs', 'toon-head', 'triangles'];
+      var current = Lampa.Storage.get('gramlink_avatar_style', 'fun-emoji');
+      var enabledCtrl = Lampa.Controller.enabled().name;
+      var items = [];
+      var hasStoredStyle = Lampa.Storage.get('gramlink_avatar_style', null) !== null;
+
+      // "Initials" — always opt-out option
+      items.push({
+        title: Lampa.Lang.translate('gramlink_avatar_none'),
+        selected: !hasStoredStyle
+      });
+      DICE_BEAR_STYLES.forEach(function (s) {
+        var previewUrl = DICE_BEAR_BASE + s + '/svg?seed=Lampa';
+        var iconHtml = '<img src="' + previewUrl + '" style="width:2em;height:2em;border-radius:50%;object-fit:cover;">';
+        items.push({
+          title: s,
+          template: 'selectbox_icon',
+          icon: iconHtml,
+          selected: s === current
+        });
+      });
+      Lampa.Select.show({
+        title: Lampa.Lang.translate('gramlink_settings_avatar_style'),
+        items: items,
+        onBack: function onBack() {
+          Lampa.Controller.toggle(enabledCtrl);
+        },
+        onSelect: function onSelect(item) {
+          var selectedStyle = item.title === Lampa.Lang.translate('gramlink_avatar_none') ? '' : item.title;
+          Lampa.Storage.set('gramlink_avatar_style', selectedStyle);
+          Lampa.Controller.toggle(enabledCtrl);
+          Lampa.Settings.update();
+        }
+      });
     }
 
     /**
@@ -5357,16 +5844,6 @@
       setupBroadcast: setupBroadcast
     };
 
-    /**
-     * hub.js — GramLink Hub component
-     *
-     * Activity component з повною підтримкою Lampa Controller:
-     * - Scroll (вертикальний, з mask)
-     * - Таби: Profiles (first) + Devices (second)
-     * - Controller.add('gramlink_hub') + collectionSet + collectionFocus
-     * - hover:focus → scroll.update() для автоскролу
-     * - back() → Lampa.Activity.backward()
-     */
     var STORAGE_CHANNEL_ID = 'gramlink_channel_id';
     var STORAGE_SYNC_LOG_TOPIC = 'gramlink_sync_log_topic';
     var STORAGE_PROFILES_TOPIC = 'gramlink_profiles_topic';
@@ -5374,48 +5851,49 @@
     var STORAGE_BACKUP_TOPIC = 'gramlink_backup_topic';
     var refreshTimer = null;
     var currentChannelId = null;
-    var currentSyncLogTopicId = null;
     var currentProfilesTopicId = null;
     var currentProfilesSyncTopicId = null;
-    var currentBackupTopicId = null;
     function Hub () {
       var self = this;
       var scroll = null;
       var last = null;
       var activeTab = 'profiles';
+      var TABS = ['profiles', 'devices', 'plugins'];
+      var tabIdx = 0;
 
-      // ─── Lifecycle ───────────────────────────────────────────
+      // ─── Lifecycle — create ──────────────────────────────
 
       self.create = function () {
         scroll = new Lampa.Scroll({
           mask: true,
           over: true
         });
-        self.html = $('<div class="gramlink-activity"></div>');
         scroll.render().addClass('gramlink-scroll');
-        self.html.append(scroll.render());
+
+        // Native: onWheel delegates to Navigator
         scroll.onWheel = function (step) {
           if (!last) return;
           Navigator.move(step > 0 ? 'down' : 'up');
         };
-        scroll.render().on('hover:focus', function (e) {
-          last = e.target;
-          scroll.update($(e.target), true);
-        });
-        scroll.render().on('hover:hover hover:touch', function (e) {
-          last = e.target;
-        });
 
-        // Build layout once in create()
-        buildLayout();
-        bindStaticEvents();
+        // Native: height() so scroll fills available space
+        scroll.height();
+
+        // Container
+        self.html = $('<div class="gramlink-activity"></div>');
+        self.html.append(scroll.render());
+
+        // Initial render fills scroll body
+        renderProfiles();
         return self.render();
       };
       self.render = function () {
         return self.html;
       };
+
+      // ─── Controller — start ──────────────────────────────
+
       self.start = function () {
-        // Native Lampa pattern: register controller as 'content' on every start
         Lampa.Controller.add('content', {
           toggle: function toggle() {
             Lampa.Controller.collectionSet(scroll.render());
@@ -5429,10 +5907,24 @@
             Navigator.move('down');
           },
           left: function left() {
-            if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+            var $cur = $(last);
+            if ($cur.hasClass('gramlink-tab') && tabIdx > 0) {
+              tabIdx--;
+              focusTab(TABS[tabIdx]);
+            } else if ($cur.hasClass('gramlink-tab') && tabIdx === 0) {
+              Lampa.Controller.toggle('menu');
+            } else if (Navigator.canmove('left')) {
+              Navigator.move('left');
+            }
           },
           right: function right() {
-            Navigator.move('right');
+            var $cur = $(last);
+            if ($cur.hasClass('gramlink-tab') && tabIdx < TABS.length - 1) {
+              tabIdx++;
+              focusTab(TABS[tabIdx]);
+            } else if (Navigator.canmove('right')) {
+              Navigator.move('right');
+            }
           },
           back: function back() {
             self.back();
@@ -5440,6 +5932,7 @@
         });
         Lampa.Controller.toggle('content');
         init();
+        focusFirst();
       };
       self.pause = function () {
         if (refreshTimer) {
@@ -5471,287 +5964,257 @@
         } catch (e) {}
       };
 
-      // ─── Layout builder — tabs (Profiles first, Devices second) ───
+      // ─── Tab switching ──────────────────────────────────
 
-      function buildLayout() {
-        var hub = $('<div class="gramlink-hub">' + '<div class="gramlink-tabs">' + '<div class="simple-button selector gramlink-tab active" data-tab="profiles">' + (Lampa.Lang.translate('gramlink_profiles') || 'Profiles') + '</div>' + '<div class="simple-button selector gramlink-tab" data-tab="devices">' + (Lampa.Lang.translate('gramlink_devices') || 'Devices') + '</div>' + '<div class="simple-button selector gramlink-tab" data-tab="plugins">' + (Lampa.Lang.translate('gramlink_plugins') || 'Plugins') + '</div>' + '</div>' + '<div class="gramlink-tab-view gramlink-tab-view--profiles">' + '<div class="gramlink-profiles"></div>' + '</div>' + '<div class="gramlink-tab-view gramlink-tab-view--devices hide">' + '<div class="gramlink-hub__section">' + '<div class="settings-param-title"><span>' + (Lampa.Lang.translate('gramlink_status') || 'Status') + '</span></div>' + '<div class="settings-folder selector gs-status-item">' + '<div class="settings-folder__icon">' + '<div class="gramlink-status__indicator gramlink-status__indicator--disconnected"></div>' + '</div>' + '<div class="settings-folder__name">' + '<div class="gramlink-status-label">' + (Lampa.Lang.translate('gramlink_not_connected') || 'Not connected') + '</div>' + '<div class="settings-folder__sub gramlink-status-detail">-</div>' + '</div>' + '</div>' + '</div>' + '<div class="gramlink-hub__section">' + '<div class="settings-param-title"><span>' + (Lampa.Lang.translate('gramlink_devices') || 'Devices') + '</span></div>' + '<div class="gramlink-devices"></div>' + '</div>' + '</div>' + '<div class="gramlink-tab-view gramlink-tab-view--plugins hide">' + '<div class="gramlink-hub__section">' + '<div class="gramlink-plugins"></div>' + '</div>' + '</div>' + '</div>');
-        scroll.clear();
-        scroll.body().append(hub);
-      }
-
-      // ─── Static event bindings ────────────────────────────────
-
-      function bindStaticEvents() {
-        scroll.render().find('.gramlink-tab').on('hover:enter', function () {
-          switchTab($(this).data('tab'));
-        });
-        scroll.render().find('.gs-status-item').on('hover:enter', function () {
-          var label = scroll.render().find('.gramlink-status-label').text();
-          if (label.indexOf(Lampa.Lang.translate('gramlink_auth_required') || 'Auth required') !== -1 || label.indexOf(Lampa.Lang.translate('gramlink_not_connected') || 'Not connected') !== -1) {
-            init();
-          }
-        });
-      }
       function switchTab(tabId) {
         if (tabId === activeTab) return;
         activeTab = tabId;
-        scroll.render().find('.gramlink-tab').removeClass('active');
-        scroll.render().find('.gramlink-tab[data-tab="' + tabId + '"]').addClass('active');
-        scroll.render().find('.gramlink-tab-view').addClass('hide');
-        scroll.render().find('.gramlink-tab-view--' + tabId).removeClass('hide');
-        if (tabId === 'plugins') refreshPlugins();
-        Lampa.Controller.collectionSet(scroll.render());
-        var firstItem = scroll.render().find('.gramlink-tab-view--' + tabId + ' .selector').first();
-        if (firstItem.length) {
-          Lampa.Controller.collectionFocus(firstItem[0], scroll.render());
-        } else {
-          var tabBtn = scroll.render().find('.gramlink-tab[data-tab="' + tabId + '"]')[0];
-          if (tabBtn) Lampa.Controller.collectionFocus(tabBtn, scroll.render());
-        }
-
-        // ponytail: safe scroll update — catch missing focus element on empty views
-        setTimeout(function () {
-          try {
-            scroll.update();
-          } catch (e) {}
-        }, 50);
+        tabIdx = TABS.indexOf(tabId);
+        scroll.clear();
+        scroll.reset();
+        if (tabId === 'profiles') renderProfiles();else if (tabId === 'devices') renderDevices();else if (tabId === 'plugins') renderPlugins();
       }
 
-      // ─── Status update ────────────────────────────────────────
+      // ─── Focus — native pattern ─────────────────────────
+      // Ponytail: always focus TAB BAR first, not content.
+      // Profile cards have hover:enter that triggers quickSwitchProfile → reload.
+      // Focusing tab first prevents accidental profile switches on init.
 
-      function updateStatus(type, label, detail) {
-        scroll.render().find('.gramlink-status__indicator').removeClass().addClass('gramlink-status__indicator gramlink-status__indicator--' + type);
-        scroll.render().find('.gramlink-status-label').text(label);
-        scroll.render().find('.gramlink-status-detail').text(detail);
+      function focusFirst() {
+        focusTabBar();
       }
 
-      // ─── Init / connect ───────────────────────────────────────
+      // ═══════════════════════════════════════════════════════
+      //  TAB RENDERERS
+      // ═══════════════════════════════════════════════════════
 
-      function init() {
-        currentChannelId = Lampa.Storage.get(STORAGE_CHANNEL_ID, null);
-        currentSyncLogTopicId = Lampa.Storage.get(STORAGE_SYNC_LOG_TOPIC, null);
-        currentProfilesTopicId = Lampa.Storage.get(STORAGE_PROFILES_TOPIC, null);
-        currentProfilesSyncTopicId = Lampa.Storage.get(STORAGE_PROFILES_SYNC_TOPIC, null);
-        currentBackupTopicId = Lampa.Storage.get(STORAGE_BACKUP_TOPIC, null);
-        var client = GramLinkClient.getInstance();
-        client.connect().then(function () {
-          updateStatus('connected', Lampa.Lang.translate('gramlink_connected') || 'Connected', getDeviceName());
-          return ensureSyncChannel();
-        }).then(function () {
-          var channelId = Lampa.Storage.get(STORAGE_CHANNEL_ID, '');
-          var syncLogTopicId = Lampa.Storage.get(STORAGE_SYNC_LOG_TOPIC, '');
-          if (channelId && syncLogTopicId) {
-            client.startHeartbeat(channelId, syncLogTopicId);
-          }
-          client.on('profile_delta', function (data) {
-            Profiles.applyDelta(data);
+      // ─── Common: tab bar ────────────────────────────────
+
+      function renderTabBar() {
+        var html = '<div class="gramlink-tabs" style="display:flex;gap:0.8em;padding:0 2em 1em">';
+        TABS.forEach(function (t) {
+          var label = t === 'profiles' ? Lampa.Lang.translate('gramlink_profiles') || 'Profiles' : t === 'devices' ? Lampa.Lang.translate('gramlink_devices') || 'Devices' : Lampa.Lang.translate('gramlink_plugins') || 'Plugins';
+          html += '<div class="simple-button selector gramlink-tab' + (t === activeTab ? ' active' : '') + '" data-tab="' + t + '">' + label + '</div>';
+        });
+        html += '</div>';
+        return html;
+      }
+      function bindTabEvents() {
+        $(scroll.body()).find('.gramlink-tab').each(function () {
+          var el = this;
+          $(el).off('._gltab');
+          // Native: direct hover:focus — scroll follows
+          $(el).on('hover:focus._gltab', function () {
+            last = el;
+            scroll.update($(el), true);
           });
-          refreshDevices();
-          refreshProfiles();
-          refreshPlugins();
-          if (refreshTimer) clearInterval(refreshTimer);
-          refreshTimer = setInterval(function () {
-            refreshDevices();
-            refreshProfiles();
-            refreshPlugins();
-          }, 15000);
-        })["catch"](function (err) {
-          updateStatus('auth_needed', Lampa.Lang.translate('gramlink_auth_required') || 'Auth required', err.message || '');
+          // Native: direct hover:enter — switch tab on explicit Enter/click
+          $(el).on('hover:enter._gltab', function () {
+            if ($(el).data('tab') !== activeTab) switchTab($(el).data('tab'));
+          });
         });
       }
 
-      // ─── Devices ──────────────────────────────────────────────
+      // Focus a tab visually without switching content (native left/right)
+      function focusTab(tabId) {
+        var tabEl = $(scroll.body()).find('.gramlink-tab[data-tab="' + tabId + '"]');
+        if (tabEl.length) {
+          last = tabEl[0];
+          Lampa.Controller.collectionSet(scroll.render());
+          Lampa.Controller.collectionFocus(tabEl[0], scroll.render());
+          scroll.update(tabEl, true);
+        }
+      }
 
-      function refreshDevices() {
+      // ═══════════════════════════════════════════════════════
+      //  PROFILES
+      // ═══════════════════════════════════════════════════════
+
+      function renderProfiles() {
+        var body = scroll.body(true);
+        body.innerHTML = '';
+
+        // Ponytail: reset to content layout — profiles use normal block flow, not grid
+        $(body).removeClass('gramlink-body--grid').addClass('gramlink-body--content');
+        body.insertAdjacentHTML('beforeend', renderTabBar());
+        bindTabEvents();
+
+        // Ponytail: wrapper div for profiles — Profiles.createProfile empties it internally.
+        // Without wrapper, it would nuke the tab bar → crash.
+        var $wrap = $('<div class="gramlink-profiles-wrap"></div>');
+        body.appendChild($wrap[0]);
+        if (!currentProfilesTopicId) {
+          $wrap.html('<div style="padding:2em;text-align:center;color:#8D8D8D">' + (Lampa.Lang.translate('gramlink_no_profiles') || 'No profiles') + '</div>');
+          focusFirst();
+          return;
+        }
         var client = GramLinkClient.getInstance();
-        if (!client.isConnected() || !currentChannelId) return;
-        client.getOnlineDevices(currentChannelId, currentSyncLogTopicId).then(function (devices) {
-          var container = scroll.render().find('.gramlink-devices');
-          container.empty();
-          var myId = getDeviceId();
-          var hasMe = devices.some(function (d) {
-            return d.device_id === myId;
+        if (!client.isConnected()) {
+          $wrap.html('<div style="padding:2em;text-align:center;color:#8D8D8D">' + (Lampa.Lang.translate('gramlink_not_connected') || 'Not connected') + '</div>');
+          focusFirst();
+          return;
+        }
+        $wrap.html('<div style="padding:2em;text-align:center;color:#8D8D8D">' + (Lampa.Lang.translate('gramlink_loading') || "Loading\u2026") + '</div>');
+        client.getMessages(getChannelId(), currentProfilesTopicId, 50).then(function (msgs) {
+          $wrap.empty();
+          var pms = msgs.filter(function (m) {
+            if (!m.text) return false;
+            try {
+              var d = JSON.parse(stripCodeFence(m.text));
+              return d && d.meta && d.meta.type === 'profile';
+            } catch (e) {
+              return false;
+            }
           });
-          if (!hasMe) {
+          if (!pms.length) {
+            $wrap.html('<div style="padding:2em;text-align:center;color:#8D8D8D">' + (Lampa.Lang.translate('gramlink_no_profiles') || 'No profiles') + '</div>');
+            focusFirst();
+            return;
+          }
+          var activeId = Lampa.Storage.get('gramlink_active_profile', '');
+          var $grid = $('<div class="profile-grid"></div>');
+          var $add = $('<div class="profile-card profile-card--add selector" data-action="add">' + '<div class="profile-card__add-icon">+</div>' + '<div>' + (Lampa.Lang.translate('gramlink_create_profile') || 'Create profile') + '</div>' + '</div>');
+          $add.on('hover:enter', function () {
+            Profiles.createProfile(currentProfilesTopicId, currentProfilesSyncTopicId, $wrap);
+          });
+          $add.on('hover:focus', function () {
+            last = this;
+            scroll.update($(this), true);
+          });
+          $grid.append($add);
+          pms.forEach(function (m) {
+            try {
+              var d = JSON.parse(stripCodeFence(m.text));
+            } catch (e) {
+              return;
+            }
+            var p = d.payload && d.payload.profile;
+            if (!p) return;
+            var isActive = String(activeId) === String(m.id);
+            var avatar = Profiles.getAvatar(p.name);
+            var color = Profiles.avatarColor(p.name);
+            var isUrl = avatar.indexOf('https://api.dicebear.com') === 0;
+            var ahtml = isUrl ? '<img src="' + avatar + '" alt="">' : '<div class="gramlink-avatar" style="background:' + color + ';border-radius:50%;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700">' + avatar + '</div>';
+            var $c = $('<div class="profile-card selector' + (isActive ? ' profile-card--active' : '') + '" ' + 'data-id="' + m.id + '" ' + 'data-name="' + escAttr(p.name || 'Unnamed') + '" ' + 'data-active="' + isActive + '">' + '<div class="profile-card__avatar-wrap">' + ahtml + '</div>' + '<div class="profile-card__name">' + escHtml(p.name || 'Unnamed') + (isActive ? "<div class=\"profile-card__active-badge\">\u25CF " + (Lampa.Lang.translate('gramlink_profile_active') || 'Active') + '</div>' : '') + '</div>' + '</div>');
+            $c.on('hover:focus', function () {
+              last = this;
+              scroll.update($(this), true);
+            });
+            // Native: hover:enter → switch profile (immediate, intentional)
+            $c.on('hover:enter', function () {
+              if (!$(this).data('active')) Profiles.quickSwitchProfile($(this).data('id'));
+            });
+            $c.on('hover:long', function () {
+              profileMenu($(this));
+            });
+            $grid.append($c);
+          });
+          $wrap.append($grid);
+          Profiles.saveProfilesCache(pms);
+          focusFirst();
+        })["catch"](function () {
+          $wrap.html('<div style="padding:2em;text-align:center;color:#8D8D8D">' + (Lampa.Lang.translate('title_error') || 'Error') + '</div>');
+          focusFirst();
+        });
+      }
+
+      // ═══════════════════════════════════════════════════════
+      //  DEVICES
+      // ═══════════════════════════════════════════════════════
+
+      function renderDevices() {
+        var body = scroll.body(true);
+        body.innerHTML = '';
+        body.insertAdjacentHTML('beforeend', renderTabBar());
+        bindTabEvents();
+        var client = GramLinkClient.getInstance();
+        var isConnected = client.isConnected();
+
+        // Status item (inline — needs colored dot, not createItem)
+        bodyPrep(body);
+        var sEl = document.createElement('div');
+        sEl.className = 'gramlink-item selector gs-status-item';
+        sEl.style.gridColumn = '1 / -1';
+        sEl.innerHTML = '<div class="gs-avatar" style="border-radius:50%;width:1.2em;height:1.2em;font-size:0.9em;margin-right:0.8em;background:' + (isConnected ? '#4caf50' : '#DD7337') + '"></div>' + '<div class="gs-content">' + '<div class="gs-title">' + (isConnected ? 'Connected' : Lampa.Lang.translate('gramlink_not_connected') || 'Not connected') + '</div>' + '<div class="gs-sub">' + escHtml(isConnected ? getDeviceName() : '-') + '</div>' + '</div>';
+        body.appendChild(sEl);
+        if (!isConnected) {
+          $(sEl).on('hover:enter', function () {
+            client.connect()["catch"](function () {});
+          });
+        } else {
+          $(sEl).addClass('gs-device-item').data('self', true).data('id', 'this').data('name', getDeviceName());
+        }
+        var chId = Lampa.Storage.get(STORAGE_CHANNEL_ID, '');
+        var slId = Lampa.Storage.get(STORAGE_SYNC_LOG_TOPIC, '');
+        if (!isConnected || !chId || !slId) {
+          focusFirst();
+          return;
+        }
+        client.getOnlineDevices(chId, slId).then(function (devices) {
+          var myId = getDeviceId();
+          if (!devices.some(function (d) {
+            return d.device_id === myId;
+          })) {
             devices.push({
               device_id: myId,
               device_name: getDeviceName(),
               timestamp: Math.floor(Date.now() / 1000)
             });
           }
-          if (devices.length === 0) {
-            container.append('<div class="settings-param-title"><span>' + (Lampa.Lang.translate('gramlink_no_devices') || 'No devices') + '</span></div>');
-            Lampa.Controller.collectionSet(scroll.render());
-            return;
-          }
+          devices.sort(function (a, b) {
+            if (a.device_id === myId) return -1;
+            if (b.device_id === myId) return 1;
+            return (a.device_name || '').localeCompare(b.device_name || '');
+          });
           devices.forEach(function (d) {
             var isThis = d.device_id === myId;
-            var avatar = d.device_name ? d.device_name.charAt(0).toUpperCase() : '?';
-            var item = $('<div class="settings-folder selector gs-device-item" data-id="' + d.device_id + '" data-name="' + (d.device_name || 'Unknown').replace(/"/g, '&quot;') + '" data-this="' + isThis + '">' + '<div class="settings-folder__icon">' + '<div class="gramlink-device-avatar">' + avatar + '</div>' + '</div>' + '<div class="settings-folder__name">' + '<div>' + (d.device_name || 'Unknown') + (isThis ? ' (' + (Lampa.Lang.translate('gramlink_this_device') || 'This device') + ')' : '') + '</div>' + '<div class="settings-folder__sub">' + (isThis ? Lampa.Lang.translate('gramlink_active') || 'Active' : Lampa.Lang.translate('gramlink_online') || 'Online') + '</div>' + '</div>' + '</div>');
-            item.on('hover:enter', function () {
-              var isThisDevice = $(this).data('this') === true;
-              var deviceName = $(this).data('name');
-              var deviceId = $(this).data('id');
-              var items = [];
-              if (!isThisDevice) {
-                items.push({
-                  title: 'Open on this device',
-                  action: 'open_on'
-                });
-              }
-              if (isThisDevice) {
-                items.push({
-                  title: Lampa.Lang.translate('gramlink_backup_export') || 'Export Backup',
-                  action: 'export'
-                });
-              }
-              items.push({
-                title: Lampa.Lang.translate('gramlink_backup_import') || 'Import Backup',
-                action: 'import'
-              });
-              if (isThisDevice) {
-                items.push({
-                  title: 'Reset device overlays',
-                  action: 'reset_overlay'
-                });
-              }
-              items.push({
-                title: 'Rename device',
-                action: 'rename_device'
-              });
-              items.push({
-                title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
-                cancel: true
-              });
-              var prevController = Lampa.Controller.enabled().name;
-              Lampa.Select.show({
-                title: deviceName,
-                items: items,
-                onBack: function onBack() {
-                  Lampa.Controller.toggle(prevController);
-                },
-                onSelect: function onSelect(item) {
-                  Lampa.Controller.toggle(prevController);
-                  if (item.cancel) return;
-                  if (item.action === 'open_on') {
-                    var active = Lampa.Activity.active();
-                    if (active && active.card) {
-                      Broadcast.sendOpenCard(deviceId, active.card);
-                      Lampa.Noty.show('Sent to ' + deviceName);
-                    } else {
-                      Lampa.Noty.show('Nothing to share');
-                    }
-                  } else if (item.action === 'export') {
-                    exportBackup();
-                  } else if (item.action === 'import') {
-                    importBackup();
-                  } else if (item.action === 'reset_overlay') {
-                    Profiles.resetDeviceOverlay();
-                    Lampa.Noty.show('Device overlays reset');
-                  } else if (item.action === 'rename_device') {
-                    var currentName = Lampa.Storage.get('gramlink_device_label', getDeviceName());
-                    Lampa.Input.edit({
-                      title: 'Device name',
-                      value: currentName,
-                      free: true,
-                      nosave: true,
-                      align: 'center'
-                    }, function (name) {
-                      if (name && name.trim()) {
-                        Lampa.Storage.set('gramlink_device_label', name.trim());
-                        Lampa.Noty.show('Device renamed to ' + name.trim());
-                        refreshDevices();
-                      }
-                    });
-                  }
-                }
-              });
-            });
-            item.on('hover:long', function () {
-              var isThisDevice = $(this).data('this') === true;
-              if (isThisDevice) {
-                exportBackup();
-              }
-            });
-            container.append(item);
+            var initial = d.device_name ? d.device_name.charAt(0).toUpperCase() : '?';
+            var rawName = d.device_name || 'Unknown';
+            // Strip "Mac Device - " default prefix, keep custom renames intact
+            var cleanName = rawName.indexOf('Mac Device - ') === 0 ? rawName.slice(13) : rawName;
+            var subText = isThis ? Lampa.Lang.translate('gramlink_this_device') || 'This device' : '';
+            var badgeText = isThis ? 'active' : 'online';
+            var el = createItem('gs-device-item', initial, cleanName, subText, 'badge--info', badgeText);
+            el.dataset.id = d.device_id;
+            el.dataset.name = rawName;
+            el.dataset.self = String(isThis);
+            body.appendChild(el);
           });
-          Lampa.Controller.collectionSet(scroll.render());
+          bindDeviceEvents();
+          focusFirst();
+        })["catch"](function () {
+          focusFirst();
+        });
+      }
+      function bindDeviceEvents() {
+        $(scroll.body()).find('.gs-device-item').each(function () {
+          var el = this;
+          $(el).off('hover:focus._gl').on('hover:focus._gl', function () {
+            last = el;
+            scroll.update($(el), true);
+          });
+          $(el).off('hover:enter._gl').on('hover:enter._gl', function () {
+            showDeviceMenu($(el).data('id'), $(el).data('name'), $(el).data('self') === true);
+          });
+          $(el).off('hover:long._gl').on('hover:long._gl', function () {
+            if ($(el).data('self') === true) exportBackup();
+          });
         });
       }
 
-      // ─── Profiles ─────────────────────────────────────────────
+      // ═══════════════════════════════════════════════════════
+      //  PLUGINS
+      // ═══════════════════════════════════════════════════════
 
-      function refreshProfiles() {
-        Profiles.refreshProfiles(currentProfilesTopicId, currentProfilesSyncTopicId, scroll.render().find('.gramlink-profiles'), function () {
-          scroll.render().find('.profile-card[data-id]').on('hover:long', function () {
-            var id = $(this).data('id');
-            var name = $(this).data('name') || 'Unnamed';
-            var isActive = $(this).data('active') === true;
-            var prevController = Lampa.Controller.enabled().name;
-            var items = [];
-            items.push({
-              title: Lampa.Lang.translate('gramlink_plugins') || 'Plugins',
-              action: 'plugins'
-            });
-            items.push({
-              title: Lampa.Lang.translate('gramlink_sync') || 'Sync',
-              action: 'sync'
-            });
-            if (!isActive) {
-              items.push({
-                title: Lampa.Lang.translate('gramlink_delete') || 'Delete',
-                action: 'delete'
-              });
-            }
-            items.push({
-              title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
-              cancel: true
-            });
-            Lampa.Select.show({
-              title: name,
-              items: items,
-              onBack: function onBack() {
-                Lampa.Controller.toggle(prevController);
-              },
-              onSelect: function onSelect(item) {
-                Lampa.Controller.toggle(prevController);
-                if (item.cancel) return;
-                if (item.action === 'plugins') {
-                  PluginManager.open(id, name, isActive);
-                } else if (item.action === 'sync') {
-                  Profiles.syncProfile(id, currentProfilesTopicId);
-                } else if (item.action === 'delete') {
-                  var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
-                  if (!channelId) return;
-                  GramLinkClient.getInstance().deleteMessage(channelId, parseInt(id, 10)).then(function (ok) {
-                    if (ok) {
-                      if (String(Lampa.Storage.get('gramlink_active_profile', '')) === String(id)) {
-                        Lampa.Storage.set('gramlink_active_profile', '');
-                        Lampa.Storage.set('gramlink_active_profile_ts', '');
-                      }
-                      refreshProfiles();
-                      Lampa.Noty.show('Profile deleted');
-                    }
-                  })["catch"](function () {
-                    Lampa.Noty.show('Delete failed');
-                  });
-                }
-              }
-            });
-          });
-          Lampa.Controller.collectionSet(scroll.render());
-        });
-      }
-
-      // ─── Plugins tab ─────────────────────────────────────────
-
-      function refreshPlugins() {
-        var container = scroll.render().find('.gramlink-plugins');
-        container.empty();
+      function renderPlugins() {
+        var body = scroll.body(true);
+        body.innerHTML = '';
+        body.insertAdjacentHTML('beforeend', renderTabBar());
+        bindTabEvents();
         var activeId = Lampa.Storage.get('gramlink_active_profile', '');
         if (!activeId) {
-          container.html('<div class="gramlink-devices__empty">' + (Lampa.Lang.translate('gramlink_no_profiles') || 'No active profile') + '</div>');
-          Lampa.Controller.collectionSet(scroll.render());
+          showEmpty(body, Lampa.Lang.translate('gramlink_no_profiles') || 'No active profile');
+          focusFirst();
           return;
         }
         var plugins;
@@ -5760,133 +6223,159 @@
         } catch (e) {
           plugins = [];
         }
-        if (!plugins || plugins.length === 0) {
-          container.html('<div class="gramlink-devices__empty">' + (Lampa.Lang.translate('gramlink_no_plugins') || 'No plugins installed') + '</div>');
+        bodyPrep(body);
+
+        // Native: Add button FIRST
+        var addEl = createItem('gs-plugin-add-item', '+', Lampa.Lang.translate('gramlink_plugins_add') || 'Add plugin', Lampa.Lang.translate('gramlink_plugins_manage_hint') || 'Add plugins via URL', null);
+        addEl.style.gridColumn = '1 / -1';
+        body.appendChild(addEl);
+        if (!plugins || !plugins.length) {
+          showEmpty(body, Lampa.Lang.translate('gramlink_no_plugins') || 'No plugins installed');
         } else {
           plugins.forEach(function (plugin, idx) {
             var isOn = plugin.status === 1;
-            var item = $('<div class="settings-folder selector gs-plugin-item" data-idx="' + idx + '">' + '<div class="settings-folder__icon">' + '<div class="gs-plugin-toggle ' + (isOn ? 'on' : 'off') + '">' + (isOn ? '●' : '○') + '</div>' + '</div>' + '<div class="settings-folder__name">' + '<div>' + escHtml(plugin.name || plugin.url || 'Plugin') + '</div>' + '<div class="settings-folder__sub">' + (plugin.url ? truncateUrl(plugin.url) : '') + '</div>' + '</div>' + '</div>');
-            item.on('hover:enter', function () {
-              var idx2 = parseInt($(this).data('idx'), 10);
-              if (plugins[idx2]) showPluginMenu(plugins[idx2], idx2);
-            });
-            container.append(item);
+            var name = (plugin.name || plugin.url || 'Plugin').slice(0, 60);
+            var url = (plugin.url || 'local').slice(0, 80);
+            // Native: badge only for disabled plugins. Enabled = no badge.
+            var badgeCls = isOn ? null : 'badge--inactive';
+            var badgeTxt = isOn ? '' : Lampa.Lang.translate('player_disabled') || 'disabled';
+            var el = createItem('gs-plugin-item', '', name, url, badgeCls, badgeTxt);
+            el.dataset.idx = idx;
+            body.appendChild(el);
           });
         }
-
-        // Add plugin button
-        var addBtn = $('<div class="settings-folder selector gs-plugin-add-item">' + '<div class="settings-folder__icon">' + '<svg width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>' + '</div>' + '<div class="settings-folder__name">' + '<div>' + (Lampa.Lang.translate('gramlink_plugins_add') || '+ Add plugin') + '</div>' + '<div class="settings-folder__sub">' + (Lampa.Lang.translate('gramlink_plugins_manage_hint') || 'Add plugins via URL') + '</div>' + '</div>' + '</div>');
-        addBtn.on('hover:enter', function () {
-          doAddPluginInline();
+        bindPluginEvents();
+        focusFirst();
+      }
+      function bindPluginEvents() {
+        $(scroll.body()).find('.gs-plugin-item').each(function () {
+          var el = this;
+          $(el).off('hover:focus._gl').on('hover:focus._gl', function () {
+            last = el;
+            scroll.update($(el), true);
+          });
+          $(el).off('hover:enter._gl').on('hover:enter._gl', function () {
+            var idx = parseInt($(el).data('idx'), 10);
+            var plugins = getPlugins();
+            if (!plugins[idx]) return;
+            var p = plugins[idx];
+            var prevCtrl = Lampa.Controller.enabled().name;
+            Lampa.Select.show({
+              title: p.name || p.url || 'Plugin',
+              items: [{
+                title: p.status === 1 ? 'Disable' : 'Enable',
+                _do: 'toggle'
+              }, {
+                title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove',
+                _do: 'remove'
+              }, {
+                title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
+                _do: 'cancel'
+              }],
+              onBack: function onBack() {
+                Lampa.Controller.toggle(prevCtrl);
+              },
+              onSelect: function onSelect(item) {
+                if (item._do === 'toggle') doToggle(idx);else if (item._do === 'remove') doRemove(idx);
+                Lampa.Controller.toggle(prevCtrl);
+              }
+            });
+          });
+          $(el).off('hover:long._gl').on('hover:long._gl', function () {
+            doToggle(parseInt($(el).data('idx'), 10));
+          });
         });
-        container.append(addBtn);
-        Lampa.Controller.collectionSet(scroll.render());
+        $(scroll.body()).find('.gs-plugin-add-item').each(function () {
+          var el = this;
+          $(el).off('hover:focus._gl').on('hover:focus._gl', function () {
+            last = el;
+            scroll.update($(el), true);
+          });
+          $(el).off('hover:enter._gl').on('hover:enter._gl', function () {
+            doAddPlugin();
+          });
+        });
       }
 
-      // ─── Plugin actions ──────────────────────────────────────
+      // ═══════════════════════════════════════════════════════
+      //  HELPERS
+      // ═══════════════════════════════════════════════════════
 
-      function showPluginMenu(plugin, idx) {
-        if (!plugin) return;
-        var isOn = plugin.status === 1;
-        var prevController = Lampa.Controller.enabled().name;
-        Lampa.Select.show({
-          title: plugin.name || plugin.url || 'Plugin',
-          items: [{
-            title: Lampa.Lang.translate(isOn ? 'gramlink_plugins_toggle_off' : 'gramlink_plugins_toggle_on') || (isOn ? 'Disable' : 'Enable'),
-            _do: 'toggle'
-          }, {
-            title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove',
-            _do: 'remove'
-          }, {
-            title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
-            _do: 'cancel'
-          }],
-          onBack: function onBack() {
-            Lampa.Controller.toggle(prevController);
-          },
-          onSelect: function onSelect(item) {
-            if (item._do === 'toggle') {
-              doPluginToggle(idx);
-            } else if (item._do === 'remove') {
-              doPluginRemove(idx);
-            } else {
-              Lampa.Controller.toggle(prevController);
-            }
-          }
+      function createItem(cls, avatar, title, sub, badgeCls, badgeText) {
+        var el = document.createElement('div');
+        el.className = 'gramlink-item selector ' + cls;
+        // Ponytail: skip avatar div when empty (plugins don't need checkmark icon)
+        var avatarHtml = avatar ? '<div class="gs-avatar">' + escHtml(avatar) + '</div>' : '';
+        el.innerHTML = avatarHtml + '<div class="gs-content">' + '<div class="gs-title">' + escHtml(title) + '</div>' + '<div class="gs-sub">' + escHtml(sub) + '</div>' + '</div>' + (badgeCls ? '<div class="gs-badge ' + badgeCls + '">' + escHtml(badgeText || '') + '</div>' : '');
+
+        // Native: direct hover:focus listener on every item
+        $(el).on('hover:focus', function () {
+          last = el;
+          scroll.update($(el), true);
         });
+        return el;
       }
-      function doPluginToggle(idx) {
-        var plugins;
-        try {
-          plugins = Lampa.Storage.get('plugins', []);
-        } catch (e) {
-          plugins = [];
+      function bodyPrep(body) {
+        $(body).addClass('gramlink-body--grid').removeClass('gramlink-body--content');
+      }
+      function showEmpty(body, msg) {
+        body.insertAdjacentHTML('beforeend', '<div class="gramlink-item" style="justify-content:center;align-items:center;display:flex;padding:2em;grid-column:1/-1"><span style="color:#8D8D8D">' + escHtml(msg) + '</span></div>');
+      }
+      function focusTabBar() {
+        var firstTab = $(scroll.body()).find('.gramlink-tab').first();
+        if (firstTab.length) {
+          last = firstTab[0];
+          Lampa.Controller.collectionSet(scroll.render());
+          Lampa.Controller.collectionFocus(firstTab[0], scroll.render());
+          scroll.immediate(firstTab[0], true);
         }
+      }
+
+      // ═══════════════════════════════════════════════════════
+      //  ACTIONS
+      // ═══════════════════════════════════════════════════════
+
+      function getPlugins() {
+        try {
+          return Lampa.Storage.get('plugins', []);
+        } catch (e) {
+          return [];
+        }
+      }
+      function savePlugins(p) {
+        Lampa.Storage.set('plugins', p);
+      }
+      function doToggle(idx) {
+        var plugins = getPlugins();
         if (!plugins[idx]) return;
         plugins[idx].status = plugins[idx].status === 1 ? 0 : 1;
-        Lampa.Storage.set('plugins', plugins);
-        refreshPlugins();
-
-        // Publish delta — device-layer (toggle is per-device, not per-user)
-        var syncTopicId = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
-        if (syncTopicId) {
-          Profiles.publishDeviceDelta(syncTopicId, 'device_plugin_status', {
-            device_id: getDeviceId(),
-            url: plugins[idx].url,
-            status: plugins[idx].status
-          }, 'all');
-        }
+        savePlugins(plugins);
+        var st = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
+        if (st) Profiles.publishDeviceDelta(st, 'device_plugin_status', {
+          device_id: getDeviceId(),
+          url: plugins[idx].url,
+          status: plugins[idx].status
+        }, 'all');
         Lampa.Noty.show((plugins[idx].name || 'Plugin') + ': ' + (plugins[idx].status === 1 ? 'on' : 'off'));
+        renderPlugins();
       }
-      function doPluginRemove(idx) {
-        var plugins;
-        try {
-          plugins = Lampa.Storage.get('plugins', []);
-        } catch (e) {
-          plugins = [];
-        }
-        if (!plugins[idx]) return;
-        var plugin = plugins[idx];
-        var prevController = Lampa.Controller.enabled().name;
-        Lampa.Select.show({
-          title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove plugin',
-          items: [{
-            title: '"' + (plugin.name || plugin.url) + '" ' + (Lampa.Lang.translate('gramlink_plugins_remove_confirm') || 'will be removed'),
-            noenter: true
-          }, {
-            title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove',
-            _do: 'remove'
-          }, {
-            title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
-            _do: 'cancel'
-          }],
-          onBack: function onBack() {
-            Lampa.Controller.toggle(prevController);
-          },
-          onSelect: function onSelect(item) {
-            if (item._do === 'remove') {
-              plugins.splice(idx, 1);
-              Lampa.Storage.set('plugins', plugins);
-              refreshPlugins();
-              var syncTopicId = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
-              if (syncTopicId) {
-                Profiles.publishLocalDelta(syncTopicId, 'plugin_change', {
-                  action: 'remove',
-                  plugin: {
-                    url: plugin.url,
-                    name: plugin.name,
-                    status: plugin.status
-                  }
-                });
-              }
-              Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_removed') || 'Plugin removed');
-            }
-            Lampa.Controller.toggle(prevController);
+      function doRemove(idx) {
+        var plugins = getPlugins();
+        var url = plugins[idx] ? plugins[idx].url : '';
+        plugins.splice(idx, 1);
+        savePlugins(plugins);
+        var st = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
+        if (st) Profiles.publishLocalDelta(st, 'plugin_change', {
+          action: 'remove',
+          plugin: {
+            url: url
           }
         });
+        Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_removed') || 'Plugin removed');
+        renderPlugins();
       }
-      function doAddPluginInline() {
-        var prevController = Lampa.Controller.enabled().name;
+      function doAddPlugin() {
+        var prevCtrl = Lampa.Controller.enabled().name;
         Lampa.Input.edit({
           title: Lampa.Lang.translate('gramlink_plugins_add_url') || 'Plugin URL (.js)',
           free: true,
@@ -5894,79 +6383,294 @@
           align: 'center'
         }, function (url) {
           if (!url) {
-            Lampa.Controller.toggle(prevController);
+            Lampa.Controller.toggle(prevCtrl);
             return;
           }
           url = url.trim();
           if (!url.match(/^https?:\/\/.+/i)) {
             Lampa.Noty.show('Invalid URL');
-            Lampa.Controller.toggle(prevController);
+            Lampa.Controller.toggle(prevCtrl);
             return;
           }
-          var plugins;
-          try {
-            plugins = Lampa.Storage.get('plugins', []);
-          } catch (e) {
-            plugins = [];
-          }
+          var plugins = getPlugins();
           if (plugins.some(function (p) {
             return p.url === url;
           })) {
-            Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_already_installed') || 'Already installed');
-            Lampa.Controller.toggle(prevController);
+            Lampa.Noty.show('Already installed');
+            Lampa.Controller.toggle(prevCtrl);
             return;
           }
-          var guessedName = url.split('/').pop().replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' ') || 'Plugin';
+          var gn = url.split('/').pop().replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' ') || 'Plugin';
           Lampa.Input.edit({
             title: Lampa.Lang.translate('gramlink_plugins_name') || 'Plugin name',
             free: true,
             nosave: true,
             align: 'center',
-            value: guessedName
+            value: gn
           }, function (name) {
-            var newPlugin = {
+            var np = {
               url: url,
-              name: name && name.trim() || guessedName,
+              name: name && name.trim() || gn,
               status: 1,
               custom: {}
             };
-            Profiles.addToPluginRegistry(url, newPlugin.name);
-            plugins.push(newPlugin);
-            Lampa.Storage.set('plugins', plugins);
-            refreshPlugins();
-            var syncTopicId = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
-            if (syncTopicId) {
-              Profiles.publishLocalDelta(syncTopicId, 'plugin_change', {
-                action: 'add',
-                plugin: newPlugin
-              });
-            }
-            Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_added') || 'Plugin added');
-            Lampa.Controller.toggle(prevController);
+            Profiles.addToPluginRegistry(url, np.name);
+            plugins.push(np);
+            savePlugins(plugins);
+            var st = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
+            if (st) Profiles.publishLocalDelta(st, 'plugin_change', {
+              action: 'add',
+              plugin: np
+            });
+            Lampa.Noty.show('Plugin added');
+            Lampa.Controller.toggle(prevCtrl);
+            renderPlugins();
           });
         });
       }
 
-      // Helper: escHtml
-      function escHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+      // ─── Device actions ─────────────────────────────────
+
+      function showDeviceMenu(did, dname, isThis) {
+        var prevCtrl = Lampa.Controller.enabled().name;
+        var items = [];
+        if (!isThis) items.push({
+          title: 'Open on this device',
+          action: 'open'
+        });
+        if (isThis) items.push({
+          title: Lampa.Lang.translate('gramlink_backup_export') || 'Export Backup',
+          action: 'export'
+        });
+        items.push({
+          title: Lampa.Lang.translate('gramlink_backup_import') || 'Import Backup',
+          action: 'import'
+        });
+        if (isThis) items.push({
+          title: 'Rename device',
+          action: 'rename'
+        });
+        items.push({
+          title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
+          cancel: true
+        });
+        Lampa.Select.show({
+          title: dname,
+          items: items,
+          onBack: function onBack() {
+            Lampa.Controller.toggle(prevCtrl);
+          },
+          onSelect: function onSelect(item) {
+            Lampa.Controller.toggle(prevCtrl);
+            if (item.cancel) return;
+            if (item.action === 'open') {
+              var a = Lampa.Activity.active();
+              if (a && a.card) {
+                Broadcast.sendOpenCard(did, a.card);
+                Lampa.Noty.show('Sent to ' + dname);
+              } else {
+                Lampa.Noty.show('Nothing to share');
+              }
+            } else if (item.action === 'export') exportBackup();else if (item.action === 'import') importBackup();else if (item.action === 'rename') {
+              var c = Lampa.Storage.get('gramlink_device_label', getDeviceName());
+              Lampa.Input.edit({
+                title: 'Device name',
+                value: c,
+                free: true,
+                nosave: true,
+                align: 'center'
+              }, function (n) {
+                if (n && n.trim()) {
+                  Lampa.Storage.set('gramlink_device_label', n.trim());
+                  Lampa.Noty.show('Device renamed');
+                }
+              });
+            }
+          }
+        });
       }
 
-      // Helper: truncateUrl
-      function truncateUrl(url) {
-        if (!url) return '';
-        try {
-          var u = new URL(url);
-          return u.hostname + '/…/' + (u.pathname.split('/').pop() || '');
-        } catch (e) {
-          return url.length > 50 ? url.slice(0, 47) + '…' : url;
+      // ─── Backup ─────────────────────────────────────────
+
+      function exportBackup() {
+        var c = GramLinkClient.getInstance(),
+          bt = Lampa.Storage.get(STORAGE_BACKUP_TOPIC, '');
+        if (!c.isConnected()) {
+          Lampa.Noty.show(Lampa.Lang.translate('gramlink_not_connected'));
+          return;
         }
+        if (!bt) {
+          Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_topic_not_ready'));
+          return;
+        }
+        var ch = parseInt(Lampa.Storage.get(STORAGE_CHANNEL_ID, ''), 10);
+        var data = {
+          meta: {
+            timestamp: Math.floor(Date.now() / 1000),
+            device_id: getDeviceId(),
+            device_name: getDeviceName()
+          },
+          storage: {}
+        };
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf('gramlink') !== 0) data.storage[k] = localStorage.getItem(k);
+        }
+        Lampa.Noty.show('Uploading...');
+        c.sendFile(ch, bt, JSON.stringify(data, null, 2), 'backup_' + Date.now() + '.json', JSON.stringify({
+          device_id: getDeviceId(),
+          device_name: getDeviceName(),
+          timestamp: Math.floor(Date.now() / 1000)
+        })).then(function (m) {
+          Lampa.Noty.show(m ? 'Exported' : 'Failed');
+        })["catch"](function () {
+          Lampa.Noty.show('Failed');
+        });
+      }
+      function importBackup() {
+        var c = GramLinkClient.getInstance(),
+          bt = Lampa.Storage.get(STORAGE_BACKUP_TOPIC, '');
+        if (!c.isConnected()) {
+          Lampa.Noty.show(Lampa.Lang.translate('gramlink_not_connected'));
+          return;
+        }
+        if (!bt) {
+          Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_topic_not_ready'));
+          return;
+        }
+        var ch = parseInt(Lampa.Storage.get(STORAGE_CHANNEL_ID, ''), 10);
+        Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_fetching'));
+        c.getBackupFiles(ch, bt, 10).then(function (files) {
+          if (!files || !files.length) {
+            Lampa.Noty.show('No backups');
+            return;
+          }
+          var prev = Lampa.Controller.enabled().name;
+          Lampa.Select.show({
+            title: 'Select backup',
+            items: files.map(function (f) {
+              return {
+                title: f.fileName || 'Backup',
+                _file: f
+              };
+            }).concat([{
+              title: 'Cancel',
+              _cancel: true
+            }]),
+            onBack: function onBack() {
+              Lampa.Controller.toggle(prev);
+            },
+            onSelect: function onSelect(item) {
+              if (item._cancel) {
+                Lampa.Controller.toggle(prev);
+                return;
+              }
+              Lampa.Noty.show('Downloading...');
+              c.downloadFile(item._file).then(function (js) {
+                try {
+                  var b = JSON.parse(js);
+                  if (b && b.storage) Object.keys(b.storage).forEach(function (k) {
+                    Lampa.Storage.set(k, b.storage[k]);
+                  });
+                  Lampa.Noty.show('Restored');
+                } catch (e) {
+                  Lampa.Noty.show('Invalid');
+                }
+              });
+            }
+          });
+        })["catch"](function () {
+          Lampa.Noty.show('Failed');
+        });
       }
 
-      // ─── Channel / Topic management ───────────────────────────
+      // ─── Profile menu ───────────────────────────────────
 
-      var CHANNEL_TITLE = '🔄 Lampa Sync [DO NOT DELETE]';
+      function profileMenu($card) {
+        var id = $card.data('id'),
+          name = $card.data('name') || 'Unnamed',
+          active = $card.data('active') === true;
+        var prev = Lampa.Controller.enabled().name;
+        var items = [];
+        items.push({
+          title: Lampa.Lang.translate('gramlink_plugins') || 'Plugins',
+          action: 'plugins'
+        });
+        items.push({
+          title: Lampa.Lang.translate('gramlink_sync') || 'Sync',
+          action: 'sync'
+        });
+        if (!active) items.push({
+          title: Lampa.Lang.translate('gramlink_delete') || 'Delete',
+          action: 'delete'
+        });
+        items.push({
+          title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
+          cancel: true
+        });
+        Lampa.Select.show({
+          title: name,
+          items: items,
+          onBack: function onBack() {
+            Lampa.Controller.toggle(prev);
+          },
+          onSelect: function onSelect(item) {
+            Lampa.Controller.toggle(prev);
+            if (item.cancel) return;
+            if (item.action === 'plugins') PluginManager.open(id, name, active);else if (item.action === 'sync') Profiles.syncProfile(id, currentProfilesTopicId);else if (item.action === 'delete') deleteProfile(id);
+          }
+        });
+      }
+      function deleteProfile(id) {
+        var ch = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
+        if (!ch) return;
+        GramLinkClient.getInstance().deleteMessage(ch, parseInt(id, 10)).then(function (ok) {
+          if (ok) {
+            if (String(Lampa.Storage.get('gramlink_active_profile', '')) === String(id)) {
+              Lampa.Storage.set('gramlink_active_profile', '');
+              Lampa.Storage.set('gramlink_active_profile_ts', '');
+            }
+            renderProfiles();
+            Lampa.Noty.show('Profile deleted');
+          }
+        })["catch"](function () {
+          Lampa.Noty.show('Delete failed');
+        });
+      }
+
+      // ═══════════════════════════════════════════════════════
+      //  INIT
+      // ═══════════════════════════════════════════════════════
+
+      function init() {
+        currentChannelId = Lampa.Storage.get(STORAGE_CHANNEL_ID, null);
+        Lampa.Storage.get(STORAGE_SYNC_LOG_TOPIC, null);
+        currentProfilesTopicId = Lampa.Storage.get(STORAGE_PROFILES_TOPIC, null);
+        currentProfilesSyncTopicId = Lampa.Storage.get(STORAGE_PROFILES_SYNC_TOPIC, null);
+        Lampa.Storage.get(STORAGE_BACKUP_TOPIC, null);
+        var client = GramLinkClient.getInstance();
+        client.connect().then(function () {
+          return ensureSyncChannel();
+        }).then(function () {
+          var ch = Lampa.Storage.get(STORAGE_CHANNEL_ID, ''),
+            sl = Lampa.Storage.get(STORAGE_SYNC_LOG_TOPIC, '');
+          if (ch && sl) client.startHeartbeat(ch, sl);
+          client.on('profile_delta', function (data) {
+            Profiles.applyDelta(data);
+          });
+          renderProfiles();
+          if (refreshTimer) clearInterval(refreshTimer);
+          refreshTimer = setInterval(function () {
+            if (activeTab === 'profiles') renderProfiles();
+          }, 15000);
+        })["catch"](function () {});
+      }
+
+      // ═══════════════════════════════════════════════════════
+      //  CHANNEL / TOPIC MANAGEMENT
+      // ═══════════════════════════════════════════════════════
+
+      var CHANNEL_TITLE = "\uD83D\uDD04 Lampa Sync [DO NOT DELETE]";
       var TOPIC_NAMES = ['sync-log', 'remote-cmd', 'backup', 'profiles', 'profiles-sync'];
       function ensureSyncChannel() {
         var client = GramLinkClient.getInstance();
@@ -5981,12 +6685,12 @@
         });
       }
       function ensureTopics() {
-        var client = GramLinkClient.getInstance();
-        var promises = [];
+        var client = GramLinkClient.getInstance(),
+          ps = [];
         function ensure(name, storeKey, setter) {
-          var stored = Lampa.Storage.get(storeKey, '');
-          if (stored) {
-            setter(stored);
+          var s = Lampa.Storage.get(storeKey, '');
+          if (s) {
+            setter(s);
             return Promise.resolve();
           }
           return client.findTopic(currentChannelId, name).then(function (id) {
@@ -5995,27 +6699,25 @@
               Lampa.Storage.set(storeKey, id);
               return;
             }
-            return client.createTopic(currentChannelId, name).then(function (topicId) {
-              if (topicId) {
-                setter(topicId);
-                Lampa.Storage.set(storeKey, topicId);
+            return client.createTopic(currentChannelId, name).then(function (tid) {
+              if (tid) {
+                setter(tid);
+                Lampa.Storage.set(storeKey, tid);
               }
             });
           });
         }
-        promises.push(ensure('sync-log', STORAGE_SYNC_LOG_TOPIC, function (id) {
-          currentSyncLogTopicId = id;
+        ps.push(ensure('sync-log', STORAGE_SYNC_LOG_TOPIC, function (id) {
         }));
-        promises.push(ensure('profiles', STORAGE_PROFILES_TOPIC, function (id) {
+        ps.push(ensure('profiles', STORAGE_PROFILES_TOPIC, function (id) {
           currentProfilesTopicId = id;
         }));
-        promises.push(ensure('profiles-sync', STORAGE_PROFILES_SYNC_TOPIC, function (id) {
+        ps.push(ensure('profiles-sync', STORAGE_PROFILES_SYNC_TOPIC, function (id) {
           currentProfilesSyncTopicId = id;
         }));
-        promises.push(ensure('backup', STORAGE_BACKUP_TOPIC, function (id) {
-          currentBackupTopicId = id;
+        ps.push(ensure('backup', STORAGE_BACKUP_TOPIC, function (id) {
         }));
-        return Promise.all(promises);
+        return Promise.all(ps);
       }
       function createChannel() {
         var client = GramLinkClient.getInstance();
@@ -6026,23 +6728,23 @@
           var seq = Promise.resolve();
           TOPIC_NAMES.forEach(function (name) {
             seq = seq.then(function () {
-              return client.createTopic(peerId, name).then(function (topicId) {
-                if (!topicId) return;
+              return client.createTopic(peerId, name).then(function (tid) {
+                if (!tid) return;
+                var s = '';
                 if (name === 'sync-log') {
-                  currentSyncLogTopicId = topicId;
-                  Lampa.Storage.set(STORAGE_SYNC_LOG_TOPIC, topicId);
+                  s = STORAGE_SYNC_LOG_TOPIC;
                 } else if (name === 'profiles') {
-                  currentProfilesTopicId = topicId;
-                  Lampa.Storage.set(STORAGE_PROFILES_TOPIC, topicId);
+                  s = STORAGE_PROFILES_TOPIC;
+                  currentProfilesTopicId = tid;
                 } else if (name === 'profiles-sync') {
-                  currentProfilesSyncTopicId = topicId;
-                  Lampa.Storage.set(STORAGE_PROFILES_SYNC_TOPIC, topicId);
+                  s = STORAGE_PROFILES_SYNC_TOPIC;
+                  currentProfilesSyncTopicId = tid;
                 } else if (name === 'backup') {
-                  currentBackupTopicId = topicId;
-                  Lampa.Storage.set(STORAGE_BACKUP_TOPIC, topicId);
+                  s = STORAGE_BACKUP_TOPIC;
                 }
+                if (s) Lampa.Storage.set(s, tid);
               })["catch"](function (e) {
-                console.warn('GramLink', 'Failed to create topic ' + name + ':', e);
+                console.warn('GramLink', 'Topic ' + name + ':', e);
               });
             });
           });
@@ -6052,164 +6754,22 @@
           throw err;
         });
       }
+      function getChannelId() {
+        return parseInt(Lampa.Storage.get(STORAGE_CHANNEL_ID, ''), 10);
+      }
 
-      // ─── Backup export/import ─────────────────────────────────
+      // ─── Misc helpers ───────────────────────────────────
 
-      var BACKUP_EXCLUDE = {
-        'gramlink_device_id': true,
-        'gramlink_auth_key_hex': true,
-        'gramlink_session': true,
-        'gramlink_dc_id': true,
-        'gramlink_channel_id': true,
-        'gramlink_sync_log_topic': true,
-        'gramlink_profiles_topic': true,
-        'gramlink_backup_topic': true
-      };
-      function isExcluded(key) {
-        if (BACKUP_EXCLUDE[key]) return true;
-        if (key.indexOf('gramlink_hb_msg_') === 0) return true;
-        return false;
+      function stripCodeFence(str) {
+        if (!str) return '';
+        return str.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
       }
-      function collectBackupData() {
-        var data = {
-          meta: {
-            timestamp: Math.floor(Date.now() / 1000),
-            device_id: getDeviceId(),
-            device_name: getDeviceName(),
-            version: VERSION
-          },
-          storage: {}
-        };
-        for (var i = 0; i < localStorage.length; i++) {
-          var key = localStorage.key(i);
-          if (!key || isExcluded(key)) continue;
-          data.storage[key] = localStorage.getItem(key);
-        }
-        return data;
+      function escHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       }
-      function exportBackup() {
-        var client = GramLinkClient.getInstance();
-        if (!client.isConnected()) {
-          Lampa.Noty.show(Lampa.Lang.translate('gramlink_not_connected'));
-          return;
-        }
-        if (!currentBackupTopicId) {
-          Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_topic_not_ready'));
-          return;
-        }
-        var backup = collectBackupData();
-        var jsonStr = JSON.stringify(backup, null, 2);
-        var fileName = 'gramlink_backup_' + Math.floor(Date.now() / 1000) + '.json';
-        var caption = JSON.stringify({
-          device_id: getDeviceId(),
-          device_name: getDeviceName(),
-          timestamp: Math.floor(Date.now() / 1000)
-        });
-        Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_uploading'));
-        client.sendFile(currentChannelId, currentBackupTopicId, jsonStr, fileName, caption).then(function (msgId) {
-          Lampa.Noty.show(msgId ? Lampa.Lang.translate('gramlink_backup_exported') : Lampa.Lang.translate('gramlink_backup_failed'));
-          Lampa.Controller.toggle('gramlink_hub');
-        })["catch"](function () {
-          Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_failed'));
-          Lampa.Controller.toggle('gramlink_hub');
-        });
-      }
-      function importBackup() {
-        var client = GramLinkClient.getInstance();
-        if (!client.isConnected()) {
-          Lampa.Noty.show(Lampa.Lang.translate('gramlink_not_connected'));
-          return;
-        }
-        if (!currentBackupTopicId) {
-          Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_topic_not_ready'));
-          return;
-        }
-        Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_fetching'));
-        client.getBackupFiles(currentChannelId, currentBackupTopicId, 10).then(function (files) {
-          if (!files || files.length === 0) {
-            Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_no_files'));
-            return;
-          }
-          var items = files.map(function (f) {
-            var deviceName = 'Unknown';
-            try {
-              deviceName = JSON.parse(f.text || '{}').device_name || 'Unknown';
-            } catch (e) {}
-            return {
-              title: deviceName + " \xB7 " + timeAgo(f.date),
-              subtitle: f.fileName || '',
-              _file: f
-            };
-          });
-          items.push({
-            title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
-            _cancel: true
-          });
-          var prevController = Lampa.Controller.enabled().name;
-          Lampa.Select.show({
-            title: Lampa.Lang.translate('gramlink_backup_pick_title'),
-            items: items,
-            onBack: function onBack() {
-              Lampa.Controller.toggle(prevController);
-            },
-            onSelect: function onSelect(item) {
-              if (item._cancel) {
-                Lampa.Controller.toggle(prevController);
-                return;
-              }
-              Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_downloading'));
-              client.downloadFile(item._file).then(function (jsonStr) {
-                if (!jsonStr) {
-                  Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_failed'));
-                  return;
-                }
-                try {
-                  var backup = JSON.parse(jsonStr);
-                  if (!backup || !backup.storage) {
-                    Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_invalid'));
-                    return;
-                  }
-                  confirmRestore(backup, prevController);
-                } catch (err) {
-                  Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_invalid'));
-                }
-              });
-            }
-          });
-        })["catch"](function () {
-          Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_failed'));
-        });
-      }
-      function confirmRestore(backup, prevController) {
-        var count = Object.keys(backup.storage).length;
-        Lampa.Select.show({
-          title: Lampa.Lang.translate('gramlink_backup_restore_title'),
-          items: [{
-            title: Lampa.Lang.translate('gramlink_backup_restore_confirm').replace('{count}', count),
-            noenter: true
-          }, {
-            title: Lampa.Lang.translate('gramlink_backup_restore_btn'),
-            _restore: true
-          }, {
-            title: Lampa.Lang.translate('gramlink_cancel'),
-            _cancel: true
-          }],
-          onBack: function onBack() {
-            Lampa.Controller.toggle(prevController);
-          },
-          onSelect: function onSelect(item) {
-            if (item._restore) {
-              applyBackup(backup);
-            }
-            Lampa.Controller.toggle(prevController);
-          }
-        });
-      }
-      function applyBackup(backup) {
-        Object.keys(backup.storage).forEach(function (key) {
-          Lampa.Storage.set(key, backup.storage[key]);
-        });
-        Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_restored'));
+      function escAttr(s) {
+        return String(s).replace(/"/g, '&quot;').replace(/'/g, '&#039;');
       }
     }
 
@@ -6246,7 +6806,7 @@
       Lampa.Component.add('gramlink_plugin_manager', PluginManagerComponent);
       lang();
       initSettings();
-      Lampa.Template.add('gramlink_style', '<style>.gramlink-activity .head__title{font-size:1.4em}.gramlink-hub{padding:1em 2em;max-width:50em;margin:0 auto}.gramlink-hub__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;margin-bottom:2em;padding-bottom:1em;border-bottom:1px solid rgba(255,255,255,0.1)}.gramlink-hub__title{font-size:1.6em;font-weight:700;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.gramlink-hub__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.5em}.gramlink-hub__section{margin-bottom:2em}.gramlink-hub__section-title{font-size:1.2em;font-weight:600;margin-bottom:1em;color:rgba(255,255,255,0.7)}.gramlink-status{background:rgba(255,255,255,0.05);-webkit-border-radius:.8em;border-radius:.8em;padding:1.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em}.gramlink-status__indicator{width:1em;height:1em;-webkit-border-radius:50%;border-radius:50%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gramlink-status__indicator--connected{background:#4caf50;-webkit-box-shadow:0 0 .6em rgba(76,175,80,0.5);box-shadow:0 0 .6em rgba(76,175,80,0.5)}.gramlink-status__indicator--disconnected{background:#f44336}.gramlink-status__indicator--connecting{background:#ffc107;-webkit-animation:gramlink-pulse 1.5s ease-in-out infinite;animation:gramlink-pulse 1.5s ease-in-out infinite}.gramlink-status__indicator--auth_needed{background:#ff9800}.gramlink-status__indicator--error{background:#f44336}.gramlink-status__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-status__label{font-size:1.1em;font-weight:600;margin-bottom:.2em}.gramlink-status__detail{font-size:.9em;color:rgba(255,255,255,0.5)}@-webkit-keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}.gramlink-devices__empty{text-align:center;padding:2em;color:rgba(255,255,255,0.4);font-size:1.1em}.gramlink-device{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em;padding:1em 1.2em;background:rgba(255,255,255,0.03);-webkit-border-radius:.6em;border-radius:.6em;margin-bottom:.5em;cursor:pointer;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-device.focus,.gramlink-device.hover{background:rgba(255,255,255,0.1);outline:.2em solid #fff;outline-offset:.3em}.gramlink-device__icon{width:2.5em;height:2.5em;-webkit-border-radius:.5em;border-radius:.5em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;font-size:.9em;color:white}.gramlink-device__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-device__name{font-size:1.1em;font-weight:600}.gramlink-device__meta{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-device__status{font-size:.8em;padding:.3em .6em;-webkit-border-radius:.3em;border-radius:.3em;background:rgba(76,175,80,0.15);color:#4caf50}.gramlink-device--this{opacity:.6;cursor:default}.gramlink-auth{padding:1em;text-align:center}.gramlink-auth__qr-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;margin-bottom:1.5em;min-height:18em}.gramlink-auth__qr-placeholder{width:16em;height:16em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;background:rgba(255,255,255,0.05);-webkit-border-radius:1em;border-radius:1em}.gramlink-auth__qr-img{width:16em;height:16em;-webkit-border-radius:1em;border-radius:1em;background:white;padding:.5em}.gramlink-auth__status{font-size:1.1em;color:rgba(255,255,255,0.6);line-height:1.5}.gramlink-auth__scan-hint{margin-bottom:.5em;color:rgba(255,255,255,0.8)}.gramlink-auth__confirm-hint{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;padding:.6em 1.2em;-webkit-border-radius:.5em;border-radius:.5em;font-size:.9em;font-weight:600;cursor:pointer;border:0;-webkit-transition:background .2s,opacity .2s;-o-transition:background .2s,opacity .2s;transition:background .2s,opacity .2s}.gramlink-btn.focus,.gramlink-btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-btn--primary{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-btn--ghost{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-btn--ghost.focus{background:rgba(255,255,255,0.15)}.gramlink-btn--small{padding:.4em .8em;font-size:.8em}@media screen and (max-width:767px){.gramlink-hub{padding:.8em 1em}.gramlink-status{padding:1em}.gramlink-auth__qr-placeholder,.gramlink-auth__qr-img{width:12em;height:12em}.gramlink-auth__qr-container{min-height:14em}}@media screen and (max-width:480px){.gramlink-hub__header{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.8em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}}.gramlink-2fa{padding:1em;text-align:center}.gramlink-2fa__desc{font-size:1.1em;color:rgba(255,255,255,0.8);margin-bottom:.5em;line-height:1.4}.gramlink-2fa__hint{font-size:.9em;color:rgba(255,255,255,0.5);margin-bottom:1.5em}.gramlink-2fa__input-wrap{margin-bottom:1.5em}.gramlink-2fa__input{width:100%;max-width:20em;padding:.8em 1em;border:.15em solid rgba(255,255,255,0.2);-webkit-border-radius:.5em;border-radius:.5em;background:rgba(255,255,255,0.08);color:#fff;font-size:1.1em;text-align:center;outline:0;-webkit-box-sizing:border-box;box-sizing:border-box}.gramlink-2fa__input:focus{border-color:#08c}.gramlink-2fa__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.gramlink-2fa__btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:.7em 1.5em;-webkit-border-radius:.5em;border-radius:.5em;font-size:1em;font-weight:600;cursor:pointer;min-width:8em;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-2fa__btn_ok{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-2fa__btn_cancel{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-2fa__btn.focus,.gramlink-2fa__btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;padding:0 2em;margin-bottom:1em}.gramlink-tab.active{background:rgba(255,255,255,0.15) !important;border-color:rgba(255,255,255,0.3) !important;color:#fff !important}.gramlink-tab-view.hide{display:none !important}.gramlink-device-avatar{width:2em;height:2em;-webkit-border-radius:.4em;border-radius:.4em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em}.gramlink-avatar{-webkit-border-radius:50%;border-radius:50%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:700;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;overflow:hidden}.gramlink-avatar--head{width:24px;height:24px;font-size:11px}.gramlink-avatar--list{width:2em;height:2em;font-size:.9em}.gramlink-profile-avatar{width:2.2em;height:2.2em;-webkit-border-radius:50%;border-radius:50%;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gs-plugin-toggle{width:1.2em;height:1.2em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:1.2em}.gs-plugin-toggle.on{color:#4caf50}.gs-plugin-toggle.off{color:rgba(255,255,255,0.3)}.gs-status-item .gramlink-status__indicator{margin:auto}.profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1em;padding:.5em 0}.profile-card{background:rgba(255,255,255,0.06);-webkit-border-radius:12px;border-radius:12px;padding:1em;position:relative;cursor:pointer;-webkit-transition:background .2s,-webkit-box-shadow .2s;transition:background .2s,-webkit-box-shadow .2s;-o-transition:background .2s,box-shadow .2s;transition:background .2s,box-shadow .2s;transition:background .2s,box-shadow .2s,-webkit-box-shadow .2s;min-height:8em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between}.profile-card.focus,.profile-card.hover{background:rgba(255,255,255,0.12);outline:.2em solid rgba(255,255,255,0.5);outline-offset:.25em}.profile-card--active{background:rgba(255,255,255,0.1);-webkit-box-shadow:inset 0 0 0 2px rgba(255,215,0,0.5);box-shadow:inset 0 0 0 2px rgba(255,215,0,0.5)}.profile-card--add{border:2px dashed rgba(255,215,0,0.4);background:transparent;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center;color:rgba(255,255,255,0.5);font-size:.95em}.profile-card--add .profile-card__add-icon{font-size:2em;line-height:1;margin-bottom:.3em;opacity:.6}.profile-card--add.focus,.profile-card--add.hover{border-color:rgba(255,215,0,0.8);color:rgba(255,255,255,0.8)}.profile-card--empty{border:2px dashed rgba(255,255,255,0.1);background:transparent}.profile-card__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between}.profile-card__name{font-size:1em;font-weight:600;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em}.profile-card__name .gramlink-avatar--list{width:1.4em;height:1.4em;font-size:.65em}@media screen and (max-width:767px){.profile-grid{grid-template-columns:repeat(2,1fr)}}@media screen and (max-width:480px){.profile-grid{grid-template-columns:1fr}}</style>');
+      Lampa.Template.add('gramlink_style', '<style>.gramlink-activity{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.gramlink-activity .head__title{font-size:1.4em}.gramlink-hub{padding:1em 2em;max-width:50em;margin:0 auto}.gramlink-hub__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;margin-bottom:2em;padding-bottom:1em;border-bottom:1px solid rgba(255,255,255,0.1)}.gramlink-hub__title{font-size:1.6em;font-weight:700;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.gramlink-hub__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.5em}.gramlink-hub__section{margin-bottom:2em}.gramlink-hub__section-title{font-size:1.2em;font-weight:600;margin-bottom:1em;color:rgba(255,255,255,0.7)}.gramlink-status{background:rgba(255,255,255,0.05);-webkit-border-radius:.8em;border-radius:.8em;padding:1.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em}.gramlink-status__indicator{width:1em;height:1em;-webkit-border-radius:50%;border-radius:50%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gramlink-status__indicator--connected{background:#4caf50;-webkit-box-shadow:0 0 .6em rgba(76,175,80,0.5);box-shadow:0 0 .6em rgba(76,175,80,0.5)}.gramlink-status__indicator--disconnected{background:#f44336}.gramlink-status__indicator--connecting{background:#ffc107;-webkit-animation:gramlink-pulse 1.5s ease-in-out infinite;animation:gramlink-pulse 1.5s ease-in-out infinite}.gramlink-status__indicator--auth_needed{background:#ff9800}.gramlink-status__indicator--error{background:#f44336}.gramlink-status__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-status__label{font-size:1.1em;font-weight:600;margin-bottom:.2em}.gramlink-status__detail{font-size:.9em;color:rgba(255,255,255,0.5)}@-webkit-keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}.gramlink-devices__empty{text-align:center;padding:2em;color:rgba(255,255,255,0.4);font-size:1.1em}.gramlink-device{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em;padding:1em 1.2em;background:rgba(255,255,255,0.03);-webkit-border-radius:.6em;border-radius:.6em;margin-bottom:.5em;cursor:pointer;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-device.focus,.gramlink-device.hover{background:rgba(255,255,255,0.1);outline:.2em solid #fff;outline-offset:.3em}.gramlink-device__icon{width:2.5em;height:2.5em;-webkit-border-radius:.5em;border-radius:.5em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;font-size:.9em;color:white}.gramlink-device__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-device__name{font-size:1.1em;font-weight:600}.gramlink-device__meta{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-device__status{font-size:.8em;padding:.3em .6em;-webkit-border-radius:.3em;border-radius:.3em;background:rgba(76,175,80,0.15);color:#4caf50}.gramlink-device--this{opacity:.6;cursor:default}.gramlink-auth{padding:1em;text-align:center}.gramlink-auth__qr-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;margin-bottom:1.5em;min-height:18em}.gramlink-auth__qr-placeholder{width:16em;height:16em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;background:rgba(255,255,255,0.05);-webkit-border-radius:1em;border-radius:1em}.gramlink-auth__qr-img{width:16em;height:16em;-webkit-border-radius:1em;border-radius:1em;background:white;padding:.5em}.gramlink-auth__status{font-size:1.1em;color:rgba(255,255,255,0.6);line-height:1.5}.gramlink-auth__scan-hint{margin-bottom:.5em;color:rgba(255,255,255,0.8)}.gramlink-auth__confirm-hint{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;padding:.6em 1.2em;-webkit-border-radius:.5em;border-radius:.5em;font-size:.9em;font-weight:600;cursor:pointer;border:0;-webkit-transition:background .2s,opacity .2s;-o-transition:background .2s,opacity .2s;transition:background .2s,opacity .2s}.gramlink-btn.focus,.gramlink-btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-btn--primary{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-btn--ghost{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-btn--ghost.focus{background:rgba(255,255,255,0.15)}.gramlink-btn--small{padding:.4em .8em;font-size:.8em}@media screen and (max-width:767px){.gramlink-hub{padding:.8em 1em}.gramlink-status{padding:1em}.gramlink-auth__qr-placeholder,.gramlink-auth__qr-img{width:12em;height:12em}.gramlink-auth__qr-container{min-height:14em}}@media screen and (max-width:480px){.gramlink-hub__header{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.8em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}}.gramlink-2fa{padding:1em;text-align:center}.gramlink-2fa__desc{font-size:1.1em;color:rgba(255,255,255,0.8);margin-bottom:.5em;line-height:1.4}.gramlink-2fa__hint{font-size:.9em;color:rgba(255,255,255,0.5);margin-bottom:1.5em}.gramlink-2fa__input-wrap{margin-bottom:1.5em}.gramlink-2fa__input{width:100%;max-width:20em;padding:.8em 1em;border:.15em solid rgba(255,255,255,0.2);-webkit-border-radius:.5em;border-radius:.5em;background:rgba(255,255,255,0.08);color:#fff;font-size:1.1em;text-align:center;outline:0;-webkit-box-sizing:border-box;box-sizing:border-box}.gramlink-2fa__input:focus{border-color:#08c}.gramlink-2fa__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.gramlink-2fa__btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:.7em 1.5em;-webkit-border-radius:.5em;border-radius:.5em;font-size:1em;font-weight:600;cursor:pointer;min-width:8em;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-2fa__btn_ok{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-2fa__btn_cancel{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-2fa__btn.focus,.gramlink-2fa__btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;padding:0 2em;margin-bottom:1em}.gramlink-tab.active{background:rgba(255,255,255,0.15) !important;border-color:rgba(255,255,255,0.3) !important;color:#fff !important}.gramlink-body--grid>.gramlink-tabs,.gramlink-tabs{grid-column:1/-1}.gramlink-device-avatar{width:2em;height:2em;-webkit-border-radius:.4em;border-radius:.4em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em}.gramlink-avatar{-webkit-border-radius:50%;border-radius:50%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:700;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;overflow:hidden}.gramlink-avatar--head{width:24px;height:24px;font-size:11px}.gramlink-avatar--list{width:2em;height:2em;font-size:.9em}.gramlink-profile-avatar{width:2.2em;height:2.2em;-webkit-border-radius:50%;border-radius:50%;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gs-plugin-toggle{width:1.2em;height:1.2em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:1.2em}.gs-plugin-toggle.on{color:#4caf50}.gs-plugin-toggle.off{color:rgba(255,255,255,0.3)}.gs-status-item .gramlink-status__indicator{margin:auto}.profile-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1em;padding:.5em 0}.profile-card{background:rgba(255,255,255,0.06);-webkit-border-radius:12px;border-radius:12px;padding:1.5em 1em;position:relative;cursor:pointer;-webkit-transition:background .2s,-webkit-box-shadow .2s;transition:background .2s,-webkit-box-shadow .2s;-o-transition:background .2s,box-shadow .2s;transition:background .2s,box-shadow .2s;transition:background .2s,box-shadow .2s,-webkit-box-shadow .2s;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em}.profile-card.focus,.profile-card.hover{background:rgba(255,255,255,0.12);outline:.2em solid rgba(255,255,255,0.5);outline-offset:.25em}.profile-card--active{background:rgba(255,255,255,0.1);-webkit-box-shadow:inset 0 0 0 2px rgba(255,215,0,0.5);box-shadow:inset 0 0 0 2px rgba(255,215,0,0.5)}.profile-card--add{border:2px dashed rgba(255,215,0,0.4);background:transparent;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center;color:rgba(255,255,255,0.5);font-size:.95em;min-height:6em;gap:.4em;-webkit-border-radius:12px;border-radius:12px;grid-column:1/-1}.profile-card--add .profile-card__add-icon{font-size:2em;line-height:1;opacity:.6}.profile-card--add.focus,.profile-card--add.hover{border-color:rgba(255,215,0,0.8);color:rgba(255,255,255,0.8)}.profile-card--empty{border:2px dashed rgba(255,255,255,0.1);background:transparent}.profile-card__avatar-wrap{-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;width:3.2em;height:3.2em;-webkit-border-radius:50%;border-radius:50%;overflow:hidden;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:1.2em;font-weight:700;color:#fff}.profile-card__avatar-wrap img,.profile-card__avatar-wrap .gramlink-avatar{width:100%;height:100%;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%}.profile-card__name{font-size:1.1em;font-weight:600;line-height:1.3;-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0;word-break:break-word}.profile-card__active-badge{font-size:.7em;color:#ffd700;margin-top:.15em}@media screen and (max-width:767px){.profile-grid{grid-template-columns:repeat(2,1fr)}}@media screen and (max-width:480px){.profile-grid{grid-template-columns:1fr}}.gramlink-item{background:#404040;-webkit-border-radius:1em;border-radius:1em;padding:1.2em 1.4em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;cursor:pointer;position:relative;-webkit-box-sizing:border-box;box-sizing:border-box}.gramlink-item.focus{outline:.3em solid #fff;outline-offset:.3em;-webkit-border-radius:1.2em;border-radius:1.2em}.gramlink-body--grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1em;padding:1em 2em}.gramlink-body--grid>.gramlink-item{margin:0;min-height:0}.gramlink-body--grid>.gramlink-item+.gramlink-item{margin:0}.gramlink-body--content{padding:1em 2em}.gs-avatar{width:2.5em;height:2.5em;-webkit-border-radius:.5em;border-radius:.5em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:#fff;font-weight:700;font-size:.9em;margin-right:1em}.gs-content{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gs-title{font-size:1.1em;line-height:normal;margin-bottom:.2em;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap}.gs-sub{font-size:.84em;color:#8d8d8d;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap}.gs-badge{font-size:.78em;padding:.3em .5em;-webkit-border-radius:.3em;border-radius:.3em;background:rgba(0,0,0,0.18);-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;margin-left:auto}.gs-badge.badge--active{color:#6dce4b}.gs-badge.badge--inactive{color:#dd7337}.gs-badge.badge--info{color:#8d8d8d}.gramlink-body--grid>.gramlink-tabs,.gramlink-tabs{grid-column:1/-1}</style>');
       $('body').append(Lampa.Template.get('gramlink_style', {}, true));
       setupBroadcastListener();
       addMenu();
@@ -6415,11 +6975,13 @@
     // ─── Profile Head Button ────────────────────────────────
 
     function addProfileHeadButton() {
-      var $nativeProfile = $('.head__action.open--profile').first();
       var $profileBtn = $('<div class="head__action selector open--gramlink-profile" ' + 'style="display:none">' + '<div class="gramlink-avatar gramlink-avatar--head">?</div>' + '</div>');
-      if ($nativeProfile.length) {
-        $nativeProfile.after($profileBtn);
-        $('.head__action.open--profile').addClass('hide');
+
+      // ponytail: insert directly into head__actions, no dependency on .open--profile
+      var $headActions = $('.head__actions');
+      if ($headActions.length) {
+        var $fs = $headActions.find('.full--screen');
+        if ($fs.length) $fs.before($profileBtn);else $headActions.prepend($profileBtn);
       } else {
         $('.head__action.open--search').after($profileBtn);
       }
@@ -6433,12 +6995,18 @@
         }
         var avatar = Profiles.getAvatar(activeName);
         var color = Profiles.avatarColor(activeName);
+        var isUrl = avatar.indexOf('https://api.dicebear.com') === 0;
         $profileBtn.show();
-        $profileBtn.find('.gramlink-avatar').css('background', color).text(avatar);
+        var $av = $profileBtn.find('.gramlink-avatar');
+        if (isUrl) {
+          $av.replaceWith('<img src="' + avatar + '" class="gramlink-avatar gramlink-avatar--head" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">');
+        } else {
+          $av.css('background', color).text(avatar);
+        }
       }
       updateProfileButton();
       Lampa.Storage.listener.follow('change', function (e) {
-        if (e.name === 'gramlink_active_profile' || e.name === 'gramlink_active_profile_name') {
+        if (e.name === 'gramlink_active_profile' || e.name === 'gramlink_active_profile_name' || e.name === 'gramlink_avatar_style') {
           updateProfileButton();
         }
       });
@@ -6481,10 +7049,13 @@
       if (hasCache) {
         // Profile items from cache
         cachedProfiles.forEach(function (p) {
+          var avatarVal = Profiles.getAvatar(p.name);
+          var isUrl = avatarVal.indexOf('https://api.dicebear.com') === 0;
+          var iconHtml = isUrl ? '<img src="' + avatarVal + '" style="width:2em;height:2em;border-radius:50%;object-fit:cover;">' : '<div class="gramlink-avatar gramlink-avatar--list" style="background:' + Profiles.avatarColor(p.name) + '">' + avatarVal + '</div>';
           items.push({
             title: p.name,
             template: 'selectbox_icon',
-            icon: '<div class="gramlink-avatar gramlink-avatar--list" style="background:' + Profiles.avatarColor(p.name) + '">' + p.avatar + '</div>',
+            icon: iconHtml,
             selected: p.isActive || false,
             subtitle: p.isActive ? Lampa.Lang.translate('gramlink_profile_active') || 'Active' : '',
             _msgId: p.msgId,
@@ -6505,7 +7076,7 @@
         },
         onBack: function onBack() {},
         onFullDraw: function onFullDraw(container) {
-          container.append($('<div class="selectbox-item selectbox-item--icon selector">' + '<div class="selectbox-item__icon">' + '<svg width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' + '</div>' + '<div>' + '<div class="selectbox-item__title">' + (Lampa.Lang.translate('gramlink_settings') || 'GramLink Settings') + '</div>' + '</div>' + '</div>').on('hover:enter', function () {
+          container.append($('<div class="selectbox-item selectbox-item--icon selector">' + '<div class="selectbox-item__icon">' + '<svg width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' + '</div>' + '<div>' + '<div class="selectbox-item__title">' + (Lampa.Lang.translate('gramlink_hub_title') || 'GramLink HUB') + '</div>' + '</div>' + '</div>').on('hover:enter', function () {
             Lampa.Activity.push({
               url: '',
               title: Lampa.Lang.translate('gramlink_hub_title') || 'GramLink',
