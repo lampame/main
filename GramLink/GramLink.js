@@ -993,6 +993,35 @@
         writable: !1
       }), e;
     }
+    function _defineProperty(e, r, t) {
+      return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+        value: t,
+        enumerable: !0,
+        configurable: !0,
+        writable: !0
+      }) : e[r] = t, e;
+    }
+    function ownKeys(e, r) {
+      var t = Object.keys(e);
+      if (Object.getOwnPropertySymbols) {
+        var o = Object.getOwnPropertySymbols(e);
+        r && (o = o.filter(function (r) {
+          return Object.getOwnPropertyDescriptor(e, r).enumerable;
+        })), t.push.apply(t, o);
+      }
+      return t;
+    }
+    function _objectSpread2(e) {
+      for (var r = 1; r < arguments.length; r++) {
+        var t = null != arguments[r] ? arguments[r] : {};
+        r % 2 ? ownKeys(Object(t), !0).forEach(function (r) {
+          _defineProperty(e, r, t[r]);
+        }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) {
+          Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
+        });
+      }
+      return e;
+    }
     function _toPrimitive(t, r) {
       if ("object" != typeof t || !t) return t;
       var e = t[Symbol.toPrimitive];
@@ -1006,6 +1035,15 @@
     function _toPropertyKey(t) {
       var i = _toPrimitive(t, "string");
       return "symbol" == typeof i ? i : i + "";
+    }
+    function _typeof(o) {
+      "@babel/helpers - typeof";
+
+      return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
+        return typeof o;
+      } : function (o) {
+        return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
+      }, _typeof(o);
     }
 
     /**
@@ -1089,18 +1127,790 @@
       return bytes;
     }
 
-    var VERSION = '0.0.5';
+    /**
+     * sdk/keys.js — Єдине джерело storage-ключів та helpers для Lampa.Storage
+     *
+     * Усуває:
+     *   D-01 — getChannelId() тепер один, захищений від NaN
+     *   D-02 — всі STORAGE_* константи в одному місці
+     *   D-10 — parseInt(Lampa.Storage.get(...), 10) замінено на getInt()
+     *
+     * Використання:
+     *   import { STORAGE_KEYS, getChannelId, getInt } from '../sdk/keys'
+     */
 
-    // Storage keys
-    var STORAGE_DC_ID = 'gramlink_dc_id';
-    var STORAGE_AUTH_KEY = 'gramlink_auth_key_hex';
-    var STORAGE_DEVICE_ID = 'gramlink_device_id';
-    var STORAGE_CHANNEL_ID$2 = 'gramlink_channel_id';
+    var STORAGE_KEYS = {
+      // Session / auth
+      DC_ID: 'gramlink_dc_id',
+      AUTH_KEY: 'gramlink_auth_key_hex',
+      DEVICE_ID: 'gramlink_device_id',
+      USER_NAME: 'gramlink_user_name',
+      // Sync channel
+      CHANNEL_ID: 'gramlink_channel_id',
+      SYNC_LOG_TOPIC: 'gramlink_sync_log_topic',
+      PROFILES_TOPIC: 'gramlink_profiles_topic',
+      PROFILES_SYNC: 'gramlink_profiles_sync_topic',
+      BACKUP_TOPIC: 'gramlink_backup_topic',
+      REMOTE_CMD_TOPIC: 'gramlink_remote_cmd_topic',
+      // Active profile
+      ACTIVE_PROFILE: 'gramlink_active_profile',
+      ACTIVE_PROFILE_TS: 'gramlink_active_profile_ts',
+      ACTIVE_PROFILE_NAME: 'gramlink_active_profile_name',
+      PROFILES_CACHE: 'gramlink_profiles_cache',
+      PLUGIN_REGISTRY: 'gramlink_plugin_registry',
+      LAST_DELTA_SEEN: 'gramlink_last_delta_seen',
+      // Settings
+      AVATAR_STYLE: 'gramlink_avatar_style',
+      HEARTBEAT: 'gramlink_heartbeat',
+      BROADCAST: 'gramlink_broadcast',
+      SYNC_ENABLED: 'gramlink_sync_enabled',
+      POLL_INTERVAL: 'gramlink_poll_interval',
+      // Proxy
+      PROXY_ENABLED: 'gramlink_proxy_enabled',
+      PROXY_HOST: 'gramlink_proxy_host',
+      PROXY_PORT: 'gramlink_proxy_port',
+      PROXY_SECRET: 'gramlink_proxy_secret',
+      // Server
+      SERVER_TYPE: 'gramlink_server_type',
+      CUSTOM_HOST: 'gramlink_custom_host',
+      CUSTOM_PORT: 'gramlink_custom_port',
+      APP_TYPE: 'gramlink_app_type',
+      API_ID: 'gramlink_api_id',
+      API_HASH: 'gramlink_api_hash'
+    };
 
-    // Telegram App credentials — registered at my.telegram.org
-    // These are the same API_ID/HASH used in the backend (Telethon)
-    var TG_API_ID = 24911245;
-    var TG_API_HASH = 'af35604124d731e01a113639b905e10e';
+    /**
+     * Безпечне читання channelId зі storage.
+     * Повертає number або null (ніколи не NaN).
+     * Усуває баг з auth.js:106, де parseInt('', 10) → NaN.
+     */
+    function getChannelId() {
+      var v = Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, '');
+      var n = parseInt(v, 10);
+      // NOTE: Telegram channel peer IDs are NEGATIVE (e.g. -1001234567890).
+      // Guard against NaN/Infinity but allow negative values.
+      return Number.isFinite(n) && n !== 0 ? n : null;
+    }
+
+    /**
+     * Безпечне читання integer зі storage.
+     * Повертає число; якщо storage порожній або NaN → повертає def.
+     */
+    function getInt(key, def) {
+      if (def === undefined) def = 0;
+      var v = parseInt(Lampa.Storage.get(key, String(def)), 10);
+      return Number.isFinite(v) ? v : def;
+    }
+
+    /**
+     * sdk/telegram.js — Єдина обгортка TGSBundle (window.telegram)
+     *
+     * Усуває:
+     *   A-01 — Жоден компонент не має прямого доступу до window.telegram.
+     *          Всі імпортують через sdk/telegram.
+     *
+     * Контракт TGSBundle:
+     *   window.telegram = { TelegramClient, MemorySession, Api, Buffer }
+     *
+     * Використання:
+     *   import { telegram, Api, Buffer } from '../sdk/telegram'
+     */
+    var _tg = null;
+    var _tgPromise = null;
+
+    /**
+     * Завантажує TGSBundle (якщо ще не завантажено) і повертає window.telegram.
+     * Безпечно викликати багаторазово — повторні виклики повертають той самий проміс.
+     */
+    function telegram() {
+      if (_tg) return Promise.resolve(_tg);
+      if (!_tgPromise) {
+        _tgPromise = loadGramJS().then(function (tg) {
+          _tg = tg;
+          return tg;
+        });
+      }
+      return _tgPromise;
+    }
+
+    /**
+     * Ліниве завантаження Api (TL-об'єкти).
+     */
+    function Api() {
+      return telegram().then(function (tg) {
+        return tg.Api;
+      });
+    }
+
+    /**
+     * Ліниве завантаження Buffer.
+     */
+    function Buffer() {
+      return telegram().then(function (tg) {
+        return tg.Buffer;
+      });
+    }
+
+    /**
+     * sdk/channels.js — Операції з каналами/топіками Telegram
+     *
+     * Усуває:
+     *   A-03 — createForum замість ручного Api.channels.CreateChannel + ToggleForum
+     *   A-04 — createTopic замість ручного Api.channels.CreateForumTopic
+     *   A-05 — findTopic замість ручного Api.channels.GetForumTopics
+     *   A-06 — getInputEntity тепер всередині функцій, не в коді компонентів
+     *
+     * Всі функції приймають tgClient як перший параметр.
+     *
+     * Використання:
+     *   import { createForum, createTopic, findTopic, findChannel } from '../sdk/channels'
+     */
+
+    /**
+     * Створює новий megagroup-канал з форумом.
+     * Повертає peerId (negative int) або null.
+     */
+    function createForum(tgClient, title, about) {
+      if (about === undefined) about = 'GramLink: Lampa device sync channel';
+      return Api().then(function (A) {
+        return tgClient.invoke(new A.channels.CreateChannel({
+          title: title,
+          about: about,
+          megagroup: true,
+          forImport: false,
+          forum: true
+        })).then(function (result) {
+          var chat = result.chats && result.chats[0];
+          if (!chat) throw new Error('Channel create: no chat in result');
+          var peerId = parseInt('-100' + chat.id, 10);
+          return tgClient.invoke(new A.channels.ToggleForum({
+            channel: chat,
+            enabled: true
+          }))["catch"](function () {}).then(function () {
+            return peerId;
+          });
+        })["catch"](function (err) {
+          console.error('GramLink', 'createForum error:', err);
+          return null;
+        });
+      });
+    }
+
+    /**
+     * Створює topic у каналі.
+     * Повертає topic_id (int) або null.
+     */
+    function createTopic(tgClient, channelId, topicTitle, iconColor) {
+      if (iconColor === undefined) iconColor = 0x0088CC;
+      return Api().then(function (A) {
+        return tgClient.getInputEntity(channelId).then(function (peer) {
+          return tgClient.invoke(new A.channels.CreateForumTopic({
+            channel: peer,
+            title: topicTitle,
+            iconColor: iconColor
+          }));
+        }).then(function (result) {
+          var updates = result.updates || [];
+          for (var i = 0; i < updates.length; i++) {
+            if (updates[i].id) return updates[i].id;
+          }
+          return null;
+        })["catch"](function (err) {
+          console.error('GramLink', 'createTopic error:', err);
+          return null;
+        });
+      });
+    }
+
+    /**
+     * Знаходить topic за назвою.
+     * Повертає topic_id (int) або null.
+     */
+    function findTopic(tgClient, channelId, topicTitle, limit) {
+      if (limit === undefined) limit = 10;
+      return Api().then(function (A) {
+        return tgClient.getInputEntity(channelId).then(function (peer) {
+          return tgClient.invoke(new A.channels.GetForumTopics({
+            channel: peer,
+            q: topicTitle,
+            offsetDate: 0,
+            offsetId: 0,
+            offsetTopic: 0,
+            limit: limit
+          }));
+        }).then(function (result) {
+          var topics = result.topics || [];
+          for (var i = 0; i < topics.length; i++) {
+            if (topics[i].title === topicTitle) return topics[i].id;
+          }
+          return null;
+        })["catch"](function () {
+          return null;
+        });
+      });
+    }
+
+    /**
+     * Знаходить канал за назвою серед діалогів користувача.
+     * Повертає peerId (negative int) або null.
+     */
+    function findChannel(tgClient, title, dialogLimit) {
+      if (dialogLimit === undefined) dialogLimit = 200;
+      return tgClient.getDialogs({
+        limit: dialogLimit
+      }).then(function (dialogs) {
+        for (var i = 0; i < dialogs.length; i++) {
+          var d = dialogs[i];
+          if (d.title === title) {
+            var rawId = d.entity && d.entity.id;
+            if (!rawId) continue;
+            return parseInt('-100' + rawId, 10);
+          }
+        }
+        return null;
+      })["catch"](function () {
+        return null;
+      });
+    }
+
+    /**
+     * sdk/files.js — Завантаження файлів у Telegram
+     *
+     * Усуває:
+     *   A-07 — upload() замість 70 рядків ручних TL-викликів у utils/client.js:540-609
+     *   A-08 — InputReplyToMessage інкапсульований
+     *   A-20 — Buffer.from інкапсульований
+     *
+     * Використання:
+     *   import { upload } from '../sdk/files'
+     */
+    var CHUNK = 512 * 1024;
+
+    /**
+     * Завантажує файл у вказаний чат/топік.
+     *
+     * @param {Object} tgClient — GramJS TelegramClient instance
+     * @param {number} chatId
+     * @param {number|string} threadId — topic ID
+     * @param {string} dataStr — вміст файлу (рядок)
+     * @param {string} fileName
+     * @param {string} [caption] — підпис до файлу (JSON)
+     * @returns {Promise<number|null>} messageId або null
+     */
+    function upload(tgClient, chatId, threadId, dataStr, fileName, caption) {
+      if (!chatId) return Promise.resolve(null);
+      return Promise.all([Api(), Buffer()]).then(function (results) {
+        var A = results[0];
+        var Buf = results[1];
+        var arr = new Uint8Array(8);
+        crypto.getRandomValues(arr);
+        var fileId = arr.reduce(function (a, b, i) {
+          return a | BigInt(b) << BigInt(i * 8);
+        }, 0n);
+        var buf = Buf.from(dataStr, 'utf-8');
+        var total = Math.ceil(buf.length / CHUNK);
+        var seq = Promise.resolve();
+        for (var i = 0; i < total; i++) {
+          (function (part) {
+            var start = part * CHUNK;
+            var end = Math.min(start + CHUNK, buf.length);
+            var chunk = buf.slice(start, end);
+            seq = seq.then(function () {
+              return tgClient.invoke(new A.upload.SaveFilePart({
+                fileId: fileId,
+                filePart: part,
+                bytes: chunk
+              }));
+            });
+          })(i);
+        }
+        return seq.then(function () {
+          return tgClient.getInputEntity(chatId);
+        }).then(function (peer) {
+          var randomId = BigInt(crypto.getRandomValues(new Uint8Array(4)).reduce(function (a, b) {
+            return a * 256 + b;
+          }, 0));
+          return tgClient.invoke(new A.messages.SendMedia({
+            peer: peer,
+            replyTo: new A.InputReplyToMessage({
+              replyToMsgId: parseInt(threadId, 10)
+            }),
+            media: new A.InputMediaUploadedDocument({
+              file: new A.InputFile({
+                id: fileId,
+                parts: total,
+                name: fileName,
+                md5Checksum: ''
+              }),
+              mimeType: 'application/json',
+              attributes: [new A.DocumentAttributeFilename({
+                fileName: fileName
+              })]
+            }),
+            message: caption || '',
+            entities: caption ? [new A.MessageEntityPre({
+              offset: 0,
+              length: caption.length,
+              language: 'json'
+            })] : [],
+            randomId: randomId
+          }));
+        }).then(function (result) {
+          if (result && result.updates) {
+            for (var i = 0; i < result.updates.length; i++) {
+              if (result.updates[i].id) return result.updates[i].id;
+            }
+          }
+          return null;
+        })["catch"](function (err) {
+          console.error('GramLink', 'upload error:', err);
+          return null;
+        });
+      });
+    }
+
+    /**
+     * Знімає ```json ... ``` обгортку з тексту повідомлення.
+     */
+    function stripCodeFence$1(text) {
+      if (!text) return text;
+      return text.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+    }
+
+    /**
+     * Відправляє "сире" текстове повідомлення в topic.
+     * Повертає messageId або false.
+     */
+    function publishRaw(tgClient, chatId, threadId, text, silent) {
+      if (!chatId) return Promise.resolve(false);
+      return Api().then(function (A) {
+        var formattingEntities = [new A.MessageEntityPre({
+          offset: 0,
+          length: text.length,
+          language: 'json'
+        })];
+        var sendArgs = {
+          message: text,
+          formattingEntities: formattingEntities
+        };
+        if (threadId) sendArgs.replyTo = parseInt(threadId, 10);
+        if (silent) sendArgs.silent = true;
+        return tgClient.sendMessage(chatId, sendArgs).then(function (result) {
+          return result ? result.id : 0;
+        })["catch"](function (err) {
+          console.error('GramLink', 'publishRaw error:', err);
+          return false;
+        });
+      });
+    }
+
+    /**
+     * Відправляє повідомлення з JSON-метаданими (використовується для heartbeat, remote-cmd).
+     * Повертає messageId або false.
+     */
+    function publish(tgClient, chatId, threadId, type, payload, targetDeviceId, metaExtras) {
+      if (!chatId) return Promise.resolve(false);
+      if (!metaExtras) metaExtras = {};
+      var deviceId = Lampa.Storage.get('gramlink_device_id', '');
+      var deviceName = getDeviceNameFallback();
+      var msg = JSON.stringify({
+        meta: _objectSpread2({
+          type: type,
+          device_id: deviceId,
+          device_name: deviceName,
+          target_device_id: targetDeviceId || 'all',
+          timestamp: Math.floor(Date.now() / 1000),
+          schema_version: 1
+        }, metaExtras),
+        payload: payload || {}
+      }, null, 2);
+      return Api().then(function (A) {
+        var formattingEntities = [new A.MessageEntityPre({
+          offset: 0,
+          length: msg.length,
+          language: 'json'
+        })];
+        var sendArgs = {
+          message: msg,
+          formattingEntities: formattingEntities
+        };
+        if (threadId) sendArgs.replyTo = parseInt(threadId, 10);
+
+        // Heartbeat та sync-log завжди silent
+        if (type === 'heartbeat' || threadId && String(threadId) === String(Lampa.Storage.get('gramlink_sync_log_topic', ''))) {
+          sendArgs.silent = true;
+        }
+        return tgClient.sendMessage(chatId, sendArgs).then(function (result) {
+          return result ? result.id : 0;
+        })["catch"](function (err) {
+          console.error('GramLink', 'publish error:', err);
+          return false;
+        });
+      });
+    }
+    function getDeviceNameFallback() {
+      try {
+        var ua = navigator.userAgent || '';
+        var name = 'Unknown Device';
+        var DEVICE_TYPES = {
+          'Amazon Fire TV': /Fire TV|Amazon/i,
+          'NVIDIA Shield TV': /SHIELD|NVIDIA/i
+        };
+        for (var k in DEVICE_TYPES) {
+          if (ua.match(DEVICE_TYPES[k])) {
+            name = k;
+            break;
+          }
+        }
+        return name;
+      } catch (e) {
+        return 'Unknown Device';
+      }
+    }
+
+    /**
+     * Редагує існуюче повідомлення.
+     */
+    function editMessage(tgClient, chatId, messageId, newText, threadId) {
+      if (!chatId) return Promise.resolve(false);
+      return Api().then(function (A) {
+        var formattingEntities = [new A.MessageEntityPre({
+          offset: 0,
+          length: newText.length,
+          language: 'json'
+        })];
+        var opts = {
+          message: messageId,
+          text: newText,
+          formattingEntities: formattingEntities
+        };
+        if (threadId) opts.replyTo = parseInt(threadId, 10);
+        return tgClient.editMessage(chatId, opts).then(function () {
+          return true;
+        })["catch"](function (err) {
+          console.error('GramLink', 'editMessage error:', err);
+          return false;
+        });
+      });
+    }
+
+    /**
+     * Видаляє повідомлення.
+     */
+    function deleteMessage(tgClient, chatId, messageId) {
+      if (!chatId) return Promise.resolve(false);
+      return tgClient.deleteMessages(chatId, [messageId], {
+        revoke: true
+      }).then(function () {
+        return true;
+      })["catch"](function (err) {
+        console.error('GramLink', 'deleteMessage error:', err);
+        return false;
+      });
+    }
+
+    /**
+     * Отримує повідомлення з чату/топіка.
+     */
+    function getMessages(tgClient, chatId, threadId, limit) {
+      if (!chatId) return Promise.resolve([]);
+      var getArgs = {
+        limit: limit || 50
+      };
+      if (threadId) getArgs.replyTo = parseInt(threadId, 10);
+      return tgClient.getMessages(chatId, getArgs).then(function (messages) {
+        return (messages || []).map(function (m) {
+          return {
+            id: m.id,
+            text: m.message || m.text || '',
+            date: m.date,
+            _msg: m
+          };
+        });
+      })["catch"](function () {
+        return [];
+      });
+    }
+
+    /**
+     * Отримує повідомлення новіші за вказаний timestamp.
+     */
+    function getMessagesSince(tgClient, chatId, threadId, sinceTimestamp, limit) {
+      if (!chatId) return Promise.resolve([]);
+      var getArgs = {
+        limit: limit || 50
+      };
+      if (threadId) getArgs.replyTo = parseInt(threadId, 10);
+      return tgClient.getMessages(chatId, getArgs).then(function (messages) {
+        return (messages || []).filter(function (m) {
+          return m.date >= sinceTimestamp;
+        }).map(function (m) {
+          return {
+            id: m.id,
+            text: m.message || m.text || '',
+            date: m.date,
+            _msg: m
+          };
+        });
+      })["catch"](function () {
+        return [];
+      });
+    }
+
+    /**
+     * Завантажує вкладений файл повідомлення.
+     */
+    function downloadFile(tgClient, message) {
+      if (!message || !message._msg) return Promise.resolve(null);
+      return tgClient.downloadMedia(message._msg.media).then(function (data) {
+        if (!data) return null;
+        try {
+          return new TextDecoder('utf-8', {
+            fatal: false
+          }).decode(data);
+        } catch (e) {
+          var str = '';
+          for (var i = 0; i < data.length; i++) {
+            str += String.fromCharCode(data[i]);
+          }
+          return str;
+        }
+      })["catch"](function (err) {
+        console.error('GramLink', 'downloadFile error:', err);
+        return null;
+      });
+    }
+
+    /**
+     * Отримує список бекап-файлів з топіка.
+     */
+    function getBackupFiles(tgClient, chatId, threadId, limit) {
+      if (!chatId) return Promise.resolve([]);
+      var getArgs = {
+        limit: limit || 20
+      };
+      if (threadId) getArgs.replyTo = parseInt(threadId, 10);
+      return tgClient.getMessages(chatId, getArgs).then(function (messages) {
+        return (messages || []).filter(function (m) {
+          return m.media && m.media.document;
+        }).map(function (m) {
+          var fileName = 'backup.json';
+          var attrs = m.media.document.attributes || [];
+          for (var i = 0; i < attrs.length; i++) {
+            if (attrs[i].fileName) {
+              fileName = attrs[i].fileName;
+              break;
+            }
+          }
+          return {
+            id: m.id,
+            date: m.date,
+            fileName: fileName,
+            size: m.media.document.size,
+            text: m.message || '',
+            _msg: m
+          };
+        });
+      })["catch"](function () {
+        return [];
+      });
+    }
+
+    /**
+     * Завантажує файл з вкладення (окремо від downloadFile для зворотньої сумісності).
+     */
+    function downloadMessageFile(tgClient, message) {
+      if (!message || !message._msg) return Promise.resolve(null);
+      if (!message._msg.media || !message._msg.media.document) return Promise.resolve(null);
+      return tgClient.downloadMedia(message._msg.media).then(function (data) {
+        if (!data) return null;
+        try {
+          return new TextDecoder('utf-8', {
+            fatal: false
+          }).decode(data);
+        } catch (e) {
+          return null;
+        }
+      })["catch"](function (err) {
+        console.error('GramLink', 'downloadMessageFile error:', err);
+        return null;
+      });
+    }
+
+    /**
+     * sdk/device.js — Device fingerprinting та API credentials
+     *
+     * Усуває:
+     *   D-06 — getApiCredentials тепер в SDK, не дублюється в auth.js/settings.js/client.js
+     *   A-16 — getDeviceId зберігається як є (session ID), додано коментар
+     *
+     * Використання:
+     *   import { getDeviceId, getDeviceName, getApiCredentials } from '../sdk/device'
+     */
+
+    // Примітка (A-16): getDeviceId генерує tv_xxx_timestamp як session token,
+    // не стабільний fingerprint. При localStorage.clear() — змінюється.
+    // Для стабільного fingerprint потрібен хеш user-agent + screen resolution.
+
+    var STORAGE_DEVICE_ID = STORAGE_KEYS.DEVICE_ID;
+    function getDeviceId() {
+      var id = Lampa.Storage.get(STORAGE_DEVICE_ID, '');
+      if (!id) {
+        id = 'tv_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+        Lampa.Storage.set(STORAGE_DEVICE_ID, id);
+      }
+      return id;
+    }
+    var DEVICE_TYPES = {
+      'Amazon Fire TV': {
+        check: function check(ua) {
+          return ua.match(/Fire TV|Amazon/i);
+        },
+        name: 'Amazon Fire TV'
+      },
+      'NVIDIA Shield TV': {
+        check: function check(ua) {
+          return ua.match(/SHIELD|NVIDIA/i);
+        },
+        name: 'NVIDIA Shield TV'
+      },
+      'Roku': {
+        check: function check(ua) {
+          return ua.match(/Roku/i) && !ua.match(/TCL/i);
+        },
+        name: 'Roku'
+      },
+      'Xiaomi Mi Box': {
+        check: function check(ua) {
+          return ua.match(/MiBox|Xiaomi/i);
+        },
+        name: 'Xiaomi Mi Box'
+      },
+      'Apple TV': {
+        check: function check(ua) {
+          return Lampa.Platform.screen('tv') && ua.match(/Apple/) && ua.match(/iPad/) && !Lampa.Platform.screen('mobile');
+        },
+        name: 'Apple TV'
+      },
+      'LG WebOS TV': {
+        check: function check(ua) {
+          return Lampa.Platform.screen('tv') && ua.match(/WebOS|LG/i);
+        },
+        name: 'LG WebOS TV'
+      },
+      'Samsung Tizen TV': {
+        check: function check(ua) {
+          return Lampa.Platform.screen('tv') && ua.match(/Samsung|Tizen/i);
+        },
+        name: 'Samsung Tizen TV'
+      },
+      'Sony Bravia TV': {
+        check: function check(ua) {
+          return Lampa.Platform.screen('tv') && ua.match(/Sony|Bravia/i);
+        },
+        name: 'Sony Bravia TV'
+      },
+      'TCL Roku TV': {
+        check: function check(ua) {
+          return Lampa.Platform.screen('tv') && ua.match(/Roku|TCL/i);
+        },
+        name: 'TCL Roku TV'
+      },
+      'Hisense VIDAA TV': {
+        check: function check(ua) {
+          return Lampa.Platform.screen('tv') && ua.match(/VIDAA|Hisense/i);
+        },
+        name: 'Hisense VIDAA TV'
+      },
+      'Haier Smart TV': {
+        check: function check(ua) {
+          return Lampa.Platform.screen('tv') && ua.match(/Haier/i);
+        },
+        name: 'Haier Smart TV'
+      },
+      'Yandex Smart TV': {
+        check: function check(ua) {
+          return Lampa.Platform.screen('tv') && ua.match(/YNDX|Yandex|YandexTV/i);
+        },
+        name: 'Yandex Smart TV'
+      },
+      'Android Device': {
+        check: function check(ua) {
+          return ua.match(/Android/) && !Lampa.Platform.screen('tv');
+        },
+        name: 'Android Device'
+      },
+      'Smart TV': {
+        check: function check(ua) {
+          return Lampa.Platform.screen('tv') && ua.match(/Smart-TV|Smart TV|TV/i);
+        },
+        name: 'Smart TV'
+      },
+      'Android TV': {
+        check: function check(ua) {
+          return Lampa.Platform.screen('tv') && ua.match(/Android/) && !ua.match(/MiBox|SHIELD|Yandex/i);
+        },
+        name: 'Android TV'
+      },
+      'iPhone': {
+        check: function check(ua) {
+          return ua.match(/iPhone/);
+        },
+        name: 'iPhone'
+      },
+      'iPad': {
+        check: function check(ua) {
+          return ua.match(/iPad|Macintosh/) && Lampa.Platform.screen('mobile');
+        },
+        name: 'iPad'
+      },
+      'Mac Device': {
+        check: function check(ua) {
+          return ua.match(/Macintosh|iPad/) && !Lampa.Platform.screen('mobile');
+        },
+        name: 'Mac Device'
+      },
+      'Windows PC': {
+        check: function check(ua) {
+          return ua.match(/Windows/);
+        },
+        name: 'Windows PC'
+      }
+    };
+    function getDeviceName() {
+      var ua = navigator.userAgent || '';
+      var name = 'Unknown Device';
+      for (var k in DEVICE_TYPES) {
+        if (DEVICE_TYPES[k].check(ua)) {
+          name = DEVICE_TYPES[k].name;
+          break;
+        }
+      }
+      var m = ua.match(/\((.*?)\)/);
+      var details = m ? m[1] : '';
+      return details ? name + ' - (' + details + ')' : name;
+    }
+
+    /**
+     * Повертає API credentials для Telegram.
+     * Якщо gramlink_app_type === 'custom' — читає зі storage.
+     * Інакше — дефолтні Lampa credentials.
+     */
+    function getApiCredentials() {
+      var apiId = 24911245;
+      var apiHash = 'af35604124d731e01a113639b905e10e';
+      var appType = Lampa.Storage.get(STORAGE_KEYS.APP_TYPE, 'lampa');
+      if (appType === 'custom') {
+        apiId = parseInt(Lampa.Storage.get(STORAGE_KEYS.API_ID, ''), 10);
+        apiHash = Lampa.Storage.get(STORAGE_KEYS.API_HASH, '');
+      }
+      return {
+        apiId: apiId,
+        apiHash: apiHash
+      };
+    }
+
+    var VERSION = '0.0.6';
     var instance = null;
     var GramLinkClient = /*#__PURE__*/function () {
       function GramLinkClient() {
@@ -1111,6 +1921,7 @@
         this._heartbeatTimer = null;
         this._pollTimer = null;
         this._dcPollTimer = null;
+        this._heartbeatMsgId = null; // ponytail: cached heartbeat message ID
         this.tgClient = null; // GramJS TelegramClient instance
       }
       return _createClass(GramLinkClient, [{
@@ -1119,21 +1930,21 @@
         // ─── Auth helpers (used by auth.js) ────────────────────────
 
         function saveCredentials(dcId, authKeyHex) {
-          Lampa.Storage.set(STORAGE_DC_ID, String(dcId));
-          Lampa.Storage.set(STORAGE_AUTH_KEY, authKeyHex);
+          Lampa.Storage.set(STORAGE_KEYS.DC_ID, String(dcId));
+          Lampa.Storage.set(STORAGE_KEYS.AUTH_KEY, authKeyHex);
         }
       }, {
         key: "hasCredentials",
         value: function hasCredentials() {
-          var dc = Lampa.Storage.get(STORAGE_DC_ID, '');
-          var key = Lampa.Storage.get(STORAGE_AUTH_KEY, '');
+          var dc = Lampa.Storage.get(STORAGE_KEYS.DC_ID, '');
+          var key = Lampa.Storage.get(STORAGE_KEYS.AUTH_KEY, '');
           return !!(dc && key);
         }
       }, {
         key: "clearCredentials",
         value: function clearCredentials() {
-          Lampa.Storage.set(STORAGE_DC_ID, '');
-          Lampa.Storage.set(STORAGE_AUTH_KEY, '');
+          Lampa.Storage.set(STORAGE_KEYS.DC_ID, '');
+          Lampa.Storage.set(STORAGE_KEYS.AUTH_KEY, '');
         }
 
         // ─── Connection ────────────────────────────────────────────
@@ -1170,8 +1981,8 @@
             var TelegramClient = tg.TelegramClient;
             var MemorySession = tg.MemorySession;
             tg.Api;
-            var dcId = parseInt(Lampa.Storage.get(STORAGE_DC_ID, ''), 10);
-            var authKeyHex = Lampa.Storage.get(STORAGE_AUTH_KEY, '');
+            var dcId = parseInt(Lampa.Storage.get(STORAGE_KEYS.DC_ID, ''), 10);
+            var authKeyHex = Lampa.Storage.get(STORAGE_KEYS.AUTH_KEY, '');
             if (!dcId || !authKeyHex) {
               self._connecting = false;
               throw new Error('Authorization required');
@@ -1303,7 +2114,8 @@
               if (proxyOptions) {
                 clientOptions.proxy = proxyOptions;
               }
-              var client = new TelegramClient(session, TG_API_ID, TG_API_HASH, clientOptions);
+              var creds = getApiCredentials();
+              var client = new TelegramClient(session, creds.apiId, creds.apiHash, clientOptions);
               try {
                 client.setLogLevel('error');
               } catch (e) {}
@@ -1426,28 +2238,11 @@
          */
       }, {
         key: "publishRaw",
-        value: function publishRaw(threadId, text, silent) {
+        value: function publishRaw$1(threadId, text, silent) {
           if (!this.isConnected()) return Promise.resolve(false);
-          var chatId = parseInt(Lampa.Storage.get(STORAGE_CHANNEL_ID$2, ''), 10);
+          var chatId = parseInt(Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, ''), 10);
           if (!chatId) return Promise.resolve(false);
-          var Api = window.telegram.Api;
-          var formattingEntities = [new Api.MessageEntityPre({
-            offset: 0,
-            length: text.length,
-            language: 'json'
-          })];
-          var sendArgs = {
-            message: text,
-            formattingEntities: formattingEntities
-          };
-          if (threadId) sendArgs.replyTo = parseInt(threadId, 10);
-          if (silent) sendArgs.silent = true;
-          return this.tgClient.sendMessage(chatId, sendArgs).then(function (result) {
-            return result ? result.id : 0;
-          })["catch"](function (err) {
-            console.error('GramLink', 'publishRaw error:', err);
-            return false;
-          });
+          return publishRaw(this.tgClient, chatId, threadId, text, silent);
         }
 
         /**
@@ -1471,40 +2266,9 @@
         }
       }, {
         key: "publish",
-        value: function publish(chatId, threadId, type, payload, targetDeviceId) {
+        value: function publish$1(chatId, threadId, type, payload, targetDeviceId) {
           if (!this.isConnected()) return Promise.resolve(false);
-          var msg = JSON.stringify({
-            meta: {
-              type: type,
-              device_id: getDeviceId(),
-              device_name: getDeviceName(),
-              target_device_id: targetDeviceId || 'all',
-              timestamp: Math.floor(Date.now() / 1000),
-              schema_version: 1
-            },
-            payload: payload || {}
-          }, null, 2);
-          var Api = window.telegram.Api;
-          var formattingEntities = [new Api.MessageEntityPre({
-            offset: 0,
-            length: msg.length,
-            language: 'json'
-          })];
-          var sendArgs = {
-            message: msg,
-            formattingEntities: formattingEntities
-          };
-          if (threadId) sendArgs.replyTo = parseInt(threadId, 10);
-          var syncLogTopicId = Lampa.Storage.get('gramlink_sync_log_topic', '');
-          if (type === 'heartbeat' || threadId && String(threadId) === String(syncLogTopicId)) {
-            sendArgs.silent = true;
-          }
-          return this.tgClient.sendMessage(chatId, sendArgs).then(function (result) {
-            return result ? result.id : 0;
-          })["catch"](function (err) {
-            console.error('GramLink', 'publish error:', err);
-            return false;
-          });
+          return publish(this.tgClient, chatId, threadId, type, payload, targetDeviceId);
         }
 
         // ─── Get online devices (read heartbeat messages) ──────────
@@ -1512,16 +2276,12 @@
         key: "getOnlineDevices",
         value: function getOnlineDevices(chatId, threadId) {
           if (!this.isConnected()) return Promise.resolve([]);
-          var getArgs = {
-            limit: 50
-          };
-          if (threadId) getArgs.replyTo = parseInt(threadId, 10);
-          return this.tgClient.getMessages(chatId, getArgs).then(function (messages) {
+          return getMessages(this.tgClient, chatId, threadId, 50).then(function (messages) {
             var now = Math.floor(Date.now() / 1000);
             var seen = {};
             (messages || []).forEach(function (m) {
               try {
-                var d = JSON.parse(stripCodeFence(m.message || m.text || ''));
+                var d = JSON.parse(stripCodeFence$1(m.text || ''));
                 var meta = d && d.meta;
                 if (!meta || meta.type !== 'heartbeat') return;
                 if (now - meta.timestamp < 90) {
@@ -1540,24 +2300,9 @@
         // ─── Get messages from topic ────────────────────────────────
       }, {
         key: "getMessages",
-        value: function getMessages(chatId, threadId, limit) {
+        value: function getMessages$1(chatId, threadId, limit) {
           if (!this.isConnected()) return Promise.resolve([]);
-          var getArgs = {
-            limit: limit || 50
-          };
-          if (threadId) getArgs.replyTo = parseInt(threadId, 10);
-          return this.tgClient.getMessages(chatId, getArgs).then(function (messages) {
-            return (messages || []).map(function (m) {
-              return {
-                id: m.id,
-                text: m.message || m.text || '',
-                date: m.date,
-                _msg: m // preserve raw message for file download
-              };
-            });
-          })["catch"](function () {
-            return [];
-          });
+          return getMessages(this.tgClient, chatId, threadId, limit);
         }
 
         /**
@@ -1566,68 +2311,27 @@
          */
       }, {
         key: "getMessagesSince",
-        value: function getMessagesSince(threadId, sinceTimestamp, limit) {
+        value: function getMessagesSince$1(threadId, sinceTimestamp, limit) {
           if (!this.isConnected()) return Promise.resolve([]);
-          var chatId = parseInt(Lampa.Storage.get(STORAGE_CHANNEL_ID$2, ''), 10);
+          var chatId = parseInt(Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, ''), 10);
           if (!chatId) return Promise.resolve([]);
-          var getArgs = {
-            limit: limit || 50
-          };
-          if (threadId) getArgs.replyTo = parseInt(threadId, 10);
-          return this.tgClient.getMessages(chatId, getArgs).then(function (messages) {
-            return (messages || []).filter(function (m) {
-              return m.date >= sinceTimestamp;
-            }).map(function (m) {
-              return {
-                id: m.id,
-                text: m.message || m.text || '',
-                date: m.date,
-                _msg: m
-              };
-            });
-          })["catch"](function () {
-            return [];
-          });
+          return getMessagesSince(this.tgClient, chatId, threadId, sinceTimestamp, limit);
         }
 
         // ─── Delete a message ───────────────────────────────────────
       }, {
         key: "deleteMessage",
-        value: function deleteMessage(chatId, messageId) {
+        value: function deleteMessage$1(chatId, messageId) {
           if (!this.isConnected()) return Promise.resolve(false);
-          return this.tgClient.deleteMessages(chatId, [messageId], {
-            revoke: true
-          }).then(function () {
-            return true;
-          })["catch"](function (err) {
-            console.error('GramLink', 'deleteMessage error:', err);
-            return false;
-          });
+          return deleteMessage(this.tgClient, chatId, messageId);
         }
 
         // ─── Edit a message ─────────────────────────────────────────
       }, {
         key: "editMessage",
-        value: function editMessage(chatId, messageId, newText, threadId) {
+        value: function editMessage$1(chatId, messageId, newText, threadId) {
           if (!this.isConnected()) return Promise.resolve(false);
-          var Api = window.telegram.Api;
-          var formattingEntities = [new Api.MessageEntityPre({
-            offset: 0,
-            length: newText.length,
-            language: 'json'
-          })];
-          var opts = {
-            message: messageId,
-            text: newText,
-            formattingEntities: formattingEntities
-          };
-          if (threadId) opts.replyTo = parseInt(threadId, 10);
-          return this.tgClient.editMessage(chatId, opts).then(function () {
-            return true;
-          })["catch"](function (err) {
-            console.error('GramLink', 'editMessage error:', err);
-            return false;
-          });
+          return editMessage(this.tgClient, chatId, messageId, newText, threadId);
         }
 
         // ─── File/document operations (backup) ───────────────────────
@@ -1635,120 +2339,25 @@
         key: "sendFile",
         value: function sendFile(chatId, threadId, dataStr, fileName, caption) {
           if (!this.isConnected()) return Promise.resolve(null);
-          var Api = window.telegram.Api;
-          var Buffer = window.telegram.Buffer;
-          var client = this.tgClient;
-          var fileId = BigInt(Math.floor(Math.random() * 1000000000000));
-          var buf = Buffer.from(dataStr, 'utf-8');
-          var CHUNK = 512 * 1024;
-          var total = Math.ceil(buf.length / CHUNK);
-          var seq = Promise.resolve();
-          for (var i = 0; i < total; i++) {
-            (function (part) {
-              var start = part * CHUNK;
-              var end = Math.min(start + CHUNK, buf.length);
-              var chunk = buf.slice(start, end);
-              seq = seq.then(function () {
-                return client.invoke(new Api.upload.SaveFilePart({
-                  fileId: fileId,
-                  filePart: part,
-                  bytes: chunk
-                }));
-              });
-            })(i);
-          }
-          return seq.then(function () {
-            return client.getInputEntity(chatId);
-          }).then(function (peer) {
-            return client.invoke(new Api.messages.SendMedia({
-              peer: peer,
-              replyTo: new Api.InputReplyToMessage({
-                replyToMsgId: parseInt(threadId, 10)
-              }),
-              media: new Api.InputMediaUploadedDocument({
-                file: new Api.InputFile({
-                  id: fileId,
-                  parts: total,
-                  name: fileName,
-                  md5Checksum: ''
-                }),
-                mimeType: 'application/json',
-                attributes: [new Api.DocumentAttributeFilename({
-                  fileName: fileName
-                })]
-              }),
-              message: caption || '',
-              entities: caption ? [new Api.MessageEntityPre({
-                offset: 0,
-                length: caption.length,
-                language: 'json'
-              })] : [],
-              randomId: BigInt(Math.floor(Math.random() * 1000000000))
-            }));
-          }).then(function (result) {
-            if (result && result.updates) {
-              for (var i = 0; i < result.updates.length; i++) {
-                if (result.updates[i].id) return result.updates[i].id;
-              }
-            }
-            return null;
-          })["catch"](function (err) {
-            console.error('GramLink', 'sendFile error:', err);
-            return null;
-          });
+          return upload(this.tgClient, chatId, threadId, dataStr, fileName, caption);
         }
       }, {
         key: "getBackupFiles",
-        value: function getBackupFiles(chatId, threadId, limit) {
+        value: function getBackupFiles$1(chatId, threadId, limit) {
           if (!this.isConnected()) return Promise.resolve([]);
-          var getArgs = {
-            limit: limit || 20
-          };
-          if (threadId) getArgs.replyTo = parseInt(threadId, 10);
-          return this.tgClient.getMessages(chatId, getArgs).then(function (messages) {
-            return (messages || []).filter(function (m) {
-              return m.media && m.media.document;
-            }).map(function (m) {
-              var fileName = 'backup.json';
-              var attrs = m.media.document.attributes || [];
-              for (var i = 0; i < attrs.length; i++) {
-                if (attrs[i].fileName) {
-                  fileName = attrs[i].fileName;
-                  break;
-                }
-              }
-              return {
-                id: m.id,
-                date: m.date,
-                fileName: fileName,
-                size: m.media.document.size,
-                text: m.message || '',
-                _msg: m
-              };
-            });
-          })["catch"](function () {
-            return [];
-          });
+          return getBackupFiles(this.tgClient, chatId, threadId, limit);
         }
       }, {
         key: "downloadFile",
-        value: function downloadFile(message) {
+        value: function downloadFile$1(message) {
           if (!this.isConnected()) return Promise.resolve(null);
-          if (!message || !message._msg) return Promise.resolve(null);
-          return this.tgClient.downloadMedia(message._msg.media).then(bytesToString)["catch"](function (err) {
-            console.error('GramLink', 'downloadFile error:', err);
-            return null;
-          });
+          return downloadFile(this.tgClient, message);
         }
       }, {
         key: "downloadMessageFile",
-        value: function downloadMessageFile(message) {
-          if (!this.isConnected() || !message || !message._msg) return Promise.resolve(null);
-          if (!message._msg.media || !message._msg.media.document) return Promise.resolve(null);
-          return this.tgClient.downloadMedia(message._msg.media).then(bytesToString)["catch"](function (err) {
-            console.error('GramLink', 'downloadMessageFile error:', err);
-            return null;
-          });
+        value: function downloadMessageFile$1(message) {
+          if (!this.isConnected()) return Promise.resolve(null);
+          return downloadMessageFile(this.tgClient, message);
         }
 
         // ─── Channel operations via GramJS invoke() ─────────────────
@@ -1759,23 +2368,9 @@
          */
       }, {
         key: "findChannel",
-        value: function findChannel(title) {
+        value: function findChannel$1(title) {
           if (!this.isConnected()) return Promise.resolve(null);
-          return this.tgClient.getDialogs({
-            limit: 200
-          }).then(function (dialogs) {
-            for (var i = 0; i < dialogs.length; i++) {
-              var d = dialogs[i];
-              if (d.title === title) {
-                var rawId = d.entity && d.entity.id;
-                if (!rawId) continue;
-                return -100 * Math.pow(10, String(rawId).length) + rawId < 0 ? parseInt('-100' + rawId, 10) : parseInt('-100' + rawId, 10);
-              }
-            }
-            return null;
-          })["catch"](function () {
-            return null;
-          });
+          return findChannel(this.tgClient, title, 200);
         }
 
         /**
@@ -1786,29 +2381,7 @@
         key: "createChannel",
         value: function createChannel(title) {
           if (!this.isConnected()) return Promise.resolve(null);
-          var Api = window.telegram.Api;
-          var client = this.tgClient;
-          return client.invoke(new Api.channels.CreateChannel({
-            title: title,
-            about: 'GramLink: Lampa device sync channel',
-            megagroup: true,
-            forImport: false,
-            forum: true
-          })).then(function (result) {
-            var chat = result.chats && result.chats[0];
-            if (!chat) throw new Error('Channel create: no chat in result');
-            var peerId = parseInt('-100' + chat.id, 10);
-            // Enable forum topics on the newly created group
-            return client.invoke(new Api.channels.ToggleForum({
-              channel: chat,
-              enabled: true
-            }))["catch"](function () {}).then(function () {
-              return peerId;
-            });
-          })["catch"](function (err) {
-            console.error('GramLink', 'createChannel error:', err);
-            return null;
-          });
+          return createForum(this.tgClient, title, 'GramLink: Lampa device sync channel');
         }
 
         /**
@@ -1817,26 +2390,9 @@
          */
       }, {
         key: "createTopic",
-        value: function createTopic(channelId, topicTitle) {
+        value: function createTopic$1(channelId, topicTitle) {
           if (!this.isConnected()) return Promise.resolve(null);
-          var Api = window.telegram.Api;
-          var client = this.tgClient;
-          return client.getInputEntity(channelId).then(function (peer) {
-            return client.invoke(new Api.channels.CreateForumTopic({
-              channel: peer,
-              title: topicTitle,
-              iconColor: 0x0088CC
-            }));
-          }).then(function (result) {
-            var updates = result.updates || [];
-            for (var i = 0; i < updates.length; i++) {
-              if (updates[i].id) return updates[i].id;
-            }
-            return null;
-          })["catch"](function (err) {
-            console.error('GramLink', 'createTopic error:', err);
-            return null;
-          });
+          return createTopic(this.tgClient, channelId, topicTitle, 0x0088CC);
         }
 
         /**
@@ -1845,28 +2401,9 @@
          */
       }, {
         key: "findTopic",
-        value: function findTopic(channelId, topicTitle) {
+        value: function findTopic$1(channelId, topicTitle) {
           if (!this.isConnected()) return Promise.resolve(null);
-          var Api = window.telegram.Api;
-          var client = this.tgClient;
-          return client.getInputEntity(channelId).then(function (peer) {
-            return client.invoke(new Api.channels.GetForumTopics({
-              channel: peer,
-              q: topicTitle,
-              offsetDate: 0,
-              offsetId: 0,
-              offsetTopic: 0,
-              limit: 10
-            }));
-          }).then(function (result) {
-            var topics = result.topics || [];
-            for (var i = 0; i < topics.length; i++) {
-              if (topics[i].title === topicTitle) return topics[i].id;
-            }
-            return null;
-          })["catch"](function () {
-            return null;
-          });
+          return findTopic(this.tgClient, channelId, topicTitle, 10);
         }
 
         // ─── Heartbeat ─────────────────────────────────────────────
@@ -1893,11 +2430,19 @@
               },
               payload: {}
             }, null, 2);
+
+            // ponytail: use cached heartbeat message ID
+            if (self._heartbeatMsgId) {
+              return self.editMessage(chatId, self._heartbeatMsgId, payload, threadId);
+            }
             self._findHeartbeatMessage(chatId, threadId, myId).then(function (result) {
               if (result.id) {
+                self._heartbeatMsgId = result.id; // ponytail: cache it
                 return self.editMessage(chatId, result.id, payload, threadId);
               } else {
-                return self.publish(chatId, threadId, 'heartbeat', {}).then(function () {});
+                return self.publish(chatId, threadId, 'heartbeat', {}).then(function (msgId) {
+                  if (msgId) self._heartbeatMsgId = msgId; // ponytail: cache new message
+                });
               }
             });
           };
@@ -1919,7 +2464,7 @@
             var mine = [];
             (messages || []).forEach(function (m) {
               try {
-                var d = JSON.parse(stripCodeFence(m.message || m.text || ''));
+                var d = JSON.parse(stripCodeFence$1(m.message || m.text || ''));
                 var meta = d && d.meta;
                 if (!meta || meta.type !== 'heartbeat') return;
                 if (meta.device_id === myDeviceId) {
@@ -1972,11 +2517,11 @@
             if (!self.tgClient || !self.tgClient.session) return;
             var currentDc = self.tgClient.session.dcId;
             if (!currentDc) return;
-            var savedDc = parseInt(Lampa.Storage.get(STORAGE_DC_ID, ''), 10);
+            var savedDc = parseInt(Lampa.Storage.get(STORAGE_KEYS.DC_ID, ''), 10);
             if (currentDc !== savedDc) {
-              Lampa.Storage.set(STORAGE_DC_ID, String(currentDc));
+              Lampa.Storage.set(STORAGE_KEYS.DC_ID, String(currentDc));
             }
-          }, 60000);
+          }, 300000); // ponytail: relaxed DC poller (5 min)
         }
       }, {
         key: "_stopDcPoller",
@@ -1993,11 +2538,13 @@
         value: function _startUpdateListener() {
           var self = this;
           if (!self.tgClient) return;
-          self.tgClient.addEventHandler(function (update) {
+
+          // ponytail: save handler for cleanup
+          self._updateHandler = function (update) {
             try {
               var msg = update.message;
               if (!msg || !msg.message) return;
-              var d = JSON.parse(stripCodeFence(msg.message));
+              var d = JSON.parse(stripCodeFence$1(msg.message));
               if (!d || !d.meta) return;
               var myId = getDeviceId();
 
@@ -2013,12 +2560,19 @@
               if (d.meta.device_id === myId) return;
               self._emit(d.meta.type, d);
             } catch (e) {}
-          });
+          };
+          self.tgClient.addEventHandler(self._updateHandler); // ponytail: use saved handler
         }
       }, {
         key: "_stopUpdateListener",
         value: function _stopUpdateListener() {
-          // GramJS cleans up handlers on disconnect
+          // ponytail: proper handler cleanup
+          if (this.tgClient && this._updateHandler) {
+            try {
+              this.tgClient.removeEventHandler(this._updateHandler);
+            } catch (e) {}
+            this._updateHandler = null;
+          }
         }
 
         // ─── Event emitter ─────────────────────────────────────────
@@ -2056,160 +2610,8 @@
         }
       }]);
     }(); // ─── UTF-8 decode helper ─────────────────────────────────
-    function bytesToString(data) {
-      if (!data) return null;
-      try {
-        return new TextDecoder('utf-8', {
-          fatal: false
-        }).decode(data);
-      } catch (e) {
-        var str = '';
-        for (var i = 0; i < data.length; i++) {
-          str += String.fromCharCode(data[i]);
-        }
-        return str;
-      }
-    }
 
-    // ─── Device fingerprinting ────────────────────────────────
-
-    var DEVICE_TYPES = {
-      'Amazon Fire TV': {
-        check: function check(ua) {
-          return ua.match(/Fire TV|Amazon/i);
-        },
-        name: 'Amazon Fire TV'
-      },
-      'NVIDIA Shield TV': {
-        check: function check(ua) {
-          return ua.match(/SHIELD|NVIDIA/i);
-        },
-        name: 'NVIDIA Shield TV'
-      },
-      'Roku': {
-        check: function check(ua) {
-          return ua.match(/Roku/i) && !ua.match(/TCL/i);
-        },
-        name: 'Roku'
-      },
-      'Xiaomi Mi Box': {
-        check: function check(ua) {
-          return ua.match(/MiBox|Xiaomi/i);
-        },
-        name: 'Xiaomi Mi Box'
-      },
-      'Apple TV': {
-        check: function check(ua) {
-          return Lampa.Platform.screen('tv') && ua.match(/Apple/) && ua.match(/iPad/) && !Lampa.Platform.screen('mobile');
-        },
-        name: 'Apple TV'
-      },
-      'LG WebOS TV': {
-        check: function check(ua) {
-          return Lampa.Platform.screen('tv') && ua.match(/WebOS|LG/i);
-        },
-        name: 'LG WebOS TV'
-      },
-      'Samsung Tizen TV': {
-        check: function check(ua) {
-          return Lampa.Platform.screen('tv') && ua.match(/Samsung|Tizen/i);
-        },
-        name: 'Samsung Tizen TV'
-      },
-      'Sony Bravia TV': {
-        check: function check(ua) {
-          return Lampa.Platform.screen('tv') && ua.match(/Sony|Bravia/i);
-        },
-        name: 'Sony Bravia TV'
-      },
-      'TCL Roku TV': {
-        check: function check(ua) {
-          return Lampa.Platform.screen('tv') && ua.match(/Roku|TCL/i);
-        },
-        name: 'TCL Roku TV'
-      },
-      'Hisense VIDAA TV': {
-        check: function check(ua) {
-          return Lampa.Platform.screen('tv') && ua.match(/VIDAA|Hisense/i);
-        },
-        name: 'Hisense VIDAA TV'
-      },
-      'Haier Smart TV': {
-        check: function check(ua) {
-          return Lampa.Platform.screen('tv') && ua.match(/Haier/i);
-        },
-        name: 'Haier Smart TV'
-      },
-      'Yandex Smart TV': {
-        check: function check(ua) {
-          return Lampa.Platform.screen('tv') && ua.match(/YNDX|Yandex|YandexTV/i);
-        },
-        name: 'Yandex Smart TV'
-      },
-      'Android Device': {
-        check: function check(ua) {
-          return ua.match(/Android/) && !Lampa.Platform.screen('tv');
-        },
-        name: 'Android Device'
-      },
-      'Smart TV': {
-        check: function check(ua) {
-          return Lampa.Platform.screen('tv') && ua.match(/Smart-TV|Smart TV|TV/i);
-        },
-        name: 'Smart TV'
-      },
-      'Android TV': {
-        check: function check(ua) {
-          return Lampa.Platform.screen('tv') && ua.match(/Android/) && !ua.match(/MiBox|SHIELD|Yandex/i);
-        },
-        name: 'Android TV'
-      },
-      'iPhone': {
-        check: function check(ua) {
-          return ua.match(/iPhone/);
-        },
-        name: 'iPhone'
-      },
-      'iPad': {
-        check: function check(ua) {
-          return ua.match(/iPad|Macintosh/) && Lampa.Platform.screen('mobile');
-        },
-        name: 'iPad'
-      },
-      'Mac Device': {
-        check: function check(ua) {
-          return ua.match(/Macintosh|iPad/) && !Lampa.Platform.screen('mobile');
-        },
-        name: 'Mac Device'
-      },
-      'Windows PC': {
-        check: function check(ua) {
-          return ua.match(/Windows/);
-        },
-        name: 'Windows PC'
-      }
-    };
-    function getDeviceId() {
-      var id = Lampa.Storage.get(STORAGE_DEVICE_ID, '');
-      if (!id) {
-        id = 'tv_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-        Lampa.Storage.set(STORAGE_DEVICE_ID, id);
-      }
-      return id;
-    }
-    function getDeviceName() {
-      var ua = navigator.userAgent || '';
-      var name = 'Unknown Device';
-      for (var k in DEVICE_TYPES) {
-        if (DEVICE_TYPES[k].check(ua)) {
-          name = DEVICE_TYPES[k].name;
-          break;
-        }
-      }
-      var m = ua.match(/\((.*?)\)/);
-      var details = m ? m[1] : '';
-      return details ? name + ' - (' + details + ')' : name;
-    }
+    // ─── Device fingerprinting (moved to sdk/device) ──────────
 
     // ─── Message parsing helpers ──────────────────────────────
 
@@ -2386,6 +2788,287 @@
     }
 
     /**
+     * sdk/avatars.js — Avatar-генерація та ініціали
+     *
+     * Усуває:
+     *   D-04 — extractNameFromUrl тепер в одному місці
+     *   D-05a,b — DICE_BEAR_BASE, DICE_BEAR_STYLES в одному місці
+     *   D-05c — avatarLetters (auth.js:193) = getInitials (profiles.js:184) тепер одне
+     *   D-15 — renderAvatar() — 4 копії avatar HTML builder
+     *   D-16 — avatarColor тепер викликається звідси, не з profiles.js
+     *
+     * Використання:
+     *   import { getAvatar, avatarColor, renderAvatar, getInitials } from '../sdk/avatars'
+     */
+    var DICE_BEAR_BASE = 'https://api.dicebear.com/10.x/';
+    var DICE_BEAR_STYLES = ['adventurer', 'adventurer-neutral', 'avataaars', 'avataaars-neutral', 'big-ears', 'big-ears-neutral', 'big-smile', 'bottts', 'bottts-neutral', 'croodles', 'croodles-neutral', 'disco', 'dylan', 'fun-emoji', 'glass', 'glyphs', 'icons', 'identicon', 'initial-face', 'initials', 'lorelei', 'lorelei-neutral', 'micah', 'miniavs', 'notionists', 'notionists-neutral', 'open-peeps', 'personas', 'pixel-art', 'pixel-art-neutral', 'rings', 'shape-grid', 'shapes', 'stripes', 'thumbs', 'toon-head', 'triangles'];
+    var COLORS = ['#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ff9800', '#ff5722', '#795548'];
+
+    /**
+     * Генерує URL аватара через DiceBear або ініціали, якщо стиль вимкнено.
+     */
+    function getAvatar(name) {
+      var style = Lampa.Storage.get(STORAGE_KEYS.AVATAR_STYLE, 'fun-emoji');
+      if (!style) return getInitials(name);
+      return DICE_BEAR_BASE + style + '/svg?seed=' + encodeURIComponent(name) + '&borderRadius=50';
+    }
+
+    /**
+     * Повертає ініціали імені:
+     *   1 слово → перші 2 літери
+     *   2+ слів → перші літери кожного слова
+     */
+    function getInitials(name) {
+      if (!name) return '??';
+      var parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] || '') + (parts[1][0] || '');
+      }
+      return name.slice(0, 2);
+    }
+
+    /**
+     * Детермінований колір на основі імені.
+     */
+    function avatarColor(name) {
+      if (!name) return '#0088cc';
+      var hash = 0;
+      for (var i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return COLORS[Math.abs(hash) % COLORS.length];
+    }
+
+    /**
+     * Перевіряє, чи avatar є DiceBear URL (а не ініціалами).
+     */
+    function isAvatarUrl(avatar) {
+      return avatar && avatar.indexOf(DICE_BEAR_BASE) === 0;
+    }
+
+    /**
+     * Повертає готовий HTML для аватара.
+     * @param {string} name
+     * @param {Object} [options]
+     * @param {string} [options.className='gramlink-avatar']
+     * @param {string} [options.style] — додатковий CSS
+     * @returns {string} HTML рядок
+     */
+    function renderAvatar(name, options) {
+      if (!options) options = {};
+      var url = getAvatar(name);
+      var color = avatarColor(name);
+      var isUrl = isAvatarUrl(url);
+      var clsName = options.className || 'gramlink-avatar';
+      var extraStyle = options.style || '';
+      if (isUrl) {
+        return '<img src="' + url + '" alt="" class="' + clsName + '"' + (extraStyle ? ' style="' + extraStyle + '"' : '') + '>';
+      }
+      return '<div class="' + clsName + '" style="background:' + color + ';border-radius:50%;' + 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;' + 'color:#fff;font-weight:700;' + extraStyle + '">' + url + '</div>';
+    }
+
+    /**
+     * Витягує назву плагіна з URL.
+     */
+    function extractNameFromUrl(url) {
+      try {
+        var parts = url.split('/');
+        var fname = parts[parts.length - 1] || parts[parts.length - 2] || 'Plugin';
+        return fname.replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' ');
+      } catch (e) {
+        return 'Plugin';
+      }
+    }
+
+    var PROFILE_META_VERSION = 3;
+
+    // ─── Storage helpers ──────────────────────────────────────────────────
+
+    function readJSON(key, def) {
+      try {
+        return Lampa.Storage.get(key, def);
+      } catch (e) {
+        return def;
+      }
+    }
+    function collectFavorite() {
+      return readJSON('favorite', {});
+    }
+    function collectTimeline() {
+      return readJSON('file_view', {});
+    }
+    function collectPlugins() {
+      return readJSON('plugins', []);
+    }
+    function collectSettings() {
+      return {
+        sync_enabled: Lampa.Storage.get('gramlink_sync_enabled', false),
+        heartbeat: Lampa.Storage.get('gramlink_heartbeat', false),
+        broadcast: Lampa.Storage.get('gramlink_broadcast', false)
+      };
+    }
+
+    // ─── Caption builder ─────────────────────────────────────────────────
+
+    /**
+     * Будує JSON для caption повідомлення профілю.
+     *
+     * @param {Object} profile — { name, avatar, updated? }
+     * @param {Object} [extras] — додаткові поля meta (source, source_id, тощо)
+     * @returns {string} JSON рядок
+     */
+    function buildCaption(profile, extras) {
+      if (!extras) extras = {};
+      return JSON.stringify({
+        meta: _objectSpread2({
+          type: 'profile',
+          timestamp: Math.floor(Date.now() / 1000),
+          version: PROFILE_META_VERSION
+        }, extras),
+        payload: {
+          profile: {
+            name: profile.name,
+            avatar: profile.avatar,
+            updated: profile.updated || Math.floor(Date.now() / 1000)
+          }
+        }
+      });
+    }
+
+    // ─── File data builder ────────────────────────────────────────────────
+
+    /**
+     * Будує повний fileData для файлу профілю.
+     *
+     * @param {Object} opts
+     * @param {string} opts.name
+     * @param {string} opts.avatar
+     * @param {Object} [opts.bookmarks]
+     * @param {Object} [opts.timeline]
+     * @param {Array} [opts.plugins]
+     * @param {Object} [opts.settings]
+     * @param {Object} [opts.device_overrides]
+     * @returns {Object} fileData для JSON.stringify
+     */
+    function buildFileData(opts) {
+      var now = Math.floor(Date.now() / 1000);
+      return {
+        profile_meta: {
+          name: opts.name,
+          avatar: opts.avatar,
+          updated: now
+        },
+        bookmarks: opts.bookmarks || {
+          favorite: {}
+        },
+        timeline: opts.timeline || {},
+        plugins: opts.plugins || [],
+        settings: opts.settings || collectSettings(),
+        device_overrides: opts.device_overrides || {}
+      };
+    }
+
+    // ─── Parsers ──────────────────────────────────────────────────────────
+
+    /**
+     * Парсить caption повідомлення профілю.
+     * Повертає payload.profile або null.
+     */
+    function parseCaption(text) {
+      try {
+        var d = JSON.parse(stripCodeFence$1(text || ''));
+        return d && d.payload && d.payload.profile;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    /**
+     * Перевіряє, чи текст є валідним profile-повідомленням.
+     * Повертає parsed object або null.
+     */
+    function parseProfileMessage(text) {
+      try {
+        var d = JSON.parse(stripCodeFence$1(text || ''));
+        return d && d.meta && d.meta.type === 'profile' ? d : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    /**
+     * Знаходить цільове повідомлення в масиві за msgId.
+     * Патерн, який дублювався 6 разів (D-11).
+     */
+    function findMessageById(messages, msgId) {
+      var target = null;
+      messages.forEach(function (m) {
+        if (String(m.id) === String(msgId)) target = m;
+      });
+      return target;
+    }
+
+    // ─── Deep clone ───────────────────────────────────────────────────────
+
+    /**
+     * Глибоке клонування об'єкта.
+     * Використовує structuredClone (сучасні браузери/Smart TV >=2020)
+     * з fallback на JSON.parse/stringify.
+     */
+    function deepClone(obj) {
+      if (typeof structuredClone === 'function') {
+        return structuredClone(obj);
+      }
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    // ─── File name builder ────────────────────────────────────────────────
+
+    /**
+     * Будує ім'я файлу для профілю.
+     */
+    function buildProfileFileName(name, now) {
+      return 'profile_' + name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + now + '.json';
+    }
+
+    // ─── Delta cursor ─────────────────────────────────────────────────────
+
+    var STORAGE_LAST_DELTA_SEEN = 'gramlink_last_delta_seen';
+    function getLastDeltaSeen() {
+      return parseInt(Lampa.Storage.get(STORAGE_LAST_DELTA_SEEN, '0'), 10);
+    }
+    function setLastDeltaSeen(timestamp) {
+      Lampa.Storage.set(STORAGE_LAST_DELTA_SEEN, String(timestamp));
+    }
+
+    /**
+     * sdk/topic-config.js — Конфігурація каналу та топіків
+     *
+     * Усуває:
+     *   D-02 — CHANNEL_TITLE та TOPIC_NAMES тепер в одному місці.
+     *          auth.js мав власний масив TOPICS (4 елементи, без remote-cmd);
+     *          hub.js мав TOPIC_NAMES (5 елементів, з remote-cmd).
+     *          Тепер одне джерело істини: 5 топіків.
+     *
+     * Використання:
+     *   import { CHANNEL_TITLE, TOPIC_NAMES, TOPIC_STORAGE_KEYS } from '../sdk/topic-config'
+     */
+
+    var CHANNEL_TITLE = "\uD83D\uDD04 Lampa Sync [DO NOT DELETE]";
+    var TOPIC_NAMES = ['sync-log', 'remote-cmd', 'backup', 'profiles', 'profiles-sync'];
+
+    /**
+     * Мапа ім'я топіка → storage key.
+     */
+    var TOPIC_STORAGE_KEYS = {
+      'sync-log': 'gramlink_sync_log_topic',
+      'remote-cmd': 'gramlink_remote_cmd_topic',
+      'backup': 'gramlink_backup_topic',
+      'profiles': 'gramlink_profiles_topic',
+      'profiles-sync': 'gramlink_profiles_sync_topic'
+    };
+
+    /**
      * auth.js — QR + 2FA authorization flow via GramJS (no backend)
      *
      * Uses GramJS high-level API client.signInUserWithQrCode() which handles:
@@ -2412,21 +3095,21 @@
      *   8. SRP computed locally (100k PBKDF2-SHA512 + mod-exp) → auth.CheckPassword
      *   9. Success: save dcId + authKey hex, trigger Client.getInstance().connect()
      */
-
-    // ponytail: channel/topic constants duplicated from hub.js to avoid circular dep
-    var CHANNEL_TITLE = '🔄 Lampa Sync [DO NOT DELETE]';
     var TOPICS = [{
       name: 'sync-log',
-      key: 'gramlink_sync_log_topic'
+      key: TOPIC_STORAGE_KEYS['sync-log']
+    }, {
+      name: 'remote-cmd',
+      key: TOPIC_STORAGE_KEYS['remote-cmd']
     }, {
       name: 'profiles',
-      key: 'gramlink_profiles_topic'
+      key: TOPIC_STORAGE_KEYS['profiles']
     }, {
       name: 'profiles-sync',
-      key: 'gramlink_profiles_sync_topic'
+      key: TOPIC_STORAGE_KEYS['profiles-sync']
     }, {
       name: 'backup',
-      key: 'gramlink_backup_topic'
+      key: TOPIC_STORAGE_KEYS['backup']
     }];
     var authCancelFlag = false;
     var tgClient = null; // Temporary GramJS client used during auth flow
@@ -2447,40 +3130,21 @@
       tgClient = null;
     }
 
-    /**
-     * Resolve API credentials from Lampa.Storage.
-     *   gramlink_app_type === 'lampa' (default) → use Lampa's bundled credentials
-     *   gramlink_app_type === 'custom' → use gramlink_api_id + gramlink_api_hash from storage
-     */
-    function getApiCredentials() {
-      var apiId = 24911245;
-      var apiHash = 'af35604124d731e01a113639b905e10e';
-      var appType = Lampa.Storage.get('gramlink_app_type', 'lampa');
-      if (appType === 'custom') {
-        apiId = parseInt(Lampa.Storage.get('gramlink_api_id', ''), 10);
-        apiHash = Lampa.Storage.get('gramlink_api_hash', '');
-      }
-      return {
-        apiId: apiId,
-        apiHash: apiHash
-      };
-    }
-
     // ponytail: background channel init — avoids "Sync channel not ready" error
     function autoEnsureSyncChannel() {
       var client = GramLinkClient.getInstance();
-      if (Lampa.Storage.get('gramlink_channel_id', '')) return;
+      if (Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, '')) return;
       Lampa.Bell.push({
         text: 'GramLink: Setting up sync channel...'
       });
       client.findChannel(CHANNEL_TITLE).then(function (id) {
         if (id) {
-          Lampa.Storage.set('gramlink_channel_id', id);
+          Lampa.Storage.set(STORAGE_KEYS.CHANNEL_ID, id);
           return ensureAllTopics();
         }
         return client.createChannel(CHANNEL_TITLE).then(function (peerId) {
           if (!peerId) return;
-          Lampa.Storage.set('gramlink_channel_id', peerId);
+          Lampa.Storage.set(STORAGE_KEYS.CHANNEL_ID, peerId);
           return createAllTopics(peerId);
         });
       }).then(function () {
@@ -2494,7 +3158,7 @@
     }
     function ensureAllTopics() {
       var client = GramLinkClient.getInstance();
-      var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
+      var channelId = getChannelId();
       var seq = Promise.resolve();
       TOPICS.forEach(function (t) {
         if (Lampa.Storage.get(t.key, '')) return;
@@ -2528,71 +3192,45 @@
 
     // ponytail: auto-create default profile so user can use plugin immediately
     function autoCreateDefaultProfile() {
-      var profilesTopicId = Lampa.Storage.get('gramlink_profiles_topic', '');
+      var profilesTopicId = Lampa.Storage.get(STORAGE_KEYS.PROFILES_TOPIC, '');
       if (!profilesTopicId) return;
       var client = GramLinkClient.getInstance();
       if (!client.isConnected()) return;
-      var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
+      var channelId = getChannelId();
       if (!channelId) return;
       client.getMessages(channelId, profilesTopicId, 10).then(function (msgs) {
         var hasProfiles = false;
         msgs.forEach(function (m) {
           if (!m.text) return;
-          try {
-            var d = JSON.parse(stripCodeFence(m.text));
-            if (d && d.meta && d.meta.type === 'profile') hasProfiles = true;
-          } catch (e) {}
+          if (parseProfileMessage(m.text)) hasProfiles = true;
         });
         if (!hasProfiles) createGeneralProfile(channelId, profilesTopicId, client);
       })["catch"](function () {});
     }
     function createGeneralProfile(channelId, profilesTopicId, client) {
       var name = 'General';
-      var avatar = avatarLetters(name);
+      var avatar = getInitials(name);
       var now = Math.floor(Date.now() / 1000);
-      var caption = JSON.stringify({
-        meta: {
-          type: 'profile',
-          timestamp: now,
-          version: 2
-        },
-        payload: {
-          profile: {
-            name: name,
-            avatar: avatar,
-            updated: now
-          }
-        }
+      var caption = buildCaption({
+        name: name,
+        avatar: avatar,
+        updated: now
       });
-      function readJSON(key, def) {
-        try {
-          return Lampa.Storage.get(key, def);
-        } catch (e) {
-          return def;
-        }
-      }
-      var fileData = {
-        profile_meta: {
-          name: name,
-          avatar: avatar,
-          updated: now
-        },
+      var fileData = buildFileData({
+        name: name,
+        avatar: avatar,
         bookmarks: {
           favorite: readJSON('favorite', {})
         },
         timeline: readJSON('file_view', {}),
         plugins: readJSON('plugins', []),
-        settings: {
-          sync_enabled: Lampa.Storage.get('gramlink_sync_enabled', false),
-          heartbeat: Lampa.Storage.get('gramlink_heartbeat', false),
-          broadcast: Lampa.Storage.get('gramlink_broadcast', false)
-        }
-      };
+        settings: readJSON('gramlink_sync_settings', {})
+      });
       client.sendFile(channelId, profilesTopicId, JSON.stringify(fileData, null, 2), 'profile_General_' + now + '.json', caption).then(function (msgId) {
         if (!msgId) return;
-        Lampa.Storage.set('gramlink_active_profile', String(msgId));
-        Lampa.Storage.set('gramlink_active_profile_ts', String(now));
-        Lampa.Storage.set('gramlink_active_profile_name', name);
+        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE, String(msgId));
+        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE_TS, String(now));
+        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE_NAME, name);
         // Reload to apply cached/imported data
         setTimeout(function () {
           window.location.reload();
@@ -2600,11 +3238,6 @@
       })["catch"](function (err) {
         console.warn('GramLink', 'Auto-create profile failed:', err);
       });
-    }
-    function avatarLetters(name) {
-      if (!name) return '??';
-      var parts = name.trim().split(/\s+/);
-      return parts.length >= 2 ? (parts[0][0] || '') + (parts[1][0] || '') : name.slice(0, 2);
     }
 
     // ── Shared auth success handler ────────────────────────────────────
@@ -2637,7 +3270,7 @@
 
       // Save user display name (username > firstName+lastName > phone)
       var displayName = user.username || '' || [user.firstName, user.lastName].filter(Boolean).join(' ') || user.phone || 'User';
-      Lampa.Storage.set('gramlink_user_name', displayName);
+      Lampa.Storage.set(STORAGE_KEYS.USER_NAME, displayName);
       GramLinkClient.getInstance().saveCredentials(dcId, authKeyHex);
       cancelAuth();
       Lampa.Modal.close();
@@ -3058,485 +3691,523 @@
       });
     }
 
-    /**
-     * plugin_manager.js — GramLink Plugin Manager
-     *
-     * Activity-компонента для перегляду та редагування списку плагінів профілю.
-     * Побудована на нативному патерні Lampa Component (Lampa.Scroll + .settings-folder).
-     * Публічний API PluginManager.open() збережено для settings.js та profiles.js.
-     */
-    function PluginManagerComponent(object) {
-      var self = this;
-      var scroll = null;
-      var last = null;
-      var plugins = object._plugins || [];
-      var isActive = object._isActive || false;
-      var profileMsgId = object._profileMsgId;
-      var profileName = object._profileName || 'Unnamed';
-      var originalData = object._originalData || null;
-
-      // ─── Lifecycle ──────────────────────────────────────────
-
-      self.create = function () {
-        scroll = new Lampa.Scroll({
-          mask: true,
-          over: true
-        });
-        self.html = $('<div class="gramlink-activity"></div>');
-        scroll.render().addClass('gramlink-scroll');
-        self.html.append(scroll.render());
-        scroll.onWheel = function (step) {
-          if (!last) return;
-          Navigator.move(step > 0 ? 'down' : 'up');
-        };
-        scroll.render().on('hover:focus', function (e) {
-          last = e.target;
-          scroll.update($(e.target), true);
-        });
-        scroll.render().on('hover:hover hover:touch', function (e) {
-          last = e.target;
-        });
-        renderPluginList();
-        return self.render();
-      };
-      self.render = function () {
-        return self.html;
-      };
-      self.start = function () {
-        Lampa.Controller.add('content', {
-          toggle: function toggle() {
-            Lampa.Controller.collectionSet(scroll.render());
-            var focus = last && $(last).closest('body').length ? last : false;
-            Lampa.Controller.collectionFocus(focus, scroll.render());
-          },
-          up: function up() {
-            if (Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
-          },
-          down: function down() {
-            Navigator.move('down');
-          },
-          left: function left() {
-            if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
-          },
-          right: function right() {
-            Navigator.move('right');
-          },
-          back: function back() {
-            Lampa.Activity.backward();
-          }
-        });
-        Lampa.Controller.toggle('content');
-      };
-      self.pause = function () {};
-      self.stop = function () {};
-      self.destroy = function () {
-        if (self.__destroyed) return;
-        self.__destroyed = true;
-        try {
-          if (scroll) scroll.destroy();
-        } catch (e) {}
-        try {
-          self.html.remove();
-        } catch (e) {}
-      };
-      self.back = function () {
-        Lampa.Activity.backward();
-      };
-
-      // ─── Рендер списку плагінів ────────────────────────────
-
-      function renderPluginList() {
-        scroll.clear();
-        if (plugins.length === 0) {
-          scroll.body().append('<div class="settings-param-title"><span>' + (Lampa.Lang.translate('gramlink_plugins_empty') || 'No plugins') + '</span></div>');
-        } else {
-          plugins.forEach(function (plugin, idx) {
-            scroll.body().append(renderPluginItem(plugin, idx));
-          });
-        }
-        scroll.body().append(renderAddButton());
-        bindItemEvents();
-      }
-      function renderPluginItem(plugin, idx) {
-        var isOn = plugin.status === 1;
-        return $('<div class="settings-folder selector gs-plugin-item" data-idx="' + idx + '">' + '<div class="settings-folder__icon">' + '<div class="gs-plugin-toggle ' + (isOn ? 'on' : 'off') + '">' + (isOn ? '●' : '○') + '</div>' + '</div>' + '<div class="settings-folder__name">' + '<div>' + escHtml(plugin.name || 'Plugin') + '</div>' + '<div class="settings-folder__sub">' + escHtml(truncateUrl(plugin.url)) + '</div>' + '</div>' + '</div>');
-      }
-      function renderAddButton() {
-        return $('<div class="settings-folder selector gs-plugin-add">' + '<div class="settings-folder__icon">' + '<svg width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>' + '</div>' + '<div class="settings-folder__name">' + '<div>' + (Lampa.Lang.translate('gramlink_plugins_add') || 'Add plugin') + '</div>' + '</div>' + '</div>');
-      }
-
-      // ─── Біндинг подій ─────────────────────────────────────
-
-      function bindItemEvents() {
-        scroll.render().find('.gs-plugin-item').on('hover:enter', function () {
-          var idx = parseInt($(this).data('idx'), 10);
-          if (plugins[idx]) showPluginMenu(plugins[idx], idx);
-        });
-        scroll.render().find('.gs-plugin-item').on('hover:long', function () {
-          var idx = parseInt($(this).data('idx'), 10);
-          if (plugins[idx]) doToggle(plugins[idx], idx);
-        });
-        scroll.render().find('.gs-plugin-add').on('hover:enter', function () {
-          doAddPlugin();
-        });
-      }
-
-      // ─── Підменю для конкретного плагіна ───────────────────
-
-      function showPluginMenu(plugin, idx) {
-        if (!plugin) return;
-        var isOn = plugin.status === 1;
-        Lampa.Select.show({
-          title: plugin.name || plugin.url,
-          items: [{
-            title: Lampa.Lang.translate(isOn ? 'gramlink_plugins_toggle_off' : 'gramlink_plugins_toggle_on') || (isOn ? 'Disable' : 'Enable'),
-            _do: 'toggle'
-          }, {
-            title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove',
-            _do: 'remove'
-          }, {
-            title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
-            _do: 'cancel'
-          }],
-          onBack: function onBack() {
-            Lampa.Controller.toggle('gramlink_plugins');
-          },
-          onSelect: function onSelect(item) {
-            if (item._do === 'toggle') {
-              doToggle(plugin, idx);
-            } else if (item._do === 'remove') {
-              doRemoveConfirm(plugin, idx);
-            } else {
-              Lampa.Controller.toggle('gramlink_plugins');
-            }
-          }
-        });
-      }
-
-      // ─── Дії ───────────────────────────────────────────────
-
-      function doToggle(plugin, idx) {
-        plugin.status = plugin.status === 1 ? 0 : 1;
-        plugins[idx] = plugin;
-        if (isActive) {
-          var live = getLivePlugins();
-          live.forEach(function (p) {
-            if (p.url === plugin.url) p.status = plugin.status;
-          });
-          Lampa.Storage.set('plugins', live);
-          publishDelta('toggle', {
-            url: plugin.url,
-            name: plugin.name,
-            status: plugin.status
-          });
-          Lampa.Noty.show((plugin.name || 'Plugin') + ': ' + (plugin.status === 1 ? 'enabled' : 'disabled'));
-        }
-        if (!isActive) {
-          saveSnapshot(function () {
-            reRender();
-          });
-          return;
-        }
-        reRender();
-      }
-      function doAddPlugin() {
-        Lampa.Input.edit({
-          title: Lampa.Lang.translate('gramlink_plugins_add_url') || 'Plugin URL (.js)',
-          free: true,
-          nosave: true,
-          align: 'center'
-        }, function (url) {
-          if (!url) {
-            reRender();
-            return;
-          }
-          url = url.trim();
-          if (!url.match(/^https?:\/\/.+/i)) {
-            Lampa.Noty.show('Invalid URL');
-            reRender();
-            return;
-          }
-          if (plugins.some(function (p) {
-            return p.url === url;
-          })) {
-            Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_already_installed') || 'Already installed');
-            reRender();
-            return;
-          }
-          var guessedName = extractNameFromUrl$1(url);
-          Lampa.Input.edit({
-            title: Lampa.Lang.translate('gramlink_plugins_name') || 'Plugin name',
-            free: true,
-            nosave: true,
-            align: 'center',
-            value: guessedName
-          }, function (name) {
-            var newPlugin = {
-              url: url,
-              name: name && name.trim() || guessedName,
-              status: 1,
-              custom: {}
-            };
-            plugins.push(newPlugin);
-            if (isActive) {
-              var live = getLivePlugins();
-              live.push(newPlugin);
-              Lampa.Storage.set('plugins', live);
-              publishDelta('add', newPlugin);
-              Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_added') || 'Plugin added');
-              reRender();
-            } else {
-              saveSnapshot(function () {
-                reRender();
-              });
-            }
-          });
-        });
-      }
-      function doRemoveConfirm(plugin, idx) {
-        Lampa.Select.show({
-          title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove plugin',
-          items: [{
-            title: '"' + (plugin.name || plugin.url) + '" — ' + (Lampa.Lang.translate('gramlink_plugins_remove_confirm') || 'remove?'),
-            noenter: true
-          }, {
-            title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove',
-            _do: 'remove'
-          }, {
-            title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
-            _do: 'cancel'
-          }],
-          onBack: function onBack() {
-            Lampa.Controller.toggle('gramlink_plugins');
-          },
-          onSelect: function onSelect(item) {
-            if (item._do === 'remove') {
-              plugins.splice(idx, 1);
-              if (isActive) {
-                var live = getLivePlugins().filter(function (p) {
-                  return p.url !== plugin.url;
-                });
-                Lampa.Storage.set('plugins', live);
-                publishDelta('remove', {
-                  url: plugin.url,
-                  name: plugin.name,
-                  status: plugin.status
-                });
-                Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_removed') || 'Plugin removed');
-                reRender();
-              } else {
-                saveSnapshot(function () {
-                  reRender();
-                });
-              }
-            } else {
-              Lampa.Controller.toggle('gramlink_plugins');
-            }
-          }
-        });
-      }
-
-      // ─── Збереження snapshot для неактивного профілю ───────
-
-      function saveSnapshot(onDone) {
-        var client = GramLinkClient.getInstance();
-        var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
-        var topicId = Lampa.Storage.get('gramlink_profiles_topic', '');
-        if (!client.isConnected() || !channelId || !topicId) {
-          Lampa.Noty.show(Lampa.Lang.translate('gramlink_not_connected') || 'Not connected');
-          if (onDone) onDone();
-          return;
-        }
-        var now = Math.floor(Date.now() / 1000);
-        var fileData = JSON.parse(JSON.stringify(originalData || {}));
-        fileData.plugins = clonePlugins(plugins);
-        if (!fileData.profile_meta) fileData.profile_meta = {};
-        fileData.profile_meta.updated = now;
-        var caption = JSON.stringify({
-          meta: {
-            type: 'profile',
-            timestamp: now,
-            version: 2
-          },
-          payload: {
-            profile: {
-              name: profileName,
-              updated: now
-            }
-          }
-        });
-        var fileName = 'profile_' + profileName.replace(/[^a-zA-Z0-9]/g, '_') + '_' + now + '.json';
-        Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_saving') || 'Saving…');
-        client.sendFile(channelId, topicId, JSON.stringify(fileData, null, 2), fileName, caption).then(function (newMsgId) {
-          if (newMsgId) {
-            client.deleteMessage(channelId, profileMsgId)["catch"](function () {});
-            var activeId = Lampa.Storage.get('gramlink_active_profile', '');
-            if (String(activeId) === String(profileMsgId)) {
-              Lampa.Storage.set('gramlink_active_profile', String(newMsgId));
-            }
-            profileMsgId = newMsgId;
-            Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_saved') || 'Saved');
-          } else {
-            Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_failed') || 'Save failed');
-          }
-          if (onDone) onDone();
-        })["catch"](function () {
-          Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_failed') || 'Save failed');
-          if (onDone) onDone();
-        });
-      }
-
-      // ─── Delta publish ─────────────────────────────────────
-
-      function publishDelta(action, plugin) {
-        var syncTopicId = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
-        if (!syncTopicId) return;
-        Profiles.publishLocalDelta(syncTopicId, 'plugin_change', {
-          action: action,
-          plugin: plugin
-        });
-      }
-
-      // ─── Re-render ─────────────────────────────────────────
-
-      function reRender() {
-        renderPluginList();
-        Lampa.Controller.toggle('gramlink_plugins');
-      }
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  Завантаження snapshot для неактивного профілю
-    // ═══════════════════════════════════════════════════════════════════
-
-    function loadSnapshotThenPush(profileMsgId, profileName) {
-      var client = GramLinkClient.getInstance();
-      var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
-      var topicId = Lampa.Storage.get('gramlink_profiles_topic', '');
-      if (!channelId || !topicId) {
-        Lampa.Noty.show('Sync channel not ready');
+    function startMigration(profilesTopicId) {
+      if (!window.lampa_settings || !window.lampa_settings.account_use) {
+        Lampa.Noty.show('Cub account not found. Log in to Cub in Lampa settings first.');
         return;
       }
-      Lampa.Noty.show(Lampa.Lang.translate('gramlink_loading') || 'Loading…');
-      client.getMessages(channelId, topicId, 50).then(function (msgs) {
-        var target = null;
-        msgs.forEach(function (m) {
-          if (String(m.id) === String(profileMsgId)) target = m;
-        });
-        if (!target) {
-          Lampa.Noty.show(Lampa.Lang.translate('gramlink_profile_not_found') || 'Profile not found');
-          return;
-        }
-        return client.downloadMessageFile(target).then(function (fileData) {
-          if (!fileData) {
-            Lampa.Noty.show('Could not load profile data');
-            return;
+      if (!Lampa.Account || !Lampa.Account.Permit || !Lampa.Account.Permit.token) {
+        Lampa.Noty.show('Cub account not found. Log in to Cub in Lampa settings first.');
+        return;
+      }
+      Lampa.Modal.open({
+        title: 'Migrate from Cub?',
+        html: $('<div style="padding:1em">' + '<p>This will:</p>' + '<ul style="padding-left:1.5em;line-height:1.8">' + '<li>Import ALL your Cub profiles</li>' + '<li>Import bookmarks & continue watching</li>' + '<li>Import installed plugins</li>' + '<li>Disable Cub sync</li>' + '</ul>' + '<p style="color:#f44336;margin-top:1em">Cub account will be disabled. This cannot be undone automatically.</p>' + '</div>'),
+        buttons: [{
+          name: 'Yes, migrate',
+          onSelect: function onSelect() {
+            Lampa.Modal.close();
+            doMigration(profilesTopicId);
           }
-          try {
-            var data = JSON.parse(fileData);
-            setTimeout(function () {
-              Lampa.Activity.push({
-                url: '',
-                title: Lampa.Lang.translate('gramlink_plugins_title').replace('{name}', profileName),
-                component: 'gramlink_plugin_manager',
-                page: 1,
-                _plugins: clonePlugins(data.plugins || []),
-                _isActive: false,
-                _profileMsgId: profileMsgId,
-                _profileName: profileName,
-                _originalData: data
-              });
-            }, 200);
-          } catch (e) {
-            Lampa.Noty.show('Invalid profile data');
+        }, {
+          name: 'Cancel',
+          onSelect: function onSelect() {
+            Lampa.Modal.close();
           }
-        });
-      })["catch"](function () {
-        Lampa.Noty.show('Could not load profile data');
+        }]
       });
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    //  Публічний API
-    // ═══════════════════════════════════════════════════════════════════
+    // ─── Favourite categories (Lampa.Favorite) ──────────────────────
 
-    var PluginManager = {
-      open: function open(profileMsgId, profileName, isActive) {
-        if (isActive) {
-          var plugins = clonePlugins(getLivePlugins());
-          setTimeout(function () {
-            Lampa.Activity.push({
-              url: '',
-              title: Lampa.Lang.translate('gramlink_plugins_title').replace('{name}', profileName || 'Unnamed'),
-              component: 'gramlink_plugin_manager',
-              page: 1,
-              _plugins: plugins,
-              _isActive: true,
-              _profileMsgId: profileMsgId,
-              _profileName: profileName || 'Unnamed'
-            });
-          }, 200);
-        } else {
-          if (!GramLinkClient.getInstance().isConnected()) {
-            Lampa.Noty.show(Lampa.Lang.translate('gramlink_not_connected'));
-            return;
-          }
-          loadSnapshotThenPush(profileMsgId, profileName || 'Unnamed');
+    var FAV_CATEGORIES = ['like', 'wath', 'book', 'history', 'look', 'viewed', 'scheduled', 'continued', 'thrown'];
+
+    // ─── Convert Cub bookmark dump → Lampa favorite dict ─────────────
+
+    function _emptyFav() {
+      var fav = {
+        card: []
+      };
+      FAV_CATEGORIES.forEach(function (c) {
+        fav[c] = [];
+      });
+      return fav;
+    }
+    function cubDumpToFavorite(rawText) {
+      var parsed;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch (e) {
+        return _emptyFav();
+      }
+      var rows = parsed && parsed.bookmarks;
+      if (!rows || !rows.length) return _emptyFav();
+      var fav = {
+        card: []
+      };
+      FAV_CATEGORIES.forEach(function (c) {
+        fav[c] = [];
+      });
+      var seenCards = {};
+      rows.forEach(function (b) {
+        if (!b.type || b.card_id == null) return;
+        if (!fav[b.type]) fav[b.type] = [];
+
+        // Avoid duplicate card_ids in the same category
+        if (fav[b.type].indexOf(b.card_id) < 0) {
+          fav[b.type].unshift(b.card_id);
         }
+
+        // Parse card data once per unique card_id
+        if (!seenCards[b.card_id] && b.data) {
+          seenCards[b.card_id] = true;
+          try {
+            var card = typeof b.data === 'string' ? JSON.parse(b.data) : b.data;
+            fav.card.push(card);
+          } catch (e) {}
+        }
+      });
+      return fav;
+    }
+
+    // ─── Convert Cub timeline dump → Lampa file_view dict ────────────
+
+    function cubDumpToTimeline(rawText) {
+      var parsed;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch (e) {
+        return {};
       }
+      var timelines = parsed && parsed.timelines;
+      if (!timelines) return {};
+      var result = {};
+      for (var hash in timelines) {
+        if (!Object.prototype.hasOwnProperty.call(timelines, hash)) continue;
+        var t = timelines[hash];
+        if (!t) continue;
+        result[hash] = {
+          time: t.time || 0,
+          duration: t.duration || 0,
+          percent: t.percent || 0
+        };
+      }
+      return result;
+    }
+
+    // ─── Filter Cub plugins for a specific profile ───────────────────
+
+    function filterPluginsForProfile(allPlugins, profileId) {
+      var result = [];
+      allPlugins.forEach(function (p) {
+        if (!p.url) return;
+        var profileIds = [];
+        try {
+          profileIds = JSON.parse(p.profiles);
+        } catch (e) {
+          return;
+        }
+        if (!profileIds.some(function (id) {
+          return id == profileId;
+        })) return;
+        result.push({
+          url: p.url,
+          name: p.name || p.url.split('/').pop().replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' '),
+          status: p.status !== undefined ? p.status : 1
+        });
+      });
+      return result;
+    }
+
+    // ─── Merge local + Cub plugins (GramLink safeguard) ──────────────
+
+    function mergeWithLocalPlugins(cubPlugins) {
+      var localPlugins = [];
+      try {
+        localPlugins = Lampa.Storage.get('plugins', []);
+      } catch (e) {}
+      var seen = {};
+      var result = [];
+
+      // Keep ALL local plugins first — GramLink lives here
+      localPlugins.forEach(function (p) {
+        var url = p.url || '';
+        if (!seen[url]) {
+          result.push(p);
+          seen[url] = true;
+        }
+      });
+
+      // Add Cub plugins that aren't already local
+      cubPlugins.forEach(function (p) {
+        if (!seen[p.url]) {
+          result.push(p);
+          seen[p.url] = true;
+        }
+      });
+      return result;
+    }
+
+    // ─── Main migration flow ─────────────────────────────────────────
+
+    function doMigration(profilesTopicId) {
+      var client = GramLinkClient.getInstance();
+      if (!client.isConnected()) {
+        Lampa.Noty.show('Not connected to Telegram');
+        return;
+      }
+      Lampa.Noty.show('Reading Cub profiles...');
+      Lampa.Account.Api.load('profiles/all').then(function (result) {
+        if (!result || !result.profiles || !result.profiles.length) {
+          Lampa.Noty.show('No Cub profiles found');
+          return;
+        }
+        var profiles = result.profiles;
+        var activeProfileId = Lampa.Account.Permit.account.profile.id;
+        var imported = 0;
+        var activatedId = null;
+        var activatedName = null;
+
+        // ── 1. Fetch ALL plugins once ──────────────────────────
+        Lampa.Account.Api.load('plugins/all').then(function (pluginResult) {
+          var allPlugins = pluginResult && pluginResult.secuses ? pluginResult.plugins || [] : [];
+
+          // ── 2. Process each profile sequentially ───────────
+          function processNext(index) {
+            if (index >= profiles.length) {
+              finishMigration(imported, activatedId, activatedName);
+              return;
+            }
+            var cubProfile = profiles[index];
+            var name = cubProfile.name || 'Profile ' + (index + 1);
+            var avatar = getAvatar(name);
+            var now = Math.floor(Date.now() / 1000);
+            var caption = buildCaption({
+              name: name,
+              avatar: avatar,
+              updated: now
+            }, {
+              source: 'cub',
+              source_id: cubProfile.id
+            });
+            Lampa.Noty.show('Importing "' + name + '" (' + (index + 1) + '/' + profiles.length + ')…');
+
+            // ── 2a. Fetch this profile's Bookmarks ─────────
+            var bookmarkPromise = Lampa.Account.Api.load('bookmarks/dump', {
+              headers: {
+                profile: cubProfile.id
+              },
+              dataType: 'text'
+            }).then(function (raw) {
+              return cubDumpToFavorite(raw);
+            })["catch"](function () {
+              var f = {
+                card: []
+              };
+              FAV_CATEGORIES.forEach(function (c) {
+                f[c] = [];
+              });
+              return f;
+            });
+
+            // ── 2b. Fetch this profile's Timeline ──────────
+            var timelinePromise = Lampa.Account.Api.load('timeline/dump', {
+              headers: {
+                profile: cubProfile.id
+              },
+              dataType: 'text'
+            }).then(function (raw) {
+              return cubDumpToTimeline(raw);
+            })["catch"](function () {
+              return {};
+            });
+
+            // ── 2c. Wait for both, build + send file ──────
+            Promise.all([bookmarkPromise, timelinePromise]).then(function (results) {
+              var bookmarks = results[0];
+              var timeline = results[1];
+              var profilePlugins = mergeWithLocalPlugins(filterPluginsForProfile(allPlugins, cubProfile.id));
+              var fileData = buildFileData({
+                name: name,
+                avatar: avatar,
+                bookmarks: {
+                  favorite: bookmarks
+                },
+                timeline: timeline,
+                plugins: profilePlugins,
+                settings: collectSettings()
+              });
+              var fileJson = JSON.stringify(fileData, null, 2);
+              var fileName = 'profile_' + name.replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_').slice(0, 64) + '_' + now + '.json';
+              var channelId = getChannelId();
+              client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
+                if (msgId) {
+                  imported++;
+                  if (String(cubProfile.id) === String(activeProfileId)) {
+                    activatedId = msgId;
+                    activatedName = name;
+                  }
+                }
+                processNext(index + 1);
+              })["catch"](function () {
+                processNext(index + 1);
+              });
+            })["catch"](function () {
+              // If both bookmark+timeline fail, still create profile with empty data
+              var profilePlugins = mergeWithLocalPlugins(filterPluginsForProfile(allPlugins, cubProfile.id));
+              var fileData = buildFileData({
+                name: name,
+                avatar: avatar,
+                plugins: profilePlugins,
+                settings: collectSettings()
+              });
+              var fileJson = JSON.stringify(fileData, null, 2);
+              var fileName = 'profile_' + name.replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_').slice(0, 64) + '_' + now + '.json';
+              var channelId = getChannelId();
+              client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
+                if (msgId) {
+                  imported++;
+                  if (String(cubProfile.id) === String(activeProfileId)) {
+                    activatedId = msgId;
+                    activatedName = name;
+                  }
+                }
+                processNext(index + 1);
+              })["catch"](function () {
+                processNext(index + 1);
+              });
+            });
+          }
+          processNext(0);
+        })["catch"](function (e) {
+          console.error('GramLink', 'Migration fetch plugins error:', e);
+          Lampa.Noty.show('Failed to read Cub plugins');
+
+          // Still try to migrate profiles without plugins
+          fallbackMigration(profiles, activeProfileId, profilesTopicId);
+        });
+      })["catch"](function (e) {
+        console.error('GramLink', 'Migration fetch error:', e);
+        Lampa.Noty.show('Failed to read Cub profiles: ' + (e.message || 'API error'));
+      });
+    }
+
+    // ─── Fallback if plugins/all fails: migrate with local data ─────
+
+    function fallbackMigration(profiles, activeProfileId, profilesTopicId) {
+      var client = GramLinkClient.getInstance();
+      if (!client.isConnected()) return;
+      var imported = 0;
+      var activatedId = null;
+      var activatedName = null;
+      var now = Math.floor(Date.now() / 1000);
+      function processNext(index) {
+        if (index >= profiles.length) {
+          finishMigration(imported, activatedId, activatedName);
+          return;
+        }
+        var cubProfile = profiles[index];
+        var name = cubProfile.name || 'Profile ' + (index + 1);
+        var avatar = getAvatar(name);
+        var ts = now + index; // unique timestamp per profile
+
+        var caption = buildCaption({
+          name: name,
+          avatar: avatar,
+          updated: ts
+        }, {
+          source: 'cub',
+          source_id: cubProfile.id
+        });
+        var fileData = buildFileData({
+          name: name,
+          avatar: avatar,
+          plugins: mergeWithLocalPlugins([]),
+          settings: collectSettings()
+        });
+        var fileJson = JSON.stringify(fileData, null, 2);
+        var fileName = 'profile_' + name.replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_').slice(0, 64) + '_' + ts + '.json';
+        var channelId = getChannelId();
+        client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
+          if (msgId) {
+            imported++;
+            if (String(cubProfile.id) === String(activeProfileId)) {
+              activatedId = msgId;
+              activatedName = name;
+            }
+          }
+          processNext(index + 1);
+        })["catch"](function () {
+          processNext(index + 1);
+        });
+      }
+      processNext(0);
+    }
+
+    // ─── Finish ──────────────────────────────────────────────────────
+
+    function finishMigration(count, activatedId, activatedName) {
+      if (activatedId) {
+        Lampa.Storage.set('gramlink_active_profile', String(activatedId));
+        Lampa.Storage.set('gramlink_active_profile_ts', String(Math.floor(Date.now() / 1000)));
+        if (activatedName) Lampa.Storage.set('gramlink_active_profile_name', activatedName);
+      }
+      Lampa.Storage.set('account', '', true);
+      Lampa.Storage.field('account_use', false);
+      Lampa.Settings.update();
+      Lampa.Modal.open({
+        title: 'Migration complete!',
+        html: $('<div style="padding:1em">' + count + ' profiles imported. Cub account disabled.</div>'),
+        buttons: [{
+          name: 'Reload now',
+          onSelect: function onSelect() {
+            Lampa.Modal.close();
+            window.location.reload();
+          }
+        }, {
+          name: 'Later',
+          onSelect: function onSelect() {
+            Lampa.Modal.close();
+          }
+        }]
+      });
+    }
+
+    /**
+     * sdk/html.js — Єдина екранізація HTML (XSS-захист)
+     *
+     * Усуває:
+     *   D-03a — 4 копії escHtml з різними наборами символів
+     *   D-03b — escAttr тепер частина escHtml з { attr: true }
+     *
+     * Використання:
+     *   import { escHtml, escAttr } from '../sdk/html'
+     */
+
+    var HTML_ESC_MAP = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
     };
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  Helpers
-    // ═══════════════════════════════════════════════════════════════════
-
-    function getLivePlugins() {
-      try {
-        return Lampa.Storage.get('plugins', []);
-      } catch (e) {
-        return [];
-      }
-    }
-    function clonePlugins(arr) {
-      try {
-        return JSON.parse(JSON.stringify(arr || []));
-      } catch (e) {
-        return [];
-      }
-    }
-    function extractNameFromUrl$1(url) {
-      try {
-        var parts = url.split('/');
-        var fname = parts[parts.length - 1] || parts[parts.length - 2] || 'Plugin';
-        return fname.replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' ');
-      } catch (e) {
-        return 'Plugin';
-      }
-    }
-    function truncateUrl(url) {
-      if (!url) return '';
-      try {
-        var u = new URL(url);
-        var host = u.hostname;
-        var path = u.pathname.split('/').pop() || '';
-        return host + '/…/' + path;
-      } catch (e) {
-        return url.length > 50 ? url.slice(0, 47) + '…' : url;
-      }
-    }
+    var HTML_ESC_RE = /[&<>"']/g;
     function escHtml(str) {
       if (!str) return '';
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+      return String(str).replace(HTML_ESC_RE, function (m) {
+        return HTML_ESC_MAP[m];
+      });
+    }
+
+    /**
+     * Екранування для HTML-атрибутів (додатково екранує одиничні лапки).
+     * Аліас для escHtml — оскільки ми вже екрануємо всі 5 символів.
+     */
+    function escAttr(str) {
+      return escHtml(str);
+    }
+
+    /**
+     * sdk/lampa.js — UI helpers для Lampa API
+     *
+     * Усуває:
+     *   D-18 — softRefresh() тепер в SDK
+     *   A-14 — Lampa.Input.edit boilerplate централізовано
+     *   A-15 — Lampa.Select.show boilerplate (prevController) централізовано
+     *   A-13 — Lampa.Storage.listener.follow з автовідпискою
+     *
+     * Використання:
+     *   import { softRefresh, select, input, onStorageChange } from '../sdk/lampa'
+     */
+
+    /**
+     * "М'яке" оновлення поточної activity без перезавантаження сторінки.
+     */
+    function softRefresh() {
+      var activity = Lampa.Activity.active();
+      if (!activity) return;
+      if (activity.page) activity.page = 1;
+      Lampa.Activity.replace(activity);
+      activity.outdated = false;
+    }
+
+    /**
+     * Обгортка для Lampa.Select.show з автоматичним toggle Controller.
+     * Скасовує boilerplate `var prevController = Lampa.Controller.enabled().name`.
+     *
+     * @param {Object} opts
+     * @param {string} opts.title
+     * @param {Array} opts.items
+     * @param {Function} opts.onSelect — викликається з item (cancel вже відфільтровано)
+     * @param {Function} [opts.onBack]
+     * @param {Function} [opts.onFullDraw]
+     * @returns {string} назва попереднього контролера
+     */
+    function select(opts) {
+      var prevController = Lampa.Controller.enabled().name;
+      var items = (opts.items || []).map(function (item) {
+        // Додаємо cancel-прапорець, якщо його немає
+        if (item.cancel === undefined && item.title === 'Cancel') item.cancel = true;
+        return item;
+      });
+      Lampa.Select.show({
+        title: opts.title,
+        items: items,
+        onSelect: function onSelect(item) {
+          Lampa.Controller.toggle(prevController);
+          if (item && item.cancel) {
+            if (opts.onCancel) opts.onCancel();
+            return;
+          }
+          if (opts.onSelect) opts.onSelect(item);
+        },
+        onBack: function onBack() {
+          Lampa.Controller.toggle(prevController);
+          if (opts.onBack) opts.onBack();
+        },
+        onFullDraw: opts.onFullDraw
+      });
+      return prevController;
+    }
+
+    /**
+     * Обгортка для Lampa.Input.edit з дефолтними параметрами.
+     *
+     * @param {Object} opts
+     * @param {string} opts.title
+     * @param {string} [opts.value]
+     * @param {string} [opts.align='center']
+     * @param {Function} opts.onSubmit — викликається з введеним рядком
+     * @returns {string} назва попереднього контролера
+     */
+    function input(opts) {
+      var prevController = Lampa.Controller.enabled().name;
+      Lampa.Input.edit({
+        title: opts.title,
+        value: opts.value || '',
+        align: opts.align || 'center',
+        free: true,
+        nosave: true
+      }, function (val) {
+        // Якщо користувач натиснув Cancel, val може бути null/undefined
+        if (val === null || val === undefined) {
+          Lampa.Controller.toggle(prevController);
+          if (opts.onCancel) opts.onCancel();
+          return;
+        }
+        Lampa.Controller.toggle(prevController);
+        if (opts.onSubmit) opts.onSubmit(val);
+      });
+      return prevController;
     }
 
     var _skipNextPublish = false;
-    var STORAGE_ACTIVE_PROFILE = 'gramlink_active_profile';
-    var STORAGE_ACTIVE_PROFILE_TS = 'gramlink_active_profile_ts';
-    var STORAGE_PROFILES_TOPIC$1 = 'gramlink_profiles_topic';
-    var STORAGE_PROFILES_SYNC_TOPIC$1 = 'gramlink_profiles_sync_topic';
-    var STORAGE_CHANNEL_ID$1 = 'gramlink_channel_id';
-    var STORAGE_PROFILES_CACHE = 'gramlink_profiles_cache';
-    var STORAGE_PLUGIN_REGISTRY = 'gramlink_plugin_registry';
+    var STORAGE_ACTIVE_PROFILE = STORAGE_KEYS.ACTIVE_PROFILE;
+    var STORAGE_ACTIVE_PROFILE_TS = STORAGE_KEYS.ACTIVE_PROFILE_TS;
+    var STORAGE_PROFILES_TOPIC$1 = STORAGE_KEYS.PROFILES_TOPIC;
+    var STORAGE_PROFILES_SYNC_TOPIC$1 = STORAGE_KEYS.PROFILES_SYNC;
+    var STORAGE_PROFILES_CACHE = STORAGE_KEYS.PROFILES_CACHE;
+    var STORAGE_PLUGIN_REGISTRY = STORAGE_KEYS.PLUGIN_REGISTRY;
 
     // ─── Sync Key Manifest ──────────────────────────────────
 
@@ -3569,9 +4240,9 @@
     // ─── Device Key Registry ──────────────────────────────────
     // ponytail: flat prefix array, not a plugin system.
     // Add new prefixes here as Lampa core adds new settings.
-    var DEVICE_KEY_PREFIXES = ['player', 'player_', 'subtitles_', 'video_quality_', 'navigation_', 'interface_', 'background_', 'glass_', 'card_', 'poster_', 'animation_', 'scroll_', 'request_caching', 'cache_images', 'mask', 'light_version', 'menu_always', 'black_style', 'gramlink_heartbeat', 'gramlink_broadcast'];
+    var DEVICE_KEY_PREFIXES$1 = ['player', 'player_', 'subtitles_', 'video_quality_', 'navigation_', 'interface_', 'background_', 'glass_', 'card_', 'poster_', 'animation_', 'scroll_', 'request_caching', 'cache_images', 'mask', 'light_version', 'menu_always', 'black_style', 'gramlink_heartbeat', 'gramlink_broadcast'];
     function isDeviceKey(key) {
-      return DEVICE_KEY_PREFIXES.some(function (p) {
+      return DEVICE_KEY_PREFIXES$1.some(function (p) {
         return key === p || key.indexOf(p) === 0;
       });
     }
@@ -3620,7 +4291,8 @@
       var activeId = Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, '');
       var cacheData = profileMessages.map(function (m) {
         try {
-          var d = JSON.parse(stripCodeFence(m.text));
+          var d = parseProfileMessage(m.text);
+          if (!d) return null;
           var p = d.payload && d.payload.profile;
           if (!p) return null;
           return {
@@ -3675,15 +4347,6 @@
       });
       Lampa.Storage.set(STORAGE_PLUGIN_REGISTRY, registry);
     }
-    function extractNameFromUrl(url) {
-      try {
-        var parts = url.split('/');
-        var fname = parts[parts.length - 1] || parts[parts.length - 2] || 'Plugin';
-        return fname.replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' ');
-      } catch (e) {
-        return 'Plugin';
-      }
-    }
 
     /** Fetch profiles from Telegram and populate cache (called on startup). */
     function refreshCacheFromTelegram() {
@@ -3694,49 +4357,12 @@
       client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
         var profileMessages = msgs.filter(function (m) {
           if (!m.text) return false;
-          try {
-            var d = JSON.parse(stripCodeFence(m.text));
-            return d && d.meta && d.meta.type === 'profile';
-          } catch (e) {
-            return false;
-          }
+          return !!parseProfileMessage(m.text);
         });
         if (profileMessages.length > 0) {
           saveProfilesCache(profileMessages);
         }
       })["catch"](function () {});
-    }
-    function getChannelId() {
-      return parseInt(Lampa.Storage.get(STORAGE_CHANNEL_ID$1, ''), 10);
-    }
-
-    // ─── Avatar generation ──────────────────────────────────
-
-    var DICE_BEAR_BASE = 'https://api.dicebear.com/10.x/';
-    function getAvatar(name) {
-      var style = Lampa.Storage.get('gramlink_avatar_style', 'fun-emoji');
-      if (!style) return getInitials(name);
-      return DICE_BEAR_BASE + style + '/svg?seed=' + encodeURIComponent(name) + '&borderRadius=50';
-    }
-    function getInitials(name) {
-      if (!name) return '??';
-      var parts = name.trim().split(/\s+/);
-      if (parts.length >= 2) {
-        return (parts[0][0] || '') + (parts[1][0] || '');
-      }
-      return name.slice(0, 2);
-    }
-    function isAvatarUrl(avatar) {
-      return avatar && avatar.indexOf(DICE_BEAR_BASE) === 0;
-    }
-    function avatarColor(name) {
-      if (!name) return '#0088cc';
-      var hash = 0;
-      for (var i = 0; i < name.length; i++) {
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      var colors = ['#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ff9800', '#ff5722', '#795548'];
-      return colors[Math.abs(hash) % colors.length];
     }
 
     // ─── Profile list rendering ─────────────────────────────
@@ -3749,12 +4375,7 @@
         container.empty();
         var profileMessages = msgs.filter(function (m) {
           if (!m.text) return false;
-          try {
-            var d = JSON.parse(stripCodeFence(m.text));
-            return d && d.meta && d.meta.type === 'profile';
-          } catch (e) {
-            return false;
-          }
+          return !!parseProfileMessage(m.text);
         });
         if (profileMessages.length === 0) {
           container.html('<div class="gramlink-devices__empty">No profiles</div>');
@@ -3772,7 +4393,8 @@
 
         // 2. Profile cards
         profileMessages.forEach(function (m) {
-          var d = JSON.parse(stripCodeFence(m.text));
+          var d = parseProfileMessage(m.text);
+          if (!d) return;
           var p = d.payload && d.payload.profile;
           if (!p) return;
           var isActive = String(activeId) === String(m.id);
@@ -3784,10 +4406,6 @@
           var $card = $('<div class="profile-card selector' + (isActive ? ' profile-card--active' : '') + '" ' + 'data-id="' + m.id + '" ' + 'data-name="' + nameSafe + '" ' + 'data-active="' + isActive + '">' + '<div class="profile-card__avatar-wrap">' + avatarHtml + '</div>' + '<div class="profile-card__name">' + escHtml(p.name || 'Unnamed') + (isActive ? '<div class="profile-card__active-badge">● ' + (Lampa.Lang.translate('gramlink_profile_active') || 'Active') + '</div>' : '') + '</div>' + '</div>');
           $grid.append($card);
         });
-        function escHtml(str) {
-          if (!str) return '';
-          return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
         container.empty().append($grid);
 
         // Card click → switch profile (immediate)
@@ -3822,10 +4440,7 @@
         autoSaveProfile(currentId, profilesTopicId);
       }
       client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
-        var target = null;
-        msgs.forEach(function (m) {
-          if (String(m.id) === String(msgId)) target = m;
-        });
+        var target = findMessageById(msgs, msgId);
         if (!target) {
           Lampa.Noty.show('Profile not found');
           return;
@@ -3837,11 +4452,9 @@
           }
 
           // Store profile name from caption for settings button
-          try {
-            var captionData = JSON.parse(stripCodeFence(target.text));
-            var profileName = captionData.payload && captionData.payload.profile && captionData.payload.profile.name;
-            if (profileName) Lampa.Storage.set('gramlink_active_profile_name', profileName);
-          } catch (e) {}
+          var captionProfile = parseCaption(target.text);
+          var profileName = captionProfile && captionProfile.name;
+          if (profileName) Lampa.Storage.set('gramlink_active_profile_name', profileName);
           var profileData;
           try {
             profileData = JSON.parse(fileData);
@@ -3852,7 +4465,7 @@
           var fileTimestamp = target.date || 0;
           return replayDeltas(profilesSyncTopicId, msgId, fileTimestamp, profileData).then(function (mergedData) {
             applyProfileData(mergedData, msgId);
-            window.location.reload();
+            softRefresh(); // ponytail: avoid full page reload
           });
         });
       })["catch"](function (e) {
@@ -3867,7 +4480,7 @@
       if (!profilesSyncTopicId) return Promise.resolve(snapshotData);
       var client = GramLinkClient.getInstance();
       return client.getMessagesSince(profilesSyncTopicId, sinceTimestamp, 50).then(function (deltas) {
-        var data = JSON.parse(JSON.stringify(snapshotData));
+        var data = deepClone(snapshotData);
         deltas.forEach(function (msg) {
           var d;
           try {
@@ -4020,55 +4633,32 @@
         var profileName = name.trim();
         var avatar = getAvatar(profileName);
         var now = Math.floor(Date.now() / 1000);
-        var caption = JSON.stringify({
-          meta: {
-            type: 'profile',
-            timestamp: now,
-            version: 3
-          },
-          payload: {
-            profile: {
-              name: profileName,
-              avatar: avatar,
-              updated: now
-            }
-          }
+        var caption = buildCaption({
+          name: profileName,
+          avatar: avatar,
+          updated: now
         });
 
         // First profile: inherit current data. Subsequent: start empty.
         client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
           var hasProfiles = msgs.some(function (m) {
             if (!m.text) return false;
-            try {
-              var d = JSON.parse(stripCodeFence(m.text));
-              return d && d.meta && d.meta.type === 'profile';
-            } catch (e) {
-              return false;
-            }
+            return !!parseProfileMessage(m.text);
           });
-          var fileData = {
-            profile_meta: {
-              name: profileName,
-              avatar: avatar,
-              updated: now
-            },
-            plugins: collectPlugins(),
-            settings: collectSettings(),
-            device_overrides: {}
-          };
-          if (!hasProfiles) {
-            fileData.bookmarks = {
-              favorite: collectFavorite()
-            };
-            fileData.timeline = collectTimeline();
-          } else {
-            fileData.bookmarks = {
+          var fileData = buildFileData({
+            name: profileName,
+            avatar: avatar,
+            bookmarks: hasProfiles ? {
               favorite: {}
-            };
-            fileData.timeline = {};
-          }
+            } : {
+              favorite: collectFavorite()
+            },
+            timeline: hasProfiles ? {} : collectTimeline(),
+            plugins: collectPlugins(),
+            settings: collectSettings()
+          });
           var fileJson = JSON.stringify(fileData, null, 2);
-          var fileName = 'profile_' + profileName.replace(/[^a-zA-Z0-9]/g, '_') + '_' + now + '.json';
+          var fileName = buildProfileFileName(profileName, now);
           client.sendFile(getChannelId(), profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
             if (msgId) {
               Lampa.Storage.set(STORAGE_ACTIVE_PROFILE, String(msgId));
@@ -4099,53 +4689,31 @@
       }
       var now = Math.floor(Date.now() / 1000);
       client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
-        var target = null;
-        msgs.forEach(function (m) {
-          if (String(m.id) === String(msgId)) target = m;
-        });
+        var target = findMessageById(msgs, msgId);
         if (!target) {
           Lampa.Noty.show('Profile not found');
           return;
         }
-        var meta;
-        try {
-          meta = JSON.parse(stripCodeFence(target.text));
-        } catch (e) {
-          meta = {};
-        }
-        var p = meta.payload && meta.payload.profile || {};
+        var p = parseCaption(target.text) || {};
         var profileName = p.name || 'Unnamed';
         var avatar = p.avatar || getAvatar(profileName);
-        var caption = JSON.stringify({
-          meta: {
-            type: 'profile',
-            timestamp: now,
-            version: 3
-          },
-          payload: {
-            profile: {
-              name: profileName,
-              avatar: avatar,
-              updated: now
-            }
-          }
+        var caption = buildCaption({
+          name: profileName,
+          avatar: avatar,
+          updated: now
         });
-        var fileData = {
-          profile_meta: {
-            name: profileName,
-            avatar: avatar,
-            updated: now
-          },
+        var fileData = buildFileData({
+          name: profileName,
+          avatar: avatar,
           bookmarks: {
             favorite: collectFavorite()
           },
           timeline: collectTimeline(),
           plugins: collectPlugins(),
-          settings: collectSettings(),
-          device_overrides: {}
-        };
+          settings: collectSettings()
+        });
         var fileJson = JSON.stringify(fileData, null, 2);
-        var fileName = 'profile_' + profileName.replace(/[^a-zA-Z0-9]/g, '_') + '_' + now + '.json';
+        var fileName = buildProfileFileName(profileName, now);
         client.sendFile(getChannelId(), profilesTopicId, fileJson, fileName, caption).then(function (newMsgId) {
           if (newMsgId) {
             // Delete old message to avoid duplicates
@@ -4164,37 +4732,6 @@
     }
     function autoSaveProfile(msgId, profilesTopicId) {
       syncProfile(msgId, profilesTopicId);
-    }
-
-    // ─── Data collectors ────────────────────────────────────
-
-    function collectTimeline() {
-      try {
-        return Lampa.Storage.get('file_view', {});
-      } catch (e) {
-        return {};
-      }
-    }
-    function collectFavorite() {
-      try {
-        return Lampa.Storage.get('favorite', {});
-      } catch (e) {
-        return {};
-      }
-    }
-    function collectPlugins() {
-      try {
-        return Lampa.Storage.get('plugins', []);
-      } catch (e) {
-        return [];
-      }
-    }
-    function collectSettings() {
-      return {
-        sync_enabled: Lampa.Storage.get('gramlink_sync_enabled', false),
-        heartbeat: Lampa.Storage.get('gramlink_heartbeat', false),
-        broadcast: Lampa.Storage.get('gramlink_broadcast', false)
-      };
     }
 
     // Collect all device-scoped storage keys → { key: value }
@@ -4253,10 +4790,7 @@
       var client = GramLinkClient.getInstance();
       if (!client.isConnected()) return;
       client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
-        var target = null;
-        msgs.forEach(function (m) {
-          if (String(m.id) === String(activeId)) target = m;
-        });
+        var target = findMessageById(msgs, activeId);
         if (!target) {
           Lampa.Storage.set(STORAGE_ACTIVE_PROFILE, '');
           return;
@@ -4313,19 +4847,15 @@
           }
 
           // ── Profile name from caption ──
-          try {
-            var captionText = target.text || '';
-            var captionParsed = JSON.parse(captionText.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim());
-            var captionName = captionParsed.payload && captionParsed.payload.profile && captionParsed.payload.profile.name;
-            if (captionName) Lampa.Storage.set('gramlink_active_profile_name', captionName);
-          } catch (e) {}
+          var captionProfile = parseCaption(target.text);
+          var captionName = captionProfile && captionProfile.name;
+          if (captionName) Lampa.Storage.set('gramlink_active_profile_name', captionName);
         });
       })["catch"](function () {});
     }
 
     // ─── Delta apply (called from hub.js event + GramLink.js polling) ──
 
-    var STORAGE_LAST_DELTA_SEEN = 'gramlink_last_delta_seen';
     function applyDelta(data) {
       var activeId = Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, '');
       if (!data || !data.meta || String(data.meta.profile_msg_id) !== String(activeId)) return;
@@ -4387,7 +4917,7 @@
       if (!profilesSyncTopicId) return;
       var client = GramLinkClient.getInstance();
       if (!client.isConnected()) return;
-      var lastSeen = parseInt(Lampa.Storage.get(STORAGE_LAST_DELTA_SEEN, '0'), 10);
+      var lastSeen = getLastDeltaSeen();
       client.getMessagesSince(profilesSyncTopicId, lastSeen, 30).then(function (msgs) {
         var newest = lastSeen;
         msgs.forEach(function (m) {
@@ -4400,7 +4930,7 @@
           } catch (e) {}
         });
         if (newest > lastSeen) {
-          Lampa.Storage.set(STORAGE_LAST_DELTA_SEEN, String(newest));
+          setLastDeltaSeen(newest);
         }
       })["catch"](function () {});
     }
@@ -4439,13 +4969,6 @@
       // Re-read
       if (Lampa.Favorite && Lampa.Favorite.read) Lampa.Favorite.read();
     }
-    function softRefresh() {
-      var activity = Lampa.Activity.active();
-      if (!activity) return;
-      if (activity.page) activity.page = 1;
-      Lampa.Activity.replace(activity);
-      activity.outdated = false;
-    }
 
     // ─── Quick switch (from sidebar, full reload) ──────────────
 
@@ -4471,10 +4994,7 @@
         autoSaveProfile(currentId, profilesTopicId);
       }
       client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
-        var target = null;
-        msgs.forEach(function (m) {
-          if (String(m.id) === String(msgId)) target = m;
-        });
+        var target = findMessageById(msgs, msgId);
         if (!target) {
           Lampa.Loading.stop();
           Lampa.Noty.show('Profile not found');
@@ -4495,18 +5015,16 @@
             Lampa.Noty.show('Invalid data');
             return;
           }
-          try {
-            var captionData = JSON.parse(stripCodeFence(target.text));
-            var profileName = captionData.payload && captionData.payload.profile && captionData.payload.profile.name;
-            if (profileName) Lampa.Storage.set('gramlink_active_profile_name', profileName);
-          } catch (e) {}
+          var captionProfile = parseCaption(target.text);
+          var profileName = captionProfile && captionProfile.name;
+          if (profileName) Lampa.Storage.set('gramlink_active_profile_name', profileName);
           return replayDeltas(profilesSyncTopicId, msgId, fileTimestamp, profileData).then(function (mergedData) {
             applyProfileData(mergedData, msgId);
             updateSyncTimestamp('favorite');
             updateSyncTimestamp('file_view');
             updateSyncTimestamp('plugins');
             Lampa.Loading.stop();
-            window.location.reload();
+            softRefresh(); // ponytail: avoid full page reload
           });
         });
       })["catch"](function (e) {
@@ -4545,423 +5063,449 @@
       removeFromPluginRegistry: removeFromPluginRegistry
     };
 
-    function startMigration(profilesTopicId) {
-      if (!window.lampa_settings || !window.lampa_settings.account_use) {
-        Lampa.Noty.show('Cub account not found. Log in to Cub in Lampa settings first.');
-        return;
-      }
-      if (!Lampa.Account || !Lampa.Account.Permit || !Lampa.Account.Permit.token) {
-        Lampa.Noty.show('Cub account not found. Log in to Cub in Lampa settings first.');
-        return;
-      }
-      Lampa.Modal.open({
-        title: 'Migrate from Cub?',
-        html: $('<div style="padding:1em">' + '<p>This will:</p>' + '<ul style="padding-left:1.5em;line-height:1.8">' + '<li>Import ALL your Cub profiles</li>' + '<li>Import bookmarks & continue watching</li>' + '<li>Import installed plugins</li>' + '<li>Disable Cub sync</li>' + '</ul>' + '<p style="color:#f44336;margin-top:1em">Cub account will be disabled. This cannot be undone automatically.</p>' + '</div>'),
-        buttons: [{
-          name: 'Yes, migrate',
-          onSelect: function onSelect() {
-            Lampa.Modal.close();
-            doMigration(profilesTopicId);
-          }
-        }, {
-          name: 'Cancel',
-          onSelect: function onSelect() {
-            Lampa.Modal.close();
-          }
-        }]
-      });
-    }
+    /**
+     * plugin_manager.js — GramLink Plugin Manager
+     *
+     * Activity-компонента для перегляду та редагування списку плагінів профілю.
+     * Побудована на нативному патерні Lampa Component (Lampa.Scroll + .settings-folder).
+     * Публічний API PluginManager.open() збережено для settings.js та profiles.js.
+     */
+    function PluginManagerComponent(object) {
+      var self = this;
+      var scroll = null;
+      var last = null;
+      var plugins = object._plugins || [];
+      var isActive = object._isActive || false;
+      var profileMsgId = object._profileMsgId;
+      var profileName = object._profileName || 'Unnamed';
+      var originalData = object._originalData || null;
 
-    // ─── Favourite categories (Lampa.Favorite) ──────────────────────
+      // ─── Lifecycle ──────────────────────────────────────────
 
-    var FAV_CATEGORIES = ['like', 'wath', 'book', 'history', 'look', 'viewed', 'scheduled', 'continued', 'thrown'];
-    function emptyFavorite() {
-      var fav = {
-        card: []
-      };
-      FAV_CATEGORIES.forEach(function (c) {
-        fav[c] = [];
-      });
-      return fav;
-    }
-
-    // ─── Convert Cub bookmark dump → Lampa favorite dict ─────────────
-
-    function cubDumpToFavorite(rawText) {
-      var parsed;
-      try {
-        parsed = JSON.parse(rawText);
-      } catch (e) {
-        return emptyFavorite();
-      }
-      var rows = parsed && parsed.bookmarks;
-      if (!rows || !rows.length) return emptyFavorite();
-      var fav = {
-        card: []
-      };
-      FAV_CATEGORIES.forEach(function (c) {
-        fav[c] = [];
-      });
-      var seenCards = {};
-      rows.forEach(function (b) {
-        if (!b.type || b.card_id == null) return;
-        if (!fav[b.type]) fav[b.type] = [];
-
-        // Avoid duplicate card_ids in the same category
-        if (fav[b.type].indexOf(b.card_id) < 0) {
-          fav[b.type].push(b.card_id);
-        }
-
-        // Parse card data once per unique card_id
-        if (!seenCards[b.card_id] && b.data) {
-          seenCards[b.card_id] = true;
-          try {
-            var card = typeof b.data === 'string' ? JSON.parse(b.data) : b.data;
-            fav.card.push(card);
-          } catch (e) {}
-        }
-      });
-      return fav;
-    }
-
-    // ─── Convert Cub timeline dump → Lampa file_view dict ────────────
-
-    function cubDumpToTimeline(rawText) {
-      var parsed;
-      try {
-        parsed = JSON.parse(rawText);
-      } catch (e) {
-        return {};
-      }
-      var timelines = parsed && parsed.timelines;
-      if (!timelines) return {};
-      var result = {};
-      for (var hash in timelines) {
-        if (!Object.prototype.hasOwnProperty.call(timelines, hash)) continue;
-        var t = timelines[hash];
-        if (!t) continue;
-        result[hash] = {
-          time: t.time || 0,
-          duration: t.duration || 0,
-          percent: t.percent || 0
-        };
-      }
-      return result;
-    }
-
-    // ─── Filter Cub plugins for a specific profile ───────────────────
-
-    function filterPluginsForProfile(allPlugins, profileId) {
-      var result = [];
-      allPlugins.forEach(function (p) {
-        if (!p.url) return;
-        var profileIds = [];
-        try {
-          profileIds = JSON.parse(p.profiles);
-        } catch (e) {
-          return;
-        }
-        if (profileIds.indexOf(profileId) < 0) return;
-        result.push({
-          url: p.url,
-          name: p.name || p.url.split('/').pop().replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' '),
-          status: p.status !== undefined ? p.status : 1
+      self.create = function () {
+        scroll = new Lampa.Scroll({
+          mask: true,
+          over: true
         });
-      });
-      return result;
-    }
+        self.html = $('<div class="gramlink-activity"></div>');
+        scroll.render().addClass('gramlink-scroll');
+        self.html.append(scroll.render());
+        scroll.onWheel = function (step) {
+          if (!last) return;
+          Navigator.move(step > 0 ? 'down' : 'up');
+        };
+        scroll.render().on('hover:focus', function (e) {
+          last = e.target;
+          scroll.update($(e.target), true);
+        });
+        scroll.render().on('hover:hover hover:touch', function (e) {
+          last = e.target;
+        });
+        renderPluginList();
+        return self.render();
+      };
+      self.render = function () {
+        return self.html;
+      };
+      self.start = function () {
+        Lampa.Controller.add('gramlink_plugins', {
+          // ponytail: unique controller name
+          toggle: function toggle() {
+            Lampa.Controller.collectionSet(scroll.render());
+            var focus = last && $(last).closest('body').length ? last : false;
+            Lampa.Controller.collectionFocus(focus, scroll.render());
+          },
+          up: function up() {
+            if (Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
+          },
+          down: function down() {
+            Navigator.move('down');
+          },
+          left: function left() {
+            if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+          },
+          right: function right() {
+            Navigator.move('right');
+          },
+          back: function back() {
+            Lampa.Activity.backward();
+          }
+        });
+        Lampa.Controller.toggle('content');
+      };
+      self.pause = function () {};
+      self.stop = function () {};
+      self.destroy = function () {
+        if (self.__destroyed) return;
+        self.__destroyed = true;
+        try {
+          $(scroll.body()).find('.gs-plugin-item, .gs-plugin-add').off();
+        } catch (e) {} // ponytail: unbind item events
+        try {
+          if (scroll) scroll.destroy();
+        } catch (e) {}
+        try {
+          self.html.remove();
+        } catch (e) {}
+        last = null; // ponytail: clear ref
+      };
+      self.back = function () {
+        Lampa.Activity.backward();
+      };
 
-    // ─── Merge local + Cub plugins (GramLink safeguard) ──────────────
+      // ─── Рендер списку плагінів ────────────────────────────
 
-    function mergeWithLocalPlugins(cubPlugins) {
-      var localPlugins = [];
-      try {
-        localPlugins = Lampa.Storage.get('plugins', []);
-      } catch (e) {}
-      var seen = {};
-      var result = [];
-
-      // Keep ALL local plugins first — GramLink lives here
-      localPlugins.forEach(function (p) {
-        var url = p.url || '';
-        if (!seen[url]) {
-          result.push(p);
-          seen[url] = true;
+      function renderPluginList() {
+        scroll.clear();
+        if (plugins.length === 0) {
+          scroll.body().append('<div class="settings-param-title"><span>' + (Lampa.Lang.translate('gramlink_plugins_empty') || 'No plugins') + '</span></div>');
+        } else {
+          plugins.forEach(function (plugin, idx) {
+            scroll.body().append(renderPluginItem(plugin, idx));
+          });
         }
-      });
-
-      // Add Cub plugins that aren't already local
-      cubPlugins.forEach(function (p) {
-        if (!seen[p.url]) {
-          result.push(p);
-          seen[p.url] = true;
-        }
-      });
-      return result;
-    }
-
-    // ─── Main migration flow ─────────────────────────────────────────
-
-    function doMigration(profilesTopicId) {
-      var client = GramLinkClient.getInstance();
-      if (!client.isConnected()) {
-        Lampa.Noty.show('Not connected to Telegram');
-        return;
+        scroll.body().append(renderAddButton());
+        bindItemEvents();
       }
-      Lampa.Noty.show('Reading Cub profiles...');
-      Lampa.Account.Api.load('profiles/all').then(function (result) {
-        if (!result || !result.profiles || !result.profiles.length) {
-          Lampa.Noty.show('No Cub profiles found');
+      function renderPluginItem(plugin, idx) {
+        var isOn = plugin.status === 1;
+        return $('<div class="settings-folder selector gs-plugin-item" data-idx="' + idx + '">' + '<div class="settings-folder__icon">' + '<div class="gs-plugin-toggle ' + (isOn ? 'on' : 'off') + '">' + (isOn ? '●' : '○') + '</div>' + '</div>' + '<div class="settings-folder__name">' + '<div>' + escHtml(plugin.name || 'Plugin') + '</div>' + '<div class="settings-folder__sub">' + escHtml(truncateUrl(plugin.url)) + '</div>' + '</div>' + '</div>');
+      }
+      function renderAddButton() {
+        return $('<div class="settings-folder selector gs-plugin-add">' + '<div class="settings-folder__icon">' + '<svg width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>' + '</div>' + '<div class="settings-folder__name">' + '<div>' + (Lampa.Lang.translate('gramlink_plugins_add') || 'Add plugin') + '</div>' + '</div>' + '</div>');
+      }
+
+      // ─── Біндинг подій ─────────────────────────────────────
+
+      function bindItemEvents() {
+        scroll.render().find('.gs-plugin-item').on('hover:enter', function () {
+          var idx = parseInt($(this).data('idx'), 10);
+          if (plugins[idx]) showPluginMenu(plugins[idx], idx);
+        });
+        scroll.render().find('.gs-plugin-item').on('hover:long', function () {
+          var idx = parseInt($(this).data('idx'), 10);
+          if (plugins[idx]) doToggle(plugins[idx], idx);
+        });
+        scroll.render().find('.gs-plugin-add').on('hover:enter', function () {
+          doAddPlugin();
+        });
+      }
+
+      // ─── Підменю для конкретного плагіна ───────────────────
+
+      function showPluginMenu(plugin, idx) {
+        if (!plugin) return;
+        var isOn = plugin.status === 1;
+        Lampa.Select.show({
+          title: plugin.name || plugin.url,
+          items: [{
+            title: Lampa.Lang.translate(isOn ? 'gramlink_plugins_toggle_off' : 'gramlink_plugins_toggle_on') || (isOn ? 'Disable' : 'Enable'),
+            _do: 'toggle'
+          }, {
+            title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove',
+            _do: 'remove'
+          }, {
+            title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
+            _do: 'cancel'
+          }],
+          onBack: function onBack() {
+            Lampa.Controller.toggle('gramlink_plugins');
+          },
+          onSelect: function onSelect(item) {
+            if (item._do === 'toggle') {
+              doToggle(plugin, idx);
+            } else if (item._do === 'remove') {
+              doRemoveConfirm(plugin, idx);
+            } else {
+              Lampa.Controller.toggle('gramlink_plugins');
+            }
+          }
+        });
+      }
+
+      // ─── Дії ───────────────────────────────────────────────
+
+      function doToggle(plugin, idx) {
+        plugin.status = plugin.status === 1 ? 0 : 1;
+        plugins[idx] = plugin;
+        if (isActive) {
+          var live = collectPlugins();
+          live.forEach(function (p) {
+            if (p.url === plugin.url) p.status = plugin.status;
+          });
+          Lampa.Storage.set('plugins', live);
+          publishDelta('toggle', {
+            url: plugin.url,
+            name: plugin.name,
+            status: plugin.status
+          });
+          Lampa.Noty.show((plugin.name || 'Plugin') + ': ' + (plugin.status === 1 ? 'enabled' : 'disabled'));
+        }
+        if (!isActive) {
+          saveSnapshot(function () {
+            reRender();
+          });
           return;
         }
-        var profiles = result.profiles;
-        var activeProfileId = Lampa.Account.Permit.account.profile.id;
-        var imported = 0;
-        var activatedId = null;
-        var activatedName = null;
-
-        // ── 1. Fetch ALL plugins once ──────────────────────────
-        Lampa.Account.Api.load('plugins/all').then(function (pluginResult) {
-          var allPlugins = pluginResult && pluginResult.secuses ? pluginResult.plugins || [] : [];
-
-          // ── 2. Process each profile sequentially ───────────
-          function processNext(index) {
-            if (index >= profiles.length) {
-              finishMigration(imported, activatedId, activatedName);
+        reRender();
+      }
+      function doAddPlugin() {
+        input({
+          title: Lampa.Lang.translate('gramlink_plugins_add_url') || 'Plugin URL (.js)',
+          align: 'center',
+          onCancel: function onCancel() {
+            reRender();
+          },
+          onSubmit: function onSubmit(url) {
+            if (!url) {
+              reRender();
               return;
             }
-            var cubProfile = profiles[index];
-            var name = cubProfile.name || 'Profile ' + (index + 1);
-            var avatar = getAvatar(name);
-            var now = Math.floor(Date.now() / 1000);
-            var caption = JSON.stringify({
-              meta: {
-                type: 'profile',
-                timestamp: now,
-                version: 2,
-                source: 'cub',
-                source_id: cubProfile.id
-              },
-              payload: {
-                profile: {
-                  name: name,
-                  avatar: avatar,
-                  updated: now
+            url = url.trim();
+            if (!url.match(/^https?:\/\/.+/i)) {
+              Lampa.Noty.show('Invalid URL');
+              reRender();
+              return;
+            }
+            if (plugins.some(function (p) {
+              return p.url === url;
+            })) {
+              Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_already_installed') || 'Already installed');
+              reRender();
+              return;
+            }
+            var guessedName = extractNameFromUrl(url);
+            input({
+              title: Lampa.Lang.translate('gramlink_plugins_name') || 'Plugin name',
+              align: 'center',
+              value: guessedName,
+              onSubmit: function onSubmit(name) {
+                var newPlugin = {
+                  url: url,
+                  name: name && name.trim() || guessedName,
+                  status: 1,
+                  custom: {}
+                };
+                plugins.push(newPlugin);
+                if (isActive) {
+                  var live = collectPlugins();
+                  live.push(newPlugin);
+                  Lampa.Storage.set('plugins', live);
+                  publishDelta('add', newPlugin);
+                  Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_added') || 'Plugin added');
+                  reRender();
+                } else {
+                  saveSnapshot(function () {
+                    reRender();
+                  });
                 }
               }
             });
-            Lampa.Noty.show('Importing "' + name + '" (' + (index + 1) + '/' + profiles.length + ')…');
-
-            // ── 2a. Fetch this profile's Bookmarks ─────────
-            var bookmarkPromise = Lampa.Account.Api.load('bookmarks/dump', {
-              headers: {
-                profile: cubProfile.id
-              },
-              dataType: 'text'
-            }).then(function (raw) {
-              return cubDumpToFavorite(raw);
-            })["catch"](function () {
-              return emptyFavorite();
-            });
-
-            // ── 2b. Fetch this profile's Timeline ──────────
-            var timelinePromise = Lampa.Account.Api.load('timeline/dump', {
-              headers: {
-                profile: cubProfile.id
-              },
-              dataType: 'text'
-            }).then(function (raw) {
-              return cubDumpToTimeline(raw);
-            })["catch"](function () {
-              return {};
-            });
-
-            // ── 2c. Wait for both, build + send file ──────
-            Promise.all([bookmarkPromise, timelinePromise]).then(function (results) {
-              var bookmarks = results[0];
-              var timeline = results[1];
-              var profilePlugins = mergeWithLocalPlugins(filterPluginsForProfile(allPlugins, cubProfile.id));
-              var fileData = {
-                profile_meta: {
-                  name: name,
-                  avatar: avatar,
-                  updated: now
-                },
-                bookmarks: {
-                  favorite: bookmarks
-                },
-                timeline: timeline,
-                plugins: profilePlugins,
-                settings: {
-                  sync_enabled: Lampa.Storage.get('gramlink_sync_enabled', false),
-                  heartbeat: Lampa.Storage.get('gramlink_heartbeat', false),
-                  broadcast: Lampa.Storage.get('gramlink_broadcast', false)
-                }
-              };
-              var fileJson = JSON.stringify(fileData, null, 2);
-              var fileName = 'profile_' + name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + now + '.json';
-              var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
-              client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
-                if (msgId) {
-                  imported++;
-                  if (String(cubProfile.id) === String(activeProfileId)) {
-                    activatedId = msgId;
-                    activatedName = name;
-                  }
-                }
-                processNext(index + 1);
-              })["catch"](function () {
-                processNext(index + 1);
-              });
-            })["catch"](function () {
-              // If both bookmark+timeline fail, still create profile with empty data
-              var profilePlugins = mergeWithLocalPlugins(filterPluginsForProfile(allPlugins, cubProfile.id));
-              var fileData = {
-                profile_meta: {
-                  name: name,
-                  avatar: avatar,
-                  updated: now
-                },
-                bookmarks: {
-                  favorite: emptyFavorite()
-                },
-                timeline: {},
-                plugins: profilePlugins,
-                settings: {
-                  sync_enabled: Lampa.Storage.get('gramlink_sync_enabled', false),
-                  heartbeat: Lampa.Storage.get('gramlink_heartbeat', false),
-                  broadcast: Lampa.Storage.get('gramlink_broadcast', false)
-                }
-              };
-              var fileJson = JSON.stringify(fileData, null, 2);
-              var fileName = 'profile_' + name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + now + '.json';
-              var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
-              client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
-                if (msgId) {
-                  imported++;
-                  if (String(cubProfile.id) === String(activeProfileId)) {
-                    activatedId = msgId;
-                    activatedName = name;
-                  }
-                }
-                processNext(index + 1);
-              })["catch"](function () {
-                processNext(index + 1);
-              });
-            });
           }
-          processNext(0);
-        })["catch"](function (e) {
-          console.error('GramLink', 'Migration fetch plugins error:', e);
-          Lampa.Noty.show('Failed to read Cub plugins');
-
-          // Still try to migrate profiles without plugins
-          fallbackMigration(profiles, activeProfileId, profilesTopicId);
         });
-      })["catch"](function (e) {
-        console.error('GramLink', 'Migration fetch error:', e);
-        Lampa.Noty.show('Failed to read Cub profiles: ' + (e.message || 'API error'));
-      });
-    }
+      }
+      function doRemoveConfirm(plugin, idx) {
+        Lampa.Select.show({
+          title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove plugin',
+          items: [{
+            title: '"' + (plugin.name || plugin.url) + '" — ' + (Lampa.Lang.translate('gramlink_plugins_remove_confirm') || 'remove?'),
+            noenter: true
+          }, {
+            title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove',
+            _do: 'remove'
+          }, {
+            title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
+            _do: 'cancel'
+          }],
+          onBack: function onBack() {
+            Lampa.Controller.toggle('gramlink_plugins');
+          },
+          onSelect: function onSelect(item) {
+            if (item._do === 'remove') {
+              plugins.splice(idx, 1);
+              if (isActive) {
+                var live = collectPlugins().filter(function (p) {
+                  return p.url !== plugin.url;
+                });
+                Lampa.Storage.set('plugins', live);
+                publishDelta('remove', {
+                  url: plugin.url,
+                  name: plugin.name,
+                  status: plugin.status
+                });
+                Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_removed') || 'Plugin removed');
+                reRender();
+              } else {
+                saveSnapshot(function () {
+                  reRender();
+                });
+              }
+            } else {
+              Lampa.Controller.toggle('gramlink_plugins');
+            }
+          }
+        });
+      }
 
-    // ─── Fallback if plugins/all fails: migrate with local data ─────
+      // ─── Збереження snapshot для неактивного профілю ───────
 
-    function fallbackMigration(profiles, activeProfileId, profilesTopicId) {
-      var client = GramLinkClient.getInstance();
-      if (!client.isConnected()) return;
-      var imported = 0;
-      var activatedId = null;
-      var activatedName = null;
-      var now = Math.floor(Date.now() / 1000);
-      function processNext(index) {
-        if (index >= profiles.length) {
-          finishMigration(imported, activatedId, activatedName);
+      function saveSnapshot(onDone) {
+        var client = GramLinkClient.getInstance();
+        var channelId = getChannelId();
+        var topicId = Lampa.Storage.get('gramlink_profiles_topic', '');
+        if (!client.isConnected() || !channelId || !topicId) {
+          Lampa.Noty.show(Lampa.Lang.translate('gramlink_not_connected') || 'Not connected');
+          if (onDone) onDone();
           return;
         }
-        var cubProfile = profiles[index];
-        var name = cubProfile.name || 'Profile ' + (index + 1);
-        var avatar = getAvatar(name);
-        var ts = now + index; // unique timestamp per profile
-
-        var caption = JSON.stringify({
-          meta: {
-            type: 'profile',
-            timestamp: ts,
-            version: 2,
-            source: 'cub',
-            source_id: cubProfile.id
-          },
-          payload: {
-            profile: {
-              name: name,
-              avatar: avatar,
-              updated: ts
-            }
-          }
+        var now = Math.floor(Date.now() / 1000);
+        var fileData = buildFileData({
+          name: profileName,
+          plugins: deepClone(plugins),
+          bookmarks: originalData && originalData.bookmarks || undefined,
+          timeline: originalData && originalData.timeline || undefined,
+          settings: originalData && originalData.settings || undefined,
+          device_overrides: originalData && originalData.device_overrides || undefined
         });
-        var fileData = {
-          profile_meta: {
-            name: name,
-            avatar: avatar,
-            updated: ts
-          },
-          bookmarks: {
-            favorite: emptyFavorite()
-          },
-          timeline: {},
-          plugins: mergeWithLocalPlugins([]),
-          settings: {
-            sync_enabled: Lampa.Storage.get('gramlink_sync_enabled', false),
-            heartbeat: Lampa.Storage.get('gramlink_heartbeat', false),
-            broadcast: Lampa.Storage.get('gramlink_broadcast', false)
-          }
-        };
-        var fileJson = JSON.stringify(fileData, null, 2);
-        var fileName = 'profile_' + name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + ts + '.json';
-        var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
-        client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
-          if (msgId) {
-            imported++;
-            if (String(cubProfile.id) === String(activeProfileId)) {
-              activatedId = msgId;
-              activatedName = name;
+        var caption = buildCaption({
+          name: profileName,
+          updated: now
+        });
+        var fileName = buildProfileFileName(profileName, now);
+        Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_saving') || 'Saving…');
+        client.sendFile(channelId, topicId, JSON.stringify(fileData, null, 2), fileName, caption).then(function (newMsgId) {
+          if (newMsgId) {
+            client.deleteMessage(channelId, profileMsgId)["catch"](function () {});
+            var activeId = Lampa.Storage.get('gramlink_active_profile', '');
+            if (String(activeId) === String(profileMsgId)) {
+              Lampa.Storage.set('gramlink_active_profile', String(newMsgId));
             }
+            profileMsgId = newMsgId;
+            Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_saved') || 'Saved');
+          } else {
+            Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_failed') || 'Save failed');
           }
-          processNext(index + 1);
+          if (onDone) onDone();
         })["catch"](function () {
-          processNext(index + 1);
+          Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_failed') || 'Save failed');
+          if (onDone) onDone();
         });
       }
-      processNext(0);
+
+      // ─── Delta publish ─────────────────────────────────────
+
+      function publishDelta(action, plugin) {
+        var syncTopicId = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
+        if (!syncTopicId) return;
+        Profiles.publishLocalDelta(syncTopicId, 'plugin_change', {
+          action: action,
+          plugin: plugin
+        });
+      }
+
+      // ─── Re-render ─────────────────────────────────────────
+
+      function reRender() {
+        renderPluginList();
+        Lampa.Controller.toggle('gramlink_plugins');
+      }
     }
 
-    // ─── Finish ──────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
+    //  Завантаження snapshot для неактивного профілю
+    // ═══════════════════════════════════════════════════════════════════
 
-    function finishMigration(count, activatedId, activatedName) {
-      if (activatedId) {
-        Lampa.Storage.set('gramlink_active_profile', String(activatedId));
-        Lampa.Storage.set('gramlink_active_profile_ts', String(Math.floor(Date.now() / 1000)));
-        if (activatedName) Lampa.Storage.set('gramlink_active_profile_name', activatedName);
+    function loadSnapshotThenPush(profileMsgId, profileName) {
+      var client = GramLinkClient.getInstance();
+      var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
+      var topicId = Lampa.Storage.get('gramlink_profiles_topic', '');
+      if (!channelId || !topicId) {
+        Lampa.Noty.show('Sync channel not ready');
+        return;
       }
-      Lampa.Storage.set('account', '', true);
-      Lampa.Storage.field('account_use', false);
-      Lampa.Settings.update();
-      Lampa.Modal.open({
-        title: 'Migration complete!',
-        html: $('<div style="padding:1em">' + count + ' profiles imported. Cub account disabled.</div>'),
-        buttons: [{
-          name: 'Reload now',
-          onSelect: function onSelect() {
-            Lampa.Modal.close();
-            window.location.reload();
+      Lampa.Noty.show(Lampa.Lang.translate('gramlink_loading') || 'Loading…');
+      client.getMessages(channelId, topicId, 50).then(function (msgs) {
+        var target = null;
+        msgs.forEach(function (m) {
+          if (String(m.id) === String(profileMsgId)) target = m;
+        });
+        if (!target) {
+          Lampa.Noty.show(Lampa.Lang.translate('gramlink_profile_not_found') || 'Profile not found');
+          return;
+        }
+        return client.downloadMessageFile(target).then(function (fileData) {
+          if (!fileData) {
+            Lampa.Noty.show('Could not load profile data');
+            return;
           }
-        }, {
-          name: 'Later',
-          onSelect: function onSelect() {
-            Lampa.Modal.close();
+          try {
+            var data = JSON.parse(fileData);
+            setTimeout(function () {
+              Lampa.Activity.push({
+                url: '',
+                title: Lampa.Lang.translate('gramlink_plugins_title').replace('{name}', profileName),
+                component: 'gramlink_plugin_manager',
+                page: 1,
+                _plugins: deepClone(data.plugins || []),
+                _isActive: false,
+                _profileMsgId: profileMsgId,
+                _profileName: profileName,
+                _originalData: data
+              });
+            }, 200);
+          } catch (e) {
+            Lampa.Noty.show('Invalid profile data');
           }
-        }]
+        });
+      })["catch"](function () {
+        Lampa.Noty.show('Could not load profile data');
       });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  Публічний API
+    // ═══════════════════════════════════════════════════════════════════
+
+    var PluginManager = {
+      open: function open(profileMsgId, profileName, isActive) {
+        if (isActive) {
+          var plugins = deepClone(collectPlugins());
+          setTimeout(function () {
+            Lampa.Activity.push({
+              url: '',
+              title: Lampa.Lang.translate('gramlink_plugins_title').replace('{name}', profileName || 'Unnamed'),
+              component: 'gramlink_plugin_manager',
+              page: 1,
+              _plugins: plugins,
+              _isActive: true,
+              _profileMsgId: profileMsgId,
+              _profileName: profileName || 'Unnamed'
+            });
+          }, 200);
+        } else {
+          if (!GramLinkClient.getInstance().isConnected()) {
+            Lampa.Noty.show(Lampa.Lang.translate('gramlink_not_connected'));
+            return;
+          }
+          loadSnapshotThenPush(profileMsgId, profileName || 'Unnamed');
+        }
+      }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  Helpers
+    // ═══════════════════════════════════════════════════════════════════
+
+    function truncateUrl(url) {
+      if (!url) return '';
+      try {
+        var u = new URL(url);
+        var host = u.hostname;
+        var path = u.pathname.split('/').pop() || '';
+        return host + '/…/' + path;
+      } catch (e) {
+        return url.length > 50 ? url.slice(0, 47) + '…' : url;
+      }
     }
 
     function initSettings() {
@@ -5603,8 +6147,6 @@
       }
     }
     function openAvatarStyleSelect() {
-      var DICE_BEAR_BASE = 'https://api.dicebear.com/10.x/';
-      var DICE_BEAR_STYLES = ['adventurer', 'adventurer-neutral', 'avataaars', 'avataaars-neutral', 'big-ears', 'big-ears-neutral', 'big-smile', 'bottts', 'bottts-neutral', 'croodles', 'croodles-neutral', 'disco', 'dylan', 'fun-emoji', 'glass', 'glyphs', 'icons', 'identicon', 'initial-face', 'initials', 'lorelei', 'lorelei-neutral', 'micah', 'miniavs', 'notionists', 'notionists-neutral', 'open-peeps', 'personas', 'pixel-art', 'pixel-art-neutral', 'rings', 'shape-grid', 'shapes', 'stripes', 'thumbs', 'toon-head', 'triangles'];
       var current = Lampa.Storage.get('gramlink_avatar_style', 'fun-emoji');
       var enabledCtrl = Lampa.Controller.enabled().name;
       var items = [];
@@ -5652,8 +6194,8 @@
     function discoverDevices() {
       var client = GramLinkClient.getInstance();
       if (!client.isConnected()) return Promise.resolve([]);
-      var channelId = Lampa.Storage.get('gramlink_channel_id', '');
-      var syncLogTopicId = Lampa.Storage.get('gramlink_sync_log_topic', '');
+      var channelId = Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, '');
+      var syncLogTopicId = Lampa.Storage.get(STORAGE_KEYS.SYNC_LOG_TOPIC, '');
       if (!channelId || !syncLogTopicId) return Promise.resolve([]);
       return client.getOnlineDevices(channelId, syncLogTopicId);
     }
@@ -5663,8 +6205,8 @@
     function sendOpenCard(deviceId, cardData) {
       var client = GramLinkClient.getInstance();
       if (!client.isConnected()) return;
-      var channelId = Lampa.Storage.get('gramlink_channel_id', '');
-      var remoteCmdTopicId = Lampa.Storage.get('gramlink_remote_cmd_topic', '');
+      var channelId = Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, '');
+      var remoteCmdTopicId = Lampa.Storage.get(STORAGE_KEYS.REMOTE_CMD_TOPIC, '');
       if (!channelId || !remoteCmdTopicId) return;
       client.publish(channelId, remoteCmdTopicId, 'open_card', {
         card: cardData
@@ -5673,8 +6215,8 @@
     function sendPlayVideo(deviceId, mediaData) {
       var client = GramLinkClient.getInstance();
       if (!client.isConnected()) return;
-      var channelId = Lampa.Storage.get('gramlink_channel_id', '');
-      var remoteCmdTopicId = Lampa.Storage.get('gramlink_remote_cmd_topic', '');
+      var channelId = Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, '');
+      var remoteCmdTopicId = Lampa.Storage.get(STORAGE_KEYS.REMOTE_CMD_TOPIC, '');
       if (!channelId || !remoteCmdTopicId) return;
       client.publish(channelId, remoteCmdTopicId, 'play_video', {
         media: mediaData
@@ -5844,16 +6386,422 @@
       setupBroadcast: setupBroadcast
     };
 
-    var STORAGE_CHANNEL_ID = 'gramlink_channel_id';
-    var STORAGE_SYNC_LOG_TOPIC = 'gramlink_sync_log_topic';
-    var STORAGE_PROFILES_TOPIC = 'gramlink_profiles_topic';
-    var STORAGE_PROFILES_SYNC_TOPIC = 'gramlink_profiles_sync_topic';
-    var STORAGE_BACKUP_TOPIC = 'gramlink_backup_topic';
-    var refreshTimer = null;
-    var currentChannelId = null;
-    var currentProfilesTopicId = null;
-    var currentProfilesSyncTopicId = null;
+    /**
+     * sdk/manifest_schema.js — Схема backup manifest'у та категоризація ключів
+     *
+     * Усуває:
+     *   — categorize() централізовано замість ручного фільтру по localStorage
+     *   — buildManifest() / validateManifest() замість ручного JSON.stringify
+     *   — DEVICE_KEY_PREFIXES визначено в одному місці
+     *
+     * Використання:
+     *   import { categorize, buildManifest, validateManifest, DEVICE_KEY_PREFIXES } from '../sdk/manifest_schema'
+     */
+
+    /**
+     * Префікси ключів, які належать до device_state (налаштування пристрою).
+     * Синхронізовано з profiles.js:DEVICE_KEY_PREFIXES.
+     */
+    var DEVICE_KEY_PREFIXES = ['player', 'player_', 'subtitles_', 'video_quality_', 'navigation_', 'interface_', 'background_', 'glass_', 'card_', 'poster_', 'animation_', 'scroll_', 'request_caching', 'cache_images', 'mask', 'light_version', 'menu_always', 'black_style', 'gramlink_heartbeat', 'gramlink_broadcast'];
+
+    /**
+     * Патерни для виключення кешів з бекапу.
+     */
+    var CACHE_PATTERNS = [/_cache$/, /_line_cache/, /_ts$/, /_line$/];
+
+    /**
+     * Конкретні ключі, які треба виключити (не регенеруються патернами).
+     */
+    var EXCLUDE_KEYS_SET = {
+      'GramJs:apiCache': true
+    };
+
+    /**
+     * Категоризує ключ localStorage.
+     *
+     * @param {string} key
+     * @returns {string} 'core' | 'device_state' | 'cache_exclude' | 'gramlink_meta'
+     */
+    function categorize(key) {
+      // Ключі GramLink не бекапимо (за винятком heartbeat/broadcast — device_state)
+      if (key.indexOf('gramlink_') === 0) {
+        var isDevice = DEVICE_KEY_PREFIXES.some(function (p) {
+          return key === p || key.indexOf(p) === 0;
+        });
+        if (!isDevice) return 'gramlink_meta';
+        return 'device_state';
+      }
+
+      // Явно виключені ключі
+      if (EXCLUDE_KEYS_SET[key]) return 'cache_exclude';
+
+      // Перевірка патернів кешу
+      for (var i = 0; i < CACHE_PATTERNS.length; i++) {
+        if (CACHE_PATTERNS[i].test(key)) return 'cache_exclude';
+      }
+
+      // Перевірка пристроєвих префіксів
+      for (var j = 0; j < DEVICE_KEY_PREFIXES.length; j++) {
+        var p = DEVICE_KEY_PREFIXES[j];
+        if (key === p || key.indexOf(p) === 0) return 'device_state';
+      }
+
+      // Все інше — core
+      return 'core';
+    }
+
+    /**
+     * Збирає manifest з метаданих та списку чанків.
+     *
+     * @param {Object} meta
+     * @param {number} meta.created_at — Unix timestamp
+     * @param {string} meta.device_id
+     * @param {string} meta.device_name
+     * @param {Array} chunks — масив чанків
+     * @param {string} chunks[].id — "chunk_000"
+     * @param {string} chunks[].category — "core" | "device_state"
+     * @param {string[]} chunks[].keys — список ключів у чанку
+     * @param {number} chunks[].raw_bytes — розмір до стиснення
+     * @param {string} chunks[].file_name — "chunk_000.json"
+     * @returns {Object} manifest
+     */
+    function buildManifest(meta, chunks) {
+      var totalKeys = 0;
+      var totalBytes = 0;
+      var chunkList = (chunks || []).map(function (ch) {
+        totalKeys += (ch.keys || []).length;
+        totalBytes += ch.raw_bytes || 0;
+        return {
+          id: ch.id,
+          category: ch.category,
+          keys: ch.keys || [],
+          raw_bytes: ch.raw_bytes || 0,
+          file_name: ch.file_name,
+          telegram_msg_id: ch.telegram_msg_id || 0
+        };
+      });
+      return {
+        meta: {
+          type: 'gramlink_backup',
+          version: 1,
+          created_at: meta.created_at || Math.floor(Date.now() / 1000),
+          device_id: meta.device_id || '',
+          device_name: meta.device_name || 'Unknown'
+        },
+        totals: {
+          total_chunks: chunkList.length,
+          total_keys: totalKeys,
+          total_bytes: totalBytes
+        },
+        chunks: chunkList
+      };
+    }
+
+    /**
+     * Валідує структуру manifest.
+     * @param {Object} m
+     * @param {string} [context] — для повідомлення помилки
+     * @returns {boolean} true якщо валідний
+     * @throws {Error} якщо невалідний
+     */
+    function validateManifest(m) {
+      if (!m || _typeof(m) !== 'object') throw new Error('Manifest is not an object');
+      if (m.meta && m.meta.type !== 'gramlink_backup') throw new Error('Not a GramLink backup manifest');
+      if (!m.meta || !m.meta.created_at || !m.meta.device_id) throw new Error('Manifest missing required meta fields');
+      if (!m.chunks || !Array.isArray(m.chunks) || !m.chunks.length) throw new Error('Manifest has no chunks');
+      if (!m.totals || typeof m.totals.total_chunks !== 'number') throw new Error('Manifest missing totals');
+      return true;
+    }
+
+    var CHUNK_SIZE = 64 * 1024; // 64 KB — безпечний розмір для старих девайсів
+
+    /**
+     * Ітерує localStorage, групує ключі за категоріями.
+     *
+     * @returns {{ core: Object, device_state: Object, cache_exclude: number }}
+     *   core / device_state — { key: rawValueString, ... }
+     *   cache_exclude — кількість виключених ключів
+     */
+    function collectCategorized() {
+      var core = {};
+      var deviceState = {};
+      var excludedCount = 0;
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (!key) continue;
+        var cat = categorize(key);
+        if (cat === 'core') {
+          core[key] = localStorage.getItem(key);
+        } else if (cat === 'device_state') {
+          deviceState[key] = localStorage.getItem(key);
+        } else {
+          excludedCount++;
+        }
+      }
+      return {
+        core: core,
+        device_state: deviceState,
+        excluded: excludedCount
+      };
+    }
+
+    /**
+     * Розбиває зібрані дані на чанки по CHUNK_SIZE байт.
+     * Кожен чанк — це об'єкт { category, keys, raw_bytes }.
+     * Великі ключі (> CHUNK_SIZE) отримують окремий чанк.
+     *
+     * @param {{ core: Object, device_state: Object }} collected
+     * @param {number} [chunkSize] — розмір чанка в байтах (за замовчуванням 64 KB)
+     * @returns {Array<{ id: string, category: string, keys: Object, raw_bytes: number, file_name: string }>}
+     */
+    function buildChunks(collected, chunkSize) {
+      if (chunkSize === undefined) chunkSize = CHUNK_SIZE;
+      var chunks = [];
+      var chunkId = 0;
+      function nextChunkId() {
+        var s = String(chunkId);
+        while (s.length < 3) s = '0' + s;
+        chunkId++;
+        return 'chunk_' + s;
+      }
+      var categories = ['core', 'device_state'];
+      for (var ci = 0; ci < categories.length; ci++) {
+        var category = categories[ci];
+        var keys = collected[category];
+        if (!keys) continue;
+        var keyEntries = Object.keys(keys);
+        if (!keyEntries.length) continue;
+        var currentChunk = {
+          keys: {}
+        };
+        var currentSize = 2; // for "{}"
+
+        for (var ki = 0; ki < keyEntries.length; ki++) {
+          var key = keyEntries[ki];
+          var value = keys[key];
+
+          // Розмір одного entry: "key":value, + possible comma
+          var estimatedSize = JSON.stringify(key).length + 2 + value.length;
+          if (ki > 0) estimatedSize += 1; // comma before
+
+          // Якщо один ключ більший за chunkSize — він отримує свій чанк
+          if (estimatedSize > chunkSize) {
+            // Фіналізуємо поточний чанк якщо там щось є
+            if (Object.keys(currentChunk.keys).length > 0) {
+              chunks.push(finalizeChunk(currentChunk, category, nextChunkId()));
+              currentChunk = {
+                keys: {}
+              };
+              currentSize = 2;
+            }
+            // Великий ключ — окремий чанк
+            var bigChunk = {
+              keys: {}
+            };
+            bigChunk.keys[key] = value;
+            chunks.push(finalizeChunk(bigChunk, category, nextChunkId()));
+            currentSize = 2;
+            continue;
+          }
+
+          // Якщо не влазить у поточний чанк — фіналізуємо його і починаємо новий
+          if (currentSize + estimatedSize > chunkSize && Object.keys(currentChunk.keys).length > 0) {
+            chunks.push(finalizeChunk(currentChunk, category, nextChunkId()));
+            currentChunk = {
+              keys: {}
+            };
+            currentSize = 2;
+          }
+          currentChunk.keys[key] = value;
+          currentSize += estimatedSize;
+        }
+
+        // Фіналізуємо останній чанк категорії
+        if (Object.keys(currentChunk.keys).length > 0) {
+          chunks.push(finalizeChunk(currentChunk, category, nextChunkId()));
+        }
+      }
+      return chunks;
+    }
+    function finalizeChunk(chunk, category, id) {
+      var data = {
+        category: category,
+        keys: chunk.keys || {}
+      };
+      return {
+        id: id,
+        category: category,
+        keys: Object.keys(data.keys),
+        keysData: data.keys,
+        // ← актуальні key-value пари, для JSON.stringify в hub.js
+        raw_bytes: JSON.stringify(data).length,
+        file_name: id + '.json'
+      };
+    }
+
+    /**
+     * Будує payload для exportBackup.
+     *
+     * @param {{ core: Object, device_state: Object }} collected — з collectCategorized()
+     * @param {Object} meta — { device_id, device_name }
+     * @param {number} [chunkSize]
+     * @returns {{ chunks: Array, manifest: Object, backupName: string }}
+     */
+    function buildExportPayload(collected, meta, chunkSize) {
+      var chunks = buildChunks(collected, chunkSize);
+      var now = Math.floor(Date.now() / 1000);
+      var backupName = 'backup_' + now;
+      var manifest = buildManifest({
+        created_at: now,
+        device_id: meta.device_id,
+        device_name: meta.device_name
+      }, chunks.map(function (ch) {
+        return {
+          id: ch.id,
+          category: ch.category,
+          keys: ch.keys,
+          raw_bytes: ch.raw_bytes,
+          file_name: backupName + '/' + ch.file_name
+        };
+      }));
+      return {
+        chunks: chunks,
+        manifest: manifest,
+        backupName: backupName
+      };
+    }
+
+    /**
+     * Отримує список backup-сесій з теми бекапу.
+     *
+     * @param {Object} c — Client.getInstance()
+     * @param {number} ch — channel ID
+     * @param {number} bt — backup topic ID
+     * @returns {Promise<Array>} масив сесій:
+     *   [{ ts, label, deviceInfo, manifestFile, sessionPrefix, files }]
+     */
+    function listBackupSessions(c, ch, bt) {
+      return c.getBackupFiles(ch, bt, 50).then(function (files) {
+        var sessions = {};
+        files.forEach(function (f) {
+          var m = f.fileName.match(/^backup_(\d+)\/manifest\.json$/);
+          if (!m) return;
+          var ts = parseInt(m[1], 10);
+          var isFinal = f.fileName.indexOf('_final') >= 0;
+
+          // Парсимо device_name з caption
+          var deviceInfo = '';
+          try {
+            if (f.text) {
+              var caption = JSON.parse(f.text);
+              if (caption.device_name) deviceInfo = caption.device_name;
+            }
+          } catch (e) {}
+
+          // Беремо найновіший manifest для цього ts (prefer _final)
+          if (!sessions[ts] || isFinal) {
+            sessions[ts] = {
+              ts: ts,
+              label: formatTimestamp(ts),
+              deviceInfo: deviceInfo,
+              manifestFile: f,
+              files: files
+            };
+          }
+        });
+        return Object.keys(sessions).map(function (k) {
+          return sessions[k];
+        }).sort(function (a, b) {
+          return b.ts - a.ts;
+        });
+      });
+    }
+
+    /**
+     * Завантажує та валідує manifest.
+     *
+     * @param {Object} c — Client.getInstance()
+     * @param {Object} session — сесія з listBackupSessions
+     * @returns {Promise<Object>} parsed manifest
+     */
+    function downloadManifest(c, session) {
+      return c.downloadFile(session.manifestFile).then(function (jsonStr) {
+        if (!jsonStr) throw new Error('Failed to download manifest');
+        var manifest = JSON.parse(jsonStr);
+        validateManifest(manifest);
+        return manifest;
+      });
+    }
+
+    /**
+     * Знаходить файли чанків для заданої сесії та manifest.
+     *
+     * @param {Object} session — сесія з listBackupSessions
+     * @param {Object} manifest — parsed manifest
+     * @returns {Array<{ file: Object, chunkMeta: Object }>}
+     */
+    function findChunkFiles(session, manifest) {
+      var results = [];
+      manifest.chunks.forEach(function (ch) {
+        // ch.file_name вже містить префікс "backup_<ts>/" (див. buildExportPayload)
+        var expectedName = ch.file_name;
+        var found = null;
+        for (var i = 0; i < session.files.length; i++) {
+          if (session.files[i].fileName === expectedName) {
+            found = session.files[i];
+            break;
+          }
+        }
+        if (found) {
+          results.push({
+            file: found,
+            chunkMeta: ch
+          });
+        } else {
+          console.warn('GramLink', 'Chunk not found:', expectedName);
+        }
+      });
+      return results;
+    }
+
+    /**
+     * Парсить вміст чанка.
+     *
+     * @param {string} jsonStr — сирий JSON (downloadFile результат)
+     * @returns {Object} { category, keys }
+     */
+    function parseChunk(jsonStr) {
+      var data = JSON.parse(jsonStr);
+      if (!data || !data.keys || _typeof(data.keys) !== 'object') {
+        throw new Error('Invalid chunk format');
+      }
+      return data;
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────────────
+
+    function formatTimestamp(unixTs) {
+      try {
+        var pad = function pad(n) {
+          return n < 10 ? '0' + n : String(n);
+        };
+        var d = new Date(unixTs * 1000);
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      } catch (e) {
+        return String(unixTs);
+      }
+    }
+
+    var STORAGE_CHANNEL_ID = STORAGE_KEYS.CHANNEL_ID;
+    var STORAGE_SYNC_LOG_TOPIC = STORAGE_KEYS.SYNC_LOG_TOPIC;
+    var STORAGE_PROFILES_TOPIC = STORAGE_KEYS.PROFILES_TOPIC;
+    var STORAGE_PROFILES_SYNC_TOPIC = STORAGE_KEYS.PROFILES_SYNC;
+    var STORAGE_BACKUP_TOPIC = STORAGE_KEYS.BACKUP_TOPIC;
     function Hub () {
+      var refreshTimer = null;
+      var currentChannelId = null;
+      var currentProfilesTopicId = null;
+      var currentProfilesSyncTopicId = null;
       var self = this;
       var scroll = null;
       var last = null;
@@ -5875,9 +6823,6 @@
           if (!last) return;
           Navigator.move(step > 0 ? 'down' : 'up');
         };
-
-        // Native: height() so scroll fills available space
-        scroll.height();
 
         // Container
         self.html = $('<div class="gramlink-activity"></div>');
@@ -5915,6 +6860,8 @@
               Lampa.Controller.toggle('menu');
             } else if (Navigator.canmove('left')) {
               Navigator.move('left');
+            } else {
+              Lampa.Controller.toggle('menu');
             }
           },
           right: function right() {
@@ -5957,6 +6904,13 @@
           refreshTimer = null;
         }
         try {
+          if (scroll && scroll.body) scroll.body().off();
+        } catch (e) {} // ponytail:
+        if (self._deltaHandler) {
+          GramLinkClient.getInstance().off('profile_delta', self._deltaHandler);
+          self._deltaHandler = null;
+        }
+        try {
           if (scroll) scroll.destroy();
         } catch (e) {}
         try {
@@ -5971,6 +6925,7 @@
         activeTab = tabId;
         tabIdx = TABS.indexOf(tabId);
         scroll.clear();
+        last = null; // ponytail:
         scroll.reset();
         if (tabId === 'profiles') renderProfiles();else if (tabId === 'devices') renderDevices();else if (tabId === 'plugins') renderPlugins();
       }
@@ -6259,8 +7214,7 @@
             var plugins = getPlugins();
             if (!plugins[idx]) return;
             var p = plugins[idx];
-            var prevCtrl = Lampa.Controller.enabled().name;
-            Lampa.Select.show({
+            select({
               title: p.name || p.url || 'Plugin',
               items: [{
                 title: p.status === 1 ? 'Disable' : 'Enable',
@@ -6270,14 +7224,11 @@
                 _do: 'remove'
               }, {
                 title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
-                _do: 'cancel'
+                _do: 'cancel',
+                cancel: true
               }],
-              onBack: function onBack() {
-                Lampa.Controller.toggle(prevCtrl);
-              },
               onSelect: function onSelect(item) {
                 if (item._do === 'toggle') doToggle(idx);else if (item._do === 'remove') doRemove(idx);
-                Lampa.Controller.toggle(prevCtrl);
               }
             });
           });
@@ -6375,64 +7326,52 @@
         renderPlugins();
       }
       function doAddPlugin() {
-        var prevCtrl = Lampa.Controller.enabled().name;
-        Lampa.Input.edit({
+        input({
           title: Lampa.Lang.translate('gramlink_plugins_add_url') || 'Plugin URL (.js)',
-          free: true,
-          nosave: true,
-          align: 'center'
-        }, function (url) {
-          if (!url) {
-            Lampa.Controller.toggle(prevCtrl);
-            return;
-          }
-          url = url.trim();
-          if (!url.match(/^https?:\/\/.+/i)) {
-            Lampa.Noty.show('Invalid URL');
-            Lampa.Controller.toggle(prevCtrl);
-            return;
-          }
-          var plugins = getPlugins();
-          if (plugins.some(function (p) {
-            return p.url === url;
-          })) {
-            Lampa.Noty.show('Already installed');
-            Lampa.Controller.toggle(prevCtrl);
-            return;
-          }
-          var gn = url.split('/').pop().replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' ') || 'Plugin';
-          Lampa.Input.edit({
-            title: Lampa.Lang.translate('gramlink_plugins_name') || 'Plugin name',
-            free: true,
-            nosave: true,
-            align: 'center',
-            value: gn
-          }, function (name) {
-            var np = {
-              url: url,
-              name: name && name.trim() || gn,
-              status: 1,
-              custom: {}
-            };
-            Profiles.addToPluginRegistry(url, np.name);
-            plugins.push(np);
-            savePlugins(plugins);
-            var st = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
-            if (st) Profiles.publishLocalDelta(st, 'plugin_change', {
-              action: 'add',
-              plugin: np
+          onSubmit: function onSubmit(url) {
+            if (!url) return;
+            url = url.trim();
+            if (!url.match(/^https?:\/\/.+/i)) {
+              Lampa.Noty.show('Invalid URL');
+              return;
+            }
+            var plugins = getPlugins();
+            if (plugins.some(function (p) {
+              return p.url === url;
+            })) {
+              Lampa.Noty.show('Already installed');
+              return;
+            }
+            var gn = url.split('/').pop().replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' ') || 'Plugin';
+            input({
+              title: Lampa.Lang.translate('gramlink_plugins_name') || 'Plugin name',
+              value: gn,
+              onSubmit: function onSubmit(name) {
+                var np = {
+                  url: url,
+                  name: name && name.trim() || gn,
+                  status: 1,
+                  custom: {}
+                };
+                Profiles.addToPluginRegistry(url, np.name);
+                plugins.push(np);
+                savePlugins(plugins);
+                var st = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
+                if (st) Profiles.publishLocalDelta(st, 'plugin_change', {
+                  action: 'add',
+                  plugin: np
+                });
+                Lampa.Noty.show('Plugin added');
+                renderPlugins();
+              }
             });
-            Lampa.Noty.show('Plugin added');
-            Lampa.Controller.toggle(prevCtrl);
-            renderPlugins();
-          });
+          }
         });
       }
 
       // ─── Device actions ─────────────────────────────────
 
       function showDeviceMenu(did, dname, isThis) {
-        var prevCtrl = Lampa.Controller.enabled().name;
         var items = [];
         if (!isThis) items.push({
           title: 'Open on this device',
@@ -6454,15 +7393,10 @@
           title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
           cancel: true
         });
-        Lampa.Select.show({
+        select({
           title: dname,
           items: items,
-          onBack: function onBack() {
-            Lampa.Controller.toggle(prevCtrl);
-          },
           onSelect: function onSelect(item) {
-            Lampa.Controller.toggle(prevCtrl);
-            if (item.cancel) return;
             if (item.action === 'open') {
               var a = Lampa.Activity.active();
               if (a && a.card) {
@@ -6473,16 +7407,14 @@
               }
             } else if (item.action === 'export') exportBackup();else if (item.action === 'import') importBackup();else if (item.action === 'rename') {
               var c = Lampa.Storage.get('gramlink_device_label', getDeviceName());
-              Lampa.Input.edit({
+              input({
                 title: 'Device name',
                 value: c,
-                free: true,
-                nosave: true,
-                align: 'center'
-              }, function (n) {
-                if (n && n.trim()) {
-                  Lampa.Storage.set('gramlink_device_label', n.trim());
-                  Lampa.Noty.show('Device renamed');
+                onSubmit: function onSubmit(n) {
+                  if (n && n.trim()) {
+                    Lampa.Storage.set('gramlink_device_label', n.trim());
+                    Lampa.Noty.show('Device renamed');
+                  }
                 }
               });
             }
@@ -6490,7 +7422,7 @@
         });
       }
 
-      // ─── Backup ─────────────────────────────────────────
+      // ─── Backup (chunked) ──────────────────────────────
 
       function exportBackup() {
         var c = GramLinkClient.getInstance(),
@@ -6504,27 +7436,47 @@
           return;
         }
         var ch = parseInt(Lampa.Storage.get(STORAGE_CHANNEL_ID, ''), 10);
-        var data = {
-          meta: {
-            timestamp: Math.floor(Date.now() / 1000),
-            device_id: getDeviceId(),
-            device_name: getDeviceName()
-          },
-          storage: {}
-        };
-        for (var i = 0; i < localStorage.length; i++) {
-          var k = localStorage.key(i);
-          if (k && k.indexOf('gramlink') !== 0) data.storage[k] = localStorage.getItem(k);
-        }
-        Lampa.Noty.show('Uploading...');
-        c.sendFile(ch, bt, JSON.stringify(data, null, 2), 'backup_' + Date.now() + '.json', JSON.stringify({
+        Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_uploading'));
+
+        // 1. Collect & chunk
+        var collected = collectCategorized();
+        var payload = buildExportPayload(collected, {
           device_id: getDeviceId(),
-          device_name: getDeviceName(),
-          timestamp: Math.floor(Date.now() / 1000)
-        })).then(function (m) {
-          Lampa.Noty.show(m ? 'Exported' : 'Failed');
+          device_name: getDeviceName()
+        });
+        var total = payload.chunks.length;
+
+        // 2. Upload chunks sequentially (promise chain)
+        var seq = Promise.resolve();
+        payload.chunks.forEach(function (ch_data, idx) {
+          seq = seq.then(function () {
+            var chunkJson = JSON.stringify({
+              category: ch_data.category,
+              keys: ch_data.keysData
+            });
+            return c.sendFile(ch, bt, chunkJson, payload.backupName + '/' + ch_data.file_name, JSON.stringify({
+              type: 'gramlink_backup_chunk',
+              index: idx,
+              category: ch_data.category
+            })).then(function (msgId) {
+              if (msgId) payload.manifest.chunks[idx].telegram_msg_id = msgId;
+              Lampa.Noty.show(idx + 1 + '/' + total + ' ' + (Lampa.Lang.translate('gramlink_backup_uploading') || 'chunks'));
+            });
+          });
+        });
+
+        // 3. After all chunks — upload manifest
+        seq.then(function () {
+          var manifestJson = JSON.stringify(payload.manifest, null, 2);
+          return c.sendFile(ch, bt, manifestJson, payload.backupName + '/manifest.json', JSON.stringify({
+            device_id: getDeviceId(),
+            device_name: getDeviceName(),
+            timestamp: Math.floor(Date.now() / 1000)
+          }));
+        }).then(function (msgId) {
+          Lampa.Noty.show(msgId ? Lampa.Lang.translate('gramlink_backup_exported') || 'Backup saved: ' + total + ' chunks' : Lampa.Lang.translate('gramlink_backup_failed') || 'Backup failed');
         })["catch"](function () {
-          Lampa.Noty.show('Failed');
+          Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_failed') || 'Backup failed');
         });
       }
       function importBackup() {
@@ -6540,47 +7492,102 @@
         }
         var ch = parseInt(Lampa.Storage.get(STORAGE_CHANNEL_ID, ''), 10);
         Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_fetching'));
-        c.getBackupFiles(ch, bt, 10).then(function (files) {
-          if (!files || !files.length) {
-            Lampa.Noty.show('No backups');
+        listBackupSessions(c, ch, bt).then(function (sessions) {
+          if (!sessions || !sessions.length) {
+            Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_no_files') || 'No backups');
             return;
           }
-          var prev = Lampa.Controller.enabled().name;
-          Lampa.Select.show({
-            title: 'Select backup',
-            items: files.map(function (f) {
+          select({
+            title: Lampa.Lang.translate('gramlink_backup_pick_title') || 'Select backup',
+            items: sessions.map(function (s) {
               return {
-                title: f.fileName || 'Backup',
-                _file: f
+                title: s.label + (s.deviceInfo ? ' (' + s.deviceInfo + ')' : ''),
+                subtitle: Lampa.Lang.translate('gramlink_backup_restore_title') || 'Restore',
+                _session: s
               };
             }).concat([{
-              title: 'Cancel',
-              _cancel: true
+              title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
+              cancel: true
             }]),
-            onBack: function onBack() {
-              Lampa.Controller.toggle(prev);
-            },
             onSelect: function onSelect(item) {
-              if (item._cancel) {
-                Lampa.Controller.toggle(prev);
-                return;
-              }
-              Lampa.Noty.show('Downloading...');
-              c.downloadFile(item._file).then(function (js) {
-                try {
-                  var b = JSON.parse(js);
-                  if (b && b.storage) Object.keys(b.storage).forEach(function (k) {
-                    Lampa.Storage.set(k, b.storage[k]);
+              if (item.cancel || !item._session) return;
+              var session = item._session;
+
+              // Підтвердження через другий Select
+              select({
+                title: Lampa.Lang.translate('gramlink_backup_restore_title') || 'Restore backup?',
+                items: [{
+                  title: session.deviceInfo || 'Device',
+                  _info: true
+                }, {
+                  title: session.label,
+                  _info: true
+                }, {
+                  title: Lampa.Lang.translate('gramlink_backup_restore_btn') || 'Restore',
+                  action: 'restore'
+                }, {
+                  title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
+                  cancel: true
+                }],
+                onSelect: function onSelect(confItem) {
+                  if (confItem.action !== 'restore') return;
+                  Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_downloading') || 'Restoring...');
+
+                  // Завантажити manifest
+                  downloadManifest(c, session).then(function (manifest) {
+                    // Знайти файли чанків
+                    var chunkFiles = findChunkFiles(session, manifest);
+                    if (!chunkFiles.length) {
+                      Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_invalid') || 'No chunks found');
+                      return;
+                    }
+
+                    // Safety snapshot (простий: зберігаємо грамлінк-ключі)
+                    // Послідовне завантаження та застосування чанків
+                    var restoreSeq = Promise.resolve();
+                    var appliedCount = 0;
+                    chunkFiles.forEach(function (cf, idx) {
+                      restoreSeq = restoreSeq.then(function () {
+                        return c.downloadFile(cf.file).then(function (jsonStr) {
+                          if (!jsonStr) return;
+                          try {
+                            var data = parseChunk(jsonStr);
+                            var keys = data.keys || {};
+                            Object.keys(keys).forEach(function (k) {
+                              Lampa.Storage.set(k, keys[k]);
+                            });
+                            appliedCount++;
+                          } catch (e) {
+                            console.warn('GramLink', 'Chunk parse error:', e);
+                          }
+                          Lampa.Noty.show(idx + 1 + '/' + chunkFiles.length + ' chunks restored');
+                        });
+                      });
+                    });
+                    restoreSeq.then(function () {
+                      Lampa.Noty.show((Lampa.Lang.translate('gramlink_backup_restored') || 'Restored') + ' (' + appliedCount + '/' + chunkFiles.length + ')');
+                      // Сповістити delta-poll про зміну курсора
+                      Lampa.Listener.send('gramlink_backup_restored', {
+                        restored_at: manifest.meta.created_at
+                      });
+                      // М'яке оновлення з невеличкою затримкою, щоб Noty встиг відобразитись
+                      setTimeout(function () {
+                        softRefresh();
+                      }, 600);
+                    })["catch"](function (err) {
+                      console.error('GramLink', 'Restore error:', err);
+                      Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_failed') || 'Restore failed');
+                    });
+                  })["catch"](function (err) {
+                    Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_invalid') || 'Manifest error');
+                    console.error('GramLink', 'Manifest error:', err);
                   });
-                  Lampa.Noty.show('Restored');
-                } catch (e) {
-                  Lampa.Noty.show('Invalid');
                 }
               });
             }
           });
         })["catch"](function () {
-          Lampa.Noty.show('Failed');
+          Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_failed') || 'Failed to list backups');
         });
       }
 
@@ -6590,7 +7597,6 @@
         var id = $card.data('id'),
           name = $card.data('name') || 'Unnamed',
           active = $card.data('active') === true;
-        var prev = Lampa.Controller.enabled().name;
         var items = [];
         items.push({
           title: Lampa.Lang.translate('gramlink_plugins') || 'Plugins',
@@ -6608,15 +7614,10 @@
           title: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
           cancel: true
         });
-        Lampa.Select.show({
+        select({
           title: name,
           items: items,
-          onBack: function onBack() {
-            Lampa.Controller.toggle(prev);
-          },
           onSelect: function onSelect(item) {
-            Lampa.Controller.toggle(prev);
-            if (item.cancel) return;
             if (item.action === 'plugins') PluginManager.open(id, name, active);else if (item.action === 'sync') Profiles.syncProfile(id, currentProfilesTopicId);else if (item.action === 'delete') deleteProfile(id);
           }
         });
@@ -6655,9 +7656,10 @@
           var ch = Lampa.Storage.get(STORAGE_CHANNEL_ID, ''),
             sl = Lampa.Storage.get(STORAGE_SYNC_LOG_TOPIC, '');
           if (ch && sl) client.startHeartbeat(ch, sl);
-          client.on('profile_delta', function (data) {
+          self._deltaHandler = function (data) {
             Profiles.applyDelta(data);
-          });
+          };
+          client.on('profile_delta', self._deltaHandler);
           renderProfiles();
           if (refreshTimer) clearInterval(refreshTimer);
           refreshTimer = setInterval(function () {
@@ -6670,8 +7672,6 @@
       //  CHANNEL / TOPIC MANAGEMENT
       // ═══════════════════════════════════════════════════════
 
-      var CHANNEL_TITLE = "\uD83D\uDD04 Lampa Sync [DO NOT DELETE]";
-      var TOPIC_NAMES = ['sync-log', 'remote-cmd', 'backup', 'profiles', 'profiles-sync'];
       function ensureSyncChannel() {
         var client = GramLinkClient.getInstance();
         if (currentChannelId) return ensureTopics();
@@ -6754,23 +7754,9 @@
           throw err;
         });
       }
-      function getChannelId() {
-        return parseInt(Lampa.Storage.get(STORAGE_CHANNEL_ID, ''), 10);
-      }
 
+      // getChannelId — imported from sdk/keys (safe version with NaN guard)
       // ─── Misc helpers ───────────────────────────────────
-
-      function stripCodeFence(str) {
-        if (!str) return '';
-        return str.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-      }
-      function escHtml(s) {
-        if (!s) return '';
-        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-      }
-      function escAttr(s) {
-        return String(s).replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-      }
     }
 
     function startPlugin() {
@@ -6809,6 +7795,7 @@
       Lampa.Template.add('gramlink_style', '<style>.gramlink-activity{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.gramlink-activity .head__title{font-size:1.4em}.gramlink-hub{padding:1em 2em;max-width:50em;margin:0 auto}.gramlink-hub__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;margin-bottom:2em;padding-bottom:1em;border-bottom:1px solid rgba(255,255,255,0.1)}.gramlink-hub__title{font-size:1.6em;font-weight:700;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.gramlink-hub__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.5em}.gramlink-hub__section{margin-bottom:2em}.gramlink-hub__section-title{font-size:1.2em;font-weight:600;margin-bottom:1em;color:rgba(255,255,255,0.7)}.gramlink-status{background:rgba(255,255,255,0.05);-webkit-border-radius:.8em;border-radius:.8em;padding:1.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em}.gramlink-status__indicator{width:1em;height:1em;-webkit-border-radius:50%;border-radius:50%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gramlink-status__indicator--connected{background:#4caf50;-webkit-box-shadow:0 0 .6em rgba(76,175,80,0.5);box-shadow:0 0 .6em rgba(76,175,80,0.5)}.gramlink-status__indicator--disconnected{background:#f44336}.gramlink-status__indicator--connecting{background:#ffc107;-webkit-animation:gramlink-pulse 1.5s ease-in-out infinite;animation:gramlink-pulse 1.5s ease-in-out infinite}.gramlink-status__indicator--auth_needed{background:#ff9800}.gramlink-status__indicator--error{background:#f44336}.gramlink-status__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-status__label{font-size:1.1em;font-weight:600;margin-bottom:.2em}.gramlink-status__detail{font-size:.9em;color:rgba(255,255,255,0.5)}@-webkit-keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}.gramlink-devices__empty{text-align:center;padding:2em;color:rgba(255,255,255,0.4);font-size:1.1em}.gramlink-device{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em;padding:1em 1.2em;background:rgba(255,255,255,0.03);-webkit-border-radius:.6em;border-radius:.6em;margin-bottom:.5em;cursor:pointer;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-device.focus,.gramlink-device.hover{background:rgba(255,255,255,0.1);outline:.2em solid #fff;outline-offset:.3em}.gramlink-device__icon{width:2.5em;height:2.5em;-webkit-border-radius:.5em;border-radius:.5em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;font-size:.9em;color:white}.gramlink-device__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-device__name{font-size:1.1em;font-weight:600}.gramlink-device__meta{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-device__status{font-size:.8em;padding:.3em .6em;-webkit-border-radius:.3em;border-radius:.3em;background:rgba(76,175,80,0.15);color:#4caf50}.gramlink-device--this{opacity:.6;cursor:default}.gramlink-auth{padding:1em;text-align:center}.gramlink-auth__qr-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;margin-bottom:1.5em;min-height:18em}.gramlink-auth__qr-placeholder{width:16em;height:16em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;background:rgba(255,255,255,0.05);-webkit-border-radius:1em;border-radius:1em}.gramlink-auth__qr-img{width:16em;height:16em;-webkit-border-radius:1em;border-radius:1em;background:white;padding:.5em}.gramlink-auth__status{font-size:1.1em;color:rgba(255,255,255,0.6);line-height:1.5}.gramlink-auth__scan-hint{margin-bottom:.5em;color:rgba(255,255,255,0.8)}.gramlink-auth__confirm-hint{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;padding:.6em 1.2em;-webkit-border-radius:.5em;border-radius:.5em;font-size:.9em;font-weight:600;cursor:pointer;border:0;-webkit-transition:background .2s,opacity .2s;-o-transition:background .2s,opacity .2s;transition:background .2s,opacity .2s}.gramlink-btn.focus,.gramlink-btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-btn--primary{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-btn--ghost{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-btn--ghost.focus{background:rgba(255,255,255,0.15)}.gramlink-btn--small{padding:.4em .8em;font-size:.8em}@media screen and (max-width:767px){.gramlink-hub{padding:.8em 1em}.gramlink-status{padding:1em}.gramlink-auth__qr-placeholder,.gramlink-auth__qr-img{width:12em;height:12em}.gramlink-auth__qr-container{min-height:14em}}@media screen and (max-width:480px){.gramlink-hub__header{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.8em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}}.gramlink-2fa{padding:1em;text-align:center}.gramlink-2fa__desc{font-size:1.1em;color:rgba(255,255,255,0.8);margin-bottom:.5em;line-height:1.4}.gramlink-2fa__hint{font-size:.9em;color:rgba(255,255,255,0.5);margin-bottom:1.5em}.gramlink-2fa__input-wrap{margin-bottom:1.5em}.gramlink-2fa__input{width:100%;max-width:20em;padding:.8em 1em;border:.15em solid rgba(255,255,255,0.2);-webkit-border-radius:.5em;border-radius:.5em;background:rgba(255,255,255,0.08);color:#fff;font-size:1.1em;text-align:center;outline:0;-webkit-box-sizing:border-box;box-sizing:border-box}.gramlink-2fa__input:focus{border-color:#08c}.gramlink-2fa__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.gramlink-2fa__btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:.7em 1.5em;-webkit-border-radius:.5em;border-radius:.5em;font-size:1em;font-weight:600;cursor:pointer;min-width:8em;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-2fa__btn_ok{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-2fa__btn_cancel{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-2fa__btn.focus,.gramlink-2fa__btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;padding:0 2em;margin-bottom:1em}.gramlink-tab.active{background:rgba(255,255,255,0.15) !important;border-color:rgba(255,255,255,0.3) !important;color:#fff !important}.gramlink-body--grid>.gramlink-tabs,.gramlink-tabs{grid-column:1/-1}.gramlink-device-avatar{width:2em;height:2em;-webkit-border-radius:.4em;border-radius:.4em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em}.gramlink-avatar{-webkit-border-radius:50%;border-radius:50%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:700;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;overflow:hidden}.gramlink-avatar--head{width:24px;height:24px;font-size:11px}.gramlink-avatar--list{width:2em;height:2em;font-size:.9em}.gramlink-profile-avatar{width:2.2em;height:2.2em;-webkit-border-radius:50%;border-radius:50%;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gs-plugin-toggle{width:1.2em;height:1.2em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:1.2em}.gs-plugin-toggle.on{color:#4caf50}.gs-plugin-toggle.off{color:rgba(255,255,255,0.3)}.gs-status-item .gramlink-status__indicator{margin:auto}.profile-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1em;padding:.5em 0}.profile-card{background:rgba(255,255,255,0.06);-webkit-border-radius:12px;border-radius:12px;padding:1.5em 1em;position:relative;cursor:pointer;-webkit-transition:background .2s,-webkit-box-shadow .2s;transition:background .2s,-webkit-box-shadow .2s;-o-transition:background .2s,box-shadow .2s;transition:background .2s,box-shadow .2s;transition:background .2s,box-shadow .2s,-webkit-box-shadow .2s;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em}.profile-card.focus,.profile-card.hover{background:rgba(255,255,255,0.12);outline:.2em solid rgba(255,255,255,0.5);outline-offset:.25em}.profile-card--active{background:rgba(255,255,255,0.1);-webkit-box-shadow:inset 0 0 0 2px rgba(255,215,0,0.5);box-shadow:inset 0 0 0 2px rgba(255,215,0,0.5)}.profile-card--add{border:2px dashed rgba(255,215,0,0.4);background:transparent;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center;color:rgba(255,255,255,0.5);font-size:.95em;min-height:6em;gap:.4em;-webkit-border-radius:12px;border-radius:12px;grid-column:1/-1}.profile-card--add .profile-card__add-icon{font-size:2em;line-height:1;opacity:.6}.profile-card--add.focus,.profile-card--add.hover{border-color:rgba(255,215,0,0.8);color:rgba(255,255,255,0.8)}.profile-card--empty{border:2px dashed rgba(255,255,255,0.1);background:transparent}.profile-card__avatar-wrap{-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;width:3.2em;height:3.2em;-webkit-border-radius:50%;border-radius:50%;overflow:hidden;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:1.2em;font-weight:700;color:#fff}.profile-card__avatar-wrap img,.profile-card__avatar-wrap .gramlink-avatar{width:100%;height:100%;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%}.profile-card__name{font-size:1.1em;font-weight:600;line-height:1.3;-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0;word-break:break-word}.profile-card__active-badge{font-size:.7em;color:#ffd700;margin-top:.15em}@media screen and (max-width:767px){.profile-grid{grid-template-columns:repeat(2,1fr)}}@media screen and (max-width:480px){.profile-grid{grid-template-columns:1fr}}.gramlink-item{background:#404040;-webkit-border-radius:1em;border-radius:1em;padding:1.2em 1.4em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;cursor:pointer;position:relative;-webkit-box-sizing:border-box;box-sizing:border-box}.gramlink-item.focus{outline:.3em solid #fff;outline-offset:.3em;-webkit-border-radius:1.2em;border-radius:1.2em}.gramlink-body--grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1em;padding:1em 2em}.gramlink-body--grid>.gramlink-item{margin:0;min-height:0}.gramlink-body--grid>.gramlink-item+.gramlink-item{margin:0}.gramlink-body--content{padding:1em 2em}.gs-avatar{width:2.5em;height:2.5em;-webkit-border-radius:.5em;border-radius:.5em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:#fff;font-weight:700;font-size:.9em;margin-right:1em}.gs-content{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gs-title{font-size:1.1em;line-height:normal;margin-bottom:.2em;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap}.gs-sub{font-size:.84em;color:#8d8d8d;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap}.gs-badge{font-size:.78em;padding:.3em .5em;-webkit-border-radius:.3em;border-radius:.3em;background:rgba(0,0,0,0.18);-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;margin-left:auto}.gs-badge.badge--active{color:#6dce4b}.gs-badge.badge--inactive{color:#dd7337}.gs-badge.badge--info{color:#8d8d8d}.gramlink-body--grid>.gramlink-tabs,.gramlink-tabs{grid-column:1/-1}</style>');
       $('body').append(Lampa.Template.get('gramlink_style', {}, true));
       setupBroadcastListener();
+      setupBackupRestoredListener();
       addMenu();
       addProfileHeadButton();
       Broadcast.setupPlayerPanel();
@@ -6819,17 +7806,30 @@
       setupDeviceSettingsListener();
       startDeltaPolling();
     }
+
+    // ─── Real-time delta sync listeners ─────────────────────
+
+    // ─── Persistent delta polling (same-account cross-device sync) ─
+
+    var deltaPollTimer = null;
     function startDeltaPolling() {
+      // ponytail: clear existing timer on re-entry
+      if (deltaPollTimer) {
+        clearInterval(deltaPollTimer);
+        deltaPollTimer = null;
+      }
       // Start after connection is established
       var client = GramLinkClient.getInstance();
+      var pollInterval = getInt(STORAGE_KEYS.POLL_INTERVAL, 10) * 1000;
       var check = setInterval(function () {
         if (client.isConnected()) {
           clearInterval(check);
-          // Poll immediately then every 10s
+          // Poll immediately then every pollInterval
           Profiles.refreshDeltas();
-          setInterval(function () {
+          deltaPollTimer = setInterval(function () {
+            if (document.hidden) return; // ponytail: skip when tab hidden
             Profiles.refreshDeltas();
-          }, 10000);
+          }, pollInterval);
         }
       }, 2000);
     }
@@ -6918,11 +7918,16 @@
       if (!profilesTopicId) return;
       var client = GramLinkClient.getInstance();
       var check = setInterval(function () {
+        if (document.hidden) return; // ponytail: skip when tab hidden
         if (client.isConnected()) {
           clearInterval(check);
           Profiles.startAutoActivation(profilesTopicId, profilesSyncTopicId);
         }
       }, 2000);
+      // ponytail: 30s timeout — stop polling if client doesn't connect
+      setTimeout(function () {
+        clearInterval(check);
+      }, 30000);
     }
 
     // ─── Auto-connect on startup ──────────────────────────────
@@ -6972,11 +7977,25 @@
       });
     }
 
+    // ─── Backup restored listener ──────────────────────────
+
+    function setupBackupRestoredListener() {
+      Lampa.Listener.follow('gramlink_backup_restored', function (e) {
+        // Після відновлення бекапу — пересунути delta cursor,
+        // щоб не прийняти старі deltas як нові
+        if (e && e.restored_at) {
+          Lampa.Storage.set('gramlink_last_delta_seen', String(e.restored_at));
+        }
+      });
+    }
+
     // ─── Profile Head Button ────────────────────────────────
 
     function addProfileHeadButton() {
       var $profileBtn = $('<div class="head__action selector open--gramlink-profile" ' + 'style="display:none">' + '<div class="gramlink-avatar gramlink-avatar--head">?</div>' + '</div>');
 
+      // ponytail: cleanup existing profile button before insert
+      $('.open--gramlink-profile').remove();
       // ponytail: insert directly into head__actions, no dependency on .open--profile
       var $headActions = $('.head__actions');
       if ($headActions.length) {
@@ -6993,16 +8012,13 @@
           $profileBtn.hide();
           return;
         }
-        var avatar = Profiles.getAvatar(activeName);
-        var color = Profiles.avatarColor(activeName);
-        var isUrl = avatar.indexOf('https://api.dicebear.com') === 0;
         $profileBtn.show();
         var $av = $profileBtn.find('.gramlink-avatar');
-        if (isUrl) {
-          $av.replaceWith('<img src="' + avatar + '" class="gramlink-avatar gramlink-avatar--head" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">');
-        } else {
-          $av.css('background', color).text(avatar);
-        }
+        var avatarHtml = renderAvatar(activeName, {
+          className: 'gramlink-avatar gramlink-avatar--head',
+          style: 'width:100%;height:100%;object-fit:cover;border-radius:50%;'
+        });
+        $av.replaceWith(avatarHtml);
       }
       updateProfileButton();
       Lampa.Storage.listener.follow('change', function (e) {
@@ -7049,9 +8065,10 @@
       if (hasCache) {
         // Profile items from cache
         cachedProfiles.forEach(function (p) {
-          var avatarVal = Profiles.getAvatar(p.name);
-          var isUrl = avatarVal.indexOf('https://api.dicebear.com') === 0;
-          var iconHtml = isUrl ? '<img src="' + avatarVal + '" style="width:2em;height:2em;border-radius:50%;object-fit:cover;">' : '<div class="gramlink-avatar gramlink-avatar--list" style="background:' + Profiles.avatarColor(p.name) + '">' + avatarVal + '</div>';
+          var iconHtml = renderAvatar(p.name, {
+            className: 'gramlink-avatar gramlink-avatar--list',
+            style: 'width:2em;height:2em;object-fit:cover;'
+          });
           items.push({
             title: p.name,
             template: 'selectbox_icon',
@@ -7074,7 +8091,9 @@
             Profiles.quickSwitchProfile(item._msgId);
           }
         },
-        onBack: function onBack() {},
+        onBack: function onBack() {
+          Lampa.Controller.toggle(enabledCtrl); // ponytail: restore controller on back
+        },
         onFullDraw: function onFullDraw(container) {
           container.append($('<div class="selectbox-item selectbox-item--icon selector">' + '<div class="selectbox-item__icon">' + '<svg width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' + '</div>' + '<div>' + '<div class="selectbox-item__title">' + (Lampa.Lang.translate('gramlink_hub_title') || 'GramLink HUB') + '</div>' + '</div>' + '</div>').on('hover:enter', function () {
             Lampa.Activity.push({
