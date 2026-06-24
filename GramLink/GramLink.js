@@ -673,9 +673,40 @@
           ru: 'Чтение профилей Cub...'
         },
         gramlink_migration_complete: {
-          en: '{count} profiles imported. Cub account disabled.',
-          uk: 'Імпортовано {count} профілів. Cub вимкнено.',
-          ru: 'Импортировано {count} профилей. Cub отключен.'
+          en: '{count} profiles imported successfully.',
+          uk: 'Імпортовано {count} профілів успішно.',
+          ru: 'Импортировано {count} профилей успешно.'
+        },
+        // Import analyzer
+        gramlink_import_title: {
+          en: 'Cub Import Summary',
+          uk: 'Підсумок імпорту з Cub',
+          ru: 'Итоги импорта из Cub'
+        },
+        gramlink_import_profiles: {
+          en: 'Profiles found:',
+          uk: 'Знайдено профілів:',
+          ru: 'Найдено профилей:'
+        },
+        gramlink_import_bookmarks: {
+          en: 'Favorites & history items:',
+          uk: 'Елементів обраного та історії:',
+          ru: 'Элементов избранного и истории:'
+        },
+        gramlink_import_plugins: {
+          en: 'Plugins found:',
+          uk: 'Знайдено плагінів:',
+          ru: 'Найдено плагинов:'
+        },
+        gramlink_import_proceed: {
+          en: 'Proceed with migration to GramLink?',
+          uk: 'Продовжити міграцію в GramLink?',
+          ru: 'Продолжить миграцию в GramLink?'
+        },
+        gramlink_import_start: {
+          en: 'Yes, migrate',
+          uk: 'Так, мігрувати',
+          ru: 'Да, мигрировать'
         },
         gramlink_migration_no_cub: {
           en: 'Cub account not found. Log in to Cub in Lampa settings first.',
@@ -1910,7 +1941,7 @@
       };
     }
 
-    var VERSION = '0.0.6';
+    var VERSION = '0.0.61';
     var instance = null;
     var GramLinkClient = /*#__PURE__*/function () {
       function GramLinkClient() {
@@ -3700,21 +3731,72 @@
         Lampa.Noty.show('Cub account not found. Log in to Cub in Lampa settings first.');
         return;
       }
-      Lampa.Modal.open({
-        title: 'Migrate from Cub?',
-        html: $('<div style="padding:1em">' + '<p>This will:</p>' + '<ul style="padding-left:1.5em;line-height:1.8">' + '<li>Import ALL your Cub profiles</li>' + '<li>Import bookmarks & continue watching</li>' + '<li>Import installed plugins</li>' + '<li>Disable Cub sync</li>' + '</ul>' + '<p style="color:#f44336;margin-top:1em">Cub account will be disabled. This cannot be undone automatically.</p>' + '</div>'),
-        buttons: [{
-          name: 'Yes, migrate',
-          onSelect: function onSelect() {
-            Lampa.Modal.close();
-            doMigration(profilesTopicId);
-          }
-        }, {
-          name: 'Cancel',
-          onSelect: function onSelect() {
-            Lampa.Modal.close();
-          }
-        }]
+
+      // ── Import Analyzer: show counts before migration ───────────────
+      Lampa.Noty.show('Analyzing Cub data...');
+      Promise.all([Lampa.Account.Api.load('profiles/all')["catch"](function () {
+        return {
+          profiles: []
+        };
+      }), Lampa.Account.Api.load('plugins/all')["catch"](function () {
+        return {
+          plugins: []
+        };
+      })]).then(function (results) {
+        var profilesResult = results[0];
+        var pluginsResult = results[1];
+        var profiles = profilesResult && profilesResult.profiles || [];
+        var allPlugins = pluginsResult && pluginsResult.secuses ? pluginsResult.plugins || [] : [];
+        var profileCount = profiles.length;
+        var pluginCount = allPlugins.length;
+        if (profileCount === 0) {
+          Lampa.Noty.show('No Cub profiles found');
+          return;
+        }
+
+        // ── Fetch bookmarks from ALL profiles for total count ──
+        var bookmarkPromises = profiles.map(function (p) {
+          return Lampa.Account.Api.load('bookmarks/dump', {
+            headers: {
+              profile: p.id
+            },
+            dataType: 'text'
+          }).then(function (raw) {
+            try {
+              var parsed = JSON.parse(raw);
+              return parsed && parsed.bookmarks ? parsed.bookmarks.length : 0;
+            } catch (e) {
+              return 0;
+            }
+          })["catch"](function () {
+            return 0;
+          });
+        });
+        Promise.all(bookmarkPromises).then(function (bookmarkCounts) {
+          var totalBookmarks = bookmarkCounts.reduce(function (a, b) {
+            return a + b;
+          }, 0);
+          var $html = $('<div style="padding:1em">' + '<div class="gramlink-import-stats">' + '<div class="gramlink-import-stat" style="display:flex;justify-content:space-between;padding:0.8em 0;border-bottom:1px solid rgba(255,255,255,0.08)">' + '<span style="opacity:0.6">' + (Lampa.Lang.translate('gramlink_import_profiles') || 'Profiles found:') + '</span>' + '<span style="font-weight:600;font-size:1.1em">' + profileCount + '</span>' + '</div>' + '<div class="gramlink-import-stat" style="display:flex;justify-content:space-between;padding:0.8em 0;border-bottom:1px solid rgba(255,255,255,0.08)">' + '<span style="opacity:0.6">' + (Lampa.Lang.translate('gramlink_import_bookmarks') || 'Favorites & history items:') + '</span>' + '<span style="font-weight:600;font-size:1.1em">' + totalBookmarks + '</span>' + '</div>' + '<div class="gramlink-import-stat" style="display:flex;justify-content:space-between;padding:0.8em 0">' + '<span style="opacity:0.6">' + (Lampa.Lang.translate('gramlink_import_plugins') || 'Plugins found:') + '</span>' + '<span style="font-weight:600;font-size:1.1em">' + pluginCount + '</span>' + '</div>' + '</div>' + '<p style="margin-top:1em;opacity:0.5;font-size:0.9em">' + (Lampa.Lang.translate('gramlink_import_proceed') || 'Proceed with migration to GramLink?') + '</p>' + '</div>');
+          Lampa.Modal.open({
+            title: Lampa.Lang.translate('gramlink_import_title') || 'Cub Import Summary',
+            html: $html,
+            buttons: [{
+              name: Lampa.Lang.translate('gramlink_import_start') || 'Yes, migrate',
+              onSelect: function onSelect() {
+                Lampa.Modal.close();
+                doMigration(profilesTopicId);
+              }
+            }, {
+              name: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
+              onSelect: function onSelect() {
+                Lampa.Modal.close();
+              }
+            }]
+          });
+        });
+      })["catch"](function (e) {
+        console.error('GramLink', 'Import analysis error:', e);
+        Lampa.Noty.show('Failed to analyze Cub data: ' + (e.message || 'API error'));
       });
     }
 
@@ -4052,12 +4134,10 @@
         Lampa.Storage.set('gramlink_active_profile_ts', String(Math.floor(Date.now() / 1000)));
         if (activatedName) Lampa.Storage.set('gramlink_active_profile_name', activatedName);
       }
-      Lampa.Storage.set('account', '', true);
-      Lampa.Storage.field('account_use', false);
       Lampa.Settings.update();
       Lampa.Modal.open({
         title: 'Migration complete!',
-        html: $('<div style="padding:1em">' + count + ' profiles imported. Cub account disabled.</div>'),
+        html: $('<div style="padding:1em">' + count + ' profiles imported successfully.</div>'),
         buttons: [{
           name: 'Reload now',
           onSelect: function onSelect() {
