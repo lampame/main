@@ -3777,6 +3777,7 @@
             return a + b;
           }, 0);
           var $html = $('<div style="padding:1em">' + '<div class="gramlink-import-stats">' + '<div class="gramlink-import-stat" style="display:flex;justify-content:space-between;padding:0.8em 0;border-bottom:1px solid rgba(255,255,255,0.08)">' + '<span style="opacity:0.6">' + (Lampa.Lang.translate('gramlink_import_profiles') || 'Profiles found:') + '</span>' + '<span style="font-weight:600;font-size:1.1em">' + profileCount + '</span>' + '</div>' + '<div class="gramlink-import-stat" style="display:flex;justify-content:space-between;padding:0.8em 0;border-bottom:1px solid rgba(255,255,255,0.08)">' + '<span style="opacity:0.6">' + (Lampa.Lang.translate('gramlink_import_bookmarks') || 'Favorites & history items:') + '</span>' + '<span style="font-weight:600;font-size:1.1em">' + totalBookmarks + '</span>' + '</div>' + '<div class="gramlink-import-stat" style="display:flex;justify-content:space-between;padding:0.8em 0">' + '<span style="opacity:0.6">' + (Lampa.Lang.translate('gramlink_import_plugins') || 'Plugins found:') + '</span>' + '<span style="font-weight:600;font-size:1.1em">' + pluginCount + '</span>' + '</div>' + '</div>' + '<p style="margin-top:1em;opacity:0.5;font-size:0.9em">' + (Lampa.Lang.translate('gramlink_import_proceed') || 'Proceed with migration to GramLink?') + '</p>' + '</div>');
+          var enabledCtrl = Lampa.Controller.enabled().name;
           Lampa.Modal.open({
             title: Lampa.Lang.translate('gramlink_import_title') || 'Cub Import Summary',
             html: $html,
@@ -3784,12 +3785,14 @@
               name: Lampa.Lang.translate('gramlink_import_start') || 'Yes, migrate',
               onSelect: function onSelect() {
                 Lampa.Modal.close();
+                Lampa.Controller.toggle(enabledCtrl);
                 doMigration(profilesTopicId);
               }
             }, {
               name: Lampa.Lang.translate('gramlink_cancel') || 'Cancel',
               onSelect: function onSelect() {
                 Lampa.Modal.close();
+                Lampa.Controller.toggle(enabledCtrl);
               }
             }]
           });
@@ -4134,7 +4137,14 @@
         Lampa.Storage.set('gramlink_active_profile_ts', String(Math.floor(Date.now() / 1000)));
         if (activatedName) Lampa.Storage.set('gramlink_active_profile_name', activatedName);
       }
-      Lampa.Settings.update();
+
+      // Відновлюємо gramlink_tools з правильним onBack замість Settings.update()
+      var enabledCtrl = Lampa.Controller.enabled().name;
+      Lampa.Settings.create('gramlink_tools', {
+        onBack: function onBack() {
+          Lampa.Settings.create('gramlink');
+        }
+      });
       Lampa.Modal.open({
         title: 'Migration complete!',
         html: $('<div style="padding:1em">' + count + ' profiles imported successfully.</div>'),
@@ -4148,6 +4158,7 @@
           name: 'Later',
           onSelect: function onSelect() {
             Lampa.Modal.close();
+            Lampa.Controller.toggle(enabledCtrl);
           }
         }]
       });
@@ -5630,6 +5641,7 @@
         },
         onChange: function onChange() {
           var client = GramLinkClient.getInstance();
+          var enabledCtrl = Lampa.Controller.enabled().name;
           if (client.hasCredentials()) {
             Lampa.Modal.open({
               title: Lampa.Lang.translate('gramlink_settings_logout'),
@@ -5646,6 +5658,7 @@
                 name: Lampa.Lang.translate('gramlink_title'),
                 onSelect: function onSelect() {
                   Lampa.Modal.close();
+                  Lampa.Controller.toggle(enabledCtrl);
                 }
               }]
             });
@@ -5768,7 +5781,11 @@
         onChange: function onChange() {
           Lampa.Settings.create('gramlink_server', {
             onBack: function onBack() {
-              Lampa.Settings.create('gramlink_connection');
+              Lampa.Settings.create('gramlink_connection', {
+                onBack: function onBack() {
+                  Lampa.Settings.create('gramlink');
+                }
+              });
             }
           });
         }
@@ -6071,14 +6088,30 @@
                   $('.scroll__body').find('[data-name="gramlink_custom_host"]').toggleClass('hide', value !== 'custom');
                   $('.scroll__body').find('[data-name="gramlink_custom_port"]').toggleClass('hide', value !== 'custom');
                   Lampa.Modal.close();
-                  Lampa.Settings.update();
+                  Lampa.Settings.create('gramlink_server', {
+                    onBack: function onBack() {
+                      Lampa.Settings.create('gramlink_connection', {
+                        onBack: function onBack() {
+                          Lampa.Settings.create('gramlink');
+                        }
+                      });
+                    }
+                  });
                 }
               }, {
                 name: Lampa.Lang.translate('gramlink_settings_server_cancel'),
                 onSelect: function onSelect() {
                   Lampa.Storage.set('gramlink_server_type', oldVal);
                   Lampa.Modal.close();
-                  Lampa.Settings.update();
+                  Lampa.Settings.create('gramlink_server', {
+                    onBack: function onBack() {
+                      Lampa.Settings.create('gramlink_connection', {
+                        onBack: function onBack() {
+                          Lampa.Settings.create('gramlink');
+                        }
+                      });
+                    }
+                  });
                 }
               }]
             });
@@ -6257,7 +6290,11 @@
           var selectedStyle = item.title === Lampa.Lang.translate('gramlink_avatar_none') ? '' : item.title;
           Lampa.Storage.set('gramlink_avatar_style', selectedStyle);
           Lampa.Controller.toggle(enabledCtrl);
-          Lampa.Settings.update();
+          Lampa.Settings.create('gramlink_tools', {
+            onBack: function onBack() {
+              Lampa.Settings.create('gramlink');
+            }
+          });
         }
       });
     }
