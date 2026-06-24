@@ -4953,6 +4953,7 @@
           }
 
           // ── Start auto-activation with device overlays ──
+          // ponytail: merge local plugins not in profile — same safeguard as applyProfileData()
           if (data.plugins) {
             var deviceId = getDeviceId();
             var override = data.device_overrides && data.device_overrides[deviceId];
@@ -4965,6 +4966,23 @@
                 status: ds !== undefined ? ds : p.status,
                 custom: dc !== undefined ? dc : p.custom
               };
+            });
+            // Merge in locally installed plugins NOT in the profile data
+            var localPlugins = collectPlugins();
+            var mergedUrls = {};
+            merged.forEach(function (p) {
+              mergedUrls[p.url] = true;
+            });
+            localPlugins.forEach(function (lp) {
+              if (!mergedUrls[lp.url]) {
+                merged.push({
+                  url: lp.url,
+                  name: lp.name,
+                  status: lp.status !== undefined ? lp.status : 1,
+                  custom: lp.custom
+                });
+                mergedUrls[lp.url] = true;
+              }
             });
             Lampa.Storage.set('plugins', merged);
           }
@@ -7426,11 +7444,11 @@
       //  HELPERS
       // ═══════════════════════════════════════════════════════
 
-      function createItem(cls, avatar, title, sub, badgeCls, badgeText) {
+      function createItem(cls, avatar, title, sub, badgeCls, badgeText, isHtmlAvatar) {
         var el = document.createElement('div');
         el.className = 'gramlink-item selector ' + cls;
         // Ponytail: skip avatar div when empty (plugins don't need checkmark icon)
-        var avatarHtml = avatar ? '<div class="gs-avatar">' + escHtml(avatar) + '</div>' : '';
+        var avatarHtml = avatar ? '<div class="gs-avatar">' + (isHtmlAvatar ? avatar : escHtml(avatar)) + '</div>' : '';
         el.innerHTML = avatarHtml + '<div class="gs-content">' + '<div class="gs-title">' + escHtml(title) + '</div>' + '<div class="gs-sub">' + escHtml(sub) + '</div>' + '</div>' + (badgeCls ? '<div class="gs-badge ' + badgeCls + '">' + escHtml(badgeText || '') + '</div>' : '');
 
         // Native: direct hover:focus listener on every item
