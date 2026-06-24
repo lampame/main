@@ -235,19 +235,17 @@
         i = 0;
       }
       _regeneratorDefine = function (e, r, n, t) {
-        if (r) i ? i(e, r, {
+        function o(r, n) {
+          _regeneratorDefine(e, r, function (e) {
+            return this._invoke(r, n, e);
+          });
+        }
+        r ? i ? i(e, r, {
           value: n,
           enumerable: !t,
           configurable: !t,
           writable: !t
-        }) : e[r] = n;else {
-          function o(r, n) {
-            _regeneratorDefine(e, r, function (e) {
-              return this._invoke(r, n, e);
-            });
-          }
-          o("next", 0), o("throw", 1), o("return", 2);
-        }
+        }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2));
       }, _regeneratorDefine(e, r, n, t);
     }
 
@@ -267,7 +265,7 @@
       function _prepare() {
         _prepare = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
           return _regenerator().w(function (_context) {
-            while (1) switch (_context.n) {
+            while (1) switch (_context.p = _context.n) {
               case 0:
                 if (!(audio.canPlayType('audio/vnd.apple.mpegurl') || url.indexOf('.aacp') > 0)) {
                   _context.n = 2;
@@ -293,7 +291,6 @@
                 }));
               case 4:
                 _context.p = 4;
-                _context.v;
                 Lampa.Noty.show('Ошибка в загрузке потока');
                 _context.n = 6;
                 break;
@@ -321,7 +318,7 @@
         _start = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
           var _t2;
           return _regenerator().w(function (_context2) {
-            while (1) switch (_context2.n) {
+            while (1) switch (_context2.p = _context2.n) {
               case 0:
                 _context2.p = 0;
                 _context2.n = 1;
