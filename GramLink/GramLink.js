@@ -2185,8 +2185,7 @@
      * vault.js — Secure storage for GramLink auth keys
      * Wraps crypto-lite primitives with Lampa.Storage persistence.
      */
-    var PLUGIN_SECRET = 'gramlink_v3_9f2a8d7e6b5c4a1f3e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b';
-    var PBKDF2_ITERATIONS = 1000;
+    var PBKDF2_ITERATIONS = 100000;
     var KEY_LEN = 16;
     var IV_LEN = 16;
     var SALT_LEN = 16;
@@ -2244,10 +2243,20 @@
       var raw = (navigator.userAgent || '') + '|' + sw + 'x' + sh + '|' + (navigator.language || 'en');
       return sha256(strToUtf8(raw));
     }
+
+    /**
+     * Lampa Context — стабільні властивості Lampa, які не змінюються
+     * при оновленні. Використовується як seed замість hardcoded PLUGIN_SECRET.
+     * Використовує Lampa.Utils.hash() — єдину хеш-функцію з бібліотек Lampa.
+     */
+    function getLampaContext() {
+      var p = ['gramlink', Lampa.Storage.get('platform', 'unknown'), Lampa.Platform.tv() ? 'tv' : Lampa.Platform.screen('mobile') ? 'mobile' : 'desktop'];
+      return Lampa.Utils.hash(p.join('|'));
+    }
     function _deriveKey(saltBytes) {
-      var secretBytes = strToUtf8(PLUGIN_SECRET);
+      var lampaCtx = strToUtf8(String(getLampaContext()));
       var fpBytes = getDeviceFingerprint();
-      var password = hmacSha256(secretBytes, fpBytes);
+      var password = hmacSha256(lampaCtx, fpBytes);
       return pbkdf2Sha256(password, saltBytes, PBKDF2_ITERATIONS, KEY_LEN);
     }
     var vault = {
@@ -2307,7 +2316,7 @@
       }
     };
 
-    var VERSION = '0.0.62';
+    var VERSION = '0.0.7';
     var instance = null;
     var GramLinkClient = /*#__PURE__*/function () {
       function GramLinkClient() {
@@ -8356,7 +8365,12 @@
       setupBroadcastListener();
       setupBackupRestoredListener();
       addMenu();
-      addProfileHeadButton();
+      // ponytail: defer head button — DOM not ready during plugin init
+      Lampa.Listener.follow('app', function __glHeadBtn(e) {
+        if (e.type === 'ready') {
+          addProfileHeadButton();
+        }
+      });
       Broadcast.setupPlayerPanel();
       Broadcast.addBroadcastButton();
       autoConnect();
