@@ -3382,7 +3382,6 @@
             poster: p.poster_tmdb ? Lampa.TMDB.image('t/p/w300/' + p.poster_tmdb.replace(/^\//, '')) : p.poster_kinobaza ? api$1.cdn(p.poster_kinobaza, 'w300') : './img/img_broken.svg',
             job: 'Director',
             // Lampa фільтрує crew за job === 'Director'
-            character: cardMapper.getJobName([p.job_id || 2]),
             source: 'kinobaza',
             gender: p.gender || 2
           };
@@ -4039,6 +4038,15 @@
         }
       }
 
+      // Змінюємо заголовок нативного ряду режисерів на "Фільммейкери"
+      for (var ri3 = 0; ri3 < rows.length; ri3++) {
+        var r = rows[ri3];
+        if (r && r[0] === 'persons' && r[1].title === Lampa.Lang.translate('title_producer')) {
+          r[1].title = 'Фільммейкери';
+          break;
+        }
+      }
+
       // Director Movies — перед Recommendations (тільки якщо ще не додано)
       var recomendIdx = -1;
       for (var i = 0; i < rows.length; i++) {
@@ -4612,6 +4620,7 @@
   var origFull = null;
   var origPush = null;
   var origFullRoute = null;
+  var origActorRoute = null;
 
   /**
    * Дістає slug персони з кеша за ID
@@ -4697,6 +4706,25 @@
         }
       }
 
+      // ========== 1.5. Перехоплюємо Router route 'actor' — зберігаємо slug та id ==========
+      // Router.call('actor', data) повертає тільки {title, img, job}, викидаючи slug та id
+      // Нам потрібен slug для редиректу на kinobaza_person_detail
+      if (Lampa.Router && Lampa.Router.routes) {
+        for (var ri2 = 0; ri2 < Lampa.Router.routes.length; ri2++) {
+          if (Lampa.Router.routes[ri2].name === 'actor') {
+            origActorRoute = Lampa.Router.routes[ri2].callback;
+            Lampa.Router.routes[ri2].callback = function (data) {
+              var push = origActorRoute(data);
+              push.id = data.id;
+              push.slug = data.slug;
+              push.title = data.name || data.title || push.title;
+              return push;
+            };
+            break;
+          }
+        }
+      }
+
       // ========== 2. Перехоплюємо Activity.push ==========
       // Актор: {component:'actor', id, source:'kinobaza'} → kinobaza_person_detail
       // Мережа: {_networkCard} → category_full з фільтром
@@ -4715,7 +4743,6 @@
             if (slug) {
               object.component = 'kinobaza_person_detail';
               object.slug = slug;
-              object.title = object.title || slug;
             }
           }
           // Перехоплення трейлера (fallback — якщо Player не спрацював)
@@ -4788,8 +4815,12 @@
           if (Lampa.Router.routes[ri].name === 'full' && origFullRoute) {
             Lampa.Router.routes[ri].callback = origFullRoute;
           }
+          if (Lampa.Router.routes[ri].name === 'actor' && origActorRoute) {
+            Lampa.Router.routes[ri].callback = origActorRoute;
+          }
         }
         origFullRoute = null;
+        origActorRoute = null;
       }
     } catch (e) {
       // мовчки ігноруємо
