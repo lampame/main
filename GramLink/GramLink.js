@@ -2316,7 +2316,7 @@
       }
     };
 
-    var VERSION = '0.0.7';
+    var VERSION = '0.0.8';
     var instance = null;
     var GramLinkClient = /*#__PURE__*/function () {
       function GramLinkClient() {
@@ -2383,6 +2383,9 @@
             });
           }
           self._connecting = true;
+          self._emit('connection', {
+            state: 'connecting'
+          });
           return loadGramJS().then(function (tg) {
             var TelegramClient = tg.TelegramClient;
             var MemorySession = tg.MemorySession;
@@ -2529,6 +2532,9 @@
                 self.tgClient = client;
                 self._connected = true;
                 self._connecting = false;
+                self._emit('connection', {
+                  state: 'connected'
+                });
                 console.log('GramLink', 'Connected directly to Telegram MTProto (dc=' + dcId + ')');
 
                 // Start listening for incoming updates (remote commands)
@@ -2548,12 +2554,15 @@
             });
           })["catch"](function (err) {
             self._connecting = false;
+            self._connected = false;
+            self._emit('connection', {
+              state: 'disconnected'
+            });
             console.error('GramLink', 'Connection error:', err);
             if (self.hasCredentials()) {
               var errMsg = err && (err.message || err.errorMessage || '');
               if (errMsg.indexOf('AUTH_KEY_INVALID') >= 0 || errMsg.indexOf('AUTH_KEY_PERM_EMPTY') >= 0 || errMsg.indexOf('SESSION_PASSWORD_NEEDED') >= 0) {
                 self.clearCredentials();
-                self._connected = false;
                 Lampa.Noty.show(Lampa.Lang.translate('gramlink_error_session_invalid'));
                 return Promise.reject(err);
               }
@@ -2575,6 +2584,9 @@
           }
           this._connected = false;
           this._connecting = false;
+          this._emit('connection', {
+            state: 'disconnected'
+          });
         }
       }, {
         key: "logout",
@@ -2586,6 +2598,11 @@
         key: "isConnected",
         value: function isConnected() {
           return this._connected && this.tgClient !== null;
+        }
+      }, {
+        key: "isConnecting",
+        value: function isConnecting() {
+          return this._connecting;
         }
       }, {
         key: "isEnabled",
@@ -4716,7 +4733,8 @@
       return prevController;
     }
 
-    var _skipNextPublish = false;
+    // ponytail: counter instead of boolean — batch operations fire multiple events
+    var _publishSuppressed = 0;
     var STORAGE_ACTIVE_PROFILE = STORAGE_KEYS.ACTIVE_PROFILE;
     var STORAGE_ACTIVE_PROFILE_TS = STORAGE_KEYS.ACTIVE_PROFILE_TS;
     var STORAGE_PROFILES_TOPIC$1 = STORAGE_KEYS.PROFILES_TOPIC;
@@ -5066,10 +5084,12 @@
 
       // ── Bookmarks (always user-layer) ──
       if (data.bookmarks && data.bookmarks.favorite) {
+        suppressPublish();
         Lampa.Storage.set('favorite', data.bookmarks.favorite);
         if (Lampa.Favorite && Lampa.Favorite.read) {
           Lampa.Favorite.read();
         }
+        unsuppressPublish();
       }
 
       // ── Timeline (always user-layer) ──
@@ -5257,6 +5277,72 @@
       syncProfile(msgId, profilesTopicId);
     }
 
+    // ─── Rename profile ─────────────────────────────────────
+
+    function renameProfile(msgId, profilesTopicId, newName, onDone) {
+      var client = GramLinkClient.getInstance();
+      if (!client.isConnected()) {
+        Lampa.Noty.show('Not connected');
+        if (onDone) onDone();
+        return;
+      }
+      client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
+        var target = findMessageById(msgs, msgId);
+        if (!target) {
+          Lampa.Noty.show('Profile not found');
+          if (onDone) onDone();
+          return;
+        }
+        return client.downloadMessageFile(target).then(function (fileData) {
+          if (!fileData) {
+            Lampa.Noty.show('Profile file not found');
+            if (onDone) onDone();
+            return;
+          }
+          var data;
+          try {
+            data = JSON.parse(fileData);
+          } catch (e) {
+            Lampa.Noty.show('Invalid profile data');
+            if (onDone) onDone();
+            return;
+          }
+          data.profile_meta.name = newName;
+
+          // Preserve avatar from old data or caption
+          var oldCaption = parseCaption(target.text);
+          var avatar = data.profile_meta && data.profile_meta.avatar || oldCaption && oldCaption.avatar || getAvatar(newName);
+          var now = Math.floor(Date.now() / 1000);
+          var caption = buildCaption({
+            name: newName,
+            avatar: avatar,
+            updated: now
+          });
+          var fileJson = JSON.stringify(data, null, 2);
+          var fileName = buildProfileFileName(newName, now);
+          client.sendFile(getChannelId(), profilesTopicId, fileJson, fileName, caption).then(function (newMsgId) {
+            if (newMsgId) {
+              client.deleteMessage(getChannelId(), parseInt(msgId, 10))["catch"](function () {});
+              if (String(msgId) === String(Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, ''))) {
+                Lampa.Storage.set(STORAGE_ACTIVE_PROFILE, String(newMsgId));
+                Lampa.Storage.set('gramlink_active_profile_name', newName);
+              }
+              Lampa.Noty.show(Lampa.Lang.translate('gramlink_profile_renamed') || 'Profile renamed');
+            } else {
+              Lampa.Noty.show('Rename failed');
+            }
+            if (onDone) onDone(newMsgId || null);
+          })["catch"](function () {
+            Lampa.Noty.show('Rename failed');
+            if (onDone) onDone();
+          });
+        });
+      })["catch"](function () {
+        Lampa.Noty.show('Failed to load profile');
+        if (onDone) onDone();
+      });
+    }
+
     // Collect all device-scoped storage keys → { key: value }
     function collectDeviceScopedSettings() {
       var result = {};
@@ -5378,10 +5464,12 @@
 
           // ── Bookmarks & Timeline (never applied before) ──
           if (data.bookmarks && data.bookmarks.favorite) {
+            suppressPublish();
             Lampa.Storage.set('favorite', data.bookmarks.favorite);
             if (Lampa.Favorite && Lampa.Favorite.read) {
               Lampa.Favorite.read();
             }
+            unsuppressPublish();
           }
           if (data.timeline) {
             Lampa.Storage.set('file_view', data.timeline);
@@ -5411,17 +5499,17 @@
       var sub = data.meta.subtype;
       if (sub === 'bookmark_add' && payload.card_id && payload.card) {
         if (Lampa.Favorite && Lampa.Favorite.add) {
-          _skipNextPublish = true;
+          suppressPublish();
           Lampa.Favorite.add(payload.type, payload.card);
-          _skipNextPublish = false;
+          unsuppressPublish();
         }
       } else if (sub === 'bookmark_remove' && payload.card_id) {
         if (Lampa.Favorite && Lampa.Favorite.remove) {
-          _skipNextPublish = true;
+          suppressPublish();
           Lampa.Favorite.remove(payload.type, {
             id: payload.card_id
           });
-          _skipNextPublish = false;
+          unsuppressPublish();
         }
       } else if (sub === 'timecode_update' && payload.hash) {
         var tl = Lampa.Storage.get('file_view', {});
@@ -5476,11 +5564,13 @@
       })["catch"](function () {});
     }
     function isSkipPublish() {
-      if (_skipNextPublish) {
-        _skipNextPublish = false;
-        return true;
-      }
-      return false;
+      return _publishSuppressed > 0;
+    }
+    function suppressPublish() {
+      _publishSuppressed++;
+    }
+    function unsuppressPublish() {
+      if (_publishSuppressed > 0) _publishSuppressed--;
     }
 
     // ─── Offline Profile Backup/Restore ──────────────────────
@@ -5508,7 +5598,9 @@
         }
       });
       // Re-read
+      suppressPublish();
       if (Lampa.Favorite && Lampa.Favorite.read) Lampa.Favorite.read();
+      unsuppressPublish();
     }
 
     // ─── Quick switch (from sidebar, full reload) ──────────────
@@ -5598,11 +5690,45 @@
       getCachedProfiles: getCachedProfiles,
       quickSwitchProfile: quickSwitchProfile,
       syncProfile: syncProfile,
+      renameProfile: renameProfile,
       refreshCacheFromTelegram: refreshCacheFromTelegram,
       getPluginRegistry: getPluginRegistry,
       addToPluginRegistry: addToPluginRegistry,
       removeFromPluginRegistry: removeFromPluginRegistry
     };
+
+    /**
+     * sdk/reload-prompt.js — Native-style reload prompt after plugin changes
+     *
+     * Копіює патерн src/interaction/extensions/utils.js → showReload():
+     * модалка "Reboot required" з Yes/No.
+     *
+     * Використання:
+     *   import { showReloadPrompt } from '../sdk/reload-prompt'
+     *   showReloadPrompt(function() { Lampa.Activity.backward() })
+     */
+
+    // ponytail: точна копія native Extensions modal, щоб UX був однаковим
+    function showReloadPrompt(onCancel) {
+      Lampa.Modal.open({
+        title: '',
+        align: 'center',
+        zIndex: 300,
+        html: $('<div class="about">' + (Lampa.Lang.translate('plugins_need_reload') || 'Reboot required for changes to take effect') + '</div>'),
+        buttons: [{
+          name: Lampa.Lang.translate('settings_param_no') || 'No',
+          onSelect: function onSelect() {
+            Lampa.Modal.close();
+            if (onCancel) onCancel();
+          }
+        }, {
+          name: Lampa.Lang.translate('settings_param_yes') || 'Yes',
+          onSelect: function onSelect() {
+            window.location.reload();
+          }
+        }]
+      });
+    }
 
     /**
      * plugin_manager.js — GramLink Plugin Manager
@@ -5743,6 +5869,12 @@
             title: Lampa.Lang.translate(isOn ? 'gramlink_plugins_toggle_off' : 'gramlink_plugins_toggle_on') || (isOn ? 'Disable' : 'Enable'),
             _do: 'toggle'
           }, {
+            title: Lampa.Lang.translate('gramlink_plugins_edit_name') || 'Edit name',
+            _do: 'edit_name'
+          }, {
+            title: Lampa.Lang.translate('gramlink_plugins_edit_url') || 'Edit URL',
+            _do: 'edit_url'
+          }, {
             title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove',
             _do: 'remove'
           }, {
@@ -5755,11 +5887,84 @@
           onSelect: function onSelect(item) {
             if (item._do === 'toggle') {
               doToggle(plugin, idx);
+            } else if (item._do === 'edit_name') {
+              doEditPluginName(plugin, idx);
+            } else if (item._do === 'edit_url') {
+              doEditPluginUrl(plugin, idx);
             } else if (item._do === 'remove') {
               doRemoveConfirm(plugin, idx);
             } else {
               Lampa.Controller.toggle('gramlink_plugins');
             }
+          }
+        });
+      }
+      function doEditPluginName(plugin, idx) {
+        input({
+          title: Lampa.Lang.translate('gramlink_plugins_edit_name') || 'Plugin name',
+          value: plugin.name || '',
+          onSubmit: function onSubmit(newName) {
+            if (!newName || !newName.trim()) return;
+            plugin.name = newName.trim();
+            plugins[idx] = plugin;
+            if (isActive) {
+              var live = collectPlugins();
+              live.forEach(function (p) {
+                if (p.url === plugin.url) p.name = plugin.name;
+              });
+              Lampa.Storage.set('plugins', live);
+              Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_edited') || 'Plugin updated');
+            }
+            if (!isActive) {
+              saveSnapshot(function () {
+                reRender();
+              });
+              return;
+            }
+            reRender();
+            showReloadPrompt();
+          }
+        });
+      }
+      function doEditPluginUrl(plugin, idx) {
+        input({
+          title: Lampa.Lang.translate('gramlink_plugins_edit_url') || 'Plugin URL',
+          value: plugin.url || '',
+          onSubmit: function onSubmit(newUrl) {
+            if (!newUrl || !newUrl.trim()) return;
+            newUrl = newUrl.trim();
+            if (!newUrl.match(/^https?:\/\/.+/i)) {
+              Lampa.Noty.show('Invalid URL');
+              return;
+            }
+            var oldUrl = plugin.url;
+            plugin.url = newUrl;
+            plugins[idx] = plugin;
+            if (isActive) {
+              var live = collectPlugins();
+              // ponytail: match by old URL since live is a copy from storage
+              live.forEach(function (p) {
+                if (p.url === oldUrl) {
+                  p.url = newUrl;
+                  p.name = plugin.name;
+                }
+              });
+              Lampa.Storage.set('plugins', live);
+              publishDelta('toggle', {
+                url: newUrl,
+                name: plugin.name,
+                status: plugin.status
+              });
+              Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_edited') || 'Plugin updated');
+            }
+            if (!isActive) {
+              saveSnapshot(function () {
+                reRender();
+              });
+              return;
+            }
+            reRender();
+            showReloadPrompt();
           }
         });
       }
@@ -5789,6 +5994,8 @@
           return;
         }
         reRender();
+        // ponytail: reload щоб Plugins._loaded синхронізувався з storage
+        showReloadPrompt();
       }
       function doAddPlugin() {
         input({
@@ -5835,6 +6042,8 @@
                   publishDelta('add', newPlugin);
                   Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_added') || 'Plugin added');
                   reRender();
+                  // ponytail: reload щоб Plugins._loaded синхронізувався з storage
+                  showReloadPrompt();
                 } else {
                   saveSnapshot(function () {
                     reRender();
@@ -5876,6 +6085,8 @@
                 });
                 Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_removed') || 'Plugin removed');
                 reRender();
+                // ponytail: reload щоб Plugins._loaded синхронізувався з storage
+                showReloadPrompt();
               } else {
                 saveSnapshot(function () {
                   reRender();
@@ -7446,6 +7657,15 @@
         });
         Lampa.Controller.toggle('content');
         init();
+        // ponytail: Native→Hub — підхопити зміни з native Extensions/Settings
+        if (!self.__pluginStorageHandler) {
+          self.__pluginStorageHandler = function (e) {
+            if (e && e.key === 'plugins' && activeTab === 'plugins') {
+              renderPlugins();
+            }
+          };
+          Lampa.Storage.listener.follow('change', self.__pluginStorageHandler);
+        }
         focusFirst();
       };
       self.pause = function () {
@@ -7787,6 +8007,12 @@
                 title: p.status === 1 ? 'Disable' : 'Enable',
                 _do: 'toggle'
               }, {
+                title: Lampa.Lang.translate('gramlink_plugins_edit_name') || 'Edit name',
+                _do: 'edit_name'
+              }, {
+                title: Lampa.Lang.translate('gramlink_plugins_edit_url') || 'Edit URL',
+                _do: 'edit_url'
+              }, {
                 title: Lampa.Lang.translate('gramlink_plugins_remove') || 'Remove',
                 _do: 'remove'
               }, {
@@ -7795,7 +8021,7 @@
                 cancel: true
               }],
               onSelect: function onSelect(item) {
-                if (item._do === 'toggle') doToggle(idx);else if (item._do === 'remove') doRemove(idx);
+                if (item._do === 'toggle') doToggle(idx);else if (item._do === 'remove') doRemove(idx);else if (item._do === 'edit_name') doEditPluginName(idx);else if (item._do === 'edit_url') doEditPluginUrl(idx);
               }
             });
           });
@@ -7812,6 +8038,42 @@
           $(el).off('hover:enter._gl').on('hover:enter._gl', function () {
             doAddPlugin();
           });
+        });
+      }
+      function doEditPluginName(idx) {
+        var plugins = getPlugins();
+        if (!plugins[idx]) return;
+        input({
+          title: Lampa.Lang.translate('gramlink_plugins_edit_name') || 'Plugin name',
+          value: plugins[idx].name || '',
+          onSubmit: function onSubmit(newName) {
+            if (!newName || !newName.trim()) return;
+            plugins[idx].name = newName.trim();
+            savePlugins(plugins);
+            renderPlugins();
+            // ponytail: name change visible immediately in Hub, needs reload for native Extensions
+            showReloadPrompt();
+          }
+        });
+      }
+      function doEditPluginUrl(idx) {
+        var plugins = getPlugins();
+        if (!plugins[idx]) return;
+        input({
+          title: Lampa.Lang.translate('gramlink_plugins_edit_url') || 'Plugin URL',
+          value: plugins[idx].url || '',
+          onSubmit: function onSubmit(newUrl) {
+            if (!newUrl || !newUrl.trim()) return;
+            newUrl = newUrl.trim();
+            if (!newUrl.match(/^https?:\/\/.+/i)) {
+              Lampa.Noty.show('Invalid URL');
+              return;
+            }
+            plugins[idx].url = newUrl;
+            savePlugins(plugins);
+            renderPlugins();
+            showReloadPrompt();
+          }
         });
       }
 
@@ -7876,6 +8138,8 @@
         }, 'all');
         Lampa.Noty.show((plugins[idx].name || 'Plugin') + ': ' + (plugins[idx].status === 1 ? 'on' : 'off'));
         renderPlugins();
+        // ponytail: reload щоб Plugins._loaded синхронізувався з storage
+        showReloadPrompt();
       }
       function doRemove(idx) {
         var plugins = getPlugins();
@@ -7891,6 +8155,8 @@
         });
         Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_removed') || 'Plugin removed');
         renderPlugins();
+        // ponytail: reload щоб Plugins._loaded синхронізувався з storage
+        showReloadPrompt();
       }
       function doAddPlugin() {
         input({
@@ -7930,6 +8196,8 @@
                 });
                 Lampa.Noty.show('Plugin added');
                 renderPlugins();
+                // ponytail: reload щоб Plugins._loaded синхронізувався з storage
+                showReloadPrompt();
               }
             });
           }
@@ -8173,6 +8441,10 @@
           title: Lampa.Lang.translate('gramlink_sync') || 'Sync',
           action: 'sync'
         });
+        items.push({
+          title: Lampa.Lang.translate('gramlink_profile_rename') || 'Rename',
+          action: 'rename'
+        });
         if (!active) items.push({
           title: Lampa.Lang.translate('gramlink_delete') || 'Delete',
           action: 'delete'
@@ -8185,7 +8457,19 @@
           title: name,
           items: items,
           onSelect: function onSelect(item) {
-            if (item.action === 'plugins') PluginManager.open(id, name, active);else if (item.action === 'sync') Profiles.syncProfile(id, currentProfilesTopicId);else if (item.action === 'delete') deleteProfile(id);
+            if (item.action === 'plugins') PluginManager.open(id, name, active);else if (item.action === 'sync') Profiles.syncProfile(id, currentProfilesTopicId);else if (item.action === 'rename') doRenameProfile(id, name);else if (item.action === 'delete') deleteProfile(id);
+          }
+        });
+      }
+      function doRenameProfile(msgId, currentName) {
+        input({
+          title: Lampa.Lang.translate('gramlink_profile_rename') || 'Rename profile',
+          value: currentName,
+          onSubmit: function onSubmit(newName) {
+            if (!newName || !newName.trim() || newName.trim() === currentName) return;
+            Profiles.renameProfile(msgId, currentProfilesTopicId, newName.trim(), function () {
+              renderProfiles();
+            });
           }
         });
       }
@@ -8360,7 +8644,7 @@
       Lampa.Component.add('gramlink_plugin_manager', PluginManagerComponent);
       lang();
       initSettings();
-      Lampa.Template.add('gramlink_style', '<style>.gramlink-activity{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.gramlink-activity .head__title{font-size:1.4em}.gramlink-hub{padding:1em 2em;max-width:50em;margin:0 auto}.gramlink-hub__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;margin-bottom:2em;padding-bottom:1em;border-bottom:1px solid rgba(255,255,255,0.1)}.gramlink-hub__title{font-size:1.6em;font-weight:700;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.gramlink-hub__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.5em}.gramlink-hub__section{margin-bottom:2em}.gramlink-hub__section-title{font-size:1.2em;font-weight:600;margin-bottom:1em;color:rgba(255,255,255,0.7)}.gramlink-status{background:rgba(255,255,255,0.05);-webkit-border-radius:.8em;border-radius:.8em;padding:1.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em}.gramlink-status__indicator{width:1em;height:1em;-webkit-border-radius:50%;border-radius:50%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gramlink-status__indicator--connected{background:#4caf50;-webkit-box-shadow:0 0 .6em rgba(76,175,80,0.5);box-shadow:0 0 .6em rgba(76,175,80,0.5)}.gramlink-status__indicator--disconnected{background:#f44336}.gramlink-status__indicator--connecting{background:#ffc107;-webkit-animation:gramlink-pulse 1.5s ease-in-out infinite;animation:gramlink-pulse 1.5s ease-in-out infinite}.gramlink-status__indicator--auth_needed{background:#ff9800}.gramlink-status__indicator--error{background:#f44336}.gramlink-status__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-status__label{font-size:1.1em;font-weight:600;margin-bottom:.2em}.gramlink-status__detail{font-size:.9em;color:rgba(255,255,255,0.5)}@-webkit-keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}.gramlink-devices__empty{text-align:center;padding:2em;color:rgba(255,255,255,0.4);font-size:1.1em}.gramlink-device{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em;padding:1em 1.2em;background:rgba(255,255,255,0.03);-webkit-border-radius:.6em;border-radius:.6em;margin-bottom:.5em;cursor:pointer;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-device.focus,.gramlink-device.hover{background:rgba(255,255,255,0.1);outline:.2em solid #fff;outline-offset:.3em}.gramlink-device__icon{width:2.5em;height:2.5em;-webkit-border-radius:.5em;border-radius:.5em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;font-size:.9em;color:white}.gramlink-device__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-device__name{font-size:1.1em;font-weight:600}.gramlink-device__meta{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-device__status{font-size:.8em;padding:.3em .6em;-webkit-border-radius:.3em;border-radius:.3em;background:rgba(76,175,80,0.15);color:#4caf50}.gramlink-device--this{opacity:.6;cursor:default}.gramlink-auth{padding:1em;text-align:center}.gramlink-auth__qr-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;margin-bottom:1.5em;min-height:18em}.gramlink-auth__qr-placeholder{width:16em;height:16em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;background:rgba(255,255,255,0.05);-webkit-border-radius:1em;border-radius:1em}.gramlink-auth__qr-img{width:16em;height:16em;-webkit-border-radius:1em;border-radius:1em;background:white;padding:.5em}.gramlink-auth__status{font-size:1.1em;color:rgba(255,255,255,0.6);line-height:1.5}.gramlink-auth__scan-hint{margin-bottom:.5em;color:rgba(255,255,255,0.8)}.gramlink-auth__confirm-hint{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;padding:.6em 1.2em;-webkit-border-radius:.5em;border-radius:.5em;font-size:.9em;font-weight:600;cursor:pointer;border:0;-webkit-transition:background .2s,opacity .2s;-o-transition:background .2s,opacity .2s;transition:background .2s,opacity .2s}.gramlink-btn.focus,.gramlink-btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-btn--primary{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-btn--ghost{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-btn--ghost.focus{background:rgba(255,255,255,0.15)}.gramlink-btn--small{padding:.4em .8em;font-size:.8em}@media screen and (max-width:767px){.gramlink-hub{padding:.8em 1em}.gramlink-status{padding:1em}.gramlink-auth__qr-placeholder,.gramlink-auth__qr-img{width:12em;height:12em}.gramlink-auth__qr-container{min-height:14em}}@media screen and (max-width:480px){.gramlink-hub__header{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.8em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}}.gramlink-2fa{padding:1em;text-align:center}.gramlink-2fa__desc{font-size:1.1em;color:rgba(255,255,255,0.8);margin-bottom:.5em;line-height:1.4}.gramlink-2fa__hint{font-size:.9em;color:rgba(255,255,255,0.5);margin-bottom:1.5em}.gramlink-2fa__input-wrap{margin-bottom:1.5em}.gramlink-2fa__input{width:100%;max-width:20em;padding:.8em 1em;border:.15em solid rgba(255,255,255,0.2);-webkit-border-radius:.5em;border-radius:.5em;background:rgba(255,255,255,0.08);color:#fff;font-size:1.1em;text-align:center;outline:0;-webkit-box-sizing:border-box;box-sizing:border-box}.gramlink-2fa__input:focus{border-color:#08c}.gramlink-2fa__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.gramlink-2fa__btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:.7em 1.5em;-webkit-border-radius:.5em;border-radius:.5em;font-size:1em;font-weight:600;cursor:pointer;min-width:8em;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-2fa__btn_ok{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-2fa__btn_cancel{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-2fa__btn.focus,.gramlink-2fa__btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;padding:0 2em;margin-bottom:1em}.gramlink-tab.active{background:rgba(255,255,255,0.15) !important;border-color:rgba(255,255,255,0.3) !important;color:#fff !important}.gramlink-body--grid>.gramlink-tabs,.gramlink-tabs{grid-column:1/-1}.gramlink-device-avatar{width:2em;height:2em;-webkit-border-radius:.4em;border-radius:.4em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em}.gramlink-avatar{-webkit-border-radius:50%;border-radius:50%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:700;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;overflow:hidden}.gramlink-avatar--head{width:24px;height:24px;font-size:11px}.gramlink-avatar--list{width:2em;height:2em;font-size:.9em}.gramlink-profile-avatar{width:2.2em;height:2.2em;-webkit-border-radius:50%;border-radius:50%;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gs-plugin-toggle{width:1.2em;height:1.2em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:1.2em}.gs-plugin-toggle.on{color:#4caf50}.gs-plugin-toggle.off{color:rgba(255,255,255,0.3)}.gs-status-item .gramlink-status__indicator{margin:auto}.profile-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1em;padding:.5em 0}.profile-card{background:rgba(255,255,255,0.06);-webkit-border-radius:12px;border-radius:12px;padding:1.5em 1em;position:relative;cursor:pointer;-webkit-transition:background .2s,-webkit-box-shadow .2s;transition:background .2s,-webkit-box-shadow .2s;-o-transition:background .2s,box-shadow .2s;transition:background .2s,box-shadow .2s;transition:background .2s,box-shadow .2s,-webkit-box-shadow .2s;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em}.profile-card.focus,.profile-card.hover{background:rgba(255,255,255,0.12);outline:.2em solid rgba(255,255,255,0.5);outline-offset:.25em}.profile-card--active{background:rgba(255,255,255,0.1);-webkit-box-shadow:inset 0 0 0 2px rgba(255,215,0,0.5);box-shadow:inset 0 0 0 2px rgba(255,215,0,0.5)}.profile-card--add{border:2px dashed rgba(255,215,0,0.4);background:transparent;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center;color:rgba(255,255,255,0.5);font-size:.95em;min-height:6em;gap:.4em;-webkit-border-radius:12px;border-radius:12px;grid-column:1/-1}.profile-card--add .profile-card__add-icon{font-size:2em;line-height:1;opacity:.6}.profile-card--add.focus,.profile-card--add.hover{border-color:rgba(255,215,0,0.8);color:rgba(255,255,255,0.8)}.profile-card--empty{border:2px dashed rgba(255,255,255,0.1);background:transparent}.profile-card__avatar-wrap{-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;width:3.2em;height:3.2em;-webkit-border-radius:50%;border-radius:50%;overflow:hidden;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:1.2em;font-weight:700;color:#fff}.profile-card__avatar-wrap img,.profile-card__avatar-wrap .gramlink-avatar{width:100%;height:100%;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%}.profile-card__name{font-size:1.1em;font-weight:600;line-height:1.3;-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0;word-break:break-word}.profile-card__active-badge{font-size:.7em;color:#ffd700;margin-top:.15em}@media screen and (max-width:767px){.profile-grid{grid-template-columns:repeat(2,1fr)}}@media screen and (max-width:480px){.profile-grid{grid-template-columns:1fr}}.gramlink-item{background:#404040;-webkit-border-radius:1em;border-radius:1em;padding:1.2em 1.4em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;cursor:pointer;position:relative;-webkit-box-sizing:border-box;box-sizing:border-box}.gramlink-item.focus{outline:.3em solid #fff;outline-offset:.3em;-webkit-border-radius:1.2em;border-radius:1.2em}.gramlink-body--grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1em;padding:1em 2em}.gramlink-body--grid>.gramlink-item{margin:0;min-height:0}.gramlink-body--grid>.gramlink-item+.gramlink-item{margin:0}.gramlink-body--content{padding:1em 2em}.gs-avatar{width:2.5em;height:2.5em;-webkit-border-radius:.5em;border-radius:.5em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:#fff;font-weight:700;font-size:.9em;margin-right:1em}.gs-content{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gs-title{font-size:1.1em;line-height:normal;margin-bottom:.2em;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap}.gs-sub{font-size:.84em;color:#8d8d8d;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap}.gs-badge{font-size:.78em;padding:.3em .5em;-webkit-border-radius:.3em;border-radius:.3em;background:rgba(0,0,0,0.18);-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;margin-left:auto}.gs-badge.badge--active{color:#6dce4b}.gs-badge.badge--inactive{color:#dd7337}.gs-badge.badge--info{color:#8d8d8d}.gramlink-body--grid>.gramlink-tabs,.gramlink-tabs{grid-column:1/-1}</style>');
+      Lampa.Template.add('gramlink_style', '<style>.gramlink-activity{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.gramlink-activity .head__title{font-size:1.4em}.gramlink-hub{padding:1em 2em;max-width:50em;margin:0 auto}.gramlink-hub__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;margin-bottom:2em;padding-bottom:1em;border-bottom:1px solid rgba(255,255,255,0.1)}.gramlink-hub__title{font-size:1.6em;font-weight:700;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.gramlink-hub__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.5em}.gramlink-hub__section{margin-bottom:2em}.gramlink-hub__section-title{font-size:1.2em;font-weight:600;margin-bottom:1em;color:rgba(255,255,255,0.7)}.gramlink-status{background:rgba(255,255,255,0.05);-webkit-border-radius:.8em;border-radius:.8em;padding:1.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em}.gramlink-status__indicator{width:1em;height:1em;-webkit-border-radius:50%;border-radius:50%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gramlink-status__indicator--connected{background:#4caf50;-webkit-box-shadow:0 0 .6em rgba(76,175,80,0.5);box-shadow:0 0 .6em rgba(76,175,80,0.5)}.gramlink-status__indicator--disconnected{background:#f44336}.gramlink-status__indicator--connecting{background:#ffc107;-webkit-animation:gramlink-pulse 1.5s ease-in-out infinite;animation:gramlink-pulse 1.5s ease-in-out infinite}.gramlink-status__indicator--auth_needed{background:#ff9800}.gramlink-status__indicator--error{background:#f44336}.gramlink-status__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-status__label{font-size:1.1em;font-weight:600;margin-bottom:.2em}.gramlink-status__detail{font-size:.9em;color:rgba(255,255,255,0.5)}@-webkit-keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}.gramlink-devices__empty{text-align:center;padding:2em;color:rgba(255,255,255,0.4);font-size:1.1em}.gramlink-device{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em;padding:1em 1.2em;background:rgba(255,255,255,0.03);-webkit-border-radius:.6em;border-radius:.6em;margin-bottom:.5em;cursor:pointer;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-device.focus,.gramlink-device.hover{background:rgba(255,255,255,0.1);outline:.2em solid #fff;outline-offset:.3em}.gramlink-device__icon{width:2.5em;height:2.5em;-webkit-border-radius:.5em;border-radius:.5em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;font-size:.9em;color:white}.gramlink-device__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-device__name{font-size:1.1em;font-weight:600}.gramlink-device__meta{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-device__status{font-size:.8em;padding:.3em .6em;-webkit-border-radius:.3em;border-radius:.3em;background:rgba(76,175,80,0.15);color:#4caf50}.gramlink-device--this{opacity:.6;cursor:default}.gramlink-auth{padding:1em;text-align:center}.gramlink-auth__qr-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;margin-bottom:1.5em;min-height:18em}.gramlink-auth__qr-placeholder{width:16em;height:16em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;background:rgba(255,255,255,0.05);-webkit-border-radius:1em;border-radius:1em}.gramlink-auth__qr-img{width:16em;height:16em;-webkit-border-radius:1em;border-radius:1em;background:white;padding:.5em}.gramlink-auth__status{font-size:1.1em;color:rgba(255,255,255,0.6);line-height:1.5}.gramlink-auth__scan-hint{margin-bottom:.5em;color:rgba(255,255,255,0.8)}.gramlink-auth__confirm-hint{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;padding:.6em 1.2em;-webkit-border-radius:.5em;border-radius:.5em;font-size:.9em;font-weight:600;cursor:pointer;border:0;-webkit-transition:background .2s,opacity .2s;-o-transition:background .2s,opacity .2s;transition:background .2s,opacity .2s}.gramlink-btn.focus,.gramlink-btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-btn--primary{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-btn--ghost{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-btn--ghost.focus{background:rgba(255,255,255,0.15)}.gramlink-btn--small{padding:.4em .8em;font-size:.8em}@media screen and (max-width:767px){.gramlink-hub{padding:.8em 1em}.gramlink-status{padding:1em}.gramlink-auth__qr-placeholder,.gramlink-auth__qr-img{width:12em;height:12em}.gramlink-auth__qr-container{min-height:14em}}@media screen and (max-width:480px){.gramlink-hub__header{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.8em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}}.gramlink-2fa{padding:1em;text-align:center}.gramlink-2fa__desc{font-size:1.1em;color:rgba(255,255,255,0.8);margin-bottom:.5em;line-height:1.4}.gramlink-2fa__hint{font-size:.9em;color:rgba(255,255,255,0.5);margin-bottom:1.5em}.gramlink-2fa__input-wrap{margin-bottom:1.5em}.gramlink-2fa__input{width:100%;max-width:20em;padding:.8em 1em;border:.15em solid rgba(255,255,255,0.2);-webkit-border-radius:.5em;border-radius:.5em;background:rgba(255,255,255,0.08);color:#fff;font-size:1.1em;text-align:center;outline:0;-webkit-box-sizing:border-box;box-sizing:border-box}.gramlink-2fa__input:focus{border-color:#08c}.gramlink-2fa__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.gramlink-2fa__btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:.7em 1.5em;-webkit-border-radius:.5em;border-radius:.5em;font-size:1em;font-weight:600;cursor:pointer;min-width:8em;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-2fa__btn_ok{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-2fa__btn_cancel{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-2fa__btn.focus,.gramlink-2fa__btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;padding:0 2em;margin-bottom:1em}.gramlink-tab.active{background:rgba(255,255,255,0.15) !important;border-color:rgba(255,255,255,0.3) !important;color:#fff !important}.gramlink-body--grid>.gramlink-tabs,.gramlink-tabs{grid-column:1/-1}.gramlink-device-avatar{width:2em;height:2em;-webkit-border-radius:.4em;border-radius:.4em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em}.gramlink-avatar{-webkit-border-radius:50%;border-radius:50%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:700;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;overflow:hidden}.gramlink-avatar--head{width:24px;height:24px;font-size:11px}.gramlink-avatar--list{width:2em;height:2em;font-size:.9em}.gramlink-profile-avatar{width:2.2em;height:2.2em;-webkit-border-radius:50%;border-radius:50%;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gs-plugin-toggle{width:1.2em;height:1.2em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:1.2em}.gs-plugin-toggle.on{color:#4caf50}.gs-plugin-toggle.off{color:rgba(255,255,255,0.3)}.gs-status-item .gramlink-status__indicator{margin:auto}.profile-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1em;padding:.5em 0}.profile-card{background:rgba(255,255,255,0.06);-webkit-border-radius:12px;border-radius:12px;padding:1.5em 1em;position:relative;cursor:pointer;-webkit-transition:background .2s,-webkit-box-shadow .2s;transition:background .2s,-webkit-box-shadow .2s;-o-transition:background .2s,box-shadow .2s;transition:background .2s,box-shadow .2s;transition:background .2s,box-shadow .2s,-webkit-box-shadow .2s;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em}.profile-card.focus,.profile-card.hover{background:rgba(255,255,255,0.12);outline:.2em solid rgba(255,255,255,0.5);outline-offset:.25em}.profile-card--active{background:rgba(255,255,255,0.1);-webkit-box-shadow:inset 0 0 0 2px rgba(255,215,0,0.5);box-shadow:inset 0 0 0 2px rgba(255,215,0,0.5)}.profile-card--add{border:2px dashed rgba(255,215,0,0.4);background:transparent;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center;color:rgba(255,255,255,0.5);font-size:.95em;min-height:6em;gap:.4em;-webkit-border-radius:12px;border-radius:12px;grid-column:1/-1}.profile-card--add .profile-card__add-icon{font-size:2em;line-height:1;opacity:.6}.profile-card--add.focus,.profile-card--add.hover{border-color:rgba(255,215,0,0.8);color:rgba(255,255,255,0.8)}.profile-card--empty{border:2px dashed rgba(255,255,255,0.1);background:transparent}.profile-card__avatar-wrap{-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;width:3.2em;height:3.2em;-webkit-border-radius:50%;border-radius:50%;overflow:hidden;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:1.2em;font-weight:700;color:#fff}.profile-card__avatar-wrap img,.profile-card__avatar-wrap .gramlink-avatar{width:100%;height:100%;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:50%;border-radius:50%}.profile-card__name{font-size:1.1em;font-weight:600;line-height:1.3;-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0;word-break:break-word}.profile-card__active-badge{font-size:.7em;color:#ffd700;margin-top:.15em}@media screen and (max-width:767px){.profile-grid{grid-template-columns:repeat(2,1fr)}}@media screen and (max-width:480px){.profile-grid{grid-template-columns:1fr}}.gramlink-item{background:#404040;-webkit-border-radius:1em;border-radius:1em;padding:1.2em 1.4em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;cursor:pointer;position:relative;-webkit-box-sizing:border-box;box-sizing:border-box}.gramlink-item.focus{outline:.3em solid #fff;outline-offset:.3em;-webkit-border-radius:1.2em;border-radius:1.2em}.gramlink-body--grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1em;padding:1em 2em}@media(max-width:600px){.gramlink-body--grid{grid-template-columns:1fr;padding:1em}}.gramlink-body--grid>.gramlink-item{margin:0;min-height:0}.gramlink-body--grid>.gramlink-item+.gramlink-item{margin:0}.gramlink-body--content{padding:1em 2em}.gs-avatar{width:2.5em;height:2.5em;-webkit-border-radius:.5em;border-radius:.5em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:#fff;font-weight:700;font-size:.9em;margin-right:1em}.gs-content{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gs-title{font-size:1.1em;line-height:normal;margin-bottom:.2em;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap}.gs-sub{font-size:.84em;color:#8d8d8d;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap}.gs-badge{font-size:.78em;padding:.3em .5em;-webkit-border-radius:.3em;border-radius:.3em;background:rgba(0,0,0,0.18);-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;margin-left:auto}.gs-badge.badge--active{color:#6dce4b}.gs-badge.badge--inactive{color:#dd7337}.gs-badge.badge--info{color:#8d8d8d}.gramlink-body--grid>.gramlink-tabs,.gramlink-tabs{grid-column:1/-1}</style>');
       $('body').append(Lampa.Template.get('gramlink_style', {}, true));
       setupBroadcastListener();
       setupBackupRestoredListener();
@@ -8592,8 +8876,32 @@
           style: 'width:100%;height:100%;object-fit:cover;border-radius:50%;'
         });
         $av.replaceWith(avatarHtml);
+        updateConnectionIndicator();
+      }
+
+      // ponytail: connection state → data-state on the button wrapper
+      // connected: no attribute (clean), connecting: pulsing, disconnected: dimmed border
+      function updateConnectionIndicator() {
+        var client = GramLinkClient.getInstance();
+        if (!client.hasCredentials() || $profileBtn.css('display') === 'none') {
+          $profileBtn.removeAttr('data-state');
+          return;
+        }
+        if (client.isConnected()) {
+          $profileBtn.removeAttr('data-state');
+        } else if (client.isConnecting()) {
+          $profileBtn.attr('data-state', 'connecting');
+        } else {
+          $profileBtn.attr('data-state', 'disconnected');
+        }
       }
       updateProfileButton();
+
+      // ponytail: react to connection state changes from the client
+      var connClient = GramLinkClient.getInstance();
+      connClient.on('connection', function (e) {
+        updateConnectionIndicator();
+      });
       Lampa.Storage.listener.follow('change', function (e) {
         if (e.name === 'gramlink_active_profile' || e.name === 'gramlink_active_profile_name' || e.name === 'gramlink_avatar_style') {
           updateProfileButton();
