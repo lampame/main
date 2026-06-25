@@ -344,7 +344,7 @@
    * ДОДАЄМО ТІЛЬКИ специфічні для КіноБази ключі.
    * Загальні тексти (Новинки, Рекомендації, Колекція, ...) беремо з Lampa.Lang.translate('title_xxx').
    */
-  function registerTranslations() {
+  function registerTranslations$1() {
     Lampa.Lang.add({
       // ===== КОНТЕНТ-ЛАЙНИ (специфічні для КіноБази) =====
 
@@ -531,7 +531,7 @@
     removeToken: removeToken,
     hasToken: hasToken,
     getUserId: getUserId,
-    registerTranslations: registerTranslations,
+    registerTranslations: registerTranslations$1,
     TOKEN_KEY: TOKEN_KEY,
     getActiveProfileId: getActiveProfileId,
     getProfileKey: getProfileKey
@@ -5118,7 +5118,7 @@
   /**
    * Реєструє ContentRows integration
    */
-  function registerContentRows() {
+  function registerContentRows$1() {
     if (registered$4) return;
     registered$4 = true;
 
@@ -6448,7 +6448,9 @@
    * 
    * Використовує Lampa.Maker.make('Category') для вбудованої пагінації (Lampa >= 3.0.0).
    * Маппінг k6.d0 → Lampa card через card.mapOne() / card.mapList().
-   * Замінює year на released_ua (або released_en) у форматі DD.MM.YYYY.
+   * Замінює card__age (рік) на форматовану дату релізу у форматі DD.MM.YYYY.
+   * 
+   * Паттерн: після this.build() модифікуємо DOM карток
    * 
    * Натискання на картку → Activity.push({ component: 'full', source: 'kinobaza', slug })
    */
@@ -6464,17 +6466,24 @@
   }
 
   /**
-   * Override year → форматована дата релізу для всіх карток
-   * @param {array} items — результат card.mapList()
-   * @param {array} rawList — оригінальні дані json.data
+   * Після build() — замінює .card__age на форматовану дату DD.MM.YYYY
+   * в усіх картках items починаючи з offset
+   * 
+   * @param {object} ctx — Category instance (this)
+   * @param {Array} dates — масив форматованих дат
+   * @param {number} [offset=0] — зсув у this.items
    */
-  function overrideYear(items, rawList) {
-    rawList.forEach(function (raw, i) {
-      if (items[i]) {
-        var formatted = getReleaseDate(raw);
-        if (formatted) {
-          items[i].year = formatted;
-        }
+  function patchCardAges(ctx, dates, offset) {
+    offset = offset || 0;
+    dates.forEach(function (date, i) {
+      if (!date) return;
+      var cardInstance = ctx.items[offset + i];
+      if (!cardInstance) return;
+      var cardEl = cardInstance.render(true);
+      if (!cardEl) return;
+      var ageEl = cardEl.querySelector('.card__age');
+      if (ageEl) {
+        ageEl.textContent = date;
       }
     });
   }
@@ -6486,21 +6495,35 @@
           var items = cardMapper.mapList(json.data || []);
           var total = json.total || 0;
           var pages = Math.ceil(total / 30) || 1;
-          overrideYear(items, json.data || []);
+
+          // Зберігаємо форматовані дати для пост-обробки DOM
+          var dates = (json.data || []).map(function (raw) {
+            return getReleaseDate(raw);
+          });
           this.build({
             results: items,
             total_pages: pages
           });
+
+          // Після build() всі картки в this.items, DOM в document
+          // Замінюємо .card__age на DD.MM.YYYY
+          patchCardAges(this, dates);
         }.bind(this), this.empty.bind(this));
       },
       onNext: function onNext(resolve, reject) {
         releasesApi.getReleases(this.object.page, function (json) {
           var items = cardMapper.mapList(json.data || []);
-          overrideYear(items, json.data || []);
+          var dates = (json.data || []).map(function (raw) {
+            return getReleaseDate(raw);
+          });
+          var offset = this.items.length;
           resolve({
             results: items
           });
-        }, reject);
+
+          // Після resolve() нові картки додані в this.items
+          patchCardAges(this, dates, offset);
+        }.bind(this), reject);
       },
       onInstance: function onInstance(item, element) {
         item.use({
@@ -6519,6 +6542,128 @@
     });
     return comp;
   }
+
+  /**
+   * Kinobaza Releases — ContentRows integration for main page
+   * 
+   * Один рядок цифрових релізів на головному екрані.
+   * Той самий запит що й у releases/api.js — всі платформи разом.
+   * 
+   * Паттерн: listeners/content-rows.js
+   * Дата замість року: через патч Card.Release.onCreate
+   */
+
+  /**
+   * Патч Card.Release.onCreate — для карток з _releaseDate показує дату
+   * замість стандартного року (перших 4 символів release_date)
+   */
+  function patchCardRelease() {
+    try {
+      if (!Lampa.Maker || !Lampa.Maker.map) return;
+      var cardMap = Lampa.Maker.map('Card');
+      if (!cardMap || !cardMap.Release) return;
+      var origOnCreate = cardMap.Release.onCreate;
+      cardMap.Release.onCreate = function () {
+        if (this.data && this.data._releaseDate) {
+          // this.html — DOM елемент (Template.js return cloned Node)
+          // .find() → Element.prototype.find → querySelector → DOM element | null
+          var ageEl = this.html.find('.card__age');
+          if (ageEl) {
+            // .text() → Element.prototype.text → innerText
+            ageEl.text(this.data._releaseDate);
+          } else {
+            // Element.prototype.append поліфіл не парсить HTML
+            $(this.html).append('<div class="card__age">' + this.data._releaseDate + '</div>');
+          }
+          return;
+        }
+        origOnCreate.call(this);
+      };
+    } catch (e) {
+      console.error('Kinobaza', 'patchCardRelease error', e);
+    }
+  }
+
+  /**
+   * Зареєструвати ContentRows для головної сторінки
+   * Один рядок — всі цифрові релізи
+   */
+  function registerHomeLine() {
+    try {
+      Lampa.ContentRows.add({
+        name: 'kinobaza_releases_home',
+        title: Lampa.Lang.translate('kinobaza_releases_title'),
+        index: 1,
+        screen: ['main'],
+        call: function call(params, screen) {
+          return function (call) {
+            releasesApi.getReleases(1, function (json) {
+              var rawList = json.data || [];
+              var items = cardMapper.mapList(rawList);
+
+              // Додаємо _releaseDate для патча Card.Release.onCreate
+              items.forEach(function (item, i) {
+                var raw = rawList[i];
+                if (!raw) return;
+                var date = raw.released_ua || raw.released_en || '';
+                var formatted = date ? fmtDate(date) : '';
+                if (formatted) {
+                  item._releaseDate = formatted;
+                  // release_date = '' → Release видалить card__age
+                  // патч додасть новий з DD.MM.YYYY
+                  item.release_date = '';
+                }
+              });
+              call({
+                title: Lampa.Lang.translate('kinobaza_releases_title'),
+                results: items.slice(0, 20),
+                type: 'movie',
+                total_pages: 1,
+                params: {
+                  module: Lampa.Maker.module('Line').toggle(Lampa.Maker.module('Line').MASK.base, 'Event'),
+                  emit: {
+                    onMore: function onMore() {
+                      Lampa.Activity.push({
+                        url: '',
+                        title: Lampa.Lang.translate('kinobaza_releases_title'),
+                        component: 'kinobaza_releases',
+                        page: 1
+                      });
+                    }
+                  }
+                }
+              });
+            }, function () {
+              call(false);
+            });
+          };
+        }
+      });
+    } catch (e) {
+      console.error('Kinobaza', 'registerHomeLine error', e);
+    }
+  }
+
+  /**
+   * Ініціалізація
+   */
+  function _init$1() {
+    if (window.kinobaza_releases_home_ready) return;
+    window.kinobaza_releases_home_ready = true;
+    patchCardRelease();
+    registerHomeLine();
+  }
+  var homeLines = {
+    init: function init() {
+      if (window.appready) {
+        _init$1();
+      } else {
+        Lampa.Listener.follow('app', function (e) {
+          if (e.type === 'ready') _init$1();
+        });
+      }
+    }
+  };
 
   /**
    * Kinobaza Digital Releases (Цифрові Релізи)
@@ -6569,7 +6714,13 @@
 
     Lampa.Component.add('kinobaza_releases', component$4);
 
-    // ============== 6. MENU BUTTON ==============
+    // ============== 6. HOME PAGE LINES ==============
+    // Додає 3 рядки цифрових релізів на головний екран
+    // Патчить Card.Release.onCreate для показу DD.MM.YYYY замість року
+
+    homeLines.init();
+
+    // ============== 7. MENU BUTTON ==============
 
     function add() {
       var button = $("<li class=\"menu__item selector kinobaza-menu-releases\">\n            <div class=\"menu__ico\">\n                <svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M20 3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H20C21.1 21 22 20.1 22 19V5C22 3.9 21.1 3 20 3ZM10 17V7L17 12L10 17Z\" fill=\"currentColor\"/>\n                </svg>\n            </div>\n            <div class=\"menu__text\">".concat(Lampa.Lang.translate('kinobaza_releases_title'), "</div>\n        </li>"));
@@ -7220,6 +7371,389 @@
   }
 
   /**
+   * Kinobaza Persons — Local Favorite Integration
+   *
+   * Зберігає підписані особи локально в Lampa.Storage під ключем 'kinobaza_persons'
+   * та робить їх доступними через Lampa.Favorite API (all/get).
+   *
+   * Паттерн: custom-favs.js (projects/kinobaza/custom-favs.js)
+   * — окремий ключ зберігання (не залежить від CUB синхронізації Lampa.Favorite)
+   * — monkey-patch Lampa.Favorite.all() та Lampa.Favorite.get()
+   * — ContentRows реєстрація для екрану bookmarks
+   *
+   * Тип: 'persons'
+   * Ключ: 'kinobaza_persons'
+   */
+  var TYPE = 'persons';
+  var STORAGE_KEY = 'kinobaza_persons';
+  var cachedData = null;
+
+  /**
+   * Конвертує API-дані персони в картку Lampa для збереження
+   * Паттерн: myperson/component.js → mapPerson()
+   *
+   * @param {object} data — об'єкт персони з API
+   * @returns {object|null} картка Lampa
+   */
+  function mapPersonToCard(data) {
+    if (!data || !data.id) return null;
+    var personName = data.name_uk || data.name_en || '';
+    var posterUrl = './img/actor.svg';
+    if (data.poster_tmdb && data.poster_tmdb.charAt(0) === '/') {
+      posterUrl = Lampa.TMDB.image('t/p/w300/' + data.poster_tmdb.replace(/^\//, ''));
+    } else if (data.poster_kinobaza) {
+      posterUrl = api$1.cdn(data.poster_kinobaza, 'w300');
+    }
+    var isRealTmdb = data.poster_tmdb && data.poster_tmdb.charAt(0) === '/';
+
+    // Паттерн: component.js → mapPerson()
+    // Не встановлюємо poster_path — використовуємо poster (CDN URL)
+    // profile_path для cardImgBackground через Lampa.TMDB.image
+    return {
+      id: data.id,
+      slug: data.slug,
+      source: 'kinobaza',
+      title: personName,
+      original_title: personName,
+      poster: posterUrl,
+      profile_path: isRealTmdb ? data.poster_tmdb : '',
+      media_type: 'person',
+      type: 'person',
+      gender: data.gender || 2
+    };
+  }
+
+  /**
+   * Прочитати дані зі сховища
+   */
+  function read() {
+    if (cachedData) return cachedData;
+    cachedData = Lampa.Storage.get(STORAGE_KEY, {
+      persons: [],
+      card: []
+    });
+    if (!cachedData.persons) cachedData.persons = [];
+    if (!cachedData.card) cachedData.card = [];
+    return cachedData;
+  }
+
+  /**
+   * Зберегти дані у сховище
+   */
+  function save() {
+    Lampa.Storage.set(STORAGE_KEY, cachedData);
+  }
+
+  /**
+   * Отримати всі картки збережених осіб
+   * @returns {Array<object>}
+   */
+  function getAll() {
+    var store = read();
+    var ids = store.persons || [];
+    var cards = store.card || [];
+    return ids.map(function (id) {
+      for (var i = 0; i < cards.length; i++) {
+        if (cards[i].id === id) return cards[i];
+      }
+      return null;
+    }).filter(Boolean);
+  }
+
+  /**
+   * Підписатися — зберегти персону
+   * @param {object} card — картка персони (з mapPersonToCard)
+   * @param {boolean} [silent=false] — не показувати Noty (для автоматичної синхронізації)
+   */
+  function subscribe(card, silent) {
+    if (!card || !card.id) return;
+    var store = read();
+    var exists = store.persons.indexOf(card.id) !== -1;
+    if (exists) return;
+    store.persons.unshift(card.id);
+
+    // Додати картку в загальний пул, якщо ще не існує
+    var cardExists = store.card.some(function (c) {
+      return c.id === card.id;
+    });
+    if (!cardExists) {
+      store.card.push(card);
+    }
+    save();
+    cachedData = null;
+
+    // Сповістити систему про зміну обраного
+    Lampa.Listener.send('state:changed', {
+      target: 'favorite',
+      reason: 'update',
+      method: 'add',
+      type: TYPE,
+      card: card
+    });
+    if (!silent) {
+      Lampa.Noty.show(Lampa.Lang.translate('title_subscribe'));
+    }
+  }
+
+  /**
+   * Відписатися — видалити персону
+   * @param {number} personId
+   * @param {boolean} [silent=false] — не показувати Noty
+   */
+  function unsubscribe(personId, silent) {
+    if (!personId) return;
+    var store = read();
+    var idx = store.persons.indexOf(personId);
+    if (idx === -1) return;
+    store.persons.splice(idx, 1);
+
+    // Видалити картку з пулу, якщо вона не використовується в persons
+    // (залишається в card, якщо на неї є інші посилання)
+    var stillUsed = store.persons.indexOf(personId) !== -1;
+    if (!stillUsed) {
+      store.card = store.card.filter(function (c) {
+        return c.id !== personId;
+      });
+    }
+    save();
+    cachedData = null;
+    Lampa.Listener.send('state:changed', {
+      target: 'favorite',
+      reason: 'update',
+      method: 'remove',
+      type: TYPE,
+      card: {
+        id: personId
+      }
+    });
+    if (!silent) {
+      Lampa.Noty.show(Lampa.Lang.translate('title_unsubscribe'));
+    }
+  }
+
+  /**
+   * Перевірити чи підписаний на персону
+   * @param {number} personId
+   * @returns {boolean}
+   */
+  function isSubscribed(personId) {
+    if (!personId) return false;
+    var store = read();
+    return store.persons.indexOf(personId) !== -1;
+  }
+
+  /**
+   * Перемкнути підписку
+   * @param {object} card — картка персони
+   */
+  function toggle(card) {
+    if (!card || !card.id) return;
+    if (isSubscribed(card.id)) {
+      unsubscribe(card.id);
+    } else {
+      subscribe(card);
+    }
+  }
+
+  // ========== Favorite API Monkey-Patches ==========
+
+  /**
+   * Підробити Lampa.Favorite.all() щоб включав persons
+   * Паттерн: custom-favs.js Lampa.Favorite.get override
+   */
+  function patchAll() {
+    try {
+      var origAll = Lampa.Favorite.all;
+      if (!origAll) return;
+      Lampa.Favorite.all = function () {
+        var result = origAll.apply(this, arguments);
+        try {
+          var persons = getAll();
+          if (persons && persons.length) {
+            result[TYPE] = persons;
+          } else if (!result[TYPE]) {
+            result[TYPE] = [];
+          }
+        } catch (e) {
+          // мовчки
+        }
+        return result;
+      };
+    } catch (e) {
+      console.error('Kinobaza', 'patchAll error', e);
+    }
+  }
+
+  /**
+   * Підробити Lampa.Favorite.get() щоб обробляв persons
+   * Для CUB sync — повертає локальні дані persons
+   * Паттерн: custom-favs.js
+   */
+  function patchGet() {
+    try {
+      var origGet = Lampa.Favorite.get;
+      if (!origGet) return;
+      Lampa.Favorite.get = function (params) {
+        if (params && params.type === TYPE) {
+          return getAll();
+        }
+        return origGet.apply(this, arguments);
+      };
+    } catch (e) {
+      console.error('Kinobaza', 'patchGet error', e);
+    }
+  }
+
+  /**
+   * Підробити Lampa.Favorite.check() щоб включав persons
+   * Потрібно для коректного відображення іконки обраного на картках
+   */
+  function patchCheck() {
+    try {
+      var origCheck = Lampa.Favorite.check;
+      if (!origCheck) return;
+      Lampa.Favorite.check = function (card) {
+        var result = origCheck.apply(this, arguments);
+        if (card && (card.media_type === 'person' || card.type === 'person')) {
+          result[TYPE] = isSubscribed(card.id);
+          if (result[TYPE]) result.any = true;
+        }
+        return result;
+      };
+    } catch (e) {
+      console.error('Kinobaza', 'patchCheck error', e);
+    }
+  }
+
+  // ========== ContentRows для bookmarks ==========
+
+  /**
+   * Зареєструвати ContentRows для відображення осіб у bookmarks
+   * Паттерн: custom-favs.js → registerLines() + components/bookmarks.js
+   *
+   * Кожна картка персони при натисканні відкриває kinobaza_person_detail
+   */
+  function registerContentRows() {
+    try {
+      Lampa.ContentRows.add({
+        name: 'kinobaza_persons',
+        title: Lampa.Lang.translate('kinobaza_persons'),
+        index: 50,
+        screen: ['bookmarks'],
+        call: function call(params, screen) {
+          var items = getAll();
+          if (!items || !items.length) return;
+          items = items.slice(0, 20);
+
+          // Додаємо обробники навігації — вони не зберігаються в JSON
+          items.forEach(function (item) {
+            if (!item.params) item.params = {};
+            if (!item.params.emit) item.params.emit = {};
+            var cardRef = item;
+            item.params.emit.onEnter = function () {
+              Lampa.Activity.push({
+                url: '',
+                component: 'kinobaza_person_detail',
+                source: 'kinobaza',
+                slug: cardRef.slug,
+                id: cardRef.id,
+                page: 1
+              });
+            };
+            item.params.emit.onFocus = function () {
+              Lampa.Background.change(Lampa.Utils.cardImgBackground(cardRef));
+            };
+          });
+          return [{
+            title: Lampa.Lang.translate('kinobaza_persons'),
+            results: items,
+            type: TYPE,
+            total_pages: 1,
+            params: {
+              module: Lampa.Maker.module('Line').toggle(Lampa.Maker.module('Line').MASK.base, 'Event'),
+              emit: {
+                onMore: function onMore() {
+                  Lampa.Activity.push({
+                    url: '',
+                    component: 'kinobaza_myperson',
+                    title: Lampa.Lang.translate('kinobaza_persons'),
+                    page: 1
+                  });
+                }
+              }
+            }
+          }];
+        }
+      });
+    } catch (e) {
+      console.error('Kinobaza', 'registerContentRows error', e);
+    }
+  }
+
+  // ========== Переклади (self-contained, не залежить від storage.js) ==========
+
+  function registerTranslations() {
+    try {
+      Lampa.Lang.add({
+        kinobaza_persons: {
+          uk: 'Особи',
+          ru: 'Личности',
+          en: 'People',
+          be: 'Асобы'
+        }
+      });
+    } catch (e) {
+      // мовчки
+    }
+  }
+
+  // ========== Ініціалізація ==========
+
+  function _init() {
+    if (window.kinobaza_persons_fav_ready) return;
+    window.kinobaza_persons_fav_ready = true;
+    registerTranslations();
+
+    // Переконатись що slug присутній в card_fields для збереження
+    try {
+      if (Lampa.Utils && Lampa.Utils.card_fields) {
+        var extraFields = ['slug', 'media_type', 'gender'];
+        extraFields.forEach(function (f) {
+          if (Lampa.Utils.card_fields.indexOf(f) === -1) {
+            Lampa.Utils.card_fields.push(f);
+          }
+        });
+      }
+    } catch (e) {
+      // мовчки
+    }
+    patchAll();
+    patchGet();
+    patchCheck();
+    registerContentRows();
+  }
+  var favorite = {
+    init: function init() {
+      // Відкладаємо ініціалізацію до повного завантаження Lampa
+      if (window.appready) {
+        _init();
+      } else {
+        Lampa.Listener.follow('app', function (e) {
+          if (e.type === 'ready') _init();
+        });
+      }
+    },
+    subscribe: subscribe,
+    unsubscribe: unsubscribe,
+    isSubscribed: isSubscribed,
+    getAll: getAll,
+    toggle: toggle,
+    mapPersonToCard: mapPersonToCard,
+    TYPE: TYPE,
+    STORAGE_KEY: STORAGE_KEY
+  };
+
+  /**
    * Kinobaza Person Detail — TryzubTV tv.js pattern
    * Sync: header + scroll setup. Async: data loading.
    */
@@ -7239,6 +7773,8 @@
       loading = false;
     var personId = object.id || 0;
     var personSlug = object.slug || '';
+    var currentPersonData = null; // for local Favorite sync
+
     function clearCards() {
       cards.forEach(function (c) {
         c.destroy();
@@ -7377,7 +7913,7 @@
         });
       }
 
-      // Subscribe — toggle підписки на персону через Kinobaza API
+      // Subscribe — toggle підписки на персону через Kinobaza API + local Favorite
       // POST /persons/{id}/favorite та /persons/{id}/unfavorite
       var $subBtn = $h.find('.button--subscribe');
       if (!$subBtn.length) {
@@ -7394,10 +7930,18 @@
       if ($subBtn.length) {
         $subBtn.css('display', ''); // видаляємо inline style від hide (display:none)
 
+        // Зберігаємо дані персони для локального Favorite
+        currentPersonData = data;
         var personId = data.id || 0;
-        var isFav = !!data.my_favorite;
+        // Початковий стан: з API (my_favorite) або локального Favorite
+        var isFav = !!(data.my_favorite || favorite.isSubscribed(personId));
 
-        // Початковий стан з API
+        // Синхронізуємо локальний Favorite з серверним статусом
+        // Якщо на сервері підписані, а локально ні — додаємо локально (без Noty)
+        if (data.my_favorite && !favorite.isSubscribed(personId)) {
+          var card = favorite.mapPersonToCard(data);
+          if (card) favorite.subscribe(card, true);
+        }
         if (isFav) $subBtn.addClass('active');
         var subBtnEl = $subBtn[0];
         var subSvg = subBtnEl.querySelector('svg');
@@ -7406,7 +7950,7 @@
         if (subPath) subPath.setAttribute('fill', isFav ? 'currentColor' : 'transparent');
         if (subText) subText.textContent = Lampa.Lang.translate(isFav ? 'title_unsubscribe' : 'title_subscribe');
 
-        // Toggle при кліку
+        // Toggle при кліку — Kinobaza API + local Favorite
         $subBtn.off('hover:enter').on('hover:enter', function (e) {
           e.stopPropagation();
           var nowFav = $subBtn.hasClass('active');
@@ -7415,6 +7959,9 @@
               $subBtn.removeClass('active');
               if (subPath) subPath.setAttribute('fill', 'transparent');
               if (subText) subText.textContent = Lampa.Lang.translate('title_subscribe');
+
+              // Видалити з локального Favorite
+              favorite.unsubscribe(personId);
             })["catch"](function () {
               Lampa.Noty.show(Lampa.Lang.translate('network_error'));
             });
@@ -7423,6 +7970,10 @@
               $subBtn.addClass('active');
               if (subPath) subPath.setAttribute('fill', 'currentColor');
               if (subText) subText.textContent = Lampa.Lang.translate('title_unsubscribe');
+
+              // Зберегти в локальному Favorite
+              var card = currentPersonData ? favorite.mapPersonToCard(currentPersonData) : null;
+              if (card) favorite.subscribe(card);
             })["catch"](function () {
               Lampa.Noty.show(Lampa.Lang.translate('network_error'));
             });
@@ -7580,6 +8131,12 @@
 
     Lampa.Component.add('kinobaza_myperson', component$1);
     Lampa.Component.add('kinobaza_person_detail', component);
+
+    // ==================== LOCAL FAVORITE INTEGRATION ====================
+    // Зберігає підписані особи локально у Lampa.Favorite
+    // та відображає їх у компоненті bookmarks
+
+    favorite.init();
 
     // ==================== TRANSLATIONS ====================
 
@@ -10815,7 +11372,7 @@
     registerSourceOverride();
 
     // 10. Реєстрація ContentRows інтеграції для всіх категорій
-    registerContentRows();
+    registerContentRows$1();
 
     // 10.5. Реєстрація лінивого завантаження ліній
     registerLazyLines();
