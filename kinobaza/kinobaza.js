@@ -7913,6 +7913,14 @@
         });
       }
 
+      // Зберігаємо ідентифікатори на актівіті для доступу ззовні
+      try {
+        if (activity && activity.object) {
+          activity.object.imdb_id = data.imdb_id ? 'tt' + data.imdb_id : '';
+          activity.object.themoviedb_id = data.themoviedb_id || '';
+        }
+      } catch (e) {}
+
       // Subscribe — toggle підписки на персону через Kinobaza API + local Favorite
       // POST /persons/{id}/favorite та /persons/{id}/unfavorite
       var $subBtn = $h.find('.button--subscribe');
