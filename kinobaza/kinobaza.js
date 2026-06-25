@@ -577,7 +577,7 @@
    * @param {object} params
    * @returns {string}
    */
-  function buildUrl$a(path) {
+  function buildUrl$8(path) {
     var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var direct = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
     var base = direct ? DIRECT_API : BASE_URL$4;
@@ -611,7 +611,7 @@
     var resolve = arguments.length > 2 ? arguments[2] : undefined;
     var reject = arguments.length > 3 ? arguments[3] : undefined;
     var direct = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
-    var u = buildUrl$a(path, params, direct);
+    var u = buildUrl$8(path, params, direct);
     network$5.silent(u, function (json) {
       resolve(json);
     }, function (a, c) {
@@ -636,7 +636,7 @@
       if (reject) reject('no_token');
       return;
     }
-    var u = buildUrl$a(path, params);
+    var u = buildUrl$8(path, params);
     network$5.silent(u, function (json) {
       resolve(json);
     }, function (a, c) {
@@ -1044,8 +1044,8 @@
       vote_average: (item.rating || 0) / 10,
       vote: (item.imdb_rating || 0) / 10,
       voting: item.rating || 0,
-      // Дата
-      release_date: item.released_en || item.released_ua || '',
+      // Дата — fallback на year якщо немає released_en/ua (напр. рекомендації)
+      release_date: item.released_en || item.released_ua || (item.year ? String(item.year) : ''),
       // Користувацькі позначки
       myRating: item.myRating || 0,
       myFavorite: item.myFavorite || false,
@@ -1495,14 +1495,6 @@
     4: 'kinobaza_job_creator',
     5: 'kinobaza_job_composer'
   };
-  var JOB_EMOJI = {
-    0: '❓',
-    1: '🎭',
-    2: '🎬',
-    3: '✍️',
-    4: '🏛️',
-    5: '🎵'
-  };
 
   /**
    * Повертає назву професії з jobs масиву (перша знайдена, окрім 0)
@@ -1515,22 +1507,6 @@
       var code = jobs[i];
       if (code !== 0 && JOB_TRANSLATION_KEYS[code]) {
         return Lampa.Lang.translate(JOB_TRANSLATION_KEYS[code]) || '';
-      }
-    }
-    return '';
-  }
-
-  /**
-   * Повертає емодзі для першої знайденої професії (окрім 0)
-   * @param {number[]} jobs
-   * @returns {string}
-   */
-  function getJobEmoji(jobs) {
-    if (!jobs || !Array.isArray(jobs) || !jobs.length) return '';
-    for (var i = 0; i < jobs.length; i++) {
-      var code = jobs[i];
-      if (code !== 0 && JOB_EMOJI[code]) {
-        return JOB_EMOJI[code];
       }
     }
     return '';
@@ -1622,9 +1598,7 @@
     mapEpisodes: mapEpisodes,
     SOURCE: SOURCE,
     getJobName: getJobName,
-    getJobEmoji: getJobEmoji,
-    JOB_TRANSLATION_KEYS: JOB_TRANSLATION_KEYS,
-    JOB_EMOJI: JOB_EMOJI
+    JOB_TRANSLATION_KEYS: JOB_TRANSLATION_KEYS
   };
 
   /**
@@ -1642,7 +1616,7 @@
    * @param {object} params
    * @returns {string}
    */
-  function buildUrl$9(path, params) {
+  function buildUrl$7(path, params) {
     var u = BASE_URL$3 + path;
     var keys = Object.keys(params || {});
     for (var i = 0; i < keys.length; i++) {
@@ -1669,7 +1643,7 @@
     if (options && options.after) {
       params.after = options.after;
     }
-    var u = buildUrl$9('/trailers', params);
+    var u = buildUrl$7('/trailers', params);
     network$4.silent(u, function (json) {
       if (resolve) resolve(json);
     }, function (a, c) {
@@ -2013,12 +1987,12 @@
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$8(withUkrAudio, platform, orderBy),
+      url: buildUrl$6(withUkrAudio, platform, orderBy),
       type: type,
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$8(withUkrAudio, platform, orderBy),
+          url: buildUrl$6(withUkrAudio, platform, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -2035,7 +2009,7 @@
    * @param {string} orderBy
    * @returns {string}
    */
-  function buildUrl$8(withUkrAudio, platform, orderBy) {
+  function buildUrl$6(withUkrAudio, platform, orderBy) {
     var params = ['list_type=5'];
     params.push('order_by=' + orderBy);
     if (withUkrAudio) {
@@ -2073,12 +2047,12 @@
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$7(type, withUkrAudio, platform, orderBy),
+      url: buildUrl$5(type, withUkrAudio, platform, orderBy),
       type: type === 'all' ? 'movie' : type,
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$7(type, withUkrAudio, platform, orderBy),
+          url: buildUrl$5(type, withUkrAudio, platform, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -2096,7 +2070,7 @@
    * @param {string} orderBy
    * @returns {string}
    */
-  function buildUrl$7(type, withUkrAudio, platform, orderBy) {
+  function buildUrl$5(type, withUkrAudio, platform, orderBy) {
     var params = ['list_type=31'];
     params.push('order_by=' + orderBy);
     if (type === 'movie') {
@@ -2141,12 +2115,12 @@
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$6(type, withUkrAudio, platform, listType, orderBy),
+      url: buildUrl$4(type, withUkrAudio, platform, listType, orderBy),
       type: type === 'tv' ? 'tv' : 'movie',
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$6(type, withUkrAudio, platform, listType, orderBy),
+          url: buildUrl$4(type, withUkrAudio, platform, listType, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -2165,7 +2139,7 @@
    * @param {string} orderBy
    * @returns {string}
    */
-  function buildUrl$6(type, withUkrAudio, platform, listType, orderBy) {
+  function buildUrl$4(type, withUkrAudio, platform, listType, orderBy) {
     var params = ['genres[]=32', 'countries[]=39', 'countries[]=214', 'countries[]=97', 'countries[]=96', 'countries[]=92'];
     params.push('order_by=' + orderBy);
     if (listType) {
@@ -2255,12 +2229,12 @@
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$5(type, withUkrAudio, platform, listType, orderBy),
+      url: buildUrl$3(type, withUkrAudio, platform, listType, orderBy),
       type: type === 'tv' ? 'tv' : 'movie',
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$5(type, withUkrAudio, platform, listType, orderBy),
+          url: buildUrl$3(type, withUkrAudio, platform, listType, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -2279,7 +2253,7 @@
    * @param {string} orderBy
    * @returns {string}
    */
-  function buildUrl$5(type, withUkrAudio, platform, listType, orderBy) {
+  function buildUrl$3(type, withUkrAudio, platform, listType, orderBy) {
     var params = ['genres[]=12', 'exclude_genres[]=32'];
     params.push('order_by=' + orderBy);
     if (listType) {
@@ -2519,38 +2493,73 @@
   }
 
   /**
-   * Line-генератор "Netflix"
-   * Фільтрація контенту за netflix_audio=1
-   *
-   * @module lines/platforms/netflix
+   * Platform Lines — єдиний генератор для всіх платформ
+   * Використовує config мапу замість 8 окремих файлів
+   * 
+   * @module lines/platforms/platforms
    */
-  var PLATFORM_KEY$2 = 'netflix';
-  var PLATFORM_NAME$2 = 'Netflix';
+
+  var PLATFORMS = {
+    netflix: {
+      key: 'netflix_audio',
+      name: 'Netflix'
+    },
+    megogo: {
+      key: 'megogo_audio',
+      name: 'Megogo'
+    },
+    sweet: {
+      key: 'sweet_audio',
+      name: 'Sweet TV'
+    },
+    itunes: {
+      key: 'itunes_audio',
+      name: 'iTunes'
+    },
+    rakuten: {
+      key: 'rakuten_audio',
+      name: 'Rakuten'
+    },
+    googleplay: {
+      key: 'playmarket_audio',
+      name: 'Google Play'
+    },
+    takflix: {
+      key: 'takflix_audio',
+      name: 'Takflix'
+    },
+    appletv: {
+      key: 'apple_tv_subtitles',
+      name: 'Apple TV+'
+    }
+  };
 
   /**
-   * Створює Line для Netflix
-   * @param {object}   [options]                  - параметри
-   * @param {string}   [options.title]            - заголовок рядка (default: 'Нове на Netflix')
-   * @param {string}   [options.type]             - тип: 'all' | 'movie' | 'tv'
-   * @param {boolean}  [options.withUkrAudio]     - тільки з укр. аудіо
-   * @param {boolean}  [options.popular7d]        - популярне за 7 днів (list_type=31)
-   * @returns {object} Line object для ContentRows
+   * Створює Line для будь-якої платформи
+   * @param {string} platformKey - ключ з PLATFORMS
+   * @param {object} [options]
+   * @param {string} [options.title]
+   * @param {string} [options.type] - 'all' | 'movie' | 'tv'
+   * @param {boolean} [options.popular7d] - популярне за 7 днів
+   * @param {string} [options.orderBy] - 'popularity' | 'date_desc'
+   * @returns {object|null} Line object для ContentRows або null якщо платформа не знайдена
    */
-  function createNetflixLine(options) {
+  function createPlatformLine(platformKey, options) {
+    var p = PLATFORMS[platformKey];
+    if (!p) return null;
     options = options || {};
-    var title = options.title || 'Нове на ' + PLATFORM_NAME$2;
+    var title = options.title || p.name;
     var type = options.type || 'all';
-    var withUkrAudio = options.withUkrAudio || false;
     var popular7d = options.popular7d || false;
     var orderBy = options.orderBy || 'popularity';
     return {
       title: title,
-      url: buildUrl$4(type, withUkrAudio, popular7d, orderBy),
+      url: buildUrl$2(p.key, type, popular7d, orderBy),
       type: type === 'tv' ? 'tv' : 'movie',
       onMore: function onMore(params, close) {
         close();
         Lampa.Activity.push({
-          url: buildUrl$4(type, withUkrAudio, popular7d, orderBy),
+          url: buildUrl$2(p.key, type, popular7d, orderBy),
           component: 'category_full',
           source: 'kinobaza',
           title: title,
@@ -2562,160 +2571,12 @@
 
   /**
    * Будує URL для API запиту
-   * @param {string} type
-   * @param {boolean} withUkrAudio
-   * @param {boolean} popular7d
-   * @param {string} orderBy
-   * @returns {string}
    */
-  function buildUrl$4(type, withUkrAudio, popular7d, orderBy) {
-    var params = [PLATFORM_KEY$2 + '_audio=1'];
+  function buildUrl$2(platformKey, type, popular7d, orderBy) {
+    var params = [platformKey + '=1'];
     params.push('order_by=' + orderBy);
-    if (popular7d) {
-      params.push('list_type=31');
-    }
-    if (type === 'movie') {
-      params.push('type=1');
-    } else if (type === 'tv') {
-      params.push('type=2');
-    }
-    if (withUkrAudio) {
-      params.push('translated=has_ukr_audio');
-    }
-    return 'titles?' + params.join('&');
-  }
-
-  /**
-   * Line-генератор "Megogo"
-   * Фільтрація контенту за megogo_audio=1
-   *
-   * @module lines/platforms/megogo
-   */
-  var PLATFORM_KEY$1 = 'megogo';
-  var PLATFORM_NAME$1 = 'Megogo';
-
-  /**
-   * Створює Line для Megogo
-   * @param {object}   [options]                  - параметри
-   * @param {string}   [options.title]            - заголовок рядка (default: 'Нове на Megogo')
-   * @param {string}   [options.type]             - тип: 'all' | 'movie' | 'tv'
-   * @param {boolean}  [options.withUkrAudio]     - тільки з укр. аудіо
-   * @param {boolean}  [options.popular7d]        - популярне за 7 днів (list_type=31)
-   * @returns {object} Line object для ContentRows
-   */
-  function createMegogoLine(options) {
-    options = options || {};
-    var title = options.title || 'Нове на ' + PLATFORM_NAME$1;
-    var type = options.type || 'all';
-    var withUkrAudio = options.withUkrAudio || false;
-    var popular7d = options.popular7d || false;
-    var orderBy = options.orderBy || 'popularity';
-    return {
-      title: title,
-      url: buildUrl$3(type, withUkrAudio, popular7d, orderBy),
-      type: type === 'tv' ? 'tv' : 'movie',
-      onMore: function onMore(params, close) {
-        close();
-        Lampa.Activity.push({
-          url: buildUrl$3(type, withUkrAudio, popular7d, orderBy),
-          component: 'category_full',
-          source: 'kinobaza',
-          title: title,
-          page: 1
-        });
-      }
-    };
-  }
-
-  /**
-   * Будує URL для API запиту
-   * @param {string} type
-   * @param {boolean} withUkrAudio
-   * @param {boolean} popular7d
-   * @param {string} orderBy
-   * @returns {string}
-   */
-  function buildUrl$3(type, withUkrAudio, popular7d, orderBy) {
-    var params = [PLATFORM_KEY$1 + '_audio=1'];
-    params.push('order_by=' + orderBy);
-    if (popular7d) {
-      params.push('list_type=31');
-    }
-    if (type === 'movie') {
-      params.push('type=1');
-    } else if (type === 'tv') {
-      params.push('type=2');
-    }
-    if (withUkrAudio) {
-      params.push('translated=has_ukr_audio');
-    }
-    return 'titles?' + params.join('&');
-  }
-
-  /**
-   * Line-генератор "Sweet TV"
-   * Фільтрація контенту за sweet_audio=1
-   *
-   * @module lines/platforms/sweet
-   */
-  var PLATFORM_KEY = 'sweet';
-  var PLATFORM_NAME = 'Sweet TV';
-
-  /**
-   * Створює Line для Sweet TV
-   * @param {object}   [options]                  - параметри
-   * @param {string}   [options.title]            - заголовок рядка (default: 'Нове на Sweet TV')
-   * @param {string}   [options.type]             - тип: 'all' | 'movie' | 'tv'
-   * @param {boolean}  [options.withUkrAudio]     - тільки з укр. аудіо
-   * @param {boolean}  [options.popular7d]        - популярне за 7 днів (list_type=31)
-   * @returns {object} Line object для ContentRows
-   */
-  function createSweetLine(options) {
-    options = options || {};
-    var title = options.title || 'Нове на ' + PLATFORM_NAME;
-    var type = options.type || 'all';
-    var withUkrAudio = options.withUkrAudio || false;
-    var popular7d = options.popular7d || false;
-    var orderBy = options.orderBy || 'popularity';
-    return {
-      title: title,
-      url: buildUrl$2(type, withUkrAudio, popular7d, orderBy),
-      type: type === 'tv' ? 'tv' : 'movie',
-      onMore: function onMore(params, close) {
-        close();
-        Lampa.Activity.push({
-          url: buildUrl$2(type, withUkrAudio, popular7d, orderBy),
-          component: 'category_full',
-          source: 'kinobaza',
-          title: title,
-          page: 1
-        });
-      }
-    };
-  }
-
-  /**
-   * Будує URL для API запиту
-   * @param {string} type
-   * @param {boolean} withUkrAudio
-   * @param {boolean} popular7d
-   * @param {string} orderBy
-   * @returns {string}
-   */
-  function buildUrl$2(type, withUkrAudio, popular7d, orderBy) {
-    var params = [PLATFORM_KEY + '_audio=1'];
-    params.push('order_by=' + orderBy);
-    if (popular7d) {
-      params.push('list_type=31');
-    }
-    if (type === 'movie') {
-      params.push('type=1');
-    } else if (type === 'tv') {
-      params.push('type=2');
-    }
-    if (withUkrAudio) {
-      params.push('translated=has_ukr_audio');
-    }
+    if (popular7d) params.push('list_type=31');
+    if (type === 'movie') params.push('type=1');else if (type === 'tv') params.push('type=2');
     return 'titles?' + params.join('&');
   }
 
@@ -2752,11 +2613,11 @@
       title: Lampa.Lang.translate('menu_multmovie'),
       listType: 31,
       orderBy: 'popularity'
-    }), createNetflixLine({
+    }), createPlatformLine('netflix', {
       title: Lampa.Lang.translate('kinobaza_new_on_netflix'),
       popular7d: true,
       orderBy: 'popularity'
-    }), createMegogoLine({
+    }), createPlatformLine('megogo', {
       title: Lampa.Lang.translate('kinobaza_new_on_megogo'),
       popular7d: true,
       orderBy: 'popularity'
@@ -2949,106 +2810,29 @@
   var network$3 = new Lampa.Reguest();
   var source = 'kinobaza';
 
-  // Кеш маппінгу Kinobaza ID → TMDB ID (оптимізація: ID стабільні)
-  var tmdbIdCache = {};
-
   // Кеш Kinobaza person ID → slug
   // Потрібен бо при кліку на актора зі сторінки фільму Lampa втрачає slug
   var personSlugCache = {};
 
-  /**
-   * Збагачення картки TMDB ID при збереженні зі списку
-   * @param {object} card - картка з needsEnrichment: true
-   * @returns {Promise}
-   */
-  function enrichCard(card) {
-    return new Promise(function (resolve) {
-      if (!card.needsEnrichment) {
-        resolve(card);
-        return;
-      }
-      var oldId = card.id;
+  // ============== CONTENT ROWS HELPERS ==============
 
-      // Helper to update Lampa's database and storage
-      var updateFavoriteDb = function updateFavoriteDb(data) {
-        var tmdbId = data.themoviedb_id;
-        var newId = tmdbId || oldId;
-
-        // 1. Update the card reference itself
-        card.id = newId;
-        card.kinobaza_id = data.id;
-        card.imdb_id = data.imdb_id ? 'tt' + data.imdb_id : '';
-        card.themoviedb_id = tmdbId || 0;
-        card.needsEnrichment = false;
-        if (tmdbId) {
-          tmdbIdCache[card.kinobaza_id] = tmdbId;
+  // Створює part-функцію, усуває дублювання api.getTitles → mapList → addSource → call
+  function makePart(query, title, type, url) {
+    return function (call) {
+      api$1.getTitles(query).then(function (json) {
+        json.title = title;
+        json.type = type;
+        json.url = url;
+        if (json.data) {
+          json.results = cardMapper.mapList(json.data);
+          json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
         }
-
-        // 2. Update the card in Lampa's in-memory / storage favorites
-        if (typeof Lampa !== 'undefined' && Lampa.Favorite && typeof Lampa.Favorite.full === 'function') {
-          var fav = Lampa.Favorite.full();
-          if (fav && fav.card && Array.isArray(fav.card)) {
-            var dbCard = fav.card.find(function (c) {
-              return c.id === oldId;
-            });
-            if (dbCard) {
-              dbCard.id = newId;
-              dbCard.kinobaza_id = data.id;
-              dbCard.imdb_id = data.imdb_id ? 'tt' + data.imdb_id : '';
-              dbCard.themoviedb_id = tmdbId || 0;
-              dbCard.needsEnrichment = false;
-            }
-          }
-
-          // 3. Update the ID in all bookmark categories
-          var categories = ['like', 'wath', 'book', 'look', 'viewed', 'scheduled', 'continued', 'thrown', 'history'];
-          categories.forEach(function (cat) {
-            if (fav && fav[cat] && Array.isArray(fav[cat])) {
-              var index = fav[cat].indexOf(oldId);
-              if (index !== -1) {
-                fav[cat][index] = newId;
-              }
-            }
-          });
-
-          // 4. Save to Storage
-          if (Lampa.Storage && typeof Lampa.Storage.set === 'function') {
-            Lampa.Storage.set('favorite', fav);
-          }
-        }
-      };
-
-      // Спроба з кеша
-      if (tmdbIdCache[card.kinobaza_id]) {
-        updateFavoriteDb({
-          themovedb_id: tmdbIdCache[card.kinobaza_id],
-          id: card.kinobaza_id
-        });
-        resolve(card);
-        return;
-      }
-
-      // Запит деталей
-      var slug = card.slug || '';
-      if (!slug) {
-        updateFavoriteDb({
-          themovedb_id: 0,
-          id: card.id
-        });
-        resolve(card);
-        return;
-      }
-      api$1.getTitle(slug).then(function (data) {
-        updateFavoriteDb(data);
-        resolve(card);
+        json = Lampa.Utils.addSource(json, 'kinobaza');
+        call(json);
       })["catch"](function () {
-        updateFavoriteDb({
-          themovedb_id: 0,
-          id: card.id
-        });
-        resolve(card);
+        call(false);
       });
-    });
+    };
   }
 
   /**
@@ -3060,11 +2844,6 @@
         title: title,
         type: type,
         url: url,
-        // Unique marker for Kinobaza lazy rows. MUST NOT collide with
-        // other plugins' lazy_load flag (e.g. TraktTV) — otherwise their
-        // listener will fire on our rows, read undefined `definition`
-        // and crash, which aborts the whole Lampa.Listener.send cycle
-        // (subscribe.js wraps forEach in a single try/catch).
         kb_lazy: true,
         lazy_query: query,
         lazy_type: lazyType || 'titles',
@@ -3089,104 +2868,51 @@
     };
   }
 
+  // Виконує parts_data через ContentRows + partNext/fallback (для всіх гілок category)
+  function execParts(parts_data, parts_limit, params, oncomplite, onerror, returnLoad) {
+    if (Lampa.ContentRows && typeof Lampa.ContentRows.call === 'function') {
+      Lampa.ContentRows.call('category', params, parts_data);
+    }
+    function loadPart(partLoaded, partEmpty) {
+      if (Lampa.Api && typeof Lampa.Api.partNext === 'function') {
+        Lampa.Api.partNext(parts_data, parts_limit, partLoaded, partEmpty);
+      } else {
+        fallbackLoad(parts_data, parts_limit, partLoaded, partEmpty);
+      }
+    }
+    loadPart(oncomplite, onerror);
+    return returnLoad !== false ? loadPart : function () {};
+  }
+
   // ============== MAIN ==============
 
   /**
-   * Головна сторінка — 7 контентних рядів (без платформ)
-   * 
-   * Маппінг згідно kinobaza-lines-mapping.md §9.1 + §11:
-   *   1. list_type=1  → title_now_watch   (Зараз дивляться)
-   *   2. list_type=2  → title_upcoming    (Незабаром у кіно)
-   *   3. list_type=31 → title_trend_week  (У тренді за тиждень)
-   *   5. list_type=3  → kinobaza_top      (Топ КіноБази) — custom
-   *   6. list_type=5  → kinobaza_home      (Останнє додавання / Вдома)
-   *   7. list_type=20 → kinobaza_best_movies (Кращі фільми)
-   *   7. list_type=4  → kinobaza_best_series (Кращі серіали)
-   *
-   * Платформенні лайни (Netflix, Megogo, Sweet TV) — прибрано.
+   * Головна сторінка — 10 контентних рядів
    *
    * @param {object} params
    * @param {function} oncomplite
    * @param {function} onerror
    */
-  function main$1(params, oncomplite, onerror) {
+  function main(params, oncomplite, onerror) {
     var parts_limit = 9;
-    var parts_data = [
-    // 1. Зараз дивляться (list_type=1)
-    function (call) {
-      api$1.getTitles({
-        list_type: 1,
-        page: 1
-      }).then(function (json) {
-        json.title = Lampa.Lang.translate('title_now_watch');
-        json.type = 'now_watch';
-        json.url = 'titles?list_type=1';
-        if (json.data) {
-          json.results = cardMapper.mapList(json.data);
-          json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-        }
-        json = Lampa.Utils.addSource(json, 'kinobaza');
-        call(json);
-      })["catch"](function () {
-        call(false);
-      });
-    },
-    // 2. Незабаром у кіно (list_type=2)
-    function (call) {
-      api$1.getTitles({
-        list_type: 2,
-        page: 1
-      }).then(function (json) {
-        json.title = Lampa.Lang.translate('kinobaza_upcoming');
-        json.type = 'upcoming';
-        json.url = 'titles?list_type=2';
-        if (json.data) {
-          json.results = cardMapper.mapList(json.data);
-          json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-        }
-        json = Lampa.Utils.addSource(json, 'kinobaza');
-        call(json);
-      })["catch"](function () {
-        call(false);
-      });
-    },
-    // 3. У тренді за тиждень (list_type=31)
-    function (call) {
-      api$1.getTitles({
-        list_type: 31,
-        page: 1
-      }).then(function (json) {
-        json.title = Lampa.Lang.translate('title_trend_week');
-        json.type = 'trend_week';
-        json.url = 'titles?list_type=31';
-        if (json.data) {
-          json.results = cardMapper.mapList(json.data);
-          json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-        }
-        json = Lampa.Utils.addSource(json, 'kinobaza');
-        call(json);
-      })["catch"](function () {
-        call(false);
-      });
-    },
-    // 4. Топ КіноБази (list_type=3) — lazy
-    createLazyPart(Lampa.Lang.translate('kinobaza_top'), 'top', 'titles?list_type=3', {
+    var parts_data = [makePart({
+      list_type: 1,
+      page: 1
+    }, Lampa.Lang.translate('title_now_watch'), 'now_watch', 'titles?list_type=1'), makePart({
+      list_type: 2,
+      page: 1
+    }, Lampa.Lang.translate('kinobaza_upcoming'), 'upcoming', 'titles?list_type=2'), makePart({
+      list_type: 31,
+      page: 1
+    }, Lampa.Lang.translate('title_trend_week'), 'trend_week', 'titles?list_type=31'), createLazyPart(Lampa.Lang.translate('kinobaza_top'), 'top', 'titles?list_type=3', {
       list_type: 3
-    }),
-    // 6. Вдома / Останнє додавання (list_type=5) — lazy
-    createLazyPart(Lampa.Lang.translate('kinobaza_home'), 'latest', 'titles?list_type=5', {
+    }), createLazyPart(Lampa.Lang.translate('kinobaza_home'), 'latest', 'titles?list_type=5', {
       list_type: 5
-    }),
-    // 7. Кращі фільми (list_type=20) — lazy
-    createLazyPart(Lampa.Lang.translate('kinobaza_best_movies'), 'best_movies', 'titles?list_type=20', {
+    }), createLazyPart(Lampa.Lang.translate('kinobaza_best_movies'), 'best_movies', 'titles?list_type=20', {
       list_type: 20
-    }),
-    // 8. Кращі серіали (list_type=4) — lazy
-    createLazyPart(Lampa.Lang.translate('kinobaza_best_series'), 'best_series', 'titles?list_type=4', {
+    }), createLazyPart(Lampa.Lang.translate('kinobaza_best_series'), 'best_series', 'titles?list_type=4', {
       list_type: 4
-    }),
-    // 9. Трейлери — lazy
-    createLazyPart(Lampa.Lang.translate('kinobaza_trailers') || 'Трейлери', 'trailers', 'trailers', {}, 'trailers', {
+    }), createLazyPart(Lampa.Lang.translate('kinobaza_trailers') || 'Трейлери', 'trailers', 'trailers', {}, 'trailers', {
       type: 'trailers',
       scroll: {
         horizontal: true,
@@ -3195,9 +2921,7 @@
       items: {
         view: 3
       }
-    }),
-    // 10. Мережі (тільки для головної сторінки)
-    function (call) {
+    }), function (call) {
       createNetworksPart(call);
     }];
     if (Lampa.ContentRows && typeof Lampa.ContentRows.call === 'function') {
@@ -3246,20 +2970,6 @@
   /**
    * Категорія: фільми / серіали / мультфільми / аніме
    *
-   * Маппінг згідно kinobaza-lines-mapping.md §9.2-9.5:
-   *
-   * Фільми (type=1):  Зараз дивляться | Незабаром | Популярне | Топ фільми |
-   *                   Минулий рік | Варто переглянути | З високим рейтингом |
-   *                   Новинки року | 15 жанрових рядів
-   * Серіали (type=2): Популярне | Топ серіали | Минулий рік | На цьому тижні |
-   *                   З високим рейтингом | Варто переглянути | Онгоїнги |
-   *                   15 жанрових рядів
-   * Мультфільми:     Вдома | Популярні | Новинки мультфільми | Новинки мультсеріали
-   * Аніме:           Вдома | Популярне | Новинки фільми | Новинки серіали |
-   *                   З укр. аудіо
-   *
-   * Платформенні лайни — прибрано з усіх категорій.
-   *
    * @param {object} params  — {url: 'movie'|'tv'|'anime', genres: number}
    * @param {function} oncomplite
    * @param {function} onerror
@@ -3274,9 +2984,6 @@
     var type = isMovie ? 1 : 2;
     var isAnime = params.url === 'anime';
     var isCartoons = !isAnime && kbGenre === 12;
-    var isTV = params.url === 'tv';
-    var parts_limit = 0;
-    var parts_data = [];
     var currentYear = new Date().getFullYear();
 
     // Список жанрів для жанрових рядів (Kinobaza ID)
@@ -3327,318 +3034,96 @@
       name: Lampa.Lang.translate('filter_genre_dc') || 'Документальний'
     }];
 
-    // ============== МУЛЬТФІЛЬМИ (cartoon) ==============
+    // ============== МУЛЬТФІЛЬМИ ==============
     if (isCartoons) {
-      parts_limit = 4;
-      var cartoonFilter = {
+      var cf = {
         genres: [12],
         exclude_genres: [32]
       };
-      parts_data = [
-      // 1. Вдома (мультфільми)
-      function (call) {
-        var query = Object.assign({
-          list_type: 5,
-          page: 1
-        }, cartoonFilter);
-        api$1.getTitles(query).then(function (json) {
-          json.title = Lampa.Lang.translate('kinobaza_home');
-          json.type = 'latest';
-          json.url = 'titles?list_type=5&genres[]=12&exclude_genres[]=32';
-          if (json.data) {
-            json.results = cardMapper.mapList(json.data);
-            json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-          }
-          json = Lampa.Utils.addSource(json, 'kinobaza');
-          call(json);
-        })["catch"](function () {
-          call(false);
-        });
-      },
-      // 2. Популярні мультфільми
-      function (call) {
-        var query = Object.assign({
-          list_type: 31,
-          page: 1
-        }, cartoonFilter);
-        api$1.getTitles(query).then(function (json) {
-          json.title = Lampa.Lang.translate('kinobaza_popular_cartoons');
-          json.type = 'popular';
-          json.url = 'titles?list_type=31&genres[]=12&exclude_genres[]=32';
-          if (json.data) {
-            json.results = cardMapper.mapList(json.data);
-            json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-          }
-          json = Lampa.Utils.addSource(json, 'kinobaza');
-          call(json);
-        })["catch"](function () {
-          call(false);
-        });
-      },
-      // 3. Новинки мультфільми
-      function (call) {
-        var query = Object.assign({
-          type: 1,
-          order_by: 'date_desc',
-          page: 1
-        }, cartoonFilter);
-        api$1.getTitles(query).then(function (json) {
-          json.title = (Lampa.Lang.translate('title_new') || 'Новинки') + ' (фільми)';
-          json.type = 'new_movies';
-          json.url = 'titles?genres[]=12&exclude_genres[]=32&type=1&order_by=date_desc';
-          if (json.data) {
-            json.results = cardMapper.mapList(json.data);
-            json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-          }
-          json = Lampa.Utils.addSource(json, 'kinobaza');
-          call(json);
-        })["catch"](function () {
-          call(false);
-        });
-      },
-      // 4. Новинки мультсеріали
-      function (call) {
-        var query = Object.assign({
-          type: 2,
-          order_by: 'date_desc',
-          page: 1
-        }, cartoonFilter);
-        api$1.getTitles(query).then(function (json) {
-          json.title = (Lampa.Lang.translate('title_new') || 'Новинки') + ' (серіали)';
-          json.type = 'new_series';
-          json.url = 'titles?genres[]=12&exclude_genres[]=32&type=2&order_by=date_desc';
-          if (json.data) {
-            json.results = cardMapper.mapList(json.data);
-            json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-          }
-          json = Lampa.Utils.addSource(json, 'kinobaza');
-          call(json);
-        })["catch"](function () {
-          call(false);
-        });
-      }];
-      if (Lampa.ContentRows && typeof Lampa.ContentRows.call === 'function') {
-        Lampa.ContentRows.call('category', params, parts_data);
-      }
-      (function loadGenre(partLoaded, partEmpty) {
-        if (Lampa.Api && typeof Lampa.Api.partNext === 'function') {
-          Lampa.Api.partNext(parts_data, parts_limit, partLoaded, partEmpty);
-        } else {
-          fallbackLoad(parts_data, parts_limit, partLoaded, partEmpty);
-        }
-      })(oncomplite, onerror);
-      return function () {};
+      return execParts([makePart(Object.assign({
+        list_type: 5,
+        page: 1
+      }, cf), Lampa.Lang.translate('kinobaza_home'), 'latest', 'titles?list_type=5&genres[]=12&exclude_genres[]=32'), makePart(Object.assign({
+        list_type: 31,
+        page: 1
+      }, cf), Lampa.Lang.translate('kinobaza_popular_cartoons'), 'popular', 'titles?list_type=31&genres[]=12&exclude_genres[]=32'), makePart(Object.assign({
+        type: 1,
+        order_by: 'date_desc',
+        page: 1
+      }, cf), (Lampa.Lang.translate('title_new') || 'Новинки') + ' (фільми)', 'new_movies', 'titles?genres[]=12&exclude_genres[]=32&type=1&order_by=date_desc'), makePart(Object.assign({
+        type: 2,
+        order_by: 'date_desc',
+        page: 1
+      }, cf), (Lampa.Lang.translate('title_new') || 'Новинки') + ' (серіали)', 'new_series', 'titles?genres[]=12&exclude_genres[]=32&type=2&order_by=date_desc')], 4, params, oncomplite, onerror, false);
     }
 
-    // ============== АНІМЕ (anime) ==============
+    // ============== АНІМЕ ==============
     if (isAnime) {
-      parts_limit = 5;
-      var animeFilter = {
+      var af = {
         genres: [32]
       };
-      parts_data = [
-      // 1. Вдома (аніме)
-      function (call) {
-        var query = Object.assign({
-          list_type: 5,
-          page: 1
-        }, animeFilter);
-        api$1.getTitles(query).then(function (json) {
-          json.title = Lampa.Lang.translate('kinobaza_home');
-          json.type = 'latest';
-          json.url = 'titles?list_type=5&genres[]=32';
-          if (json.data) {
-            json.results = cardMapper.mapList(json.data);
-            json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-          }
-          json = Lampa.Utils.addSource(json, 'kinobaza');
-          call(json);
-        })["catch"](function () {
-          call(false);
-        });
-      },
-      // 2. Популярне аніме
-      function (call) {
-        api$1.getTitles({
-          genres: [32],
-          order_by: 'popularity',
-          page: 1
-        }).then(function (json) {
-          json.title = Lampa.Lang.translate('kinobaza_popular_anime');
-          json.type = 'popular';
-          json.url = 'titles?genres[]=32&order_by=popularity';
-          if (json.data) {
-            json.results = cardMapper.mapList(json.data);
-            json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-          }
-          json = Lampa.Utils.addSource(json, 'kinobaza');
-          call(json);
-        })["catch"](function () {
-          call(false);
-        });
-      },
-      // 3. Новинки — аніме фільми
-      function (call) {
-        var query = Object.assign({
-          type: 1,
-          order_by: 'date_desc',
-          page: 1
-        }, animeFilter);
-        api$1.getTitles(query).then(function (json) {
-          json.title = (Lampa.Lang.translate('title_new') || 'Новинки') + ' (фільми)';
-          json.type = 'new_movies';
-          json.url = 'titles?genres[]=32&type=1&order_by=date_desc';
-          if (json.data) {
-            json.results = cardMapper.mapList(json.data);
-            json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-          }
-          json = Lampa.Utils.addSource(json, 'kinobaza');
-          call(json);
-        })["catch"](function () {
-          call(false);
-        });
-      },
-      // 4. Новинки — аніме серіали
-      function (call) {
-        var query = Object.assign({
-          type: 2,
-          order_by: 'date_desc',
-          page: 1
-        }, animeFilter);
-        api$1.getTitles(query).then(function (json) {
-          json.title = (Lampa.Lang.translate('title_new') || 'Новинки') + ' (серіали)';
-          json.type = 'new_series';
-          json.url = 'titles?genres[]=32&type=2&order_by=date_desc';
-          if (json.data) {
-            json.results = cardMapper.mapList(json.data);
-            json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-          }
-          json = Lampa.Utils.addSource(json, 'kinobaza');
-          call(json);
-        })["catch"](function () {
-          call(false);
-        });
-      },
-      // 5. З українським аудіо
-      function (call) {
-        var query = Object.assign({
-          translated: 'has_ukr_audio',
-          order_by: 'popularity',
-          page: 1
-        }, animeFilter);
-        api$1.getTitles(query).then(function (json) {
-          json.title = Lampa.Lang.translate('kinobaza_ukr_audio_anime') || 'З укр. аудіо';
-          json.type = 'ukr_audio';
-          json.url = 'titles?genres[]=32&translated=has_ukr_audio';
-          if (json.data) {
-            json.results = cardMapper.mapList(json.data);
-            json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-          }
-          json = Lampa.Utils.addSource(json, 'kinobaza');
-          call(json);
-        })["catch"](function () {
-          call(false);
-        });
-      }];
-      if (Lampa.ContentRows && typeof Lampa.ContentRows.call === 'function') {
-        Lampa.ContentRows.call('category', params, parts_data);
-      }
-      (function loadGenre(partLoaded, partEmpty) {
-        if (Lampa.Api && typeof Lampa.Api.partNext === 'function') {
-          Lampa.Api.partNext(parts_data, parts_limit, partLoaded, partEmpty);
-        } else {
-          fallbackLoad(parts_data, parts_limit, partLoaded, partEmpty);
-        }
-      })(oncomplite, onerror);
-      return function () {};
+      return execParts([makePart(Object.assign({
+        list_type: 5,
+        page: 1
+      }, af), Lampa.Lang.translate('kinobaza_home'), 'latest', 'titles?list_type=5&genres[]=32'), makePart({
+        genres: [32],
+        order_by: 'popularity',
+        page: 1
+      }, Lampa.Lang.translate('kinobaza_popular_anime'), 'popular', 'titles?genres[]=32&order_by=popularity'), makePart(Object.assign({
+        type: 1,
+        order_by: 'date_desc',
+        page: 1
+      }, af), (Lampa.Lang.translate('title_new') || 'Новинки') + ' (фільми)', 'new_movies', 'titles?genres[]=32&type=1&order_by=date_desc'), makePart(Object.assign({
+        type: 2,
+        order_by: 'date_desc',
+        page: 1
+      }, af), (Lampa.Lang.translate('title_new') || 'Новинки') + ' (серіали)', 'new_series', 'titles?genres[]=32&type=2&order_by=date_desc'), makePart(Object.assign({
+        translated: 'has_ukr_audio',
+        order_by: 'popularity',
+        page: 1
+      }, af), Lampa.Lang.translate('kinobaza_ukr_audio_anime') || 'З укр. аудіо', 'ukr_audio', 'titles?genres[]=32&translated=has_ukr_audio')], 5, params, oncomplite, onerror, false);
     }
 
     // ============== ФІЛЬМИ / СЕРІАЛИ ==============
+    var parts_data = [];
 
-    // Спільні лайни (для фільмів і серіалів)
+    // 1. Зараз дивляться (тільки фільми)
+    if (isMovie) parts_data.push(makePart({
+      list_type: 1,
+      page: 1
+    }, Lampa.Lang.translate('title_now_watch'), 'now_watch', 'titles?list_type=1'));
 
-    // 1. Зараз дивляться (тільки фільми, list_type=1 — в прокаті)
-    if (isMovie) {
-      parts_data.push(function (call) {
-        api$1.getTitles({
-          list_type: 1,
-          page: 1
-        }).then(function (json) {
-          json.title = Lampa.Lang.translate('title_now_watch');
-          json.type = 'now_watch';
-          json.url = 'titles?list_type=1';
-          if (json.data) {
-            json.results = cardMapper.mapList(json.data);
-            json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-          }
-          json = Lampa.Utils.addSource(json, 'kinobaza');
-          call(json);
-        })["catch"](function () {
-          call(false);
-        });
-      });
-    }
+    // 2. Незабаром (тільки фільми)
+    if (isMovie) parts_data.push(makePart({
+      list_type: 2,
+      page: 1
+    }, Lampa.Lang.translate('kinobaza_upcoming'), 'upcoming', 'titles?list_type=2'));
 
-    // 2. Незабаром (тільки фільми, list_type=2 — майбутні прем'єри)
-    if (isMovie) {
-      parts_data.push(function (call) {
-        api$1.getTitles({
-          list_type: 2,
-          page: 1
-        }).then(function (json) {
-          json.title = Lampa.Lang.translate('kinobaza_upcoming');
-          json.type = 'upcoming';
-          json.url = 'titles?list_type=2';
-          if (json.data) {
-            json.results = cardMapper.mapList(json.data);
-            json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-          }
-          json = Lampa.Utils.addSource(json, 'kinobaza');
-          call(json);
-        })["catch"](function () {
-          call(false);
-        });
-      });
-    }
+    // 3. Популярне
+    var popTitle = isMovie ? Lampa.Lang.translate('title_popular_movie') || 'Популярні фільми' : Lampa.Lang.translate('title_popular_tv') || 'Популярні серіали';
+    parts_data.push(makePart({
+      list_type: 31,
+      page: 1,
+      type: type
+    }, popTitle, 'popular', 'titles?list_type=31&type=' + type));
 
-    // 3. Популярне з фільтром за типом
-    parts_data.push(function (call) {
-      api$1.getTitles({
-        list_type: 31,
-        page: 1,
-        type: type
-      }).then(function (json) {
-        json.title = isMovie ? Lampa.Lang.translate('title_popular_movie') || 'Популярні фільми' : Lampa.Lang.translate('title_popular_tv') || 'Популярні серіали';
-        json.type = 'popular';
-        json.url = 'titles?list_type=31&type=' + type;
-        if (json.data) {
-          json.results = cardMapper.mapList(json.data);
-          json.total_pages = Math.ceil((json.total || json.data.length) / 30) || 1;
-        }
-        json = Lampa.Utils.addSource(json, 'kinobaza');
-        call(json);
-      })["catch"](function () {
-        call(false);
-      });
-    });
-
-    // 4. Топ (для фільмів — list_type=3, для серіалів — list_type=4) — lazy
+    // 4. Топ (lazy)
     var lt = isMovie ? 3 : 4;
     var topTitle = isMovie ? Lampa.Lang.translate('title_top_movie') || 'Топ фільми' : Lampa.Lang.translate('title_top_tv') || 'Топ серіали';
     parts_data.push(createLazyPart(topTitle, 'top', 'titles?list_type=' + lt, {
       list_type: lt
     }));
 
-    // 5. Минулий рік — lazy
-    var prevYear = currentYear - 1;
-    parts_data.push(createLazyPart(Lampa.Lang.translate('title_last_year'), 'last_year', 'titles?ys=' + prevYear + '&ye=' + prevYear + '&type=' + type + '&list_type=31', {
-      ys: prevYear,
-      ye: prevYear,
+    // 5. Минулий рік (lazy)
+    var py = currentYear - 1;
+    parts_data.push(createLazyPart(Lampa.Lang.translate('title_last_year'), 'last_year', 'titles?ys=' + py + '&ye=' + py + '&type=' + type + '&list_type=31', {
+      ys: py,
+      ye: py,
       type: type,
       list_type: 31
     }));
 
-    // 6. Варто переглянути — lazy
+    // 6. Варто переглянути (lazy, тільки фільми)
     if (isMovie) {
       var ys = currentYear - 7;
       var ye = currentYear - 2;
@@ -3650,71 +3135,50 @@
       }));
     }
 
-    // 7. З високим рейтингом — lazy
+    // 7. З високим рейтингом (lazy)
     parts_data.push(createLazyPart(Lampa.Lang.translate('title_hight_voite'), 'high_rated', 'titles?imdb_rating=8&type=' + type, {
       imdb_rating: 8,
       type: type
     }));
 
-    // 8. Новинки року (тільки фільми) — lazy
-    if (isMovie) {
-      parts_data.push(createLazyPart(Lampa.Lang.translate('title_new_this_year'), 'new_year', 'titles?ys=' + currentYear + '&type=' + type + '&list_type=31', {
-        ys: currentYear,
-        type: type,
-        list_type: 31
-      }));
-    }
+    // 8. Новинки року (lazy, тільки фільми)
+    if (isMovie) parts_data.push(createLazyPart(Lampa.Lang.translate('title_new_this_year'), 'new_year', 'titles?ys=' + currentYear + '&type=' + type + '&list_type=31', {
+      ys: currentYear,
+      type: type,
+      list_type: 31
+    }));
 
-    // 9. Онгоїнги (TV) — lazy
-    if (isTV) {
-      parts_data.push(createLazyPart(Lampa.Lang.translate('title_ongoing'), 'ongoing', 'titles?list_type=31&type=' + type, {
-        list_type: 31,
-        type: type
-      }));
-    }
+    // 9. Онгоїнги (lazy, тільки TV)
+    if (params.url === 'tv') parts_data.push(createLazyPart(Lampa.Lang.translate('title_ongoing'), 'ongoing', 'titles?list_type=31&type=' + type, {
+      list_type: 31,
+      type: type
+    }));
 
-    // 10. Жанрові лайни (для фільмів і серіалів) — lazy
+    // 10. Жанрові лайни (lazy)
     for (var gi = 0; gi < genreRows.length; gi++) {
       var g = genreRows[gi];
-      var genreId = g.id;
-      var genreName = g.name;
-      parts_data.push(createLazyPart(genreName, 'genre_' + genreId, 'titles?type=' + type + '&genres[]=' + genreId + '&list_type=31', {
+      parts_data.push(createLazyPart(g.name, 'genre_' + g.id, 'titles?type=' + type + '&genres[]=' + g.id + '&list_type=31', {
         type: type,
-        genres: [genreId],
+        genres: [g.id],
         list_type: 31
       }));
     }
-
-    // parts_limit = основні лайни + жанрові
-    var baseCount = isMovie ? 8 : isTV ? 5 : 4; // without genres
-    parts_limit = baseCount + genreRows.length;
-    if (Lampa.ContentRows && typeof Lampa.ContentRows.call === 'function') {
-      Lampa.ContentRows.call('category', params, parts_data);
-    }
-    function loadPart(partLoaded, partEmpty) {
-      if (Lampa.Api && typeof Lampa.Api.partNext === 'function') {
-        Lampa.Api.partNext(parts_data, parts_limit, partLoaded, partEmpty);
-      } else {
-        fallbackLoad(parts_data, parts_limit, partLoaded, partEmpty);
-      }
-    }
-    loadPart(oncomplite, onerror);
-    return loadPart;
+    var baseCount = isMovie ? 8 : params.url === 'tv' ? 5 : 4;
+    var parts_limit = baseCount + genreRows.length;
+    return execParts(parts_data, parts_limit, params, oncomplite, onerror, true);
   }
+
+  // ============== SEARCH ==============
 
   /**
    * Пошук
    * @param {object} params  — {query: string}
    * @param {function} oncomplite
    */
-  function search$1(params, oncomplite) {
-    // Lampa передає query вже URL-закодованим (encodeURIComponent).
-    // Потрібно декодувати, щоб api.buildUrl не зробили подвійне кодування.
+  function _search(params, oncomplite) {
     var rawQuery = params.query ? decodeURIComponent(params.query) : '';
     var loaded = 0;
     var total = 2;
-
-    // Зберігаємо секції окремо, будуємо items в чіткому порядку
     var movieSection = null;
     var seriesSection = null;
     var personSection = null;
@@ -3722,7 +3186,6 @@
       loaded++;
       if (loaded >= total) {
         var items = [];
-        // Фільми → Серіали → Особи
         if (movieSection) items.push(movieSection);
         if (seriesSection) items.push(seriesSection);
         if (personSection) items.push(personSection);
@@ -3730,7 +3193,7 @@
       }
     }
 
-    // ===== 1. Titles (фільми + серіали) =====
+    // ===== 1. Titles =====
     api$1.searchTitles(rawQuery).then(function (json) {
       var movies = [];
       var series = [];
@@ -3803,11 +3266,6 @@
    * @param {function} onerror
    */
   function full(params, oncomplite, onerror) {
-    // Синхронізація Activity.id з card.id після завантаження повної картки.
-    // Lampa в full.js встановлює object.card = data.movie, але не оновлює object.id,
-    // через що Activity.active().id відрізняється від Activity.active().card.id.
-    // Обгортаємо oncomplite, щоб виправити це після обробки результату Lampa.
-    // kinobaza_id зберігається окремо в card.kinobaza_id — він не зачіпається.
     var origOncomplite = oncomplite;
     oncomplite = function oncomplite(result) {
       origOncomplite(result);
@@ -3815,21 +3273,17 @@
         params.id = result.movie.id;
       }
     };
-
-    // Пріоритет: slug → imdb_id → card.slug → card.imdb_id → card.original_title/card.original_name
     var card = params.card || {};
     var lookupKey = params.slug || params.imdb_id || card.slug || card.imdb_id || '';
     var executeWithSlug = function executeWithSlug(slug) {
       api$1.getTitle(slug).then(function (data) {
         onFullLoaded(data, oncomplite);
       })["catch"](function () {
-        // Fallback: search by title
         searchByTitle(card, oncomplite, onerror);
       });
     };
     if (lookupKey) {
       if (lookupKey.toString().startsWith('tt')) {
-        // Це IMDb ID. Спершу резолвимо його в slug
         resolver.resolveByImdb(lookupKey).then(function (target) {
           if (target && target.slug) {
             executeWithSlug(target.slug);
@@ -3840,11 +3294,9 @@
           searchByTitle(card, oncomplite, onerror);
         });
       } else {
-        // Це вже готовий slug
         executeWithSlug(lookupKey);
       }
     } else {
-      // Повільний шлях: пошук за назвою
       searchByTitle(card, oncomplite, onerror);
     }
   }
@@ -3860,8 +3312,6 @@
       });
       return;
     }
-
-    // Додаємо рік для точнішого пошуку (якщо є)
     var year = '';
     if (card.first_air_date) {
       year = (card.first_air_date + '').slice(0, 4);
@@ -3871,34 +3321,23 @@
     var searchQuery = year ? query + ' ' + year : query;
     api$1.searchTitles(searchQuery).then(function (json) {
       var items = json.data || [];
-
-      // Фільтруємо: шукаємо збіг за типом (TV/фільм) та роком
       var isTV = !!(card.original_name || card.name);
       var cardYear = parseInt(year, 10);
       var found = items.find(function (item) {
-        // Перевіряємо тип: чи співпадає TV/фільм
         var itemIsTV = (item.number_of_episodes || 0) > 0;
         if (itemIsTV !== isTV) return false;
-
-        // Перевіряємо рік
         if (cardYear && item.year !== cardYear) return false;
-
-        // Перевіряємо назву
         var itemName = (item.name_original || item.name_en || '').toLowerCase();
         var cardName = query.toLowerCase();
         if (itemName !== cardName) return false;
         return true;
       });
-
-      // Якщо точний збіг не знайдено — беремо перший результат з правильним типом
       if (!found) {
         found = items.find(function (item) {
           var itemIsTV = (item.number_of_episodes || 0) > 0;
           return itemIsTV === isTV;
         });
       }
-
-      // Якщо все ще нічого — беремо перший
       if (!found) {
         found = items[0];
       }
@@ -3931,7 +3370,23 @@
       movie: movie,
       persons: {
         cast: mapCreditCards(data.actors || []),
-        crew: mapCreditCards([].concat(data.directors || [], data.writers || []))
+        // Всі режисери+сценаристи в одному ряді з job badge в character
+        // job: 'Director' — Lampa покаже їх у нативному ряді режисерів
+        crew: (data.directors || []).concat(data.writers || []).map(function (p) {
+          return {
+            id: p.id,
+            slug: p.slug || '',
+            name: p.name_uk || p.name_en || '',
+            original_name: p.name_en || '',
+            profile_path: p.poster_tmdb || p.poster_kinobaza || '',
+            poster: p.poster_tmdb ? Lampa.TMDB.image('t/p/w300/' + p.poster_tmdb.replace(/^\//, '')) : p.poster_kinobaza ? api$1.cdn(p.poster_kinobaza, 'w300') : './img/img_broken.svg',
+            job: 'Director',
+            // Lampa фільтрує crew за job === 'Director'
+            character: cardMapper.getJobName([p.job_id || 2]),
+            source: 'kinobaza',
+            gender: p.gender || 2
+          };
+        })
       },
       recomend: {
         title: Lampa.Lang.translate('title_recomendations'),
@@ -3958,13 +3413,6 @@
     Lampa.Utils.addSource(result.recomend, 'kinobaza');
     Lampa.Utils.addSource(result.directorMovies, 'kinobaza');
     Lampa.Utils.addSource(result.collection, 'kinobaza');
-
-    // НЕ додаємо episodes в початковий результат — Lampa викличе seasons() при потребі
-    // Якщо додати порожній episodes: [], Lampa крашить рендер
-
-    // discuss формується в registerFullListener() через e.link.rows.push/splice
-    // Тут залишаємо null — вставлятиметься при complite
-
     oncomplite(result);
   }
 
@@ -3975,7 +3423,6 @@
     if (!persons || !Array.isArray(persons)) return [];
     return persons.map(function (p) {
       var profileRaw = p.poster_tmdb || p.poster_kinobaza || '';
-      // Зберігаємо slug в кеш для source-override.js
       if (p.slug) personSlugCache[p.id] = p.slug;
       return {
         id: p.id,
@@ -4028,9 +3475,6 @@
    * @param {function} onerror
    */
   function person(params, oncomplite, onerror) {
-    // Використовується тільки як fallback.
-    // Основний потік: картка → kinobaza_person_detail компонент (завантажує все сам).
-    // Повертаємо персону без кредитів — рядки не створюються.
     if (params.slug) {
       api$1.getPerson(params.slug).then(function (data) {
         oncomplite({
@@ -4041,7 +3485,6 @@
         });
       })["catch"](onerror);
     } else {
-      // Делегуємо tmdb якщо немає slug
       if (Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb && Lampa.Api.sources.tmdb.person) {
         Lampa.Api.sources.tmdb.person(params, oncomplite, onerror);
       } else {
@@ -4075,7 +3518,6 @@
 
   /**
    * Парсинг URL списку в query параметри
-   * Підтримує array params (genres[]=1&genres[]=2 → genres: ['1', '2'])
    */
   function parseListUrl(url) {
     var params = {};
@@ -4088,8 +3530,6 @@
         if (kv.length === 2) {
           var key = decodeURIComponent(kv[0]);
           var value = decodeURIComponent(kv[1]);
-
-          // Handle array params (genres[]=1&genres[]=2)
           if (key.indexOf('[]') > 0) {
             key = key.replace('[]', '');
             if (!params[key]) params[key] = [];
@@ -4110,7 +3550,7 @@
    * @param {object} params
    * @param {function} oncomplite
    */
-  function menu$1(params, oncomplite) {
+  function menu(params, oncomplite) {
     var genres = [{
       title: Lampa.Lang.translate('filter_genre_ac') || 'Бойовик',
       id: '1'
@@ -4220,94 +3660,12 @@
 
   // ============== DISCOVERY ==============
 
-  /**
-   * Discovery — глобальний пошук для вибору джерела
-   * @returns {object}
-   */
+  // Discovery — делегує search() для основної логіки
   function discovery() {
     return {
       title: Lampa.Lang.translate('kinobaza_title') || 'КіноБаза',
       search: function search(params, oncomplite) {
-        // Lampa передає query вже URL-закодованим — декодуємо перед відправкою
-        var rawQuery = params.query ? decodeURIComponent(params.query) : '';
-        var loaded = 0;
-        var total = 2;
-        var movieSection = null;
-        var seriesSection = null;
-        var personSection = null;
-        function tryComplete() {
-          loaded++;
-          if (loaded >= total) {
-            var items = [];
-            if (movieSection) items.push(movieSection);
-            if (seriesSection) items.push(seriesSection);
-            if (personSection) items.push(personSection);
-            oncomplite(items);
-          }
-        }
-
-        // ===== 1. Titles =====
-        api$1.searchTitles(rawQuery).then(function (data) {
-          var raw = data.data || [];
-          if (raw.length) {
-            var movies = [];
-            var series = [];
-            for (var i = 0; i < raw.length; i++) {
-              if (raw[i].number_of_episodes > 0) {
-                series.push(raw[i]);
-              } else {
-                movies.push(raw[i]);
-              }
-            }
-            if (movies.length) {
-              var movieResults = cardMapper.mapList(movies);
-              var movieWrapper = {
-                results: movieResults
-              };
-              Lampa.Utils.addSource(movieWrapper, 'kinobaza');
-              movieSection = {
-                title: Lampa.Lang.translate('menu_movies'),
-                type: 'movie',
-                results: movieResults
-              };
-            }
-            if (series.length) {
-              var seriesResults = cardMapper.mapList(series);
-              var seriesWrapper = {
-                results: seriesResults
-              };
-              Lampa.Utils.addSource(seriesWrapper, 'kinobaza');
-              seriesSection = {
-                title: Lampa.Lang.translate('menu_tv'),
-                type: 'tv',
-                results: seriesResults
-              };
-            }
-          }
-          tryComplete();
-        })["catch"](function () {
-          tryComplete();
-        });
-
-        // ===== 2. Persons =====
-        api$1.searchPersons(rawQuery).then(function (data) {
-          var personData = data.data || [];
-          if (personData.length) {
-            var personResults = cardMapper.mapPersonSearchList(personData);
-            var personWrapper = {
-              results: personResults
-            };
-            Lampa.Utils.addSource(personWrapper, 'kinobaza');
-            personSection = {
-              title: Lampa.Lang.translate('kinobaza_persons'),
-              type: 'person',
-              results: personResults
-            };
-          }
-          tryComplete();
-        })["catch"](function () {
-          tryComplete();
-        });
+        _search(params, oncomplite);
       },
       params: {
         save: true
@@ -4316,7 +3674,6 @@
         var card = params.element || {};
         if (close) close();
         if (card.gender !== undefined || card.slug && card._job_name) {
-          // Картка персони → kinobaza_person_detail
           Lampa.Activity.push({
             url: '',
             component: 'kinobaza_person_detail',
@@ -4326,7 +3683,6 @@
             page: 1
           });
         } else {
-          // Картка фільму/серіалу → full
           Lampa.Activity.push({
             url: '',
             component: 'full',
@@ -4363,33 +3719,25 @@
     network$3.clear();
   }
 
+  // ============== BOOKMARKS LISTENER (stub) ==============
+
   /**
    * Слухач подій закладок для збагачення карток
+   * Функціональність перенесена в sync/engine
    */
-  function initBookmarksListener() {
-    Lampa.Listener.follow('state:changed', function (e) {
-      if (e.target === 'favorite' && e.card && e.card.source === source && e.card.needsEnrichment) {
-        enrichCard(e.card).then(function () {
-          if (typeof Lampa !== 'undefined' && Lampa.Favorite && typeof Lampa.Favorite.read === 'function') {
-            Lampa.Favorite.read(true); // Quiet read without triggering page reload
-          }
-        });
-      }
-    });
-  }
+  function initBookmarksListener() {}
   var source$1 = {
-    main: main$1,
+    main: main,
     category: category,
     full: full,
-    search: search$1,
-    menu: menu$1,
+    search: _search,
+    menu: menu,
     menuCategory: menuCategory,
     list: list,
     person: person,
     seasons: seasons,
     discovery: discovery,
     clear: clear$3,
-    enrichCard: enrichCard,
     initBookmarksListener: initBookmarksListener,
     // Sub-sources для anime/cartoons (доступні як Lampa.Api.sources.kinobaza.anime)
     anime: sourceAnime,
@@ -4457,15 +3805,15 @@
       title: Lampa.Lang.translate('menu_multmovie'),
       listType: 31,
       orderBy: 'popularity'
-    }), createNetflixLine({
+    }), createPlatformLine('netflix', {
       title: 'Netflix',
       popular7d: true,
       orderBy: 'popularity'
-    }), createMegogoLine({
+    }), createPlatformLine('megogo', {
       title: 'Megogo',
       popular7d: true,
       orderBy: 'popularity'
-    }), createSweetLine({
+    }), createPlatformLine('sweet', {
       title: 'Sweet TV',
       popular7d: true,
       orderBy: 'popularity'
@@ -4486,10 +3834,10 @@
     }), createPopular7dLine({
       title: popularTitle,
       type: type
-    }), createNetflixLine({
+    }), createPlatformLine('netflix', {
       title: 'Netflix (' + type + ')',
       type: type
-    }), createMegogoLine({
+    }), createPlatformLine('megogo', {
       title: 'Megogo (' + type + ')',
       type: type
     })];
@@ -4503,14 +3851,87 @@
   };
 
   /**
-   * Full listener — DOM-інжекції для акторів дубляжу, рецензій, коментарів
-   * Паттерн: lampa-source/plugins/online/online.js
+   * Menu Redirect Listener
+   * Об'єднує anime, cartoon, myperson overrides в один listener
+   * Замінює старі файли: anime-override.js, cartoon-override.js, myperson-override.js
+   *
+   * @module listeners/menu-redirect
    */
 
+  var registered$3 = false;
+  var onMenuEvent = function onMenuEvent(e) {
+    try {
+      if (e.type !== 'action') return;
+      var currentSource = Lampa.Storage && Lampa.Storage.field ? Lampa.Storage.field('source') : '';
+      if (currentSource !== 'kinobaza') return;
+      if (e.action === 'anime') {
+        e.abort();
+        Lampa.Router.call('category', {
+          url: 'anime',
+          title: (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('menu_anime') : 'Аніме') + ' - КіноБаза',
+          source: 'kinobaza',
+          genres: 12
+        });
+        return;
+      }
+      if (e.action === 'cartoon') {
+        e.abort();
+        Lampa.Router.call('category', {
+          url: 'movie',
+          title: (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('menu_multmovie') : 'Мультфільми') + ' - КіноБаза',
+          source: 'kinobaza',
+          genres: 12
+        });
+        return;
+      }
+      if (e.action === 'myperson') {
+        e.abort();
+        Lampa.Router.call('kinobaza_myperson', {
+          title: Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('kinobaza_myperson') : 'Особи'
+        });
+        return;
+      }
+    } catch (err) {
+      console.error('Kinobaza menu-redirect error:', err);
+    }
+  };
+  function registerMenuRedirect() {
+    if (registered$3) return;
+    registered$3 = true;
+    if (Lampa.Listener) {
+      Lampa.Listener.follow('menu', onMenuEvent);
+    }
+  }
+  function unregisterMenuRedirect() {
+    if (!registered$3) return;
+    if (Lampa.Listener) {
+      Lampa.Listener.remove('menu', onMenuEvent);
+    }
+    registered$3 = false;
+  }
+
+  var ratingIcons = {
+    "imdb_rating": "<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 24 24'><path fill-rule='evenodd' d='M5 1a4 4 0 0 0-4 4v14a4 4 0 0 0 4 4h14a4 4 0 0 0 4-4V5a4 4 0 0 0-4-4zM4 14.91V9.09h1.455v5.82zm2.182 0V9.09H8L8.727 12l.728-2.91h1.818v5.82H9.818v-2.546l-.727 2.545h-.727l-.728-2.545v2.545zm5.818 0h2.182c.803 0 1.454-.652 1.454-1.455v-2.91c0-.803-.65-1.454-1.454-1.454H12v5.818Zm1.454-4.728h.364c.201 0 .364.163.364.364v2.909c0 .2-.163.363-.364.363h-.364zm2.91-1.091h1.454v1.783c.243-.177.603-.329 1.091-.329c.873 0 1.091.485 1.091.728v2.909c0 .242-.218.727-1.09.727c-.49 0-.849-.152-1.092-.328v.328h-1.454zm2.181 4.364V12a.364.364 0 0 0-.727 0v1.455a.364.364 0 0 0 .727 0' clip-rule='evenodd'/></svg>",
+    "rating": "<svg version='1.0' xmlns='http://www.w3.org/2000/svg' width='933.333' height='933.333' viewBox='0 0 700 700'>    <defs>        <linearGradient id='myGradient' gradientTransform='rotate(90)'>            <stop offset='0%'  stop-color='#005BBB' />            <stop offset='50%'  stop-color='#005BBB' />            <stop offset='50%' stop-color='#FFD500' />            <stop offset='100%' stop-color='#FFD500' />        </linearGradient>    </defs>    <path  fill='url(#myGradient)' d='M53 47.1c-15 1.5-25.4 6.6-37.2 18.1-4.5 4.4-10.5 14.4-13 21.6L.5 93.5v514l2.2 5.9c7.5 19.9 24.6 35 43.8 38.7 4.5.9 83.1 1.2 304 1.2 270.9 0 298.6-.2 304.8-1.7 11.4-2.7 22.3-9.4 30.4-18.6 3-3.5 9.5-13.5 10-15.5.1-.5 1.2-4.2 2.3-8 2-7 2-7.9 1.8-262l-.3-255-2.3-6.2c-7-18.7-22.5-32.9-41.3-37.9-6-1.6-26.2-1.7-301.4-1.8-162.2-.1-297.9.2-301.5.5zm73 48.5c2.5 1.2 5.9 3.7 7.6 5.5 5.8 6.4 6.3 8.9 6.4 37.7 0 16.4-.4 27.7-1.1 30.6-1.4 5.5-6.7 11.9-12.3 14.9-3.9 2.1-5.2 2.2-33.1 2.2-28.5 0-29.1 0-33.5-2.3-5.4-2.9-8.5-6.3-11.3-12.2-1.9-4.2-2-6.3-2-32 0-31 .4-33.1 7.7-40.3 6.1-5.8 8.8-6.2 39.6-6.2 25.8 0 27.8.2 32 2.1zm374 .2c5.4 2.9 8.5 6.3 11.3 12.2 2 4.4 2 5.6 2 102 0 95.4 0 97.6-2 102-2.5 5.8-8.6 11.6-13.7 13.3-3.4 1.1-29.2 1.3-148.6 1.2-132.1-.1-144.8-.3-148-1.8-6.9-3.3-12.4-9.8-13.6-16.2-1-5.2-1.1-187.2-.2-194.8 1.2-9 7.5-16.6 15.7-19 3.6-1.1 32.1-1.3 148.5-1.3l144.1.1 4.5 2.3zm139-.5c5.2 2.5 10.3 7.6 12.4 12.5 1.8 4 2 6.8 1.9 32.5 0 26.8-.1 28.4-2.1 32.4-1.2 2.3-3.8 5.8-5.9 7.8-6 5.8-9.9 6.4-40.8 6.1-25.3-.2-27.3-.3-31-2.3-4.2-2.2-8-5.9-11.1-10.8-1.7-2.6-1.9-5.5-2.2-30-.4-31 .1-35.2 5.4-41.4 7.1-8.2 9.9-8.8 43.4-8.6 22.9 0 27 .3 30 1.8zM126.6 235.8c5.6 2.9 10.9 9.3 12.3 14.8 1.5 6 1.4 54.8-.1 59.8-1.5 4.9-7.1 11.2-12.2 13.8-3.9 2.1-5.5 2.2-31.6 2.4-31 .1-34.4-.4-40.6-6.4-7.4-7.1-7.8-9.2-7.7-40.2 0-25.8.1-27.8 2.1-32.3 2.5-5.5 7.1-10.2 12.6-12.6 3.4-1.5 7.6-1.7 32.5-1.6 27.4.1 28.8.2 32.7 2.3zm512.4-.6c5 2.2 9.9 7.3 12.3 12.7 1.9 4.3 2.1 6.4 2 32.3v27.6l-2.7 5.6c-3 6-8.4 10.6-14.6 12.3-1.9.6-15.9.9-31 .8-25.9-.1-27.7-.2-31.5-2.2-5.5-2.9-10.1-8-11.9-13-1.9-5.4-2.3-53.6-.5-60.7 1.6-6.4 7.6-13 14-15.4 4.5-1.7 7.9-1.8 32.7-1.7 22.8.1 28.3.4 31.2 1.7zM126.5 375.7c4.2 2.2 8 5.9 11.1 10.8 1.7 2.6 1.9 5.5 2.2 30 .3 17.6 0 28.8-.8 32.1-1.3 6.1-6.3 12.5-12.4 15.6-3.9 2.1-5.3 2.2-33.1 2.2-32.1.1-33-.1-39.7-6.8-6.6-6.5-7.1-9.3-7.2-37.6-.1-14 .3-27.5.8-30 1.5-7.9 8.8-15.7 16.7-17.8 1.9-.4 15.8-.8 30.9-.7 25.9.1 27.7.2 31.5 2.2zm372.8-.3c5.2 2.6 9.6 7.2 12 12.6 1.9 4.3 2 7 2.1 98.5.1 51.7-.2 96.6-.6 99.9-1.2 9-7.5 16.5-16.1 19.1-5.4 1.6-285.9 1.9-292.1.3-9.2-2.3-16.1-10.1-17.3-19.4-1.4-10.3-.8-192.4.6-196.5 2.3-7 8.5-13.3 15.6-15.6 1.9-.6 55.8-.9 147.5-.9 139.6.1 144.6.2 148.3 2zm138.7-.6c8.4 3.7 13.7 10.4 14.8 18.8.9 7.4.8 49.5-.2 54.9-.9 4.3-4.7 10.2-9 13.6-5.2 4.1-9.6 4.6-38.6 4.5-26.2-.2-27.7-.3-31.6-2.4-5.1-2.6-10.7-8.9-12.2-13.8-1.5-5-1.6-53.8-.1-59.8 1.2-5 6.6-11.9 11-14.1 1.5-.9 4.5-1.9 6.6-2.3 5.7-1.3 56.3-.7 59.3.6zM126.5 515.7c4.1 2.2 8.8 6.8 11.5 11.3 2 3.3 2.8 56.1 1 62.7-1.5 5.3-6.9 11.7-12.4 14.6-3.9 2.1-5.2 2.2-33.1 2.2-26.5 0-29.3-.2-32.8-1.9-5.2-2.6-9.6-7.2-12-12.6-1.9-4.1-2-6.7-2-31.5 0-29 .4-32.4 5.1-38 3.3-3.9 8.1-7.1 12.3-8.2 1.9-.5 15.8-.9 30.9-.8 26 .1 27.7.2 31.5 2.2zm512.5-.5c5 2.2 9.9 7.3 12.3 12.7 1.9 4.3 2 6.5 2 32.1 0 25.3-.1 27.9-2 32-2.4 5.4-6.8 10-12 12.6-3.4 1.7-6.5 1.9-31.8 2-25.4.1-28.4-.1-32.5-1.8-5.1-2.2-9.2-5.7-12.3-10.8-2.1-3.3-2.2-4.8-2.5-31.5-.2-19.4 0-29.2.8-32.2 2.2-7.5 9.8-14.6 17.5-16.3 1.7-.3 15.2-.6 30-.5 22.1.1 27.6.4 30.5 1.7z'/></svg>",
+    "tomato_user_meter": "<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 24 24'><path d='M5.866 0L4.335 1.262l2.082 1.8c-2.629-.989-4.842 1.4-5.012 2.338c1.384-.323 2.24-.422 3.344-.335c-7.042 4.634-4.978 13.148-1.434 16.094c5.784 4.612 13.77 3.202 17.91-1.316C27.26 13.363 22.993.65 10.86 2.766c.107-1.17.633-1.503 1.243-1.602c-.89-1.493-3.67-.734-4.556 1.374C7.52 2.602 5.866 0 5.866 0zM4.422 7.217H6.9c2.673 0 2.898.012 3.55.202c1.06.307 1.868.973 2.313 1.904c.05.106.092.206.13.305l7.623.008l.027 2.912l-2.745-.024v7.549l-2.982-.016v-7.522l-2.127.016a2.92 2.92 0 0 1-1.056 1.134c-.287.176-.3.19-.254.264c.127.2 2.125 3.642 2.125 3.659l-3.39.019l-2.013-3.376c-.034-.047-.122-.068-.344-.084l-.297-.02l.037 3.48l-3.075-.038zm3.016 2.288l.024.338c.014.186.024.729.024 1.206v.867l.582-.025c.32-.013.695-.049.833-.078c.694-.146 1.048-.478 1.087-1.018c.027-.378-.063-.636-.303-.87c-.318-.309-.761-.416-1.733-.418Z'/></svg>",
+    "tomato_meter": "<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 24 24'><path d='M5.866 0L4.335 1.262l2.082 1.8c-2.629-.989-4.842 1.4-5.012 2.338c1.384-.323 2.24-.422 3.344-.335c-7.042 4.634-4.978 13.148-1.434 16.094c5.784 4.612 13.77 3.202 17.91-1.316C27.26 13.363 22.993.65 10.86 2.766c.107-1.17.633-1.503 1.243-1.602c-.89-1.493-3.67-.734-4.556 1.374C7.52 2.602 5.866 0 5.866 0zM4.422 7.217H6.9c2.673 0 2.898.012 3.55.202c1.06.307 1.868.973 2.313 1.904c.05.106.092.206.13.305l7.623.008l.027 2.912l-2.745-.024v7.549l-2.982-.016v-7.522l-2.127.016a2.92 2.92 0 0 1-1.056 1.134c-.287.176-.3.19-.254.264c.127.2 2.125 3.642 2.125 3.659l-3.39.019l-2.013-3.376c-.034-.047-.122-.068-.344-.084l-.297-.02l.037 3.48l-3.075-.038zm3.016 2.288l.024.338c.014.186.024.729.024 1.206v.867l.582-.025c.32-.013.695-.049.833-.078c.694-.146 1.048-.478 1.087-1.018c.027-.378-.063-.636-.303-.87c-.318-.309-.761-.416-1.733-.418Z'/></svg>",
+    "metascore": "<svg xmlns='http://www.w3.org/2000/svg' width='1024' height='1024' viewBox='0 0 24 24'><path d='M11.99 0A12 12 0 1 0 24 12v-.014A12 12 0 0 0 11.99 0m-.055 2.564a9.399 9.399 0 0 1 9.407 9.389v.01a9.399 9.399 0 1 1-9.408-9.399Zm-1.61 17.198l2.046-2.046l-3.94-3.94c-.165-.166-.345-.373-.442-.608c-.221-.47-.318-1.203.221-1.742c.664-.664 1.548-.387 2.406.47l3.788 3.788l2.046-2.046l-3.954-3.954a2.48 2.48 0 0 1-.456-.622c-.263-.539-.25-1.216.235-1.7c.677-.678 1.562-.429 2.544.553l3.677 3.677l2.046-2.046l-3.982-3.982c-2.018-2.018-3.912-1.949-5.212-.65c-.498.499-.802 1.024-.954 1.618a4.026 4.026 0 0 0-.055 1.686l-.027.028c-.996-.414-2.13-.166-3 .705c-1.162 1.161-1.12 2.392-.982 3.11l-.042.043l-1.009-.816l-1.77 1.77a64.1 64.1 0 0 1 2.213 2.1z'/></svg>"
+  };
+
   /**
-   * Реєструє listener для повної картки фільму
-   * Вставляє: актори дубляжу, рецензії, коментарі
+   * DOM Inject Listener
+   * Об'єднує full.js (актори дубляжу, рецензії, коментарі) та full-start.js (рейтинги, релізи, MPAA)
+   * Замінює старі файли: full.js, full-start.js
+   *
+   * @module listeners/dom-inject
    */
+  var registeredFull = false;
+  var registeredFullStart = false;
+
+  // ====================================================================
+  // Full listener — DOM-інжекції для акторів дубляжу, рецензій, коментарів
+  // ====================================================================
+
   var onFullEvent = function onFullEvent(e) {
     if (e.type !== 'complite') return;
     try {
@@ -4533,15 +3954,26 @@
               liked: r.likes || 0
             };
           });
-          rows.splice(cardsIdx, 0, ['discuss', {
-            title: Lampa.Lang.translate('kinobaza_reviews') || 'Рецензії',
-            results: reviewResults,
-            movie: movie,
-            page: 1,
-            total_pages: 1,
-            total_results: reviewResults.length
-          }]);
-          cardsIdx++;
+
+          // Guard: не додавати рецензії вдруге
+          var alreadyHasReviews = false;
+          for (var ri2 = 0; ri2 < rows.length; ri2++) {
+            if (rows[ri2] && rows[ri2][0] === 'discuss' && rows[ri2][1].title === (Lampa.Lang.translate('kinobaza_reviews') || 'Рецензії')) {
+              alreadyHasReviews = true;
+              break;
+            }
+          }
+          if (!alreadyHasReviews) {
+            rows.splice(cardsIdx, 0, ['discuss', {
+              title: Lampa.Lang.translate('kinobaza_reviews') || 'Рецензії',
+              results: reviewResults,
+              movie: movie,
+              page: 1,
+              total_pages: 1,
+              total_results: reviewResults.length
+            }]);
+            cardsIdx++;
+          }
           loadComments();
         })["catch"](function () {
           loadComments();
@@ -4563,14 +3995,25 @@
                 liked: c.likes || 0
               };
             });
-            rows.splice(cardsIdx, 0, ['discuss', {
-              title: Lampa.Lang.translate('title_comments'),
-              results: commentResults,
-              movie: movie,
-              page: 1,
-              total_pages: 1,
-              total_results: commentResults.length
-            }]);
+
+            // Guard: не додавати коментарі вдруге
+            var alreadyHasComments = false;
+            for (var ci = 0; ci < rows.length; ci++) {
+              if (rows[ci] && rows[ci][0] === 'discuss' && rows[ci][1].title === Lampa.Lang.translate('title_comments')) {
+                alreadyHasComments = true;
+                break;
+              }
+            }
+            if (!alreadyHasComments) {
+              rows.splice(cardsIdx, 0, ['discuss', {
+                title: Lampa.Lang.translate('title_comments'),
+                results: commentResults,
+                movie: movie,
+                page: 1,
+                total_pages: 1,
+                total_results: commentResults.length
+              }]);
+            }
           })["catch"](function () {});
         }
       };
@@ -4579,12 +4022,11 @@
       var rows = e.link && e.link.rows;
       if (!rows) return;
 
-      // Знаходимо індекс persons
+      // Знаходимо індекс persons (останній persons ряд = актори, для вставки дубляжу після)
       var personIdx = -1;
       for (var i = 0; i < rows.length; i++) {
         if (rows[i] && rows[i][0] === 'persons') {
           personIdx = i;
-          break;
         }
       }
 
@@ -4597,7 +4039,7 @@
         }
       }
 
-      // 0. Director Movies — перед Recommendations
+      // Director Movies — перед Recommendations (тільки якщо ще не додано)
       var recomendIdx = -1;
       for (var i = 0; i < rows.length; i++) {
         if (rows[i] && rows[i][0] === 'cards' && rows[i][1].title === Lampa.Lang.translate('title_recomendations')) {
@@ -4607,17 +4049,38 @@
       }
       var insertDirectorIdx = recomendIdx >= 0 ? recomendIdx : cardsIdx;
       var directorData = e.data && e.data.directorMovies;
-      if (directorData && directorData.results && directorData.results.length) {
+      // Guard: не додавати якщо вже є
+      var alreadyHasDirector = false;
+      for (var di = 0; di < rows.length; di++) {
+        if (rows[di] && rows[di][0] === 'cards' && rows[di][1].title === Lampa.Lang.translate('kinobaza_director_movies')) {
+          alreadyHasDirector = true;
+          break;
+        }
+      }
+      if (directorData && directorData.results && directorData.results.length && !alreadyHasDirector) {
         rows.splice(insertDirectorIdx, 0, ['cards', directorData]);
         // Зсуваємо індекси після вставки
         if (insertDirectorIdx <= personIdx) personIdx++;
         if (insertDirectorIdx <= cardsIdx) cardsIdx++;
       }
 
-      // 1. Дубляж — завжди першим
+      // 1. Дубляж — завжди першим (тільки якщо ще не додано)
       if (movie.hasDubInfo) {
         api$1.getDubPersons(movie.kinobaza_id || movie.id).then(function (dubData) {
           if (!dubData || !dubData.data || !dubData.data.length) {
+            loadReviewsAndComments();
+            return;
+          }
+
+          // Guard: не додавати дубляж вдруге
+          var alreadyHasDub = false;
+          for (var di2 = 0; di2 < rows.length; di2++) {
+            if (rows[di2] && rows[di2][0] === 'persons' && rows[di2][1].title === Lampa.Lang.translate('kinobaza_dub_actors')) {
+              alreadyHasDub = true;
+              break;
+            }
+          }
+          if (alreadyHasDub) {
             loadReviewsAndComments();
             return;
           }
@@ -4653,38 +4116,10 @@
     } catch (err) {}
   };
 
-  /**
-   * Реєструє listener для повної картки фільму
-   * Вставляє: актори дубляжу, рецензії, коментарі
-   */
-  function registerFullListener() {
-    Lampa.Listener.follow('full', onFullEvent);
-  }
+  // ====================================================================
+  // Full-start listener — DOM-інжекції в шапку картки (рейтинги, релізи, MPAA)
+  // ====================================================================
 
-  /**
-   * Видаляє full listener
-   */
-  function unregisterFullListener() {
-    Lampa.Listener.remove('full', onFullEvent);
-  }
-
-  var ratingIcons = {
-    "imdb_rating": "<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 24 24'><path fill-rule='evenodd' d='M5 1a4 4 0 0 0-4 4v14a4 4 0 0 0 4 4h14a4 4 0 0 0 4-4V5a4 4 0 0 0-4-4zM4 14.91V9.09h1.455v5.82zm2.182 0V9.09H8L8.727 12l.728-2.91h1.818v5.82H9.818v-2.546l-.727 2.545h-.727l-.728-2.545v2.545zm5.818 0h2.182c.803 0 1.454-.652 1.454-1.455v-2.91c0-.803-.65-1.454-1.454-1.454H12v5.818Zm1.454-4.728h.364c.201 0 .364.163.364.364v2.909c0 .2-.163.363-.364.363h-.364zm2.91-1.091h1.454v1.783c.243-.177.603-.329 1.091-.329c.873 0 1.091.485 1.091.728v2.909c0 .242-.218.727-1.09.727c-.49 0-.849-.152-1.092-.328v.328h-1.454zm2.181 4.364V12a.364.364 0 0 0-.727 0v1.455a.364.364 0 0 0 .727 0' clip-rule='evenodd'/></svg>",
-    "rating": "<svg version='1.0' xmlns='http://www.w3.org/2000/svg' width='933.333' height='933.333' viewBox='0 0 700 700'>    <defs>        <linearGradient id='myGradient' gradientTransform='rotate(90)'>            <stop offset='0%'  stop-color='#005BBB' />            <stop offset='50%'  stop-color='#005BBB' />            <stop offset='50%' stop-color='#FFD500' />            <stop offset='100%' stop-color='#FFD500' />        </linearGradient>    </defs>    <path  fill='url(#myGradient)' d='M53 47.1c-15 1.5-25.4 6.6-37.2 18.1-4.5 4.4-10.5 14.4-13 21.6L.5 93.5v514l2.2 5.9c7.5 19.9 24.6 35 43.8 38.7 4.5.9 83.1 1.2 304 1.2 270.9 0 298.6-.2 304.8-1.7 11.4-2.7 22.3-9.4 30.4-18.6 3-3.5 9.5-13.5 10-15.5.1-.5 1.2-4.2 2.3-8 2-7 2-7.9 1.8-262l-.3-255-2.3-6.2c-7-18.7-22.5-32.9-41.3-37.9-6-1.6-26.2-1.7-301.4-1.8-162.2-.1-297.9.2-301.5.5zm73 48.5c2.5 1.2 5.9 3.7 7.6 5.5 5.8 6.4 6.3 8.9 6.4 37.7 0 16.4-.4 27.7-1.1 30.6-1.4 5.5-6.7 11.9-12.3 14.9-3.9 2.1-5.2 2.2-33.1 2.2-28.5 0-29.1 0-33.5-2.3-5.4-2.9-8.5-6.3-11.3-12.2-1.9-4.2-2-6.3-2-32 0-31 .4-33.1 7.7-40.3 6.1-5.8 8.8-6.2 39.6-6.2 25.8 0 27.8.2 32 2.1zm374 .2c5.4 2.9 8.5 6.3 11.3 12.2 2 4.4 2 5.6 2 102 0 95.4 0 97.6-2 102-2.5 5.8-8.6 11.6-13.7 13.3-3.4 1.1-29.2 1.3-148.6 1.2-132.1-.1-144.8-.3-148-1.8-6.9-3.3-12.4-9.8-13.6-16.2-1-5.2-1.1-187.2-.2-194.8 1.2-9 7.5-16.6 15.7-19 3.6-1.1 32.1-1.3 148.5-1.3l144.1.1 4.5 2.3zm139-.5c5.2 2.5 10.3 7.6 12.4 12.5 1.8 4 2 6.8 1.9 32.5 0 26.8-.1 28.4-2.1 32.4-1.2 2.3-3.8 5.8-5.9 7.8-6 5.8-9.9 6.4-40.8 6.1-25.3-.2-27.3-.3-31-2.3-4.2-2.2-8-5.9-11.1-10.8-1.7-2.6-1.9-5.5-2.2-30-.4-31 .1-35.2 5.4-41.4 7.1-8.2 9.9-8.8 43.4-8.6 22.9 0 27 .3 30 1.8zM126.6 235.8c5.6 2.9 10.9 9.3 12.3 14.8 1.5 6 1.4 54.8-.1 59.8-1.5 4.9-7.1 11.2-12.2 13.8-3.9 2.1-5.5 2.2-31.6 2.4-31 .1-34.4-.4-40.6-6.4-7.4-7.1-7.8-9.2-7.7-40.2 0-25.8.1-27.8 2.1-32.3 2.5-5.5 7.1-10.2 12.6-12.6 3.4-1.5 7.6-1.7 32.5-1.6 27.4.1 28.8.2 32.7 2.3zm512.4-.6c5 2.2 9.9 7.3 12.3 12.7 1.9 4.3 2.1 6.4 2 32.3v27.6l-2.7 5.6c-3 6-8.4 10.6-14.6 12.3-1.9.6-15.9.9-31 .8-25.9-.1-27.7-.2-31.5-2.2-5.5-2.9-10.1-8-11.9-13-1.9-5.4-2.3-53.6-.5-60.7 1.6-6.4 7.6-13 14-15.4 4.5-1.7 7.9-1.8 32.7-1.7 22.8.1 28.3.4 31.2 1.7zM126.5 375.7c4.2 2.2 8 5.9 11.1 10.8 1.7 2.6 1.9 5.5 2.2 30 .3 17.6 0 28.8-.8 32.1-1.3 6.1-6.3 12.5-12.4 15.6-3.9 2.1-5.3 2.2-33.1 2.2-32.1.1-33-.1-39.7-6.8-6.6-6.5-7.1-9.3-7.2-37.6-.1-14 .3-27.5.8-30 1.5-7.9 8.8-15.7 16.7-17.8 1.9-.4 15.8-.8 30.9-.7 25.9.1 27.7.2 31.5 2.2zm372.8-.3c5.2 2.6 9.6 7.2 12 12.6 1.9 4.3 2 7 2.1 98.5.1 51.7-.2 96.6-.6 99.9-1.2 9-7.5 16.5-16.1 19.1-5.4 1.6-285.9 1.9-292.1.3-9.2-2.3-16.1-10.1-17.3-19.4-1.4-10.3-.8-192.4.6-196.5 2.3-7 8.5-13.3 15.6-15.6 1.9-.6 55.8-.9 147.5-.9 139.6.1 144.6.2 148.3 2zm138.7-.6c8.4 3.7 13.7 10.4 14.8 18.8.9 7.4.8 49.5-.2 54.9-.9 4.3-4.7 10.2-9 13.6-5.2 4.1-9.6 4.6-38.6 4.5-26.2-.2-27.7-.3-31.6-2.4-5.1-2.6-10.7-8.9-12.2-13.8-1.5-5-1.6-53.8-.1-59.8 1.2-5 6.6-11.9 11-14.1 1.5-.9 4.5-1.9 6.6-2.3 5.7-1.3 56.3-.7 59.3.6zM126.5 515.7c4.1 2.2 8.8 6.8 11.5 11.3 2 3.3 2.8 56.1 1 62.7-1.5 5.3-6.9 11.7-12.4 14.6-3.9 2.1-5.2 2.2-33.1 2.2-26.5 0-29.3-.2-32.8-1.9-5.2-2.6-9.6-7.2-12-12.6-1.9-4.1-2-6.7-2-31.5 0-29 .4-32.4 5.1-38 3.3-3.9 8.1-7.1 12.3-8.2 1.9-.5 15.8-.9 30.9-.8 26 .1 27.7.2 31.5 2.2zm512.5-.5c5 2.2 9.9 7.3 12.3 12.7 1.9 4.3 2 6.5 2 32.1 0 25.3-.1 27.9-2 32-2.4 5.4-6.8 10-12 12.6-3.4 1.7-6.5 1.9-31.8 2-25.4.1-28.4-.1-32.5-1.8-5.1-2.2-9.2-5.7-12.3-10.8-2.1-3.3-2.2-4.8-2.5-31.5-.2-19.4 0-29.2.8-32.2 2.2-7.5 9.8-14.6 17.5-16.3 1.7-.3 15.2-.6 30-.5 22.1.1 27.6.4 30.5 1.7z'/></svg>",
-    "tomato_user_meter": "<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 24 24'><path d='M5.866 0L4.335 1.262l2.082 1.8c-2.629-.989-4.842 1.4-5.012 2.338c1.384-.323 2.24-.422 3.344-.335c-7.042 4.634-4.978 13.148-1.434 16.094c5.784 4.612 13.77 3.202 17.91-1.316C27.26 13.363 22.993.65 10.86 2.766c.107-1.17.633-1.503 1.243-1.602c-.89-1.493-3.67-.734-4.556 1.374C7.52 2.602 5.866 0 5.866 0zM4.422 7.217H6.9c2.673 0 2.898.012 3.55.202c1.06.307 1.868.973 2.313 1.904c.05.106.092.206.13.305l7.623.008l.027 2.912l-2.745-.024v7.549l-2.982-.016v-7.522l-2.127.016a2.92 2.92 0 0 1-1.056 1.134c-.287.176-.3.19-.254.264c.127.2 2.125 3.642 2.125 3.659l-3.39.019l-2.013-3.376c-.034-.047-.122-.068-.344-.084l-.297-.02l.037 3.48l-3.075-.038zm3.016 2.288l.024.338c.014.186.024.729.024 1.206v.867l.582-.025c.32-.013.695-.049.833-.078c.694-.146 1.048-.478 1.087-1.018c.027-.378-.063-.636-.303-.87c-.318-.309-.761-.416-1.733-.418Z'/></svg>",
-    "tomato_meter": "<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 24 24'><path d='M5.866 0L4.335 1.262l2.082 1.8c-2.629-.989-4.842 1.4-5.012 2.338c1.384-.323 2.24-.422 3.344-.335c-7.042 4.634-4.978 13.148-1.434 16.094c5.784 4.612 13.77 3.202 17.91-1.316C27.26 13.363 22.993.65 10.86 2.766c.107-1.17.633-1.503 1.243-1.602c-.89-1.493-3.67-.734-4.556 1.374C7.52 2.602 5.866 0 5.866 0zM4.422 7.217H6.9c2.673 0 2.898.012 3.55.202c1.06.307 1.868.973 2.313 1.904c.05.106.092.206.13.305l7.623.008l.027 2.912l-2.745-.024v7.549l-2.982-.016v-7.522l-2.127.016a2.92 2.92 0 0 1-1.056 1.134c-.287.176-.3.19-.254.264c.127.2 2.125 3.642 2.125 3.659l-3.39.019l-2.013-3.376c-.034-.047-.122-.068-.344-.084l-.297-.02l.037 3.48l-3.075-.038zm3.016 2.288l.024.338c.014.186.024.729.024 1.206v.867l.582-.025c.32-.013.695-.049.833-.078c.694-.146 1.048-.478 1.087-1.018c.027-.378-.063-.636-.303-.87c-.318-.309-.761-.416-1.733-.418Z'/></svg>",
-    "metascore": "<svg xmlns='http://www.w3.org/2000/svg' width='1024' height='1024' viewBox='0 0 24 24'><path d='M11.99 0A12 12 0 1 0 24 12v-.014A12 12 0 0 0 11.99 0m-.055 2.564a9.399 9.399 0 0 1 9.407 9.389v.01a9.399 9.399 0 1 1-9.408-9.399Zm-1.61 17.198l2.046-2.046l-3.94-3.94c-.165-.166-.345-.373-.442-.608c-.221-.47-.318-1.203.221-1.742c.664-.664 1.548-.387 2.406.47l3.788 3.788l2.046-2.046l-3.954-3.954a2.48 2.48 0 0 1-.456-.622c-.263-.539-.25-1.216.235-1.7c.677-.678 1.562-.429 2.544.553l3.677 3.677l2.046-2.046l-3.982-3.982c-2.018-2.018-3.912-1.949-5.212-.65c-.498.499-.802 1.024-.954 1.618a4.026 4.026 0 0 0-.055 1.686l-.027.028c-.996-.414-2.13-.166-3 .705c-1.162 1.161-1.12 2.392-.982 3.11l-.042.043l-1.009-.816l-1.77 1.77a64.1 64.1 0 0 1 2.213 2.1z'/></svg>"
-  };
-
-  /**
-   * Full-start listener — DOM-інжекції в шапку картки
-   * Вставляє: rating breakdown, Metacritic, Rotten Tomatoes, release dates, PG
-   * Паттерн: lampa-source/src/sass/components/full/start.scss
-   */
-
-  /**
-   * Реєструє listener для шапки повної картки
-   */
   var onFullStartEvent = function onFullStartEvent(e) {
     if (e.type !== 'complite') return;
     try {
@@ -4927,175 +4362,33 @@
     } catch (err) {}
   };
 
-  /**
-   * Реєструє listener для шапки повної картки
-   */
-  function registerFullStartListener() {
-    Lampa.Listener.follow('full', onFullStartEvent);
-  }
+  // ====================================================================
+  // Register / Unregister
+  // ====================================================================
 
-  /**
-   * Видаляє full-start listener
-   */
-  function unregisterFullStartListener() {
-    Lampa.Listener.remove('full', onFullStartEvent);
-  }
-
-  /**
-   * Anime Override Listener
-   * Перехоплює клік на "Аніме" в меню та підміняє source на kinobaza
-   *
-   * Обходить хардкод Lampa: action == 'anime' ? 'cub' : Storage.field('source')
-   *
-   * @module listeners/anime-override
-   */
-  var registered$6 = false;
-  var onMenuEvent$3 = function onMenuEvent(e) {
-    try {
-      if (e.type !== 'action') return;
-      if (e.action !== 'anime') return;
-
-      // Перевіряємо чи обрано kinobaza
-      var currentSource = Lampa.Storage && Lampa.Storage.field ? Lampa.Storage.field('source') : '';
-      if (currentSource !== 'kinobaza') return;
-
-      // Запобігаємо стандартній поведінці (перехід на cub source)
-      e.abort();
-
-      // Відкриваємо категорію аніме через kinobaza source з genres: 12 + countries: 39,214,97,96,92
-      if (Lampa.Router) {
-        Lampa.Router.call('category', {
-          url: 'anime',
-          title: (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('menu_anime') : 'Аніме') + ' - КіноБаза',
-          source: 'kinobaza',
-          genres: 12
-        });
+  function registerDomInject() {
+    if (!registeredFull) {
+      registeredFull = true;
+      if (Lampa.Listener) {
+        Lampa.Listener.follow('full', onFullEvent);
       }
-    } catch (err) {
-      // мовчки ігноруємо помилки в listener
     }
-  };
-
-  /**
-   * Реєструє anime override listener
-   * Додає kinobaza_anime source та перехоплює menu action для аніме
-   */
-  function registerAnimeOverride() {
-    if (registered$6) return;
-    registered$6 = true;
-    try {
-      // 1. Додаємо kinobaza_anime до available sources
-      if (Lampa.Api && Lampa.Api.sources) {
-        Lampa.Api.sources.kinobaza_anime = createAnimeSource();
+    if (!registeredFullStart) {
+      registeredFullStart = true;
+      if (Lampa.Listener) {
+        Lampa.Listener.follow('full-start', onFullStartEvent);
       }
-    } catch (err) {
-      // мовчки ігноруємо
-    }
-
-    // 2. Listener на menu action — перехоплює клік "Аніме"
-    if (Lampa.Listener) {
-      Lampa.Listener.follow('menu', onMenuEvent$3);
     }
   }
-
-  /**
-   * Видаляє anime override listener
-   * Викликати при destroy() плагіна
-   */
-  function unregisterAnimeOverride() {
-    if (!registered$6) return;
-    try {
-      // Видаляємо source
-      if (Lampa.Api && Lampa.Api.sources) {
-        delete Lampa.Api.sources.kinobaza_anime;
-      }
-    } catch (err) {
-      // мовчки ігноруємо
+  function unregisterDomInject() {
+    if (registeredFull) {
+      if (Lampa.Listener) Lampa.Listener.remove('full', onFullEvent);
+      registeredFull = false;
     }
-    if (Lampa.Listener) {
-      Lampa.Listener.remove('menu', onMenuEvent$3);
+    if (registeredFullStart) {
+      if (Lampa.Listener) Lampa.Listener.remove('full-start', onFullStartEvent);
+      registeredFullStart = false;
     }
-    registered$6 = false;
-  }
-
-  /**
-   * Cartoon Override Listener
-   * Перехоплює клік на "Мультфільми" в меню та підміняє source на kinobaza
-   *
-   * Обходить хардкод Lampa: cartoon -> url: 'movie' + genres: 16
-   * Використовує genres[]=12 (анімація) та exclude_genres[]=32 (без аніме)
-   *
-   * @module listeners/cartoon-override
-   */
-  var registered$5 = false;
-  var onMenuEvent$2 = function onMenuEvent(e) {
-    try {
-      if (e.type !== 'action') return;
-      if (e.action !== 'cartoon') return;
-
-      // Перевіряємо чи обрано kinobaza
-      var currentSource = Lampa.Storage && Lampa.Storage.field ? Lampa.Storage.field('source') : '';
-      if (currentSource !== 'kinobaza') return;
-
-      // Запобігаємо стандартній поведінці (хардкод Lampa: cartoon -> url: 'movie', genres: 16)
-      e.abort();
-
-      // Відкриваємо категорію мультфільмів через kinobaza source з genres=12
-      // source.js category() при genres=12 потрапляє в гілку isCartoons,
-      // яка створює 5 мультфільм-специфічних parts_data
-      if (Lampa.Router) {
-        Lampa.Router.call('category', {
-          url: 'movie',
-          title: (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('menu_multmovie') : 'Мультфільми') + ' - КіноБаза',
-          source: 'kinobaza',
-          genres: 12
-        });
-      }
-    } catch (err) {
-      // мовчки ігноруємо помилки в listener
-    }
-  };
-
-  /**
-   * Реєструє cartoon override listener
-   * Додає kinobaza_cartoons source та перехоплює menu action для мультфільмів
-   */
-  function registerCartoonOverride() {
-    if (registered$5) return;
-    registered$5 = true;
-    try {
-      // 1. Додаємо kinobaza_cartoons до available sources
-      if (Lampa.Api && Lampa.Api.sources) {
-        Lampa.Api.sources.kinobaza_cartoons = createCartoonsSource();
-      }
-    } catch (err) {
-      // мовчки ігноруємо
-    }
-
-    // 2. Listener на menu action — перехоплює клік "Мультфільми"
-    if (Lampa.Listener) {
-      Lampa.Listener.follow('menu', onMenuEvent$2);
-    }
-  }
-
-  /**
-   * Видаляє cartoon override listener
-   * Викликати при destroy() плагіна
-   */
-  function unregisterCartoonOverride() {
-    if (!registered$5) return;
-    try {
-      // Видаляємо source
-      if (Lampa.Api && Lampa.Api.sources) {
-        delete Lampa.Api.sources.kinobaza_cartoons;
-      }
-    } catch (err) {
-      // мовчки ігноруємо
-    }
-    if (Lampa.Listener) {
-      Lampa.Listener.remove('menu', onMenuEvent$2);
-    }
-    registered$5 = false;
   }
 
   /**
@@ -5112,15 +4405,15 @@
    * @module listeners/content-rows
    */
 
-  var registered$4 = false;
+  var registered$2 = false;
   var _rows = [];
 
   /**
    * Реєструє ContentRows integration
    */
   function registerContentRows$1() {
-    if (registered$4) return;
-    registered$4 = true;
+    if (registered$2) return;
+    registered$2 = true;
 
     // ============== ANIME ==============
 
@@ -5297,14 +4590,14 @@
    * Видаляє ContentRows integration
    */
   function unregisterContentRows() {
-    if (!registered$4) return;
+    if (!registered$2) return;
     for (var i = 0; i < _rows.length; i++) {
       if (Lampa.ContentRows && Lampa.ContentRows.remove) {
         Lampa.ContentRows.remove(_rows[i]);
       }
     }
     _rows = [];
-    registered$4 = false;
+    registered$2 = false;
   }
 
   /**
@@ -5315,14 +4608,10 @@
    * @module listeners/source-override
    */
 
-  var registered$3 = false;
+  var registered$1 = false;
   var origFull = null;
   var origPush = null;
-  var origPerson = null;
-  var origBgChange = null;
   var origFullRoute = null;
-  var origCategoryRoute = null;
-  var origActorCallback = null;
 
   /**
    * Дістає slug персони з кеша за ID
@@ -5338,21 +4627,11 @@
    * за slug або imdb_id. Якщо не знайдено — fallback на оригінальний source.
    */
   function registerSourceOverride() {
-    if (registered$3) return;
-    registered$3 = true;
+    if (registered$1) return;
+    registered$1 = true;
     try {
       if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.kinobaza) return;
       origFull = Lampa.Api.full;
-
-      // ========== 0. Перехоплюємо Background.change ==========
-      // Для карток мереж (SVG логотипи) — не міняємо фон, бо data URI виглядає погано
-      if (Lampa.Background && typeof Lampa.Background.change === 'function') {
-        origBgChange = Lampa.Background.change;
-        Lampa.Background.change = function (url) {
-          if (typeof url === 'string' && url.indexOf('data:image/svg') === 0) return;
-          return origBgChange(url);
-        };
-      }
 
       // ========== 1. Перехоплюємо Router route 'full' ==========
       // components/main.js біндить onEnter → Router.call('full', data)
@@ -5418,35 +4697,6 @@
         }
       }
 
-      // ========== 1.5. Перехоплюємо Router route 'category_full' ==========
-      // Кнопка "Далі" на трейлерах → 'category_full' (закріплено в components/main.js)
-      // Перенаправляємо на компонент kinobaza_trailers
-      if (Lampa.Router && Lampa.Router.routes) {
-        for (ri = 0; ri < Lampa.Router.routes.length; ri++) {
-          if (Lampa.Router.routes[ri].name === 'category_full') {
-            origCategoryRoute = Lampa.Router.routes[ri].callback;
-            Lampa.Router.routes[ri].callback = function (data) {
-              if (data && data._trailersLine) {
-                Lampa.Activity.push({
-                  url: '',
-                  title: data.title || Lampa.Lang.translate('kinobaza_trailers'),
-                  component: 'kinobaza_trailers',
-                  page: 1
-                });
-                return {
-                  url: '',
-                  title: '',
-                  component: 'full',
-                  _dummy: true
-                };
-              }
-              return origCategoryRoute(data);
-            };
-            break;
-          }
-        }
-      }
-
       // ========== 2. Перехоплюємо Activity.push ==========
       // Актор: {component:'actor', id, source:'kinobaza'} → kinobaza_person_detail
       // Мережа: {_networkCard} → category_full з фільтром
@@ -5488,65 +4738,11 @@
         };
       }
 
-      // ========== 3. Перехоплюємо Router.routes для 'actor' ==========
-      // Дублюючий захист, якщо хтось використовує Router напряму
-      if (Lampa.Router && Lampa.Router.routes) {
-        // Шукаємо існуючий route 'actor'
-        var actorRouteIdx = -1;
-        for (var ri = 0; ri < Lampa.Router.routes.length; ri++) {
-          if (Lampa.Router.routes[ri].name === 'actor') {
-            actorRouteIdx = ri;
-            break;
-          }
-        }
-        if (actorRouteIdx >= 0) {
-          origActorCallback = Lampa.Router.routes[actorRouteIdx].callback;
-          Lampa.Router.routes[actorRouteIdx].callback = function (data) {
-            var base = origActorCallback(data);
-            if (data.source === 'kinobaza') {
-              var slug = data.slug || lookupPersonSlug(data.id);
-              if (slug) {
-                base.slug = slug;
-                base.title = data.title || slug;
-                base.id = data.id;
-              }
-            }
-            return base;
-          };
-        }
-      }
-
-      // ========== 4. Перехоплюємо Api.person (safety net) ==========
-      origPerson = Lampa.Api.person;
-      Lampa.Api.person = function (params, oncomplite, onerror) {
-        if (params.source === 'kinobaza') {
-          var slug = params.slug || lookupPersonSlug(params.id);
-          if (slug) {
-            // Якщо дійшли сюди без Activity.push — значить actor вже створено.
-            // push нову активність (не replace — active() ще не в стеку)
-            Lampa.Activity.push({
-              url: '',
-              component: 'kinobaza_person_detail',
-              source: 'kinobaza',
-              slug: slug,
-              id: params.id || 0,
-              page: 1,
-              title: params.name || params.title || slug
-            });
-            return;
-          }
-          if (origPerson) origPerson(params, oncomplite, onerror);
-          return;
-        }
-        if (origPerson) origPerson(params, oncomplite, onerror);
-      };
+      // ========== 3. Перехоплюємо Lampa.Api.full ==========
+      // Коли активна КіноБаза І картка не з КіноБази — пробуємо перехопити
       Lampa.Api.full = function (params, oncomplite, onerror) {
         try {
-          // Перевіряємо чи активна КіноБаза
           var activeSource = Lampa.Storage && typeof Lampa.Storage.field === 'function' ? Lampa.Storage.field('source') : '';
-
-          // Якщо активна КіноБаза І картка не з КіноБази — пробуємо перехопити
-          // source.js full() сама знайде тайтл по slug, imdb_id або original_title
           if (activeSource === 'kinobaza' && params.source !== 'kinobaza') {
             var kbParams = Object.assign({}, params, {
               source: 'kinobaza'
@@ -5562,8 +4758,6 @@
             });
             return;
           }
-
-          // Всі інші випадки — стандартна поведінка
           if (origFull) origFull(params, oncomplite, onerror);
         } catch (e) {
           if (origFull) origFull(params, oncomplite, onerror);
@@ -5579,7 +4773,7 @@
    * Викликати при destroy() плагіна
    */
   function unregisterSourceOverride() {
-    if (!registered$3) return;
+    if (!registered$1) return;
     try {
       if (origFull) {
         Lampa.Api.full = origFull;
@@ -5589,98 +4783,24 @@
         Lampa.Activity.push = origPush;
         origPush = null;
       }
-      if (origPerson) {
-        Lampa.Api.person = origPerson;
-        origPerson = null;
-      }
-      if (origBgChange && Lampa.Background) {
-        Lampa.Background.change = origBgChange;
-        origBgChange = null;
-      }
       if (Lampa.Router && Lampa.Router.routes) {
         for (var ri = 0; ri < Lampa.Router.routes.length; ri++) {
           if (Lampa.Router.routes[ri].name === 'full' && origFullRoute) {
             Lampa.Router.routes[ri].callback = origFullRoute;
           }
-          if (Lampa.Router.routes[ri].name === 'category_full' && origCategoryRoute) {
-            Lampa.Router.routes[ri].callback = origCategoryRoute;
-          }
-          if (Lampa.Router.routes[ri].name === 'actor' && origActorCallback) {
-            Lampa.Router.routes[ri].callback = origActorCallback;
-          }
         }
         origFullRoute = null;
-        origCategoryRoute = null;
-        origActorCallback = null;
       }
     } catch (e) {
       // мовчки ігноруємо
     }
-    registered$3 = false;
-  }
-
-  /**
-   * MyPerson Override Listener
-   * Перехоплює клік на "Особи" в штатному меню Lampa
-   * та перенаправляє на kinobaza_myperson компонент
-   *
-   * Обходить стандартний myperson компонент, який використовує TMDB/Account API
-   *
-   * @module listeners/myperson-override
-   */
-
-  var registered$2 = false;
-  var onMenuEvent$1 = function onMenuEvent(e) {
-    try {
-      if (e.type !== 'action') return;
-      if (e.action !== 'myperson') return;
-
-      // Перевіряємо чи обрано kinobaza
-      var currentSource = Lampa.Storage && Lampa.Storage.field ? Lampa.Storage.field('source') : '';
-      if (currentSource !== 'kinobaza') return;
-
-      // Запобігаємо стандартній поведінці (TMDB/Account persons)
-      e.abort();
-
-      // Відкриваємо наш компонент списку осіб
-      if (Lampa.Router) {
-        Lampa.Router.call('kinobaza_myperson', {
-          title: Lampa.Lang.translate('kinobaza_myperson') || 'Особи'
-        });
-      }
-    } catch (err) {
-      // мовчки ігноруємо помилки в listener
-    }
-  };
-
-  /**
-   * Реєструє myperson override listener
-   */
-  function registerMyPersonOverride() {
-    if (registered$2) return;
-    registered$2 = true;
-
-    // Listener на menu action — перехоплює клік "Особи"
-    if (Lampa.Listener) {
-      Lampa.Listener.follow('menu', onMenuEvent$1);
-    }
-  }
-
-  /**
-   * Видаляє myperson override listener
-   */
-  function unregisterMyPersonOverride() {
-    if (!registered$2) return;
-    if (Lampa.Listener) {
-      Lampa.Listener.remove('menu', onMenuEvent$1);
-    }
-    registered$2 = false;
+    registered$1 = false;
   }
 
   /**
    * Lazy Lines listener — dynamic loading of content rows in Kinobaza
    */
-  var registered$1 = false;
+  var registered = false;
   var onLineEvent = null;
 
   /**
@@ -5942,8 +5062,8 @@
    * Реєструє listener для лінивого завантаження ліній
    */
   function registerLazyLines() {
-    if (registered$1) return;
-    registered$1 = true;
+    if (registered) return;
+    registered = true;
     onLineEvent = function onLineEvent(e) {
       // Filter by kb_lazy flag — our own marker, not the generic `lazy_load`
       // that TraktTV also reads. If we used `lazy_load`, TraktTV's listener
@@ -5979,11 +5099,11 @@
    * Видаляє lazy lines listener
    */
   function unregisterLazyLines() {
-    if (!registered$1) return;
+    if (!registered) return;
     if (onLineEvent) {
       Lampa.Listener.remove('line', onLineEvent);
     }
-    registered$1 = false;
+    registered = false;
   }
 
   /**
@@ -8163,505 +7283,6 @@
   if (!window.plugin_kinobaza_myperson_ready) {
     startPlugin$1();
   }
-
-  /**
-   * Kinobaza Discover — дані фільтрів
-   *
-   * Патерн: content_filter/data.js (lampa-source/src/interaction/content_filter/data.js)
-   * Адаптовано для API КіноБази:
-   *   - type: 1 (фільм), 2 (серіал)
-   *   - rating: рейтинг КіноБази (0-10)
-   *   - imdb_rating: рейтинг IMDb (0-10)
-   *   - year: рік/діапазон (ys/ye)
-   *   - genres: масив ID жанрів КіноБази (genres[])
-   *   - translated: has_ukr_audio / has_ukr_subtitles
-   *   - sort: order_by
-   */
-
-  var data = {};
-  data.type = {
-    title: 'Тип',
-    items: [{
-      title: 'Фільм',
-      selected: true,
-      type: 1
-    }, {
-      title: 'Серіал',
-      type: 2
-    }]
-  };
-  data.rating = {
-    title: 'Рейтинг КіноБази',
-    items: [{
-      title: 'Будь-який'
-    }, {
-      title: 'Від 8',
-      start: 8
-    }, {
-      title: 'Від 7',
-      start: 7
-    }, {
-      title: 'Від 6',
-      start: 6
-    }, {
-      title: 'Від 5',
-      start: 5
-    }, {
-      title: '1 — 3',
-      range: '1-3'
-    }, {
-      title: '3 — 5',
-      range: '3-5'
-    }, {
-      title: '5 — 7',
-      range: '5-7'
-    }, {
-      title: '7 — 9',
-      range: '7-9'
-    }, {
-      title: '9 — 10',
-      range: '9-10'
-    }]
-  };
-  data.imdb_rating = {
-    title: 'Рейтинг IMDb',
-    items: [{
-      title: 'Будь-який'
-    }, {
-      title: 'Від 8',
-      start: 8
-    }, {
-      title: 'Від 7',
-      start: 7
-    }, {
-      title: 'Від 6',
-      start: 6
-    }, {
-      title: 'Від 5',
-      start: 5
-    }, {
-      title: '1 — 3',
-      range: '1-3'
-    }, {
-      title: '3 — 5',
-      range: '3-5'
-    }, {
-      title: '5 — 7',
-      range: '5-7'
-    }, {
-      title: '7 — 9',
-      range: '7-9'
-    }, {
-      title: '9 — 10',
-      range: '9-10'
-    }]
-  };
-  data.year = {
-    title: 'Рік',
-    items: [{
-      title: 'Будь-який',
-      any: true
-    }]
-  };
-
-  // Динамічні роки — точно як в content_filter/data.js
-  var y = new Date().getFullYear();
-  var i = 100;
-  for (var a = 0; a < 5; a++) {
-    data.year.items.push({
-      title: y - a
-    });
-  }
-  while (i -= 5) {
-    var end = y - (99 - i);
-    data.year.items.push({
-      title: end + 5 + '-' + end
-    });
-  }
-  data.genres = {
-    title: 'Жанри',
-    items: [{
-      id: 1,
-      title: 'Бойовик',
-      checkbox: true
-    }, {
-      id: 2,
-      title: 'Пригоди',
-      checkbox: true
-    }, {
-      id: 3,
-      title: 'Фентезі',
-      checkbox: true
-    }, {
-      id: 4,
-      title: 'Жахи',
-      checkbox: true
-    }, {
-      id: 5,
-      title: 'Трилер',
-      checkbox: true
-    }, {
-      id: 6,
-      title: 'Комедія',
-      checkbox: true
-    }, {
-      id: 7,
-      title: 'Драма',
-      checkbox: true
-    }, {
-      id: 8,
-      title: 'Біографія',
-      checkbox: true
-    }, {
-      id: 9,
-      title: 'Історичний',
-      checkbox: true
-    }, {
-      id: 10,
-      title: 'Кримінальний',
-      checkbox: true
-    }, {
-      id: 11,
-      title: 'Мелодрама',
-      checkbox: true
-    }, {
-      id: 13,
-      title: 'Сімейний',
-      checkbox: true
-    }, {
-      id: 14,
-      title: 'Фантастика',
-      checkbox: true
-    }, {
-      id: 15,
-      title: 'Військовий',
-      checkbox: true
-    }, {
-      id: 20,
-      title: 'Документальний',
-      checkbox: true
-    }]
-  };
-  data.translated = {
-    title: 'Переклад',
-    items: [{
-      title: 'Будь-який'
-    }, {
-      title: 'З укр. аудіо',
-      code: 'has_ukr_audio'
-    }, {
-      title: 'З укр. субтитрами',
-      code: 'has_ukr_subtitles'
-    }]
-  };
-  data.sort = {
-    title: 'Сортування',
-    items: [{
-      title: 'Будь-який'
-    }, {
-      title: 'Популярністю',
-      order: 'popularity'
-    }, {
-      title: "Новинки (дата прем'єри)",
-      order: 'date_desc'
-    }, {
-      title: 'Рейтинг КіноБази',
-      order: 'rating_desc'
-    }, {
-      title: 'Рейтинг IMDb',
-      order: 'imdb_rating_desc'
-    }, {
-      title: 'Голоси КіноБази',
-      order: 'votes_desc'
-    }, {
-      title: 'Голоси IMDb',
-      order: 'imdb_votes_desc'
-    }]
-  };
-
-  /**
-   * Kinobaza Discover — UI фільтр-меню
-   *
-   * Патерн: content_filter/menu.js (lampa-source/src/interaction/content_filter/menu.js)
-   * Адаптовано для API КіноБази:
-   *   - queryForKinobaza() будує URL з params для /titles
-   *   - Всі фільтри відповідають kinobaza API (type, rating, imdb_rating, ys/ye, genres[], translated, order_by)
-   *   - Типи контенту: ТІЛЬКИ Фільм (type=1) та Серіал (type=2)
-   */
-
-  /**
-   * Вибирає елемент (single-select)
-   * @param {Array} where - масив елементів
-   * @param {Object} a - вибраний елемент
-   */
-  function select(where, a) {
-    where.forEach(function (element) {
-      element.selected = false;
-    });
-    a.selected = true;
-  }
-
-  /**
-   * Оновлює підзаголовок групи фільтрів
-   * @param {Object} where - об'єкт з масивом items
-   */
-  function selected(where) {
-    var titles = [];
-    where.items.forEach(function (a) {
-      if (a.selected || a.checked) titles.push(a.title);
-    });
-    where.subtitle = titles.length ? titles.join(', ') : Lampa.Lang.translate('nochoice');
-  }
-
-  /**
-   * Головне меню фільтрації
-   */
-  function main() {
-    for (var i in data) selected(data[i]);
-    if (!Lampa.Select || typeof Lampa.Select.show !== 'function') return;
-    var items = [{
-      title: Lampa.Lang.translate('search_start'),
-      search: true
-    }, data.type, data.rating, data.imdb_rating, data.genres, data.year, data.translated, data.sort];
-    Lampa.Select.show({
-      title: Lampa.Lang.translate('title_filter'),
-      items: items,
-      onBack: function onBack() {
-        Lampa.Controller.toggle('content');
-      },
-      onSelect: function onSelect(a) {
-        if (a.search) search();else submenu(a);
-      }
-    });
-  }
-
-  /**
-   * Підменю для конкретного фільтру
-   * @param {Object} item - об'єкт елемента (data.type, data.rating, etc.)
-   */
-  function submenu(item) {
-    if (!Lampa.Select || typeof Lampa.Select.show !== 'function') return;
-    Lampa.Select.show({
-      title: item.title,
-      items: item.items,
-      onBack: main,
-      onSelect: function onSelect(a) {
-        select(item.items, a);
-        main();
-      }
-    });
-  }
-
-  /**
-   * Будує URL-рядок для API КіноБази з обраних фільтрів
-   *
-   * Підтримує:
-   *   type, rating/rating_max, imdb_rating/imdb_rating_max,
-   *   ys/ye (роки), genres[] (жанри), translated, order_by
-   *
-   * @returns {string} - URL для Lampa.Activity.push (напр. 'titles?type=1&rating=7&genres[]=1&genres[]=2&ys=2020&ye=2025')
-   */
-  function queryForKinobaza() {
-    var query = [];
-    var genres = [];
-
-    // ===== TYPE =====
-    var typeItem = data.type.items.find(function (s) {
-      return s.selected;
-    });
-    if (typeItem && typeItem.type) {
-      query.push('type=' + typeItem.type);
-    }
-
-    // ===== RATING (КіноБаза) =====
-    data.rating.items.forEach(function (a) {
-      if (a.selected) {
-        if (a.start) {
-          query.push('rating=' + a.start);
-        } else if (a.range) {
-          var rParts = a.range.split('-');
-          query.push('rating=' + rParts[0]);
-          query.push('rating_max=' + rParts[1]);
-        }
-      }
-    });
-
-    // ===== IMDB RATING =====
-    data.imdb_rating.items.forEach(function (a) {
-      if (a.selected) {
-        if (a.start) {
-          query.push('imdb_rating=' + a.start);
-        } else if (a.range) {
-          var iParts = a.range.split('-');
-          query.push('imdb_rating=' + iParts[0]);
-          query.push('imdb_rating_max=' + iParts[1]);
-        }
-      }
-    });
-
-    // ===== YEAR =====
-    data.year.items.forEach(function (a) {
-      if (a.selected && !a.any) {
-        var titleStr = String(a.title);
-        if (titleStr.indexOf('-') >= 0) {
-          // Діапазон: "2027-2022" → ys=2022, ye=2027
-          var yParts = titleStr.split('-');
-          query.push('ys=' + yParts[1]);
-          query.push('ye=' + yParts[0]);
-        } else {
-          // Конкретний рік
-          query.push('ys=' + titleStr);
-          query.push('ye=' + titleStr);
-        }
-      }
-    });
-
-    // ===== GENRES (checkbox) =====
-    data.genres.items.forEach(function (a) {
-      if (a.checked) {
-        genres.push(a.id);
-      }
-    });
-    if (genres.length) {
-      genres.forEach(function (id) {
-        query.push('genres[]=' + id);
-      });
-    }
-
-    // ===== TRANSLATED =====
-    data.translated.items.forEach(function (a) {
-      if (a.selected && a.code) {
-        query.push('translated=' + a.code);
-      }
-    });
-
-    // ===== SORT =====
-    data.sort.items.forEach(function (a) {
-      if (a.selected && a.order) {
-        query.push('order_by=' + a.order);
-      }
-    });
-    return 'titles?' + query.join('&');
-  }
-
-  /**
-   * Запуск пошуку — конвертує вибір в Activity.push
-   */
-  function search() {
-    Lampa.Controller.toggle('content');
-    var query = queryForKinobaza();
-    var activity = {
-      url: query,
-      title: Lampa.Lang.translate('title_filter'),
-      component: 'category_full',
-      source: 'kinobaza',
-      card_type: true,
-      page: 1
-    };
-    var activeObj = Lampa.Activity.active();
-
-    // Якщо вже на category_full — замінити (поведінка як в оригінальному content_filter)
-    if (activeObj && activeObj.component === 'category_full' && activeObj.url && activeObj.url.indexOf('titles?') === 0) {
-      Lampa.Activity.replace(activity, true);
-    } else {
-      Lampa.Activity.push(activity);
-    }
-  }
-
-  /**
-   * Показати фільтр
-   */
-  function show() {
-    main();
-  }
-  var menu = {
-    show: show
-  };
-
-  /**
-   * Kinobaza Discover — реєстрація listener
-   *
-   * Перехоплює клік "filter" в меню Lampa (Lampa.Listener.send('menu', {type: 'action', action: 'filter'}))
-   * і замінює стандартний TMDB/CUB фільтр на власний з параметрами КіноБази.
-   *
-   * Патерн: listeners/anime-override.js, listeners/cartoon-override.js
-   *
-   * Flow:
-   *   1. Lampa.Listener.follow('menu', ...) перехоплює action === 'filter'
-   *   2. Перевіряє Storage.field('source') === 'kinobaza'
-   *   3. e.abort() — запобігає стандартному Filter.show()
-   *   4. menu.show() — показує Select.show() з фільтрами КіноБази
-   */
-  var registered = false;
-  var onMenuEvent = function onMenuEvent(e) {
-    try {
-      // Тільки action події
-      if (e.type !== 'action') return;
-      if (e.action !== 'filter') return;
-
-      // Перевіряємо чи обрано kinobaza
-      var currentSource = Lampa.Storage && typeof Lampa.Storage.field === 'function' ? Lampa.Storage.field('source') : '';
-      if (currentSource !== 'kinobaza') return;
-
-      // Запобігаємо стандартній поведінці Lampa Filter
-      e.abort();
-
-      // Показуємо власне фільтр-меню КіноБази
-      if (menu && typeof menu.show === 'function') {
-        menu.show();
-      }
-    } catch (err) {
-      // мовчки ігноруємо помилки в listener
-    }
-  };
-
-  /**
-   * Реєструє listener на menu action
-   */
-  function register() {
-    if (registered) return;
-    registered = true;
-    try {
-      if (!Lampa.Listener) return;
-      Lampa.Listener.follow('menu', onMenuEvent);
-    } catch (err) {
-      // мовчки ігноруємо
-    }
-  }
-
-  /**
-   * Видаляє listener
-   */
-  function unregister() {
-    if (!registered) return;
-    if (Lampa.Listener) {
-      Lampa.Listener.remove('menu', onMenuEvent);
-    }
-    registered = false;
-  }
-
-  /**
-   * Kinobaza Discover Filter — entry point
-   *
-   * Самовиконуваний модуль з guard патерном (window.kinobaza_discover_ready).
-   * При імпорті в kinobaza.js реєструє listener на menu action "filter"
-   * для показу власного фільтр-меню КіноБази.
-   *
-   * Патерн: trailers/trailers.js, releases/releases.js, collections/collections.js
-   * (self-executing IIFE + guard + register)
-   *
-   * Використовує:
-   *   - discover/index.js — реєстрація listener
-   *   - discover/data.js   — дані фільтрів
-   *   - discover/menu.js   — UI меню (Select.show)
-   *   - category_full      — компонент для результатів (через source: 'kinobaza')
-   */
-  (function () {
-
-    if (window.kinobaza_discover_ready) return;
-    window.kinobaza_discover_ready = true;
-    register();
-  })();
 
   /**
    * Перевірка конфлікту з синхронізацією CUB (Куб)
@@ -11193,7 +9814,7 @@
       if (!Lampa.Manifest) return;
       var manifest = {
         type: 'video',
-        version: '0.6a',
+        version: '0.7',
         name: Lampa.Lang.translate('kinobaza_title') || 'КіноБаза',
         component: 'kinobaza',
         description: 'Контент-провайдер КіноБаза (kinobaza.com.ua)'
@@ -11211,36 +9832,6 @@
     if (!$('#kinobaza_style').length) {
       Lampa.Template.add('kinobaza_css', "\n            <style id=\"kinobaza_style\">\n            @charset 'UTF-8';.full-start__rate.rate--custom{display:-webkit-inline-box !important;display:-webkit-inline-flex !important;display:-ms-inline-flexbox !important;display:inline-flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important;background:rgba(255,255,255,0.08) !important;border:1px solid rgba(255,255,255,0.12) !important;-webkit-border-radius:.35em !important;border-radius:.35em !important;padding:.25em .45em !important;margin-right:.5em !important;vertical-align:middle !important;font-size:1.1em !important;-webkit-transition:all .2s ease !important;-o-transition:all .2s ease !important;transition:all .2s ease !important}.full-start__rate.rate--custom:hover{background:rgba(255,255,255,0.14) !important;border-color:rgba(255,255,255,0.22) !important;-webkit-transform:translateY(-1px);-ms-transform:translateY(-1px);transform:translateY(-1px)}.full-start__rate.rate--custom>div:first-child{width:auto !important;height:auto !important;background:transparent !important;-webkit-border-radius:0 !important;border-radius:0 !important;display:-webkit-box !important;display:-webkit-flex !important;display:-ms-flexbox !important;display:flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important;-webkit-box-pack:center !important;-webkit-justify-content:center !important;-ms-flex-pack:center !important;justify-content:center !important;margin-right:.3em !important;padding:0 !important}.full-start__rate.rate--custom .rate__icon{display:-webkit-box !important;display:-webkit-flex !important;display:-ms-flexbox !important;display:flex !important;-webkit-box-align:center !important;-webkit-align-items:center !important;-ms-flex-align:center !important;align-items:center !important}.full-start__rate.rate--custom .rate__icon svg{width:1.2em !important;height:1.2em !important;display:block !important;fill:#fff !important}.full-start__rate.rate--custom .rate__value{font-size:.85em !important;font-weight:700 !important;color:#fff !important;line-height:1 !important;padding:0 .1em !important}.full-start__rate.rate--custom .source--name{margin-left:.3em !important;font-size:.55em !important;text-transform:uppercase !important;letter-spacing:.05em !important;opacity:.6 !important;line-height:1 !important;padding:0 !important}.full-start-new__rating-breakdown{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;margin:-0.5em;margin-bottom:.8em;min-height:1.6em;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;font-size:1.15em;color:rgba(255,255,255,0.6)}.full-start-new__rating-breakdown>div{padding:.5em}.full-descr__info.full--releases{-webkit-flex-basis:100%;-ms-flex-preferred-size:100%;flex-basis:100%;margin-top:1em}.full-descr__info.full--releases .full-descr__info-name{font-size:1.1em;margin-bottom:.5em}.full-descr__info.full--releases .full-descr__info-body{font-size:1em;line-height:1.6}.full-persons--dub .card{border:solid .2em rgba(102,204,102,0.3)}.full-persons--dub .card.focus{border-color:rgba(102,204,102,0.8)}.full-discuss--reviews .discuss-item{border-left:solid .2em #fc3}.full-discuss--comments .discuss-item{border-left:solid .2em #6cf}.kb_jobs{position:absolute;top:1.4em;left:2.5em;padding:.35em .55em;background:rgba(0,0,0,0.75);color:#fff;font-size:.75em;-webkit-border-radius:.3em;border-radius:.3em;z-index:1;pointer-events:none;white-space:nowrap}.kb_jobs--first{left:-0.8em}.kinobaza-single-network{padding:.2em .3em}.kinobaza-single-network.focus{background-color:rgba(0,0,0,0.45) !important;-webkit-box-shadow:0 0 0 .2em rgba(255,255,255,0.65);box-shadow:0 0 0 .2em rgba(255,255,255,0.65)}.kinobaza-network-logo-wrap{display:inline-block;width:60px;height:1.2em;overflow:hidden;vertical-align:middle}.kinobaza-network-logo{width:100%;height:100%;-o-object-fit:contain;object-fit:contain;vertical-align:top}.items-line--type-trailers .card--wide{width:34.3em}.items-line--type-trailers .card--wide .card__view{padding-bottom:56%;background:#111}.items-line--type-trailers .card--wide .card__img{-o-object-fit:cover;object-fit:cover;background:#222}.items-line--type-networks .card--wide{width:34.3em;-webkit-border-radius:.6em;border-radius:.6em;overflow:hidden}.items-line--type-networks .card--wide .card__view{padding-bottom:56%;background:transparent;-webkit-border-radius:0;border-radius:0}.items-line--type-networks .card--wide.focus .card__view::after,.items-line--type-networks .card--wide.hover .card__view::after{-webkit-border-radius:.6em;border-radius:.6em}.items-line--type-networks .card--wide .card__img{width:100% !important;height:100% !important;-o-object-fit:contain !important;object-fit:contain !important;padding:1.5em;background:rgba(255,255,255,0.04);-webkit-border-radius:0;border-radius:0}.items-line--type-networks .card--wide .card__promo{display:none !important}.items-line--type-networks .card--wide .card__title{display:none}\n            </style>\n        ");
       $('body').append(Lampa.Template.get('kinobaza_css', {}, true));
-    }
-  }
-
-  /**
-   * Міграція старих закладок Kinobaza (якщо користувач вже мав збережені картки
-   * з числовим Kinobaza ID як основним id до впровадження TMDB ID)
-   */
-  function migrateOldBookmarks() {
-    try {
-      if (!Lampa.Storage || typeof Lampa.Storage.get !== 'function') return;
-      var favorite = Lampa.Storage.get('favorite', '{}');
-      var migrated = false;
-      if (favorite.card && Array.isArray(favorite.card)) {
-        favorite.card.forEach(function (card) {
-          // Старі картки: source === 'kinobaza', id числовий, немає kinobaza_id
-          if (card.source === 'kinobaza' && typeof card.id === 'number' && !card.kinobaza_id) {
-            card.kinobaza_id = card.id;
-            card.needsEnrichment = true;
-            // Не змінюємо card.id — нехай залишається Kinobaza ID,
-            // enrichCard оновить його на TMDB ID при першому збереженні
-            migrated = true;
-          }
-        });
-      }
-      if (migrated) {
-        Lampa.Storage.set('favorite', favorite);
-        console.log('Kinobaza', 'migrated old bookmarks');
-      }
-    } catch (e) {
-      // мовчки ігноруємо помилки міграції
     }
   }
 
@@ -11309,9 +9900,6 @@
     // Декорування API обраного
     overrideFavoriteApi();
 
-    // Міграція старих закладок
-    migrateOldBookmarks();
-
     // 1. Реєстрація source провайдера
     if (Lampa.Api) {
       Lampa.Api.sources = Lampa.Api.sources || {};
@@ -11359,20 +9947,11 @@
     // Ініціалізація системи синхронізації
     syncModule.init();
 
-    // 6. Реєстрація listener для вставки акторів дубляжу через DOM
-    registerFullListener();
+    // 6-7. Реєстрація DOM-інжекції в картку фільму (дубляж, рецензії, коментарі, рейтинги, релізи, MPAA)
+    registerDomInject();
 
-    // 7. Реєстрація listener для DOM-інжекції в шапку картки (рейтинги, релізи, MPAA)
-    registerFullStartListener();
-
-    // 8. Реєстрація override для аніме меню (обходить хардкод Lampa: action == 'anime' ? 'cub' : ...)
-    registerAnimeOverride();
-
-    // 9. Реєстрація override для мультфільмів меню (обходить хардкод Lampa: cartoon -> movie + genres: 16)
-    registerCartoonOverride();
-
-    // 9. Реєстрація override для меню "Особи"
-    registerMyPersonOverride();
+    // 8-9. Реєстрація menu redirect — перехоплення anime, cartoon, myperson в один listener
+    registerMenuRedirect();
 
     // 9.5. Реєстрація override для Lampa.Api.full — перехоплення відкриття карток
     // Коли активна КіноБаза, пробує завантажити картку через Kinobaza API
@@ -11412,15 +9991,11 @@
   window.plugin_kinobaza_destroy = function () {
     try {
       // 1. Unregister listeners
-      if (typeof unregisterFullListener === 'function') unregisterFullListener();
-      if (typeof unregisterFullStartListener === 'function') unregisterFullStartListener();
-      if (typeof unregisterAnimeOverride === 'function') unregisterAnimeOverride();
-      if (typeof unregisterCartoonOverride === 'function') unregisterCartoonOverride();
-      if (typeof unregisterMyPersonOverride === 'function') unregisterMyPersonOverride();
+      if (typeof unregisterMenuRedirect === 'function') unregisterMenuRedirect();
+      if (typeof unregisterDomInject === 'function') unregisterDomInject();
       if (typeof unregisterSourceOverride === 'function') unregisterSourceOverride();
       if (typeof unregisterContentRows === 'function') unregisterContentRows();
       if (typeof unregisterLazyLines === 'function') unregisterLazyLines();
-      if (typeof unregister === 'function') unregister();
 
       // 2. Destroy sub-modules
       if (settings && typeof settings.destroy === 'function') settings.destroy();
