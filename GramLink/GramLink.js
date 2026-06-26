@@ -1189,14 +1189,14 @@
     }
 
     /**
-     * sdk/keys.js — Єдине джерело storage-ключів та helpers для Lampa.Storage
+     * sdk/keys.js — Single source of storage keys and helpers for Lampa.Storage
      *
-     * Усуває:
-     *   D-01 — getChannelId() тепер один, захищений від NaN
-     *   D-02 — всі STORAGE_* константи в одному місці
-     *   D-10 — parseInt(Lampa.Storage.get(...), 10) замінено на getInt()
+     * Eliminates:
+     *   D-01 — getChannelId() now one function, NaN-safe
+     *   D-02 — all STORAGE_* constants in one place
+     *   D-10 — parseInt(Lampa.Storage.get(...), 10) replaced by getInt()
      *
-     * Використання:
+     * Usage:
      *   import { STORAGE_KEYS, getChannelId, getInt } from '../sdk/keys'
      */
 
@@ -1242,9 +1242,9 @@
     };
 
     /**
-     * Безпечне читання channelId зі storage.
-     * Повертає number або null (ніколи не NaN).
-     * Усуває баг з auth.js:106, де parseInt('', 10) → NaN.
+     * Safe channelId read from storage.
+     * Returns number or null (never NaN).
+     * Fixes auth.js:106 bug where parseInt('', 10) → NaN.
      */
     function getChannelId() {
       var v = Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, '');
@@ -1255,8 +1255,8 @@
     }
 
     /**
-     * Безпечне читання integer зі storage.
-     * Повертає число; якщо storage порожній або NaN → повертає def.
+     * Safe integer read from storage.
+     * Returns number; if storage is empty or NaN → returns def.
      */
     function getInt(key, def) {
       if (def === undefined) def = 0;
@@ -1265,24 +1265,24 @@
     }
 
     /**
-     * sdk/telegram.js — Єдина обгортка TGSBundle (window.telegram)
+     * sdk/telegram.js — Single TGSBundle wrapper (window.telegram)
      *
-     * Усуває:
-     *   A-01 — Жоден компонент не має прямого доступу до window.telegram.
-     *          Всі імпортують через sdk/telegram.
+     * Eliminates:
+     *   A-01 — No component has direct access to window.telegram.
+     *          All import through sdk/telegram.
      *
-     * Контракт TGSBundle:
+     * TGSBundle contract:
      *   window.telegram = { TelegramClient, MemorySession, Api, Buffer }
      *
-     * Використання:
+     * Usage:
      *   import { telegram, Api, Buffer } from '../sdk/telegram'
      */
     var _tg = null;
     var _tgPromise = null;
 
     /**
-     * Завантажує TGSBundle (якщо ще не завантажено) і повертає window.telegram.
-     * Безпечно викликати багаторазово — повторні виклики повертають той самий проміс.
+     * Loads TGSBundle (if not loaded yet) and returns window.telegram.
+     * Safe to call multiple times — subsequent calls return the same promise.
      */
     function telegram() {
       if (_tg) return Promise.resolve(_tg);
@@ -1296,7 +1296,7 @@
     }
 
     /**
-     * Ліниве завантаження Api (TL-об'єкти).
+     * Lazy load of Api (TL objects).
      */
     function Api() {
       return telegram().then(function (tg) {
@@ -1305,7 +1305,7 @@
     }
 
     /**
-     * Ліниве завантаження Buffer.
+     * Lazy load of Buffer.
      */
     function Buffer() {
       return telegram().then(function (tg) {
@@ -1314,23 +1314,23 @@
     }
 
     /**
-     * sdk/channels.js — Операції з каналами/топіками Telegram
+     * sdk/channels.js — Telegram channel/topic operations
      *
-     * Усуває:
-     *   A-03 — createForum замість ручного Api.channels.CreateChannel + ToggleForum
-     *   A-04 — createTopic замість ручного Api.channels.CreateForumTopic
-     *   A-05 — findTopic замість ручного Api.channels.GetForumTopics
-     *   A-06 — getInputEntity тепер всередині функцій, не в коді компонентів
+     * Eliminates:
+     *   A-03 — createForum instead of manual Api.channels.CreateChannel + ToggleForum
+     *   A-04 — createTopic instead of manual Api.channels.CreateForumTopic
+     *   A-05 — findTopic instead of manual Api.channels.GetForumTopics
+     *   A-06 — getInputEntity now inside functions, not in component code
      *
-     * Всі функції приймають tgClient як перший параметр.
+     * All functions accept tgClient as the first parameter.
      *
-     * Використання:
+     * Usage:
      *   import { createForum, createTopic, findTopic, findChannel } from '../sdk/channels'
      */
 
     /**
-     * Створює новий megagroup-канал з форумом.
-     * Повертає peerId (negative int) або null.
+     * Creates a new megagroup channel with forum.
+     * Returns peerId (negative int) or null.
      */
     function createForum(tgClient, title, about) {
       if (about === undefined) about = 'GramLink: Lampa device sync channel';
@@ -1349,6 +1349,16 @@
             channel: chat,
             enabled: true
           }))["catch"](function () {}).then(function () {
+            return tgClient.invoke(new A.account.UpdateNotifySettings({
+              peer: new A.InputNotifyPeer({
+                peer: chat
+              }),
+              settings: new A.InputPeerNotifySettings({
+                silent: true,
+                mute_until: 2147483647
+              })
+            }))["catch"](function () {});
+          }).then(function () {
             return peerId;
           });
         })["catch"](function (err) {
@@ -1359,8 +1369,8 @@
     }
 
     /**
-     * Створює topic у каналі.
-     * Повертає topic_id (int) або null.
+     * Creates a topic in the channel.
+     * Returns topic_id (int) or null.
      */
     function createTopic(tgClient, channelId, topicTitle, iconColor) {
       if (iconColor === undefined) iconColor = 0x0088CC;
@@ -1385,8 +1395,8 @@
     }
 
     /**
-     * Знаходить topic за назвою.
-     * Повертає topic_id (int) або null.
+     * Finds a topic by name.
+     * Returns topic_id (int) or null.
      */
     function findTopic(tgClient, channelId, topicTitle, limit) {
       if (limit === undefined) limit = 10;
@@ -1413,8 +1423,8 @@
     }
 
     /**
-     * Знаходить канал за назвою серед діалогів користувача.
-     * Повертає peerId (negative int) або null.
+     * Finds a channel by name among user's dialogs.
+     * Returns peerId (negative int) or null.
      */
     function findChannel(tgClient, title, dialogLimit) {
       if (dialogLimit === undefined) dialogLimit = 200;
@@ -1436,28 +1446,28 @@
     }
 
     /**
-     * sdk/files.js — Завантаження файлів у Telegram
+     * sdk/files.js — File upload to Telegram
      *
-     * Усуває:
-     *   A-07 — upload() замість 70 рядків ручних TL-викликів у utils/client.js:540-609
-     *   A-08 — InputReplyToMessage інкапсульований
-     *   A-20 — Buffer.from інкапсульований
+     * Eliminates:
+     *   A-07 — upload() instead of 70 lines of manual TL calls in utils/client.js:540-609
+     *   A-08 — InputReplyToMessage encapsulated
+     *   A-20 — Buffer.from encapsulated
      *
-     * Використання:
+     * Usage:
      *   import { upload } from '../sdk/files'
      */
     var CHUNK = 512 * 1024;
 
     /**
-     * Завантажує файл у вказаний чат/топік.
+     * Uploads a file to the specified chat/topic.
      *
      * @param {Object} tgClient — GramJS TelegramClient instance
      * @param {number} chatId
      * @param {number|string} threadId — topic ID
-     * @param {string} dataStr — вміст файлу (рядок)
+     * @param {string} dataStr — file content (string)
      * @param {string} fileName
-     * @param {string} [caption] — підпис до файлу (JSON)
-     * @returns {Promise<number|null>} messageId або null
+     * @param {string} [caption] — file caption (JSON)
+     * @returns {Promise<number|null>} messageId or null
      */
     function upload(tgClient, chatId, threadId, dataStr, fileName, caption) {
       if (!chatId) return Promise.resolve(null);
@@ -1532,7 +1542,7 @@
     }
 
     /**
-     * Знімає ```json ... ``` обгортку з тексту повідомлення.
+     * Strips ```json ... ``` wrapping from message text.
      */
     function stripCodeFence$1(text) {
       if (!text) return text;
@@ -1540,8 +1550,8 @@
     }
 
     /**
-     * Відправляє "сире" текстове повідомлення в topic.
-     * Повертає messageId або false.
+     * Sends a raw text message to a topic.
+     * Returns messageId or false.
      */
     function publishRaw(tgClient, chatId, threadId, text, silent) {
       if (!chatId) return Promise.resolve(false);
@@ -1567,8 +1577,8 @@
     }
 
     /**
-     * Відправляє повідомлення з JSON-метаданими (використовується для heartbeat, remote-cmd).
-     * Повертає messageId або false.
+     * Sends a message with JSON metadata (used for heartbeat, remote-cmd).
+     * Returns messageId or false.
      */
     function publish(tgClient, chatId, threadId, type, payload, targetDeviceId, metaExtras) {
       if (!chatId) return Promise.resolve(false);
@@ -1598,7 +1608,7 @@
         };
         if (threadId) sendArgs.replyTo = parseInt(threadId, 10);
 
-        // Heartbeat та sync-log завжди silent
+        // Heartbeat and sync-log are always silent
         if (type === 'heartbeat' || threadId && String(threadId) === String(Lampa.Storage.get('gramlink_sync_log_topic', ''))) {
           sendArgs.silent = true;
         }
@@ -1631,7 +1641,7 @@
     }
 
     /**
-     * Редагує існуюче повідомлення.
+     * Edits an existing message.
      */
     function editMessage(tgClient, chatId, messageId, newText, threadId) {
       if (!chatId) return Promise.resolve(false);
@@ -1657,7 +1667,7 @@
     }
 
     /**
-     * Видаляє повідомлення.
+     * Deletes a message.
      */
     function deleteMessage(tgClient, chatId, messageId) {
       if (!chatId) return Promise.resolve(false);
@@ -1672,7 +1682,7 @@
     }
 
     /**
-     * Отримує повідомлення з чату/топіка.
+     * Gets messages from a chat/topic.
      */
     function getMessages(tgClient, chatId, threadId, limit) {
       if (!chatId) return Promise.resolve([]);
@@ -1695,7 +1705,7 @@
     }
 
     /**
-     * Отримує повідомлення новіші за вказаний timestamp.
+     * Gets messages newer than the specified timestamp.
      */
     function getMessagesSince(tgClient, chatId, threadId, sinceTimestamp, limit) {
       if (!chatId) return Promise.resolve([]);
@@ -1720,7 +1730,7 @@
     }
 
     /**
-     * Завантажує вкладений файл повідомлення.
+     * Downloads a message's attached file.
      */
     function downloadFile(tgClient, message) {
       if (!message || !message._msg) return Promise.resolve(null);
@@ -1744,7 +1754,7 @@
     }
 
     /**
-     * Отримує список бекап-файлів з топіка.
+     * Gets list of backup files from a topic.
      */
     function getBackupFiles(tgClient, chatId, threadId, limit) {
       if (!chatId) return Promise.resolve([]);
@@ -1779,7 +1789,7 @@
     }
 
     /**
-     * Завантажує файл з вкладення (окремо від downloadFile для зворотньої сумісності).
+     * Downloads file from attachment (separate from downloadFile for backward compatibility).
      */
     function downloadMessageFile(tgClient, message) {
       if (!message || !message._msg) return Promise.resolve(null);
@@ -1800,19 +1810,19 @@
     }
 
     /**
-     * sdk/device.js — Device fingerprinting та API credentials
+     * sdk/device.js — Device fingerprinting and API credentials
      *
-     * Усуває:
-     *   D-06 — getApiCredentials тепер в SDK, не дублюється в auth.js/settings.js/client.js
-     *   A-16 — getDeviceId зберігається як є (session ID), додано коментар
+     * Eliminates:
+     *   D-06 — getApiCredentials now in SDK, not duplicated in auth.js/settings.js/client.js
+     *   A-16 — getDeviceId kept as-is (session ID), comment added
      *
-     * Використання:
+     * Usage:
      *   import { getDeviceId, getDeviceName, getApiCredentials } from '../sdk/device'
      */
 
-    // Примітка (A-16): getDeviceId генерує tv_xxx_timestamp як session token,
-    // не стабільний fingerprint. При localStorage.clear() — змінюється.
-    // Для стабільного fingerprint потрібен хеш user-agent + screen resolution.
+    // Note (A-16): getDeviceId generates tv_xxx_timestamp as session token,
+    // not a stable fingerprint. On localStorage.clear() — it changes.
+    // For a stable fingerprint, hash user-agent + screen resolution.
 
     var STORAGE_DEVICE_ID = STORAGE_KEYS.DEVICE_ID;
     function getDeviceId() {
@@ -1954,9 +1964,9 @@
     }
 
     /**
-     * Повертає API credentials для Telegram.
-     * Якщо gramlink_app_type === 'custom' — читає зі storage.
-     * Інакше — дефолтні Lampa credentials.
+     * Returns API credentials for Telegram.
+     * If gramlink_app_type === 'custom' — reads from storage.
+     * Otherwise — default Lampa credentials.
      */
     function getApiCredentials() {
       var apiId = 24911245;
@@ -2276,9 +2286,9 @@
     }
 
     /**
-     * Lampa Context — стабільні властивості Lampa, які не змінюються
-     * при оновленні. Використовується як seed замість hardcoded PLUGIN_SECRET.
-     * Використовує Lampa.Utils.hash() — єдину хеш-функцію з бібліотек Lampa.
+     * Lampa Context — stable Lampa properties that don't change
+     * on update. Used as seed instead of hardcoded PLUGIN_SECRET.
+     * Uses Lampa.Utils.hash() — the only hash function from Lampa's libraries.
      */
     function getLampaContext() {
       var p = ['gramlink', Lampa.Storage.get('platform', 'unknown'), Lampa.Platform.tv() ? 'tv' : Lampa.Platform.screen('mobile') ? 'mobile' : 'desktop'];
@@ -2347,7 +2357,7 @@
       }
     };
 
-    var VERSION = '0.1';
+    var VERSION = '0.1.1';
     var instance = null;
     var GramLinkClient = /*#__PURE__*/function () {
       function GramLinkClient() {
@@ -3064,8 +3074,8 @@
         }
       }]);
     }(); // ─── System version extractor (from user agent) ──────────
-    // Повертає красивий рядок версії ОС для Telegram MTProto clientOptions.
-    // Приклади: "Android 14", "iOS 17.0", "macOS 14.3", "Windows 10", "Windows 11"
+    // Returns a pretty OS version string for Telegram MTProto clientOptions.
+    // Examples: "Android 14", "iOS 17.0", "macOS 14.3", "Windows 10", "Windows 11"
     function getSystemVersion() {
       var ua = navigator.userAgent || '';
 
@@ -3117,11 +3127,11 @@
     /**
      * compat.js — GramJS compatibility checker
      *
-     * Дві групи перевірок:
-     *   - Синтаксичні (BigInt literal, async/await, generators, ?.) — НЕ поліфляться,
-     *     падають ще на етапі парсингу бандла з SyntaxError. Виявляємо через new Function(snippet).
-     *   - Runtime API (WebAssembly, crypto.subtle, Map/Set, Proxy) — перевіряємо typeof,
-     *     деякі поліфляться, деякі ні (BigInt64Array, Proxy).
+     * Two groups of checks:
+     *   - Syntax (BigInt literal, async/await, generators, ?.) — NOT polyfilled,
+     *     fail at bundle parse stage with SyntaxError. Detected via new Function(snippet).
+     *   - Runtime API (WebAssembly, crypto.subtle, Map/Set, Proxy) — check typeof,
+     *     some are polyfilled, some not (BigInt64Array, Proxy).
      *
      * @returns {Object} { supported, blockers, warnings, details }
      */
@@ -3133,7 +3143,7 @@
         runtime: {}
       };
 
-      // ── 1. Синтаксичні зонди
+      // ── 1. Syntax probes
       function canParse(snippet) {
         try {
           new Function(snippet);
@@ -3155,7 +3165,7 @@
       details.syntax.destructuring = canParse('var {a}={a:1}; var [b]=[1];');
       details.syntax.defaultParam = canParse('function f(a=1){}');
 
-      // ── 2. Runtime API перевірки
+      // ── 2. Runtime API checks
       details.runtime.bigInt = typeof BigInt !== 'undefined';
       details.runtime.bigInt64Array = typeof BigInt64Array !== 'undefined';
       details.runtime.webAssembly = typeof WebAssembly !== 'undefined' && typeof WebAssembly.instantiate === 'function';
@@ -3171,7 +3181,7 @@
       details.runtime.arrayFrom = typeof Array.from === 'function';
       details.runtime.objectAssign = typeof Object.assign === 'function';
 
-      // ── 3. Класифікація: BLOCKERS vs WARNINGS
+      // ── 3. Classification: BLOCKERS vs WARNINGS
       if (!details.syntax.bigIntLit || !details.runtime.bigInt) {
         blockers.push('BigInt — 206× у бандлі, MTProto int128/int256, RSA, DH. Не поліфиться.');
       }
@@ -3282,16 +3292,16 @@
     }
 
     /**
-     * sdk/avatars.js — Avatar-генерація та ініціали
+     * sdk/avatars.js — Avatar generation and initials
      *
-     * Усуває:
-     *   D-04 — extractNameFromUrl тепер в одному місці
-     *   D-05a,b — DICE_BEAR_BASE, DICE_BEAR_STYLES в одному місці
-     *   D-05c — avatarLetters (auth.js:193) = getInitials (profiles.js:184) тепер одне
-     *   D-15 — renderAvatar() — 4 копії avatar HTML builder
-     *   D-16 — avatarColor тепер викликається звідси, не з profiles.js
+     * Eliminates:
+     *   D-04 — extractNameFromUrl now in one place
+     *   D-05a,b — DICE_BEAR_BASE, DICE_BEAR_STYLES in one place
+     *   D-05c — avatarLetters (auth.js:193) = getInitials (profiles.js:184) now unified
+     *   D-15 — renderAvatar() — 4 copies of avatar HTML builder
+     *   D-16 — avatarColor now called from here, not from profiles.js
      *
-     * Використання:
+     * Usage:
      *   import { getAvatar, avatarColor, renderAvatar, getInitials } from '../sdk/avatars'
      */
     var DICE_BEAR_BASE = 'https://api.dicebear.com/10.x/';
@@ -3299,7 +3309,7 @@
     var COLORS = ['#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ff9800', '#ff5722', '#795548'];
 
     /**
-     * Генерує URL аватара через DiceBear або ініціали, якщо стиль вимкнено.
+     * Generates avatar URL via DiceBear or initials if style is disabled.
      */
     function getAvatar(name) {
       var style = Lampa.Storage.get(STORAGE_KEYS.AVATAR_STYLE, 'fun-emoji');
@@ -3308,9 +3318,9 @@
     }
 
     /**
-     * Повертає ініціали імені:
-     *   1 слово → перші 2 літери
-     *   2+ слів → перші літери кожного слова
+     * Returns initials of a name:
+     *   1 word → first 2 letters
+     *   2+ words → first letter of each word
      */
     function getInitials(name) {
       if (!name) return '??';
@@ -3322,7 +3332,7 @@
     }
 
     /**
-     * Детермінований колір на основі імені.
+     * Deterministic color based on name.
      */
     function avatarColor(name) {
       if (!name) return '#0088cc';
@@ -3334,19 +3344,19 @@
     }
 
     /**
-     * Перевіряє, чи avatar є DiceBear URL (а не ініціалами).
+     * Check if avatar is a DiceBear URL (not initials).
      */
     function isAvatarUrl(avatar) {
       return avatar && avatar.indexOf(DICE_BEAR_BASE) === 0;
     }
 
     /**
-     * Повертає готовий HTML для аватара.
+     * Returns ready HTML for avatar.
      * @param {string} name
      * @param {Object} [options]
      * @param {string} [options.className='gramlink-avatar']
-     * @param {string} [options.style] — додатковий CSS
-     * @returns {string} HTML рядок
+     * @param {string} [options.style] — additional CSS
+     * @returns {string} HTML string
      */
     function renderAvatar(name, options) {
       if (!options) options = {};
@@ -3362,7 +3372,7 @@
     }
 
     /**
-     * Витягує назву плагіна з URL.
+     * Extracts plugin name from URL.
      */
     function extractNameFromUrl(url) {
       try {
@@ -3405,11 +3415,11 @@
     // ─── Caption builder ─────────────────────────────────────────────────
 
     /**
-     * Будує JSON для caption повідомлення профілю.
+     * Builds JSON for profile message caption.
      *
      * @param {Object} profile — { name, avatar, updated? }
-     * @param {Object} [extras] — додаткові поля meta (source, source_id, тощо)
-     * @returns {string} JSON рядок
+     * @param {Object} [extras] — additional meta fields (source, source_id, etc.)
+     * @returns {string} JSON string
      */
     function buildCaption(profile, extras) {
       if (!extras) extras = {};
@@ -3434,7 +3444,7 @@
     // ─── File data builder ────────────────────────────────────────────────
 
     /**
-     * Будує повний fileData для файлу профілю.
+     * Builds complete fileData for a profile file.
      *
      * @param {Object} opts
      * @param {string} opts.name
@@ -3444,7 +3454,7 @@
      * @param {Array} [opts.plugins]
      * @param {Object} [opts.settings]
      * @param {Object} [opts.device_overrides]
-     * @returns {Object} fileData для JSON.stringify
+     * @returns {Object} fileData for JSON.stringify
      */
     function buildFileData(opts) {
       var now = Math.floor(Date.now() / 1000);
@@ -3467,8 +3477,8 @@
     // ─── Parsers ──────────────────────────────────────────────────────────
 
     /**
-     * Парсить caption повідомлення профілю.
-     * Повертає payload.profile або null.
+     * Parse a profile message caption.
+     * Returns payload.profile or null.
      */
     function parseCaption(text) {
       try {
@@ -3480,8 +3490,8 @@
     }
 
     /**
-     * Перевіряє, чи текст є валідним profile-повідомленням.
-     * Повертає parsed object або null.
+     * Check if text is a valid profile message.
+     * Returns parsed object or null.
      */
     function parseProfileMessage(text) {
       try {
@@ -3493,8 +3503,8 @@
     }
 
     /**
-     * Знаходить цільове повідомлення в масиві за msgId.
-     * Патерн, який дублювався 6 разів (D-11).
+     * Find target message in array by msgId.
+     * Pattern duplicated 6 times (D-11).
      */
     function findMessageById(messages, msgId) {
       var target = null;
@@ -3507,9 +3517,9 @@
     // ─── Deep clone ───────────────────────────────────────────────────────
 
     /**
-     * Глибоке клонування об'єкта.
-     * Використовує structuredClone (сучасні браузери/Smart TV >=2020)
-     * з fallback на JSON.parse/stringify.
+     * Deep clone an object.
+     * Uses structuredClone (modern browsers/Smart TV >=2020)
+     * with JSON.parse/stringify fallback.
      */
     function deepClone(obj) {
       if (typeof structuredClone === 'function') {
@@ -3521,7 +3531,7 @@
     // ─── File name builder ────────────────────────────────────────────────
 
     /**
-     * Будує ім'я файлу для профілю.
+     * Build file name for a profile.
      */
     function buildProfileFileName(name, now) {
       return 'profile_' + name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + now + '.json';
@@ -3538,15 +3548,15 @@
     }
 
     /**
-     * sdk/topic-config.js — Конфігурація каналу та топіків
+     * sdk/topic-config.js — Channel and topic configuration
      *
-     * Усуває:
-     *   D-02 — CHANNEL_TITLE та TOPIC_NAMES тепер в одному місці.
-     *          auth.js мав власний масив TOPICS (4 елементи, без remote-cmd);
-     *          hub.js мав TOPIC_NAMES (5 елементів, з remote-cmd).
-     *          Тепер одне джерело істини: 5 топіків.
+     * Eliminates:
+     *   D-02 — CHANNEL_TITLE and TOPIC_NAMES now in one place.
+     *          auth.js had its own TOPICS array (4 items, no remote-cmd);
+     *          hub.js had TOPIC_NAMES (5 items, with remote-cmd).
+     *          Now one source of truth: 5 topics.
      *
-     * Використання:
+     * Usage:
      *   import { CHANNEL_TITLE, TOPIC_NAMES, TOPIC_STORAGE_KEYS } from '../sdk/topic-config'
      */
 
@@ -3554,7 +3564,7 @@
     var TOPIC_NAMES = ['sync-log', 'remote-cmd', 'backup', 'profiles', 'profiles-sync'];
 
     /**
-     * Мапа ім'я топіка → storage key.
+     * Map topic name → storage key.
      */
     var TOPIC_STORAGE_KEYS = {
       'sync-log': 'gramlink_sync_log_topic',
@@ -4743,7 +4753,7 @@
         console.warn('[GramLink]   no profile activated — activeProfileId did not match any cubProfile.id');
       }
 
-      // Відновлюємо gramlink_tools з правильним onBack замість Settings.update()
+      // Restore gramlink_tools with correct onBack instead of Settings.update()
       var enabledCtrl = Lampa.Controller.enabled().name;
       Lampa.Settings.create('gramlink_tools', {
         onBack: function onBack() {
@@ -4770,13 +4780,13 @@
     }
 
     /**
-     * sdk/html.js — Єдина екранізація HTML (XSS-захист)
+     * sdk/html.js — Single HTML sanitization (XSS protection)
      *
-     * Усуває:
-     *   D-03a — 4 копії escHtml з різними наборами символів
-     *   D-03b — escAttr тепер частина escHtml з { attr: true }
+     * Eliminates:
+     *   D-03a — 4 copies of escHtml with different character sets
+     *   D-03b — escAttr now part of escHtml with { attr: true }
      *
-     * Використання:
+     * Usage:
      *   import { escHtml, escAttr } from '../sdk/html'
      */
 
@@ -4796,20 +4806,20 @@
     }
 
     /**
-     * sdk/lampa.js — UI helpers для Lampa API
+     * sdk/lampa.js — UI helpers for Lampa API
      *
-     * Усуває:
-     *   D-18 — softRefresh() тепер в SDK
-     *   A-14 — Lampa.Input.edit boilerplate централізовано
-     *   A-15 — Lampa.Select.show boilerplate (prevController) централізовано
-     *   A-13 — Lampa.Storage.listener.follow з автовідпискою
+     * Eliminates:
+     *   D-18 — softRefresh() now in SDK
+     *   A-14 — Lampa.Input.edit boilerplate centralized
+     *   A-15 — Lampa.Select.show boilerplate (prevController) centralized
+     *   A-13 — Lampa.Storage.listener.follow with auto-unsubscribe
      *
-     * Використання:
+     * Usage:
      *   import { softRefresh, select, input, onStorageChange } from '../sdk/lampa'
      */
 
     /**
-     * "М'яке" оновлення поточної activity без перезавантаження сторінки.
+     * "Soft" refresh of current activity without page reload.
      */
     function softRefresh() {
       var activity = Lampa.Activity.active();
@@ -4820,21 +4830,21 @@
     }
 
     /**
-     * Обгортка для Lampa.Select.show з автоматичним toggle Controller.
-     * Скасовує boilerplate `var prevController = Lampa.Controller.enabled().name`.
+     * Wrapper for Lampa.Select.show with automatic Controller toggle.
+     * Eliminates boilerplate `var prevController = Lampa.Controller.enabled().name`.
      *
      * @param {Object} opts
      * @param {string} opts.title
      * @param {Array} opts.items
-     * @param {Function} opts.onSelect — викликається з item (cancel вже відфільтровано)
+     * @param {Function} opts.onSelect — called with item (cancel already filtered out)
      * @param {Function} [opts.onBack]
      * @param {Function} [opts.onFullDraw]
-     * @returns {string} назва попереднього контролера
+     * @returns {string} previous controller name
      */
     function select(opts) {
       var prevController = Lampa.Controller.enabled().name;
       var items = (opts.items || []).map(function (item) {
-        // Додаємо cancel-прапорець, якщо його немає
+        // Add cancel flag if missing
         if (item.cancel === undefined && item.title === 'Cancel') item.cancel = true;
         return item;
       });
@@ -4859,14 +4869,14 @@
     }
 
     /**
-     * Обгортка для Lampa.Input.edit з дефолтними параметрами.
+     * Wrapper for Lampa.Input.edit with default parameters.
      *
      * @param {Object} opts
      * @param {string} opts.title
      * @param {string} [opts.value]
      * @param {string} [opts.align='center']
-     * @param {Function} opts.onSubmit — викликається з введеним рядком
-     * @returns {string} назва попереднього контролера
+     * @param {Function} opts.onSubmit — called with input string
+     * @returns {string} previous controller name
      */
     function input(opts) {
       var prevController = Lampa.Controller.enabled().name;
@@ -4877,7 +4887,7 @@
         free: true,
         nosave: true
       }, function (val) {
-        // Якщо користувач натиснув Cancel, val може бути null/undefined
+        // If user pressed Cancel, val may be null/undefined
         if (val === null || val === undefined) {
           Lampa.Controller.toggle(prevController);
           if (opts.onCancel) opts.onCancel();
@@ -5629,9 +5639,9 @@
     }
 
     // ─── Debounced full profile compaction ──────────────────
-    // Після кожної дельти чекаємо COMPACT_DEBOUNCE_MS тиші,
-    // потім перезаписуємо профайл свіжим знімком стану.
-    // Новий девайс отримує актуальний профайл + мінімум дельт.
+    // After each delta, wait COMPACT_DEBOUNCE_MS of silence,
+    // then rewrite the profile with a fresh state snapshot.
+    // A new device gets the latest profile + minimal deltas.
 
     function scheduleCompact() {
       if (compactTimer) clearTimeout(compactTimer);
@@ -5643,7 +5653,7 @@
     function compactProfile() {
       var now = Date.now();
 
-      // Rate limit: не компактити частіше ніж раз на COMPACT_MIN_INTERVAL
+      // Rate limit: do not compact more than once per COMPACT_MIN_INTERVAL
       if (now - compactLastRun < COMPACT_MIN_INTERVAL) {
         var remaining = COMPACT_MIN_INTERVAL - (now - compactLastRun);
         if (compactTimer) clearTimeout(compactTimer);
@@ -5660,7 +5670,7 @@
       var client = GramLinkClient.getInstance();
       if (!client.isConnected()) return;
 
-      // Отримуємо поточне повідомлення профайлу — звідти ім'я, аватар, мета
+      // Get current profile message — from there name, avatar, meta
       client.getMessages(channelId, profilesTopicId, 50).then(function (msgs) {
         var target = findMessageById(msgs, activeId);
         if (!target) return;
@@ -5669,7 +5679,7 @@
         var profileAvatar = captionProfile && captionProfile.avatar || getAvatar(profileName);
         var ts = Math.floor(now / 1000);
 
-        // Зберігаємо source-метадані (наприклад cub, source_id)
+        // Save source metadata (e.g. cub, source_id)
         var fullMsg = parseProfileMessage(target.text);
         var srcMeta = {};
         if (fullMsg && fullMsg.meta && fullMsg.meta.source) {
@@ -5696,16 +5706,16 @@
         client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (newMsgId) {
           if (!newMsgId) return;
 
-          // Видалити старий профайл
+          // Delete old profile
           client.deleteMessage(channelId, parseInt(activeId, 10))["catch"](function () {});
 
-          // Оновити активне посилання
+          // Update active reference
           Lampa.Storage.set(STORAGE_ACTIVE_PROFILE, String(newMsgId));
           Lampa.Storage.set(STORAGE_ACTIVE_PROFILE_TS, String(ts));
           compactLastRun = now;
 
-          // Зсунути delta-курсор на момент компактації, щоб не replay
-          // дельти, які вже враховані в свіжому знімку
+          // Shift delta cursor to compaction time so we don't replay
+          // deltas already accounted for in the fresh snapshot
           var currentSeen = getLastDeltaSeen();
           if (ts > currentSeen) setLastDeltaSeen(ts);
         })["catch"](function (err) {
@@ -6093,15 +6103,15 @@
     /**
      * sdk/reload-prompt.js — Native-style reload prompt after plugin changes
      *
-     * Копіює патерн src/interaction/extensions/utils.js → showReload():
-     * модалка "Reboot required" з Yes/No.
+     * Copies pattern from src/interaction/extensions/utils.js → showReload():
+     * modal "Reboot required" with Yes/No.
      *
-     * Використання:
+     * Usage:
      *   import { showReloadPrompt } from '../sdk/reload-prompt'
      *   showReloadPrompt(function() { Lampa.Activity.backward() })
      */
 
-    // ponytail: точна копія native Extensions modal, щоб UX був однаковим
+    // ponytail: exact copy of native Extensions modal for consistent UX
     function showReloadPrompt(onCancel) {
       Lampa.Modal.open({
         title: '',
@@ -6126,9 +6136,9 @@
     /**
      * plugin_manager.js — GramLink Plugin Manager
      *
-     * Activity-компонента для перегляду та редагування списку плагінів профілю.
-     * Побудована на нативному патерні Lampa Component (Lampa.Scroll + .settings-folder).
-     * Публічний API PluginManager.open() збережено для settings.js та profiles.js.
+     * Activity component for viewing and editing the profile's plugin list.
+     * Built on the native Lampa Component pattern (Lampa.Scroll + .settings-folder).
+     * Public API PluginManager.open() preserved for settings.js and profiles.js.
      */
     function PluginManagerComponent(object) {
       var self = this;
@@ -6213,7 +6223,7 @@
         Lampa.Activity.backward();
       };
 
-      // ─── Рендер списку плагінів ────────────────────────────
+      // ─── Render plugin list ─────────────────────────────────
 
       function renderPluginList() {
         scroll.clear();
@@ -6235,7 +6245,7 @@
         return $('<div class="settings-folder selector gs-plugin-add">' + '<div class="settings-folder__icon">' + '<svg width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>' + '</div>' + '<div class="settings-folder__name">' + '<div>' + (Lampa.Lang.translate('gramlink_plugins_add') || 'Add plugin') + '</div>' + '</div>' + '</div>');
       }
 
-      // ─── Біндинг подій ─────────────────────────────────────
+      // ─── Event binding ──────────────────────────────────────
 
       function bindItemEvents() {
         scroll.render().find('.gs-plugin-item').on('hover:enter', function () {
@@ -6251,7 +6261,7 @@
         });
       }
 
-      // ─── Підменю для конкретного плагіна ───────────────────
+      // ─── Submenu for a specific plugin ───────────────────────
 
       function showPluginMenu(plugin, idx) {
         if (!plugin) return;
@@ -6363,7 +6373,7 @@
         });
       }
 
-      // ─── Дії ───────────────────────────────────────────────
+      // ─── Actions ────────────────────────────────────────────
 
       function doToggle(plugin, idx) {
         plugin.status = plugin.status === 1 ? 0 : 1;
@@ -6388,7 +6398,7 @@
           return;
         }
         reRender();
-        // ponytail: reload щоб Plugins._loaded синхронізувався з storage
+        // ponytail: reload so Plugins._loaded syncs with storage
         showReloadPrompt();
       }
       function doAddPlugin() {
@@ -6436,7 +6446,7 @@
                   publishDelta('add', newPlugin);
                   Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_added') || 'Plugin added');
                   reRender();
-                  // ponytail: reload щоб Plugins._loaded синхронізувався з storage
+                  // ponytail: reload so Plugins._loaded syncs with storage
                   showReloadPrompt();
                 } else {
                   saveSnapshot(function () {
@@ -6480,7 +6490,7 @@
                 });
                 Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_removed') || 'Plugin removed');
                 reRender();
-                // ponytail: reload щоб Plugins._loaded синхронізувався з storage
+                // ponytail: reload so Plugins._loaded syncs with storage
                 showReloadPrompt();
               } else {
                 saveSnapshot(function () {
@@ -6494,7 +6504,7 @@
         });
       }
 
-      // ─── Збереження snapshot для неактивного профілю ───────
+      // ─── Save snapshot for inactive profile ──────────────────
 
       function saveSnapshot(onDone) {
         var client = GramLinkClient.getInstance();
@@ -6558,7 +6568,7 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    //  Завантаження snapshot для неактивного профілю
+    //  Load snapshot for inactive profile
     // ═══════════════════════════════════════════════════════════════════
 
     function loadSnapshotThenPush(profileMsgId, profileName) {
@@ -6609,7 +6619,7 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    //  Публічний API
+    //  Public API
     // ═══════════════════════════════════════════════════════════════════
 
     var PluginManager = {
@@ -6658,12 +6668,12 @@
       var SettingsApi = Lampa.SettingsApi || Lampa.Settings;
       if (!SettingsApi || !SettingsApi.addComponent) return;
 
-      // ── Шаблони для вкладених компонентів ──────────────
+      // ── Templates for nested components ──────────────────
       Lampa.Template.add('settings_gramlink_server', '<div></div>');
       Lampa.Template.add('settings_gramlink_connection', '<div></div>');
       Lampa.Template.add('settings_gramlink_sync_page', '<div></div>');
       Lampa.Template.add('settings_gramlink_tools', '<div></div>');
-      // ── Головний компонент (перед Interface) ────────────
+      // ── Main component (before Interface) ─────────────────
       SettingsApi.addComponent({
         component: 'gramlink',
         name: Lampa.Lang.translate('gramlink_title'),
@@ -6672,10 +6682,10 @@
       });
 
       // ══════════════════════════════════════════════════════
-      //  ГОЛОВНА СТОРІНКА — навігація за розділами
+      //  MAIN PAGE — section navigation
       // ══════════════════════════════════════════════════════
 
-      // ── 1. Авторизація ──────────────────────────────────
+      // ── 1. Authorization ──────────────────────────────────
       SettingsApi.addParam({
         component: 'gramlink',
         param: {
@@ -6733,7 +6743,7 @@
         }
       });
 
-      // ── 2. Синхронізація ────────────────────────────────
+      // ── 2. Synchronization ────────────────────────────────
       SettingsApi.addParam({
         component: 'gramlink',
         param: {
@@ -6752,7 +6762,7 @@
         }
       });
 
-      // ── 3. Інструменти ──────────────────────────────────
+      // ── 3. Tools ──────────────────────────────────────────
       SettingsApi.addParam({
         component: 'gramlink',
         param: {
@@ -6771,7 +6781,7 @@
         }
       });
 
-      // ── 4. Про плагін (відкривається одразу) ────────────
+      // ── 4. About plugin (opens directly) ──────────────────
       SettingsApi.addParam({
         component: 'gramlink',
         param: {
@@ -6800,7 +6810,7 @@
         }
       });
 
-      // ── 5. Підключення ──────────────────────────────────
+      // ── 5. Connection ─────────────────────────────────────
       SettingsApi.addParam({
         component: 'gramlink',
         param: {
@@ -6821,7 +6831,7 @@
 
       // ── 6. (moved to Tools) ─────────────────────────────
       // ══════════════════════════════════════════════════════
-      //  ВКЛАДЕНА СТОРІНКА: Підключення
+      //  NESTED PAGE: Connection
       // ══════════════════════════════════════════════════════
 
       SettingsApi.addParam({
@@ -6873,7 +6883,7 @@
       });
 
       // ══════════════════════════════════════════════════════
-      //  ВКЛАДЕНА СТОРІНКА: Синхронізація
+      //  NESTED PAGE: Synchronization
       // ══════════════════════════════════════════════════════
 
       SettingsApi.addParam({
@@ -6971,7 +6981,7 @@
       });
 
       // ══════════════════════════════════════════════════════
-      //  ВКЛАДЕНА СТОРІНКА: Інструменти
+      //  NESTED PAGE: Tools
       // ══════════════════════════════════════════════════════
 
       SettingsApi.addParam({
@@ -7043,7 +7053,7 @@
       });
 
       // ═══════════════════════════════════════════════════════
-      //  ВКЛАДЕНА СТОРІНКА: Налаштування сервера
+      //  NESTED PAGE: Server Settings
       // ═══════════════════════════════════════════════════════
 
       SettingsApi.addParam({
@@ -7558,43 +7568,43 @@
     };
 
     /**
-     * sdk/manifest_schema.js — Схема backup manifest'у та категоризація ключів
+     * sdk/manifest_schema.js — Backup manifest schema and key categorization
      *
-     * Усуває:
-     *   — categorize() централізовано замість ручного фільтру по localStorage
-     *   — buildManifest() / validateManifest() замість ручного JSON.stringify
-     *   — DEVICE_KEY_PREFIXES визначено в одному місці
+     * Eliminates:
+     *   — categorize() centralized instead of manual localStorage filtering
+     *   — buildManifest() / validateManifest() instead of manual JSON.stringify
+     *   — DEVICE_KEY_PREFIXES defined in one place
      *
-     * Використання:
+     * Usage:
      *   import { categorize, buildManifest, validateManifest, DEVICE_KEY_PREFIXES } from '../sdk/manifest_schema'
      */
 
     /**
-     * Префікси ключів, які належать до device_state (налаштування пристрою).
-     * Синхронізовано з profiles.js:DEVICE_KEY_PREFIXES.
+     * Key prefixes that belong to device_state (device settings).
+     * Synced with profiles.js:DEVICE_KEY_PREFIXES.
      */
     var DEVICE_KEY_PREFIXES = ['player', 'player_', 'subtitles_', 'video_quality_', 'navigation_', 'interface_', 'background_', 'glass_', 'card_', 'poster_', 'animation_', 'scroll_', 'request_caching', 'cache_images', 'mask', 'light_version', 'menu_always', 'black_style', 'gramlink_heartbeat', 'gramlink_broadcast'];
 
     /**
-     * Патерни для виключення кешів з бекапу.
+     * Patterns for excluding caches from backup.
      */
     var CACHE_PATTERNS = [/_cache$/, /_line_cache/, /_ts$/, /_line$/];
 
     /**
-     * Конкретні ключі, які треба виключити (не регенеруються патернами).
+     * Specific keys to exclude (not covered by patterns).
      */
     var EXCLUDE_KEYS_SET = {
       'GramJs:apiCache': true
     };
 
     /**
-     * Категоризує ключ localStorage.
+     * Categorizes a localStorage key.
      *
      * @param {string} key
      * @returns {string} 'core' | 'device_state' | 'cache_exclude' | 'gramlink_meta'
      */
     function categorize(key) {
-      // Ключі GramLink не бекапимо (за винятком heartbeat/broadcast — device_state)
+      // GramLink keys are not backed up (except heartbeat/broadcast — device_state)
       if (key.indexOf('gramlink_') === 0) {
         var isDevice = DEVICE_KEY_PREFIXES.some(function (p) {
           return key === p || key.indexOf(p) === 0;
@@ -7603,36 +7613,36 @@
         return 'device_state';
       }
 
-      // Явно виключені ключі
+      // Explicitly excluded keys
       if (EXCLUDE_KEYS_SET[key]) return 'cache_exclude';
 
-      // Перевірка патернів кешу
+      // Check cache patterns
       for (var i = 0; i < CACHE_PATTERNS.length; i++) {
         if (CACHE_PATTERNS[i].test(key)) return 'cache_exclude';
       }
 
-      // Перевірка пристроєвих префіксів
+      // Check device prefixes
       for (var j = 0; j < DEVICE_KEY_PREFIXES.length; j++) {
         var p = DEVICE_KEY_PREFIXES[j];
         if (key === p || key.indexOf(p) === 0) return 'device_state';
       }
 
-      // Все інше — core
+      // Everything else — core
       return 'core';
     }
 
     /**
-     * Збирає manifest з метаданих та списку чанків.
+     * Builds manifest from metadata and chunk list.
      *
      * @param {Object} meta
      * @param {number} meta.created_at — Unix timestamp
      * @param {string} meta.device_id
      * @param {string} meta.device_name
-     * @param {Array} chunks — масив чанків
+     * @param {Array} chunks — chunk array
      * @param {string} chunks[].id — "chunk_000"
      * @param {string} chunks[].category — "core" | "device_state"
-     * @param {string[]} chunks[].keys — список ключів у чанку
-     * @param {number} chunks[].raw_bytes — розмір до стиснення
+     * @param {string[]} chunks[].keys — list of keys in chunk
+     * @param {number} chunks[].raw_bytes — size before compression
      * @param {string} chunks[].file_name — "chunk_000.json"
      * @returns {Object} manifest
      */
@@ -7669,11 +7679,11 @@
     }
 
     /**
-     * Валідує структуру manifest.
+     * Validates manifest structure.
      * @param {Object} m
-     * @param {string} [context] — для повідомлення помилки
-     * @returns {boolean} true якщо валідний
-     * @throws {Error} якщо невалідний
+     * @param {string} [context] — for error message
+     * @returns {boolean} true if valid
+     * @throws {Error} if invalid
      */
     function validateManifest(m) {
       if (!m || _typeof(m) !== 'object') throw new Error('Manifest is not an object');
@@ -7684,14 +7694,14 @@
       return true;
     }
 
-    var CHUNK_SIZE = 64 * 1024; // 64 KB — безпечний розмір для старих девайсів
+    var CHUNK_SIZE = 64 * 1024; // 64 KB — safe size for older devices
 
     /**
-     * Ітерує localStorage, групує ключі за категоріями.
+     * Iterates localStorage, groups keys by category.
      *
      * @returns {{ core: Object, device_state: Object, cache_exclude: number }}
      *   core / device_state — { key: rawValueString, ... }
-     *   cache_exclude — кількість виключених ключів
+     *   cache_exclude — count of excluded keys
      */
     function collectCategorized() {
       var core = {};
@@ -7717,12 +7727,12 @@
     }
 
     /**
-     * Розбиває зібрані дані на чанки по CHUNK_SIZE байт.
-     * Кожен чанк — це об'єкт { category, keys, raw_bytes }.
-     * Великі ключі (> CHUNK_SIZE) отримують окремий чанк.
+     * Splits collected data into chunks of CHUNK_SIZE bytes.
+     * Each chunk is an object { category, keys, raw_bytes }.
+     * Large keys (> CHUNK_SIZE) get their own chunk.
      *
      * @param {{ core: Object, device_state: Object }} collected
-     * @param {number} [chunkSize] — розмір чанка в байтах (за замовчуванням 64 KB)
+     * @param {number} [chunkSize] — chunk size in bytes (default 64 KB)
      * @returns {Array<{ id: string, category: string, keys: Object, raw_bytes: number, file_name: string }>}
      */
     function buildChunks(collected, chunkSize) {
@@ -7751,13 +7761,13 @@
           var key = keyEntries[ki];
           var value = keys[key];
 
-          // Розмір одного entry: "key":value, + possible comma
+          // Size of one entry: "key":value, + possible comma
           var estimatedSize = JSON.stringify(key).length + 2 + value.length;
           if (ki > 0) estimatedSize += 1; // comma before
 
-          // Якщо один ключ більший за chunkSize — він отримує свій чанк
+          // If a single key is larger than chunkSize — it gets its own chunk
           if (estimatedSize > chunkSize) {
-            // Фіналізуємо поточний чанк якщо там щось є
+            // Finalize current chunk if it has content
             if (Object.keys(currentChunk.keys).length > 0) {
               chunks.push(finalizeChunk(currentChunk, category, nextChunkId()));
               currentChunk = {
@@ -7765,7 +7775,7 @@
               };
               currentSize = 2;
             }
-            // Великий ключ — окремий чанк
+            // Large key — separate chunk
             var bigChunk = {
               keys: {}
             };
@@ -7775,7 +7785,7 @@
             continue;
           }
 
-          // Якщо не влазить у поточний чанк — фіналізуємо його і починаємо новий
+          // If it doesn't fit in current chunk — finalize it and start a new one
           if (currentSize + estimatedSize > chunkSize && Object.keys(currentChunk.keys).length > 0) {
             chunks.push(finalizeChunk(currentChunk, category, nextChunkId()));
             currentChunk = {
@@ -7787,7 +7797,7 @@
           currentSize += estimatedSize;
         }
 
-        // Фіналізуємо останній чанк категорії
+        // Finalize the last chunk of the category
         if (Object.keys(currentChunk.keys).length > 0) {
           chunks.push(finalizeChunk(currentChunk, category, nextChunkId()));
         }
@@ -7804,16 +7814,16 @@
         category: category,
         keys: Object.keys(data.keys),
         keysData: data.keys,
-        // ← актуальні key-value пари, для JSON.stringify в hub.js
+        // ← actual key-value pairs, for JSON.stringify in hub.js
         raw_bytes: JSON.stringify(data).length,
         file_name: id + '.json'
       };
     }
 
     /**
-     * Будує payload для exportBackup.
+     * Builds payload for exportBackup.
      *
-     * @param {{ core: Object, device_state: Object }} collected — з collectCategorized()
+     * @param {{ core: Object, device_state: Object }} collected — from collectCategorized()
      * @param {Object} meta — { device_id, device_name }
      * @param {number} [chunkSize]
      * @returns {{ chunks: Array, manifest: Object, backupName: string }}
@@ -7843,12 +7853,12 @@
     }
 
     /**
-     * Отримує список backup-сесій з теми бекапу.
+     * Gets list of backup sessions from the backup topic.
      *
      * @param {Object} c — Client.getInstance()
      * @param {number} ch — channel ID
      * @param {number} bt — backup topic ID
-     * @returns {Promise<Array>} масив сесій:
+     * @returns {Promise<Array>} array of sessions:
      *   [{ ts, label, deviceInfo, manifestFile, sessionPrefix, files }]
      */
     function listBackupSessions(c, ch, bt) {
@@ -7860,7 +7870,7 @@
           var ts = parseInt(m[1], 10);
           var isFinal = f.fileName.indexOf('_final') >= 0;
 
-          // Парсимо device_name з caption
+          // Parse device_name from caption
           var deviceInfo = '';
           try {
             if (f.text) {
@@ -7869,7 +7879,7 @@
             }
           } catch (e) {}
 
-          // Беремо найновіший manifest для цього ts (prefer _final)
+          // Take the newest manifest for this ts (prefer _final)
           if (!sessions[ts] || isFinal) {
             sessions[ts] = {
               ts: ts,
@@ -7889,10 +7899,10 @@
     }
 
     /**
-     * Завантажує та валідує manifest.
+     * Downloads and validates manifest.
      *
      * @param {Object} c — Client.getInstance()
-     * @param {Object} session — сесія з listBackupSessions
+     * @param {Object} session — session from listBackupSessions
      * @returns {Promise<Object>} parsed manifest
      */
     function downloadManifest(c, session) {
@@ -7905,16 +7915,16 @@
     }
 
     /**
-     * Знаходить файли чанків для заданої сесії та manifest.
+     * Finds chunk files for a given session and manifest.
      *
-     * @param {Object} session — сесія з listBackupSessions
+     * @param {Object} session — session from listBackupSessions
      * @param {Object} manifest — parsed manifest
      * @returns {Array<{ file: Object, chunkMeta: Object }>}
      */
     function findChunkFiles(session, manifest) {
       var results = [];
       manifest.chunks.forEach(function (ch) {
-        // ch.file_name вже містить префікс "backup_<ts>/" (див. buildExportPayload)
+        // ch.file_name already has prefix "backup_<ts>/" (see buildExportPayload)
         var expectedName = ch.file_name;
         var found = null;
         for (var i = 0; i < session.files.length; i++) {
@@ -7936,9 +7946,9 @@
     }
 
     /**
-     * Парсить вміст чанка.
+     * Parses chunk content.
      *
-     * @param {string} jsonStr — сирий JSON (downloadFile результат)
+     * @param {string} jsonStr — raw JSON (downloadFile result)
      * @returns {Object} { category, keys }
      */
     function parseChunk(jsonStr) {
@@ -8053,7 +8063,7 @@
         });
         Lampa.Controller.toggle('content');
         init();
-        // ponytail: Native→Hub — підхопити зміни з native Extensions/Settings
+        // ponytail: Native→Hub — pick up changes from native Extensions/Settings
         if (!self.__pluginStorageHandler) {
           self.__pluginStorageHandler = function (e) {
             if (e && e.key === 'plugins' && activeTab === 'plugins') {
@@ -8616,9 +8626,9 @@
         }, 'all');
         Lampa.Noty.show((plugins[idx].name || 'Plugin') + ': ' + (plugins[idx].status === 1 ? 'on' : 'off'));
         renderPlugins();
-        // ponytail: reload щоб Plugins._loaded синхронізувався з storage
+        // ponytail: reload so Plugins._loaded syncs with storage
         showReloadPrompt(function () {
-          // ponytail: після "No" — відновити фокус, бо renderPlugins() замінив DOM і старий last втрачено
+          // ponytail: after "No" — restore focus, renderPlugins() replaced DOM so old last is lost
           focusFirst();
         });
       }
@@ -8831,7 +8841,7 @@
               if (item.cancel || !item._session) return;
               var session = item._session;
 
-              // Підтвердження через другий Select
+              // Confirmation via a second Select
               select({
                 title: Lampa.Lang.translate('gramlink_backup_restore_title') || 'Restore backup?',
                 items: [{
@@ -8851,17 +8861,17 @@
                   if (confItem.action !== 'restore') return;
                   Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_downloading') || 'Restoring...');
 
-                  // Завантажити manifest
+                  // Download manifest
                   downloadManifest(c, session).then(function (manifest) {
-                    // Знайти файли чанків
+                    // Find chunk files
                     var chunkFiles = findChunkFiles(session, manifest);
                     if (!chunkFiles.length) {
                       Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_invalid') || 'No chunks found');
                       return;
                     }
 
-                    // Safety snapshot (простий: зберігаємо грамлінк-ключі)
-                    // Послідовне завантаження та застосування чанків
+                    // Safety snapshot (simple: save gramlink keys)
+                    // Sequential download and application of chunks
                     var restoreSeq = Promise.resolve();
                     var appliedCount = 0;
                     chunkFiles.forEach(function (cf, idx) {
@@ -8884,11 +8894,11 @@
                     });
                     restoreSeq.then(function () {
                       Lampa.Noty.show((Lampa.Lang.translate('gramlink_backup_restored') || 'Restored') + ' (' + appliedCount + '/' + chunkFiles.length + ')');
-                      // Сповістити delta-poll про зміну курсора
+                      // Notify delta-poll about cursor change
                       Lampa.Listener.send('gramlink_backup_restored', {
                         restored_at: manifest.meta.created_at
                       });
-                      // М'яке оновлення з невеличкою затримкою, щоб Noty встиг відобразитись
+                      // Soft refresh with small delay so Noty has time to display
                       setTimeout(function () {
                         softRefresh();
                       }, 600);
@@ -9347,8 +9357,8 @@
 
     function setupBackupRestoredListener() {
       Lampa.Listener.follow('gramlink_backup_restored', function (e) {
-        // Після відновлення бекапу — пересунути delta cursor,
-        // щоб не прийняти старі deltas як нові
+        // After backup restore — advance delta cursor,
+        // so old deltas are not accepted as new
         if (e && e.restored_at) {
           Lampa.Storage.set('gramlink_last_delta_seen', String(e.restored_at));
         }
