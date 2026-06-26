@@ -273,9 +273,9 @@
       "desc_uk": "GramLink — це плагін для Lampa, який синхронізує твої закладки, таймкоди перегляду та плагіни між пристроями через твій власний Telegram-акаунт. Жодних сторонніх серверів — всі дані зберігаються у твоєму приватному каналі Telegram.",
       "desc_en": "GramLink is a Lampa plugin that syncs your bookmarks, watch progress, and plugins across devices through your own Telegram account. No third-party servers — all data is stored in your private Telegram channel.",
       "desc_ru": "GramLink — это плагин для Lampa, который синхронизирует твои закладки, таймкоды просмотра и плагины между устройствами через твой собственный Telegram-аккаунт. Никаких сторонних серверов — все данные хранятся в твоём приватном канале Telegram.",
-      "full_uk": "Повна інструкція: <a href=\"https://pages.markdown.space/lampame/gluk\">pages.markdown.space/lampame/gluk</a>",
-      "full_en": "Full user guide: <a href=\"https://pages.markdown.space/lampame/gl\">pages.markdown.space/lampame/gl</a>",
-      "full_ru": "Полная инструкция: <a href=\"https://pages.markdown.space/lampame/glru\">pages.markdown.space/lampame/glru</a>",
+      "full_uk": "Повна інструкція: https://pages.markdown.space/lampame/gluk",
+      "full_en": "Full user guide: https://pages.markdown.space/lampame/gl",
+      "full_ru": "Полная инструкция: https://pages.markdown.space/lampame/glru",
       "file": "GramLink/GramLink.js",
       "langs": [
         "en",
