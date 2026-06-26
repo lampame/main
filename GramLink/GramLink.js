@@ -1190,6 +1190,7 @@
       PROFILES_CACHE: 'gramlink_profiles_cache',
       PLUGIN_REGISTRY: 'gramlink_plugin_registry',
       LAST_DELTA_SEEN: 'gramlink_last_delta_seen',
+      PROFILE_PLUGIN_URLS: 'gramlink_profile_plugin_urls',
       // Settings
       AVATAR_STYLE: 'gramlink_avatar_style',
       HEARTBEAT: 'gramlink_heartbeat',
@@ -2316,7 +2317,7 @@
       }
     };
 
-    var VERSION = '0.0.8';
+    var VERSION = '0.0.9';
     var instance = null;
     var GramLinkClient = /*#__PURE__*/function () {
       function GramLinkClient() {
@@ -3538,6 +3539,7 @@
     }];
     var authCancelFlag = false;
     var tgClient = null; // Temporary GramJS client used during auth flow
+    var passwordPromptActive = false; // Bug 1: guard against duplicate 2FA UI
 
     /**
      * Cancel the current auth flow and dispose of the temporary client.
@@ -3552,6 +3554,7 @@
      */
     function cancelAuth() {
       authCancelFlag = true;
+      passwordPromptActive = false;
       tgClient = null;
     }
 
@@ -3838,6 +3841,13 @@
               // Returns a Promise<string> — GramJS waits for resolution,
               // then computes SRP and calls auth.CheckPassword.
               return new Promise(function (resolve, reject) {
+                // Bug 1: prevent duplicate UI if GramJS retries password callback
+                if (passwordPromptActive) {
+                  reject(new Error('Password prompt already active'));
+                  return;
+                }
+                passwordPromptActive = true;
+
                 // Close QR modal briefly to show Input.edit
                 Lampa.Modal.close();
                 Lampa.Input.edit({
@@ -3846,6 +3856,7 @@
                   free: true,
                   nosave: true
                 }, function (val) {
+                  passwordPromptActive = false;
                   if (val && String(val).trim()) {
                     // Re-open QR modal for final status
                     Lampa.Modal.open({
@@ -3875,8 +3886,16 @@
             onError: function onError(err) {
               console.error('GramLink', 'Auth error:', err && (err.message || err.errorMessage));
               if (authCancelFlag) return true;
-              Lampa.Noty.show('GramLink auth error: ' + (err.message || err.errorMessage || 'unknown error'));
-              return false; // Don't stop the auth flow
+              var errMsg = err && (err.message || err.errorMessage || '');
+              // Bug 1: stop retry on password errors — prevents infinite loop + UI duplication
+              if (errMsg.indexOf('PASSWORD') !== -1 || errMsg.indexOf('password') !== -1) {
+                passwordPromptActive = false;
+                authCancelFlag = true; // Suppress duplicate Noty from _onAuthError
+                Lampa.Noty.show('Wrong password: ' + errMsg);
+                return true; // Stop retry
+              }
+              Lampa.Noty.show('GramLink auth error: ' + errMsg);
+              return false; // Don't stop the auth flow for other errors
             }
           });
         });
@@ -4099,7 +4118,11 @@
                       },
                       onError: function onError(pwErr) {
                         Lampa.Noty.show('2FA error: ' + (pwErr.message || ''));
-                        return false;
+                        // Bug 2: return true to stop retry — false causes infinite loop
+                        cancelAuth();
+                        Lampa.Modal.close();
+                        Lampa.Controller.toggle(enabledCtrl);
+                        return true;
                       }
                     });
                   });
@@ -4741,6 +4764,7 @@
     var STORAGE_PROFILES_SYNC_TOPIC$1 = STORAGE_KEYS.PROFILES_SYNC;
     var STORAGE_PROFILES_CACHE = STORAGE_KEYS.PROFILES_CACHE;
     var STORAGE_PLUGIN_REGISTRY = STORAGE_KEYS.PLUGIN_REGISTRY;
+    var STORAGE_PROFILE_PLUGIN_URLS = STORAGE_KEYS.PROFILE_PLUGIN_URLS;
 
     // ─── Sync Key Manifest ──────────────────────────────────
 
@@ -5097,37 +5121,101 @@
         Lampa.Storage.set('file_view', data.timeline);
       }
 
-      // ── Plugins (user-layer registry + device-layer status/custom) ──
+      // ── Plugins (smart merge: respects user removals, accepts cross-device additions) ──
       if (data.plugins) {
-        var mergedPlugins = data.plugins.map(function (p) {
-          var deviceStatus = override && override.plugins_status && override.plugins_status[p.url];
-          var deviceCustom = override && override.plugins_custom && override.plugins_custom[p.url];
-          return {
-            url: p.url,
-            name: p.name,
-            status: deviceStatus !== undefined ? deviceStatus : p.status,
-            custom: deviceCustom !== undefined ? deviceCustom : p.custom
-          };
-        });
+        // Build profile plugin URL list from current profile data
+        var profileUrls = [];
+        for (var pi = 0; pi < data.plugins.length; pi++) {
+          var pu = data.plugins[pi].url;
+          if (pu) profileUrls.push(pu);
+        }
 
-        // Safeguard: never lose GramLink when switching profiles
-        // Merge in any locally installed plugins NOT in the profile data
+        // Read previously-saved profile plugin URLs (from last activation on this device)
+        var knownProfileUrls;
+        try {
+          knownProfileUrls = JSON.parse(Lampa.Storage.get(STORAGE_PROFILE_PLUGIN_URLS, '[]')) || [];
+        } catch (e) {
+          knownProfileUrls = [];
+        }
+        var knownMap = {};
+        for (var ki = 0; ki < knownProfileUrls.length; ki++) {
+          knownMap[knownProfileUrls[ki]] = true;
+        }
+
+        // Save current profile URLs for next activation
+        Lampa.Storage.set(STORAGE_PROFILE_PLUGIN_URLS, JSON.stringify(profileUrls));
+
+        // Start with local plugins
         var localPlugins = collectPlugins();
+        var localByUrl = {};
+        for (var li = 0; li < localPlugins.length; li++) {
+          localByUrl[localPlugins[li].url] = localPlugins[li];
+        }
+
+        // Build profile URL → plugin map for fast lookup
+        var profileByUrl = {};
+        for (var pi2 = 0; pi2 < data.plugins.length; pi2++) {
+          profileByUrl[data.plugins[pi2].url] = data.plugins[pi2];
+        }
+
+        // Merge: keep existing locals, override if profile has it, add new profile plugins
+        var mergedPlugins = [];
         var mergedUrls = {};
-        mergedPlugins.forEach(function (p) {
-          mergedUrls[p.url] = true;
-        });
-        localPlugins.forEach(function (lp) {
-          if (!mergedUrls[lp.url]) {
+
+        // 1. Process existing local plugins — apply profile overrides where URL matches
+        for (var li2 = 0; li2 < localPlugins.length; li2++) {
+          var lp = localPlugins[li2];
+          var profileMatch = profileByUrl[lp.url];
+          if (profileMatch) {
+            var ds = override && override.plugins_status && override.plugins_status[lp.url];
+            var dc = override && override.plugins_custom && override.plugins_custom[lp.url];
+            mergedPlugins.push({
+              url: lp.url,
+              name: profileMatch.name || lp.name,
+              status: ds !== undefined ? ds : profileMatch.status,
+              custom: dc !== undefined ? dc : profileMatch.custom || lp.custom
+            });
+          } else {
             mergedPlugins.push({
               url: lp.url,
               name: lp.name,
               status: lp.status !== undefined ? lp.status : 1,
               custom: lp.custom
             });
-            mergedUrls[lp.url] = true;
           }
-        });
+          mergedUrls[lp.url] = true;
+        }
+
+        // 2. Add NEW profile plugins that don't exist locally (cross-device additions)
+        for (var pi3 = 0; pi3 < data.plugins.length; pi3++) {
+          var pp = data.plugins[pi3];
+          if (!pp.url) continue;
+          // Skip if already in local list (already handled above)
+          if (mergedUrls[pp.url]) continue;
+          // Skip if "known" (was in previous profile activation) but user removed locally
+          if (knownMap[pp.url] && !localByUrl[pp.url]) continue;
+          // NEW plugin from profile — add it
+          var ds2 = override && override.plugins_status && override.plugins_status[pp.url];
+          var dc2 = override && override.plugins_custom && override.plugins_custom[pp.url];
+          mergedPlugins.push({
+            url: pp.url,
+            name: pp.name,
+            status: ds2 !== undefined ? ds2 : pp.status,
+            custom: dc2 !== undefined ? dc2 : pp.custom
+          });
+          mergedUrls[pp.url] = true;
+        }
+
+        // 3. Safeguard: GramLink must always be present
+        var gramlinkUrl = './plugins/GramLink.js';
+        if (!mergedUrls[gramlinkUrl]) {
+          mergedPlugins.push({
+            url: gramlinkUrl,
+            name: 'GramLink',
+            status: 1,
+            custom: {}
+          });
+        }
         Lampa.Storage.set('plugins', mergedPlugins);
       }
 
@@ -5361,6 +5449,12 @@
       return result;
     }
 
+    // ─── Profile compaction state ───────────────────────────
+    var compactTimer = null; // debounce timer handle
+    var compactLastRun = 0; // timestamp of last successful compaction
+    var COMPACT_DEBOUNCE_MS = 30000; // wait 30s after last change before compact
+    var COMPACT_MIN_INTERVAL = 60000; // at most once per 60s
+
     // ─── Delta publisher (called from outside) ──────────────
 
     function publishLocalDelta(profilesSyncTopicId, subtype, payload) {
@@ -5369,6 +5463,7 @@
       var activeProfileId = Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, '');
       if (!activeProfileId) return;
       client.publishDelta(profilesSyncTopicId, subtype, activeProfileId, payload);
+      scheduleCompact();
     }
 
     // Publish a device-targeted delta (includes target_device_id for filtering)
@@ -5389,6 +5484,93 @@
         payload: payload || {}
       });
       client.publishRaw(profilesSyncTopicId, msg, true);
+      scheduleCompact();
+    }
+
+    // ─── Debounced full profile compaction ──────────────────
+    // Після кожної дельти чекаємо COMPACT_DEBOUNCE_MS тиші,
+    // потім перезаписуємо профайл свіжим знімком стану.
+    // Новий девайс отримує актуальний профайл + мінімум дельт.
+
+    function scheduleCompact() {
+      if (compactTimer) clearTimeout(compactTimer);
+      compactTimer = setTimeout(function () {
+        compactTimer = null;
+        compactProfile();
+      }, COMPACT_DEBOUNCE_MS);
+    }
+    function compactProfile() {
+      var now = Date.now();
+
+      // Rate limit: не компактити частіше ніж раз на COMPACT_MIN_INTERVAL
+      if (now - compactLastRun < COMPACT_MIN_INTERVAL) {
+        var remaining = COMPACT_MIN_INTERVAL - (now - compactLastRun);
+        if (compactTimer) clearTimeout(compactTimer);
+        compactTimer = setTimeout(function () {
+          compactTimer = null;
+          compactProfile();
+        }, remaining);
+        return;
+      }
+      var profilesTopicId = Lampa.Storage.get(STORAGE_PROFILES_TOPIC$1, '');
+      var activeId = Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, '');
+      var channelId = getChannelId();
+      if (!profilesTopicId || !activeId || !channelId) return;
+      var client = GramLinkClient.getInstance();
+      if (!client.isConnected()) return;
+
+      // Отримуємо поточне повідомлення профайлу — звідти ім'я, аватар, мета
+      client.getMessages(channelId, profilesTopicId, 50).then(function (msgs) {
+        var target = findMessageById(msgs, activeId);
+        if (!target) return;
+        var captionProfile = parseCaption(target.text);
+        var profileName = captionProfile && captionProfile.name || Lampa.Storage.get(STORAGE_KEYS.ACTIVE_PROFILE_NAME, '') || 'Unnamed';
+        var profileAvatar = captionProfile && captionProfile.avatar || getAvatar(profileName);
+        var ts = Math.floor(now / 1000);
+
+        // Зберігаємо source-метадані (наприклад cub, source_id)
+        var fullMsg = parseProfileMessage(target.text);
+        var srcMeta = {};
+        if (fullMsg && fullMsg.meta && fullMsg.meta.source) {
+          srcMeta.source = fullMsg.meta.source;
+          srcMeta.source_id = fullMsg.meta.source_id;
+        }
+        var caption = buildCaption({
+          name: profileName,
+          avatar: profileAvatar,
+          updated: ts
+        }, srcMeta);
+        var fileData = buildFileData({
+          name: profileName,
+          avatar: profileAvatar,
+          bookmarks: {
+            favorite: collectFavorite()
+          },
+          timeline: collectTimeline(),
+          plugins: collectPlugins(),
+          settings: collectSettings()
+        });
+        var fileJson = JSON.stringify(fileData, null, 2);
+        var fileName = buildProfileFileName(profileName, ts);
+        client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (newMsgId) {
+          if (!newMsgId) return;
+
+          // Видалити старий профайл
+          client.deleteMessage(channelId, parseInt(activeId, 10))["catch"](function () {});
+
+          // Оновити активне посилання
+          Lampa.Storage.set(STORAGE_ACTIVE_PROFILE, String(newMsgId));
+          Lampa.Storage.set(STORAGE_ACTIVE_PROFILE_TS, String(ts));
+          compactLastRun = now;
+
+          // Зсунути delta-курсор на момент компактації, щоб не replay
+          // дельти, які вже враховані в свіжому знімку
+          var currentSeen = getLastDeltaSeen();
+          if (ts > currentSeen) setLastDeltaSeen(ts);
+        })["catch"](function (err) {
+          console.warn('GramLink', 'Compact profile failed:', err && err.message);
+        });
+      })["catch"](function () {});
     }
 
     // ─── Startup auto-activation ────────────────────────────
@@ -5414,37 +5596,99 @@
           }
 
           // ── Start auto-activation with device overlays ──
-          // ponytail: merge local plugins not in profile — same safeguard as applyProfileData()
           if (data.plugins) {
             var deviceId = getDeviceId();
             var override = data.device_overrides && data.device_overrides[deviceId];
-            var merged = data.plugins.map(function (p) {
-              var ds = override && override.plugins_status && override.plugins_status[p.url];
-              var dc = override && override.plugins_custom && override.plugins_custom[p.url];
-              return {
-                url: p.url,
-                name: p.name,
-                status: ds !== undefined ? ds : p.status,
-                custom: dc !== undefined ? dc : p.custom
-              };
-            });
-            // Merge in locally installed plugins NOT in the profile data
+
+            // Build profile plugin URL list from current profile data
+            var profileUrls = [];
+            for (var pi = 0; pi < data.plugins.length; pi++) {
+              var pu = data.plugins[pi].url;
+              if (pu) profileUrls.push(pu);
+            }
+
+            // Read previously-saved profile plugin URLs
+            var knownProfileUrls;
+            try {
+              knownProfileUrls = JSON.parse(Lampa.Storage.get(STORAGE_PROFILE_PLUGIN_URLS, '[]')) || [];
+            } catch (e) {
+              knownProfileUrls = [];
+            }
+            var knownMap = {};
+            for (var ki = 0; ki < knownProfileUrls.length; ki++) {
+              knownMap[knownProfileUrls[ki]] = true;
+            }
+
+            // Save current profile URLs for next activation
+            Lampa.Storage.set(STORAGE_PROFILE_PLUGIN_URLS, JSON.stringify(profileUrls));
+
+            // Start with local plugins
             var localPlugins = collectPlugins();
+            var localByUrl = {};
+            for (var li = 0; li < localPlugins.length; li++) {
+              localByUrl[localPlugins[li].url] = localPlugins[li];
+            }
+
+            // Profile URL → plugin map
+            var profileByUrl = {};
+            for (var pi2 = 0; pi2 < data.plugins.length; pi2++) {
+              profileByUrl[data.plugins[pi2].url] = data.plugins[pi2];
+            }
+            var merged = [];
             var mergedUrls = {};
-            merged.forEach(function (p) {
-              mergedUrls[p.url] = true;
-            });
-            localPlugins.forEach(function (lp) {
-              if (!mergedUrls[lp.url]) {
+
+            // 1. Existing local plugins — apply profile overrides
+            for (var li2 = 0; li2 < localPlugins.length; li2++) {
+              var lp = localPlugins[li2];
+              var profileMatch = profileByUrl[lp.url];
+              if (profileMatch) {
+                var ds = override && override.plugins_status && override.plugins_status[lp.url];
+                var dc = override && override.plugins_custom && override.plugins_custom[lp.url];
+                merged.push({
+                  url: lp.url,
+                  name: profileMatch.name || lp.name,
+                  status: ds !== undefined ? ds : profileMatch.status,
+                  custom: dc !== undefined ? dc : profileMatch.custom || lp.custom
+                });
+              } else {
                 merged.push({
                   url: lp.url,
                   name: lp.name,
                   status: lp.status !== undefined ? lp.status : 1,
                   custom: lp.custom
                 });
-                mergedUrls[lp.url] = true;
               }
-            });
+              mergedUrls[lp.url] = true;
+            }
+
+            // 2. NEW profile plugins (cross-device additions)
+            for (var pi3 = 0; pi3 < data.plugins.length; pi3++) {
+              var pp = data.plugins[pi3];
+              if (!pp.url) continue;
+              if (mergedUrls[pp.url]) continue;
+              // Known but user removed locally → skip
+              if (knownMap[pp.url] && !localByUrl[pp.url]) continue;
+              var ds2 = override && override.plugins_status && override.plugins_status[pp.url];
+              var dc2 = override && override.plugins_custom && override.plugins_custom[pp.url];
+              merged.push({
+                url: pp.url,
+                name: pp.name,
+                status: ds2 !== undefined ? ds2 : pp.status,
+                custom: dc2 !== undefined ? dc2 : pp.custom
+              });
+              mergedUrls[pp.url] = true;
+            }
+
+            // 3. Safeguard: GramLink must always be present
+            var gramlinkUrl = './plugins/GramLink.js';
+            if (!mergedUrls[gramlinkUrl]) {
+              merged.push({
+                url: gramlinkUrl,
+                name: 'GramLink',
+                status: 1,
+                custom: {}
+              });
+            }
             Lampa.Storage.set('plugins', merged);
           }
           if (data.settings) {
@@ -7584,6 +7828,7 @@
       var scroll = null;
       var last = null;
       var activeTab = 'profiles';
+      var _initializing = false; // Bug 3: guard against premature "No profiles" render
       var TABS = ['profiles', 'devices', 'plugins'];
       var tabIdx = 0;
 
@@ -7606,8 +7851,10 @@
         self.html = $('<div class="gramlink-activity"></div>');
         self.html.append(scroll.render());
 
-        // Initial render fills scroll body
-        renderProfiles();
+        // Bug 3: show loading placeholder — actual render after init() completes
+        _initializing = true;
+        var body = scroll.body(true);
+        body.innerHTML = '<div style="padding:2em;text-align:center;color:#8D8D8D">' + (Lampa.Lang.translate('gramlink_loading') || "Loading\u2026") + '</div>';
         return self.render();
       };
       self.render = function () {
@@ -7785,6 +8032,13 @@
         // Without wrapper, it would nuke the tab bar → crash.
         var $wrap = $('<div class="gramlink-profiles-wrap"></div>');
         body.appendChild($wrap[0]);
+
+        // Bug 3: show loading if still initializing topics
+        if (_initializing) {
+          $wrap.html('<div style="padding:2em;text-align:center;color:#8D8D8D">' + (Lampa.Lang.translate('gramlink_loading') || "Loading\u2026") + '</div>');
+          focusFirst();
+          return;
+        }
         if (!currentProfilesTopicId) {
           $wrap.html('<div style="padding:2em;text-align:center;color:#8D8D8D">' + (Lampa.Lang.translate('gramlink_no_profiles') || 'No profiles') + '</div>');
           focusFirst();
@@ -8051,8 +8305,9 @@
             plugins[idx].name = newName.trim();
             savePlugins(plugins);
             renderPlugins();
-            // ponytail: name change visible immediately in Hub, needs reload for native Extensions
-            showReloadPrompt();
+            showReloadPrompt(function () {
+              focusFirst();
+            });
           }
         });
       }
@@ -8072,7 +8327,9 @@
             plugins[idx].url = newUrl;
             savePlugins(plugins);
             renderPlugins();
-            showReloadPrompt();
+            showReloadPrompt(function () {
+              focusFirst();
+            });
           }
         });
       }
@@ -8139,7 +8396,10 @@
         Lampa.Noty.show((plugins[idx].name || 'Plugin') + ': ' + (plugins[idx].status === 1 ? 'on' : 'off'));
         renderPlugins();
         // ponytail: reload щоб Plugins._loaded синхронізувався з storage
-        showReloadPrompt();
+        showReloadPrompt(function () {
+          // ponytail: після "No" — відновити фокус, бо renderPlugins() замінив DOM і старий last втрачено
+          focusFirst();
+        });
       }
       function doRemove(idx) {
         var plugins = getPlugins();
@@ -8155,8 +8415,9 @@
         });
         Lampa.Noty.show(Lampa.Lang.translate('gramlink_plugins_removed') || 'Plugin removed');
         renderPlugins();
-        // ponytail: reload щоб Plugins._loaded синхронізувався з storage
-        showReloadPrompt();
+        showReloadPrompt(function () {
+          focusFirst();
+        });
       }
       function doAddPlugin() {
         input({
@@ -8196,8 +8457,9 @@
                 });
                 Lampa.Noty.show('Plugin added');
                 renderPlugins();
-                // ponytail: reload щоб Plugins._loaded синхронізувався з storage
-                showReloadPrompt();
+                showReloadPrompt(function () {
+                  focusFirst();
+                });
               }
             });
           }
@@ -8501,9 +8763,14 @@
         currentProfilesSyncTopicId = Lampa.Storage.get(STORAGE_PROFILES_SYNC_TOPIC, null);
         Lampa.Storage.get(STORAGE_BACKUP_TOPIC, null);
         var client = GramLinkClient.getInstance();
+        // Bug 3: show loading while ensureSyncChannel() runs
+        _initializing = true;
+        renderProfiles(); // Shows "Loading..." because _initializing is true
+
         client.connect().then(function () {
           return ensureSyncChannel();
         }).then(function () {
+          _initializing = false;
           var ch = Lampa.Storage.get(STORAGE_CHANNEL_ID, ''),
             sl = Lampa.Storage.get(STORAGE_SYNC_LOG_TOPIC, '');
           if (ch && sl) client.startHeartbeat(ch, sl);
@@ -8516,7 +8783,11 @@
           refreshTimer = setInterval(function () {
             if (activeTab === 'profiles') renderProfiles();
           }, 15000);
-        })["catch"](function () {});
+        })["catch"](function (err) {
+          _initializing = false;
+          renderProfiles(); // Shows "No profiles" or loaded data based on what Storage has
+          console.warn('GramLink', 'Hub init error:', err);
+        });
       }
 
       // ═══════════════════════════════════════════════════════
