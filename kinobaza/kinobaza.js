@@ -5748,6 +5748,11 @@
         screen: ['main'],
         call: function call(params, screen) {
           return function (call) {
+            // ponytail: only show when kinobaza source is active
+            if (Lampa.Storage.field('source') !== 'kinobaza') {
+              call(false);
+              return;
+            }
             releasesApi.getReleases(1, function (json) {
               var rawList = json.data || [];
               var items = cardMapper.mapList(rawList);
