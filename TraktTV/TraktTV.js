@@ -245,19 +245,17 @@
       i = 0;
     }
     _regeneratorDefine = function (e, r, n, t) {
-      if (r) i ? i(e, r, {
+      function o(r, n) {
+        _regeneratorDefine(e, r, function (e) {
+          return this._invoke(r, n, e);
+        });
+      }
+      r ? i ? i(e, r, {
         value: n,
         enumerable: !t,
         configurable: !t,
         writable: !t
-      }) : e[r] = n;else {
-        function o(r, n) {
-          _regeneratorDefine(e, r, function (e) {
-            return this._invoke(r, n, e);
-          });
-        }
-        o("next", 0), o("throw", 1), o("return", 2);
-      }
+      }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2));
     }, _regeneratorDefine(e, r, n, t);
   }
   function _slicedToArray(r, e) {
@@ -625,7 +623,7 @@
         _args = arguments,
         _t;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             requestOptions = _args.length > 5 && _args[5] !== undefined ? _args[5] : {};
             baseUrl = resolveBaseUrl(path);
@@ -1780,7 +1778,7 @@
         _args4 = arguments,
         _t;
       return _regenerator().w(function (_context4) {
-        while (1) switch (_context4.n) {
+        while (1) switch (_context4.p = _context4.n) {
           case 0:
             params = _args4.length > 2 && _args4[2] !== undefined ? _args4[2] : {};
             unauthorized = _args4.length > 3 && _args4[3] !== undefined ? _args4[3] : false;
@@ -1948,7 +1946,7 @@
         _t3,
         _t4;
       return _regenerator().w(function (_context6) {
-        while (1) switch (_context6.n) {
+        while (1) switch (_context6.p = _context6.n) {
           case 0:
             params = _args6.length > 2 && _args6[2] !== undefined ? _args6[2] : {};
             unauthorized = _args6.length > 3 && _args6[3] !== undefined ? _args6[3] : false;
@@ -5996,7 +5994,7 @@
       _fetchTraktCalendar = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
         var dateString;
         return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
+          while (1) switch (_context2.p = _context2.n) {
             case 0:
               dateString = getTodayString();
               _context2.p = 1;
@@ -6006,7 +6004,6 @@
               return _context2.a(2, _context2.v);
             case 3:
               _context2.p = 3;
-              _context2.v;
               Lampa.Bell.push({
                 text: Lampa.Lang.translate('trakttv_calendar_error')
               });
@@ -7287,7 +7284,7 @@
     _exportBookmarks = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(_ref5) {
       var api, favorite, _ref5$target, target, _ref5$listId, listId, _ref5$favoriteType, favoriteType, checkCancel, onProgress, resolvedFavoriteType, bookmarks, targetItems, targetSet, summary, index, card, mapped, compareKeys, isDuplicate, response, status, _t3;
       return _regenerator().w(function (_context4) {
-        while (1) switch (_context4.n) {
+        while (1) switch (_context4.p = _context4.n) {
           case 0:
             api = _ref5.api, favorite = _ref5.favorite, _ref5$target = _ref5.target, target = _ref5$target === void 0 ? 'watchlist' : _ref5$target, _ref5$listId = _ref5.listId, listId = _ref5$listId === void 0 ? null : _ref5$listId, _ref5$favoriteType = _ref5.favoriteType, favoriteType = _ref5$favoriteType === void 0 ? 'book' : _ref5$favoriteType, checkCancel = _ref5.checkCancel, onProgress = _ref5.onProgress;
             if (api) {
@@ -7413,7 +7410,6 @@
             break;
           case 12:
             _context4.p = 12;
-            _context4.v;
             summary.failed += 1;
           case 13:
             onProgress && onProgress({
@@ -8343,7 +8339,7 @@
     _runBookmarksSyncOperation = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(operation, opts) {
       var source, target, listId, favoriteType, resolvedFavoriteType, favoriteTypeTitle, isCanceled, startActionText, startText, summary, _t, _t2;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             if (opts === undefined) opts = {};
             source = opts.source || 'watchlist';
@@ -8539,7 +8535,7 @@
     _replayAction = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(item) {
       var body, status, _t;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             body = buildScrobbleBody$1(item.media, item.progress);
             _context.p = 1;
@@ -8612,7 +8608,7 @@
     _processQueueImpl = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
       var initialLength, succeeded, discarded, item, _t2;
       return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+        while (1) switch (_context2.p = _context2.n) {
           case 0:
             if (!isProcessing) {
               _context2.n = 1;
@@ -9340,7 +9336,7 @@
     _withPerKeyLock = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(key, fn) {
       var queue, release, p, prev;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             queue = lockQueues.get(key);
             if (!queue) {
@@ -9389,7 +9385,7 @@
             return _context3.a(2, withPerKeyLock(key, /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
               var check, delays, lastErr, attempt, res, status, _t;
               return _regenerator().w(function (_context2) {
-                while (1) switch (_context2.n) {
+                while (1) switch (_context2.p = _context2.n) {
                   case 0:
                     check = canFinishOnce(key);
                     slog(logPrefix, 'canFinishOnce', key, check);
@@ -9552,7 +9548,7 @@
     _finish = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(media) {
       var token, key, doFinish, result;
       return _regenerator().w(function (_context5) {
-        while (1) switch (_context5.n) {
+        while (1) switch (_context5.p = _context5.n) {
           case 0:
             token = Lampa.Storage.get('trakt_token');
             if (token) {
@@ -9582,7 +9578,7 @@
               var _ref9 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
                 var type, tmdbId, search, e, traktId, res, _tmdbId, _search, _e, traktShowId, season, episode, seasons, _e2, last, titleCandidates, found, _iterator5, _step5, s, _iterator6, _step6, ep, _iterator7, _step7, title, epHash, _e3, _res, _t2, _t3, _t4;
                 return _regenerator().w(function (_context4) {
-                  while (1) switch (_context4.n) {
+                  while (1) switch (_context4.p = _context4.n) {
                     case 0:
                       // replicate existing logic but only final "history" call
                       type = getContentType$1(media); // if movie -> addToHistory({method:'movie', id, ids})

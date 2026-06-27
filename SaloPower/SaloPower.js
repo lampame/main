@@ -121,19 +121,17 @@
       i = 0;
     }
     _regeneratorDefine = function (e, r, n, t) {
-      if (r) i ? i(e, r, {
+      function o(r, n) {
+        _regeneratorDefine(e, r, function (e) {
+          return this._invoke(r, n, e);
+        });
+      }
+      r ? i ? i(e, r, {
         value: n,
         enumerable: !t,
         configurable: !t,
         writable: !t
-      }) : e[r] = n;else {
-        function o(r, n) {
-          _regeneratorDefine(e, r, function (e) {
-            return this._invoke(r, n, e);
-          });
-        }
-        o("next", 0), o("throw", 1), o("return", 2);
-      }
+      }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2));
     }, _regeneratorDefine(e, r, n, t);
   }
 
@@ -171,7 +169,7 @@
       var _load = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(params, oncomplete, onerror) {
         var limit_ui, disciplines_response, disciplines, LineModule, line_promises, lines, _t2;
         return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
+          while (1) switch (_context2.p = _context2.n) {
             case 0:
               _context2.p = 0;
               limit_ui = params && params.limit ? params.limit : 10;
@@ -187,7 +185,7 @@
                 var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(discipline) {
                   var vod_response, vods, mapped, hasMore, items, line, _t;
                   return _regenerator().w(function (_context) {
-                    while (1) switch (_context.n) {
+                    while (1) switch (_context.p = _context.n) {
                       case 0:
                         _context.p = 0;
                         _context.n = 1;
@@ -281,7 +279,7 @@
       var _loadCategory = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(disciplineId, oncomplete, onerror) {
         var url, vod_response, vods, items, _t3;
         return _regenerator().w(function (_context3) {
-          while (1) switch (_context3.n) {
+          while (1) switch (_context3.p = _context3.n) {
             case 0:
               _context3.p = 0;
               url = "https://a.maincast.tv/items/vod?filter={\"discipline\":".concat(disciplineId, "}&sort=-date&limit=100");
@@ -465,7 +463,7 @@
                 var _onEnter = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
                   var socket, key, newLink, _t;
                   return _regenerator().w(function (_context) {
-                    while (1) switch (_context.n) {
+                    while (1) switch (_context.p = _context.n) {
                       case 0:
                         if (!(!card_data || !card_data.salo_vod_id)) {
                           _context.n = 1;
@@ -558,7 +556,7 @@
                 var _onEnter = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
                   var socket, key, newLink, _t;
                   return _regenerator().w(function (_context) {
-                    while (1) switch (_context.n) {
+                    while (1) switch (_context.p = _context.n) {
                       case 0:
                         if (!(!card_data || !card_data.salo_vod_id)) {
                           _context.n = 1;

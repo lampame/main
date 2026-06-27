@@ -271,19 +271,17 @@
       i = 0;
     }
     _regeneratorDefine = function (e, r, n, t) {
-      if (r) i ? i(e, r, {
+      function o(r, n) {
+        _regeneratorDefine(e, r, function (e) {
+          return this._invoke(r, n, e);
+        });
+      }
+      r ? i ? i(e, r, {
         value: n,
         enumerable: !t,
         configurable: !t,
         writable: !t
-      }) : e[r] = n;else {
-        function o(r, n) {
-          _regeneratorDefine(e, r, function (e) {
-            return this._invoke(r, n, e);
-          });
-        }
-        o("next", 0), o("throw", 1), o("return", 2);
-      }
+      }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2));
     }, _regeneratorDefine(e, r, n, t);
   }
   function _setPrototypeOf(t, e) {
@@ -840,7 +838,7 @@
     _getPosterFromLabels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(labels) {
       var labelArray, label, _label$split, _label$split2, method, id, sourcePoster, response, poster, _t;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             // Ищем лейблы, которые начинаются на tv или movie и содержат цифры после косой
             labelArray = Array.isArray(labels) ? labels : labels.split(','); // Find label matching tv/movie pattern
@@ -1025,7 +1023,7 @@
         _args = arguments,
         _t;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             options = _args.length > 1 && _args[1] !== undefined ? _args[1] : {};
             config = getConfig$1();
@@ -1061,7 +1059,7 @@
         _args2 = arguments,
         _t2;
       return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+        while (1) switch (_context2.p = _context2.n) {
           case 0:
             showNotification = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : true;
             config = getConfig$1();
@@ -1123,7 +1121,7 @@
     _GetData$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
       var response, torrents, _t0;
       return _regenerator().w(function (_context4) {
-        while (1) switch (_context4.n) {
+        while (1) switch (_context4.p = _context4.n) {
           case 0:
             _context4.p = 0;
             _context4.n = 1;
@@ -1223,7 +1221,7 @@
     _SendCommand$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(action, torrentData) {
       var version, normalizedAction, commandPath, requestData, _t1;
       return _regenerator().w(function (_context6) {
-        while (1) switch (_context6.n) {
+        while (1) switch (_context6.p = _context6.n) {
           case 0:
             _context6.p = 0;
             _context6.n = 1;
@@ -1274,7 +1272,7 @@
     _SendTask$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(selectedTorrent, labels, dtype) {
       var _t10;
       return _regenerator().w(function (_context7) {
-        while (1) switch (_context7.n) {
+        while (1) switch (_context7.p = _context7.n) {
           case 0:
             if (selectedTorrent) {
               _context7.n = 1;
@@ -1410,7 +1408,7 @@
     _searchTMDB = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(query) {
       var tmdbLang, url, _t;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             tmdbLang = Lampa.Storage.field('tmdb_lang') || Lampa.Storage.get('language') || 'en';
             url = Lampa.TMDB.api("search/multi?include_adult=true&query=".concat(encodeURIComponent(query), "&api_key=").concat(Lampa.TMDB.key(), "&language=").concat(tmdbLang));
@@ -1486,7 +1484,7 @@
     _processTorrents = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(torrentData) {
       var torrents, results, _t3;
       return _regenerator().w(function (_context3) {
-        while (1) switch (_context3.n) {
+        while (1) switch (_context3.p = _context3.n) {
           case 0:
             console.log('TDM', 'Processing torrents:', _typeof(torrentData), torrentData);
 
@@ -1498,7 +1496,7 @@
               var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(torrent) {
                 var name, cleanedNameInfo, response, strictMatches, _t2;
                 return _regenerator().w(function (_context2) {
-                  while (1) switch (_context2.n) {
+                  while (1) switch (_context2.p = _context2.n) {
                     case 0:
                       _context2.p = 0;
                       // Clean the torrent name
@@ -1655,7 +1653,7 @@
           _args = arguments,
           _t;
         return _regenerator().w(function (_context) {
-          while (1) switch (_context.n) {
+          while (1) switch (_context.p = _context.n) {
             case 0:
               timeout = _args.length > 1 && _args[1] !== undefined ? _args[1] : 10000;
               body = JSON.stringify(data);
@@ -1730,7 +1728,7 @@
           _args3 = arguments,
           _t2;
         return _regenerator().w(function (_context3) {
-          while (1) switch (_context3.n) {
+          while (1) switch (_context3.p = _context3.n) {
             case 0:
               showNotification = _args3.length > 0 && _args3[0] !== undefined ? _args3[0] : true;
               _context3.p = 1;
@@ -1787,7 +1785,7 @@
       _GetData = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
         var fields, response, _t0;
         return _regenerator().w(function (_context5) {
-          while (1) switch (_context5.n) {
+          while (1) switch (_context5.p = _context5.n) {
             case 0:
               _context5.p = 0;
               fields = ["labels", "status", "totalSize", "percentComplete", "percentDone", "name", "id"].concat(_toConsumableArray(extraFields));
@@ -1859,7 +1857,7 @@
       _GetInfo = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
         var response, _t1;
         return _regenerator().w(function (_context6) {
-          while (1) switch (_context6.n) {
+          while (1) switch (_context6.p = _context6.n) {
             case 0:
               _context6.p = 0;
               _context6.n = 1;
@@ -1978,7 +1976,7 @@
       _SendCommand = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9(action, torrentData) {
         var parsed, handled, _t11;
         return _regenerator().w(function (_context9) {
-          while (1) switch (_context9.n) {
+          while (1) switch (_context9.p = _context9.n) {
             case 0:
               _context9.p = 0;
               _context9.n = 1;
@@ -2038,7 +2036,7 @@
       _SendTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0(selectedTorrent, labels, dtype) {
         var config, addResponse, torrentId, labelResponse, _t12;
         return _regenerator().w(function (_context0) {
-          while (1) switch (_context0.n) {
+          while (1) switch (_context0.p = _context0.n) {
             case 0:
               if (selectedTorrent) {
                 _context0.n = 1;
@@ -2267,7 +2265,7 @@
       var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(resolve, reject) {
         var allTables, db, _t;
         return _regenerator().w(function (_context) {
-          while (1) switch (_context.n) {
+          while (1) switch (_context.p = _context.n) {
             case 0:
               if (Lampa.DB) {
                 _context.n = 1;
@@ -2324,7 +2322,7 @@
     _saveMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(key, value) {
       var db, tableName, _t2;
       return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+        while (1) switch (_context2.p = _context2.n) {
           case 0:
             _context2.p = 0;
             _context2.n = 1;
@@ -2357,7 +2355,7 @@
     _getMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(key) {
       var db, tableName, result, _t3;
       return _regenerator().w(function (_context3) {
-        while (1) switch (_context3.n) {
+        while (1) switch (_context3.p = _context3.n) {
           case 0:
             _context3.p = 0;
             _context3.n = 1;
@@ -2486,7 +2484,7 @@
     _resolveTmdbFromSimkl = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(fileName) {
       var normalizedFileName, response, payload, _t;
       return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+        while (1) switch (_context2.p = _context2.n) {
           case 0:
             normalizedFileName = String(fileName || '').trim();
             if (normalizedFileName) {
@@ -2638,7 +2636,7 @@
             authPromise = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
               var config, response, payload, code, _payload, _code, normalizedError, _t;
               return _regenerator().w(function (_context) {
-                while (1) switch (_context.n) {
+                while (1) switch (_context.p = _context.n) {
                   case 0:
                     config = getConfig();
                     if (!(!config.url || !config.user || !config.pass)) {
@@ -2734,7 +2732,7 @@
         _args3 = arguments,
         _t2;
       return _regenerator().w(function (_context3) {
-        while (1) switch (_context3.n) {
+        while (1) switch (_context3.p = _context3.n) {
           case 0:
             params = _args3.length > 1 && _args3[1] !== undefined ? _args3[1] : {};
             options = _args3.length > 2 && _args3[2] !== undefined ? _args3[2] : {};
@@ -2958,7 +2956,7 @@
     _hydrateMetadataFromSimkl = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(torrentId, title, metadata) {
       var now, currentMetadata, match, failedMetadata, nextMetadata, resolvedPoster, _t3;
       return _regenerator().w(function (_context6) {
-        while (1) switch (_context6.n) {
+        while (1) switch (_context6.p = _context6.n) {
           case 0:
             if (shouldTrySimklLookup(metadata, title)) {
               _context6.n = 1;
@@ -3023,7 +3021,7 @@
     _GetData = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
       var payload, tasks, _t5;
       return _regenerator().w(function (_context8) {
-        while (1) switch (_context8.n) {
+        while (1) switch (_context8.p = _context8.n) {
           case 0:
             _context8.p = 0;
             _context8.n = 1;
@@ -3041,7 +3039,7 @@
               var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(torrent) {
                 var metadata, title, progress, imageUrl, resolvedPoster, nextMetadata, _t4;
                 return _regenerator().w(function (_context7) {
-                  while (1) switch (_context7.n) {
+                  while (1) switch (_context7.p = _context7.n) {
                     case 0:
                       _context7.n = 1;
                       return getMetadata(torrent.id);
@@ -3142,7 +3140,7 @@
     _GetInfo = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
       var payload, shares, moviesPath, tvPath, selectedShare, _t6;
       return _regenerator().w(function (_context9) {
-        while (1) switch (_context9.n) {
+        while (1) switch (_context9.p = _context9.n) {
           case 0:
             _context9.p = 0;
             _context9.n = 1;
@@ -3197,7 +3195,7 @@
     _SendCommand = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0(action, torrentData) {
       var _t7;
       return _regenerator().w(function (_context0) {
-        while (1) switch (_context0.n) {
+        while (1) switch (_context0.p = _context0.n) {
           case 0:
             _context0.p = 0;
             _context0.n = 1;
@@ -3235,7 +3233,7 @@
     _SendTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1(selectedTorrent, labels, dtype) {
       var sourceUri, destination, _t8;
       return _regenerator().w(function (_context1) {
-        while (1) switch (_context1.n) {
+        while (1) switch (_context1.p = _context1.n) {
           case 0:
             _context1.p = 0;
             sourceUri = selectedTorrent && (selectedTorrent.MagnetUri || selectedTorrent.Link);
@@ -3680,7 +3678,7 @@
         _t,
         _t2;
       return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+        while (1) switch (_context2.p = _context2.n) {
           case 0:
             args = _args2.length > 2 && _args2[2] !== undefined ? _args2[2] : [];
             options = _args2.length > 3 && _args2[3] !== undefined ? _args2[3] : {};
@@ -3867,7 +3865,7 @@
     _tmdbSearch = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(torrent) {
       var results, _t2;
       return _regenerator().w(function (_context3) {
-        while (1) switch (_context3.n) {
+        while (1) switch (_context3.p = _context3.n) {
           case 0:
             _context3.p = 0;
             _context3.n = 1;
@@ -3935,7 +3933,7 @@
     _updateTransmissionLikeMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(torrent, client, mediaInfo) {
       var label, _t3;
       return _regenerator().w(function (_context4) {
-        while (1) switch (_context4.n) {
+        while (1) switch (_context4.p = _context4.n) {
           case 0:
             label = buildMetadataTag(mediaInfo);
             _context4.p = 1;
@@ -3985,7 +3983,7 @@
     _updateQbittorrentMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(torrent, client, mediaInfo) {
       var tagValue, _t4;
       return _regenerator().w(function (_context5) {
-        while (1) switch (_context5.n) {
+        while (1) switch (_context5.p = _context5.n) {
           case 0:
             tagValue = buildMetadataTag(mediaInfo); // той самий формат, що й при додаванні
             _context5.p = 1;
@@ -4024,7 +4022,7 @@
     _updateSynologyMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(torrent, client, mediaInfo) {
       var key, metadataTag, poster, _t5;
       return _regenerator().w(function (_context6) {
-        while (1) switch (_context6.n) {
+        while (1) switch (_context6.p = _context6.n) {
           case 0:
             _context6.p = 0;
             key = String(torrent && torrent.id || "");
@@ -4073,7 +4071,7 @@
     _updateAllMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(torrents, client) {
       var _iterator, _step, torrent, _t6;
       return _regenerator().w(function (_context7) {
-        while (1) switch (_context7.n) {
+        while (1) switch (_context7.p = _context7.n) {
           case 0:
             _iterator = _createForOfIteratorHelper(torrents);
             _context7.p = 1;
@@ -4308,7 +4306,7 @@
         _args2 = arguments,
         _t;
       return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+        while (1) switch (_context2.p = _context2.n) {
           case 0:
             allTorrents = _args2.length > 2 && _args2[2] !== undefined ? _args2[2] : [];
             client = Lampa.Storage.field("lmetorrentSelect");
@@ -4384,7 +4382,7 @@
         var _update = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
           var client_name, isUniversal, new_torrents, has_active_downloads_before, has_active_downloads_after;
           return _regenerator().w(function (_context) {
-            while (1) switch (_context.n) {
+            while (1) switch (_context.p = _context.n) {
               case 0:
                 if (!this.updateInProgress) {
                   _context.n = 1;
@@ -4426,7 +4424,6 @@
                 break;
               case 5:
                 _context.p = 5;
-                _context.v;
               case 6:
                 _context.p = 6;
                 this.updateInProgress = false;
@@ -4673,7 +4670,7 @@
     this.create = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
       var result, _t;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             pauseHeaderPolling();
             stopAutoUpdate();
@@ -4745,7 +4742,7 @@
       _refreshTorrents = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
         var torrents, knownIds, nextIds, needRebuild, _t2;
         return _regenerator().w(function (_context3) {
-          while (1) switch (_context3.n) {
+          while (1) switch (_context3.p = _context3.n) {
             case 0:
               if (!updateInProgress) {
                 _context3.n = 1;
@@ -6075,7 +6072,7 @@
     _startClient = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(client) {
       var data, info, result, _t2;
       return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+        while (1) switch (_context2.p = _context2.n) {
           case 0:
             _context2.p = 0;
             if (hasClient(client)) {
@@ -6102,7 +6099,6 @@
             break;
           case 5:
             _context2.p = 5;
-            _context2.v;
             info = null;
           case 6:
             result = {

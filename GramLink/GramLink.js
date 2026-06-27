@@ -3670,6 +3670,22 @@
           statusEl.text('WebSocket connection failed');
           Lampa.Noty.show('GramLink: Cannot connect to Gateway');
         };
+
+        // ponytail: route incoming WS messages to pending promises
+        ws.onmessage = function (e) {
+          var msg;
+          try {
+            msg = JSON.parse(e.data);
+          } catch (x) {
+            return;
+          }
+          var pending = msg.id && authPending[msg.id];
+          if (pending) {
+            clearTimeout(pending.timer);
+            delete authPending[msg.id];
+            if (msg.ok) pending.resolve(msg);else pending.reject(new Error(msg.error || 'Gateway error'));
+          }
+        };
       });
     }
     function doAuthFlow(ws, phone, creds, statusEl, enabledCtrl, onConnected) {
@@ -3883,6 +3899,22 @@
       ws.onerror = function () {
         statusEl.text('WebSocket connection failed');
         Lampa.Noty.show('GramLink: Cannot connect to Gateway');
+      };
+
+      // ponytail: route incoming WS messages to pending promises
+      ws.onmessage = function (e) {
+        var msg;
+        try {
+          msg = JSON.parse(e.data);
+        } catch (x) {
+          return;
+        }
+        var pending = msg.id && qrPending[msg.id];
+        if (pending) {
+          clearTimeout(pending.timer);
+          delete qrPending[msg.id];
+          if (msg.ok) pending.resolve(msg);else pending.reject(new Error(msg.error || 'Gateway error'));
+        }
       };
     }
     function doQrExport(creds, qrPlaceholder, qrEl, statusEl, enabledCtrl, onConnected) {
