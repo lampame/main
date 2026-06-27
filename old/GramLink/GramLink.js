@@ -2557,6 +2557,20 @@
         }
       };
     }
+    function renderQrCode(token, qrPlaceholder, qrEl, statusEl) {
+      qrPlaceholder.hide();
+      qrEl.show().empty();
+      var qrUrl = 'tg://login?token=' + token;
+      Lampa.Utils.qrcode(qrUrl, qrEl, function () {});
+      setTimeout(function () {
+        var s = qrEl.find('svg');
+        if (s.length) s.css({
+          width: '14em',
+          height: '14em'
+        });
+      }, 100);
+      statusEl.html('<div>Scan with Telegram</div>' + '<div style="font-size:0.85em;color:rgba(255,255,255,0.4)">' + 'Open Telegram → Settings → Devices → Scan QR' + '</div>');
+    }
     function doQrExport(creds, qrPlaceholder, qrEl, statusEl, enabledCtrl, onConnected) {
       qrSend({
         cmd: 'auth_qr_export',
@@ -2564,34 +2578,28 @@
         apiHash: creds.apiHash
       }).then(function (resp) {
         if (qrCancelFlag) return;
-        if (resp.ok && resp.event === 'qr_code') {
-          var token = resp.token;
-          qrPlaceholder.hide();
-          qrEl.show().empty();
-          var qrUrl = 'tg://login?token=' + token;
-          Lampa.Utils.qrcode(qrUrl, qrEl, function () {});
-          setTimeout(function () {
-            var s = qrEl.find('svg');
-            if (s.length) s.css({
-              width: '14em',
-              height: '14em'
-            });
-          }, 100);
-          statusEl.html('<div>Scan with Telegram</div>' + '<div style="font-size:0.85em;color:rgba(255,255,255,0.4)">' + 'Open Telegram → Settings → Devices → Scan QR' + '</div>');
-
-          // Start polling for scan
-          startPolling(creds, statusEl, enabledCtrl, onConnected);
-        } else {
+        if (!resp.ok) {
           statusEl.text('Error: ' + (resp.error || 'Unexpected response'));
+          Lampa.Noty.show('GramLink: ' + (resp.error || 'QR auth failed'));
+          return;
+        }
+        if (resp.event === 'qr_starting') {
+          // Background flow starting, poll again to get token
+          qrPollTimer = setTimeout(pollOnce, 800);
+        } else if (resp.event === 'qr_poll' && resp.token) {
+          // Got token, render QR
+          renderQrCode(resp.token, qrPlaceholder, qrEl, statusEl);
+          qrPollTimer = setTimeout(pollOnce, 3000);
+        } else {
+          // Fallback: poll
+          qrPollTimer = setTimeout(pollOnce, 1000);
         }
       }).catch(function (err) {
         if (qrCancelFlag) return;
         statusEl.text('Error: ' + (err.message || 'unknown'));
         Lampa.Noty.show('GramLink: ' + (err.message || 'QR auth failed'));
       });
-    }
-    function startPolling(creds, statusEl, enabledCtrl, onConnected) {
-      function poll() {
+      function pollOnce() {
         if (qrCancelFlag) return;
         qrSend({
           cmd: 'auth_qr_export',
@@ -2599,27 +2607,38 @@
           apiHash: creds.apiHash
         }).then(function (resp) {
           if (qrCancelFlag) return;
-          if (resp.ok && resp.event === 'auth_success') {
-            finalizeQrAuth(resp, enabledCtrl, onConnected);
-          } else if (resp.ok && resp.event === 'password_needed') {
-            handleQrPassword(creds, resp.hint || '', statusEl, enabledCtrl, onConnected);
-          } else if (resp.ok && resp.event === 'qr_poll' && resp.status === 'waiting') {
-            qrPollTimer = setTimeout(poll, 3000);
-          } else if (resp.ok && resp.event === 'qr_code') {
-            qrPollTimer = setTimeout(poll, 3000);
-          } else if (resp.ok && resp.event === 'qr_migrate_done') {
-            qrPollTimer = setTimeout(poll, 3000);
-          } else {
+          if (!resp.ok) {
             statusEl.text('Error: ' + (resp.error || 'Poll failed'));
-            Lampa.Noty.show('GramLink: QR auth error');
+            Lampa.Noty.show('GramLink: ' + (resp.error || 'Poll failed'));
+            return;
+          }
+          if (resp.event === 'auth_success') {
+            finalizeQrAuth(resp, enabledCtrl, onConnected);
+          } else if (resp.event === 'password_needed') {
+            handleQrPassword(creds, resp.hint || '', statusEl, enabledCtrl, onConnected);
+            // Also keep polling — background flow updates state
+          } else if (resp.event === 'qr_poll' && resp.status === 'waiting') {
+            // If token changed (regenerated), update QR
+            if (resp.token && qrEl.children().length === 0) {
+              renderQrCode(resp.token, qrPlaceholder, qrEl, statusEl);
+            } else if (resp.token && qrEl.find('svg').data('token') !== resp.token) {
+              // Token refreshed by signInUserWithQrCode — re-render
+              qrEl.find('svg').data('token', resp.token);
+              renderQrCode(resp.token, qrPlaceholder, qrEl, statusEl);
+            }
+            qrPollTimer = setTimeout(pollOnce, 3000);
+          } else if (resp.event === 'qr_starting') {
+            // Still starting
+            qrPollTimer = setTimeout(pollOnce, 800);
+          } else {
+            // Unknown — keep polling
+            qrPollTimer = setTimeout(pollOnce, 3000);
           }
         }).catch(function (err) {
           if (qrCancelFlag) return;
-          statusEl.text('Poll error: ' + (err.message || 'unknown'));
-          qrPollTimer = setTimeout(poll, 5000);
+          qrPollTimer = setTimeout(pollOnce, 3000);
         });
       }
-      qrPollTimer = setTimeout(poll, 3000);
     }
     function handleQrPassword(creds, hint, statusEl, enabledCtrl, onConnected) {
       statusEl.text('2FA password required...');
