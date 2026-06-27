@@ -1979,6 +1979,38 @@
     }
 
     /**
+     * Returns a pretty OS version string for Telegram MTProto clientOptions.
+     * Examples: "Android 14", "iOS 17.0", "macOS 10.15.7", "Windows 11", "Linux".
+     */
+    function getSystemVersion() {
+      var ua = navigator.userAgent || '';
+      var m = ua.match(/Android\s+([\d.]+)/);
+      if (m) return 'Android ' + m[1];
+      m = ua.match(/(?:iPhone|iPad)\s+OS\s+([\d_]+)/);
+      if (m) return 'iOS ' + m[1].replace(/_/g, '.');
+      m = ua.match(/Mac\s+OS\s+X\s+([\d_]+)/);
+      if (m) return 'macOS ' + m[1].replace(/_/g, '.');
+      m = ua.match(/Windows\s+NT\s+([\d.]+)/);
+      if (m) {
+        var v = m[1];
+        if (v === '10.0') {
+          if (ua.match(/Windows\s+11|Win64|arm64/i) && !ua.match(/Windows\s+10\.0;\s*$|Touch/i)) return 'Windows 11';
+          return 'Windows 10';
+        }
+        if (v === '6.3') return 'Windows 8.1';
+        if (v === '6.2') return 'Windows 8';
+        if (v === '6.1') return 'Windows 7';
+        return 'Windows ' + v;
+      }
+      m = ua.match(/\(([^)]+)\)/);
+      if (m) {
+        var parts = m[1].split(';');
+        return parts[0].trim() || 'Linux';
+      }
+      return '1.0';
+    }
+
+    /**
      * Returns API credentials for Telegram.
      * If gramlink_app_type === 'custom' — reads from storage.
      * Otherwise — default Lampa credentials.
@@ -2372,7 +2404,7 @@
       }
     };
 
-    var VERSION$1 = '0.2.1';
+    var VERSION$1 = '0.2.2';
     var instance = null;
     var GramLinkClient = /*#__PURE__*/function () {
       function GramLinkClient() {
@@ -3088,47 +3120,7 @@
           return instance;
         }
       }]);
-    }(); // ─── System version extractor (from user agent) ──────────
-    // Returns a pretty OS version string for Telegram MTProto clientOptions.
-    // Examples: "Android 14", "iOS 17.0", "macOS 14.3", "Windows 10", "Windows 11"
-    function getSystemVersion() {
-      var ua = navigator.userAgent || '';
-
-      // Android: "Android 14", "Android 16"
-      var m = ua.match(/Android\s+([\d.]+)/);
-      if (m) return 'Android ' + m[1];
-
-      // iOS (iPhone/iPad): "... iPhone OS 17_0 ..." → "iOS 17.0"
-      m = ua.match(/(?:iPhone|iPad)\s+OS\s+([\d_]+)/);
-      if (m) return 'iOS ' + m[1].replace(/_/g, '.');
-
-      // macOS: "Mac OS X 10_15_7" → "macOS 10.15.7"
-      m = ua.match(/Mac\s+OS\s+X\s+([\d_]+)/);
-      if (m) return 'macOS ' + m[1].replace(/_/g, '.');
-
-      // Windows NT: "Windows NT 10.0" → "Windows 10" / "Windows 11" / "Windows 10.0.xxxx"
-      m = ua.match(/Windows\s+NT\s+([\d.]+)/);
-      if (m) {
-        var v = m[1];
-        if (v === '10.0') {
-          // Windows 11 often reports NT 10.0 too — check for "Windows 11" in UA
-          if (ua.match(/Windows\s+11|Win64|arm64/i) && !ua.match(/Windows\s+10\.0;\s*$|Touch/i)) return 'Windows 11';
-          return 'Windows 10';
-        }
-        if (v === '6.3') return 'Windows 8.1';
-        if (v === '6.2') return 'Windows 8';
-        if (v === '6.1') return 'Windows 7';
-        return 'Windows ' + v;
-      }
-
-      // Linux (generic): extract distro info if available
-      m = ua.match(/\(([^)]+)\)/);
-      if (m) {
-        var parts = m[1].split(';');
-        return parts[0].trim() || 'Linux';
-      }
-      return '1.0';
-    }
+    }(); // ─── UTF-8 decode helper ─────────────────────────────────
 
     // ─── Device fingerprinting (moved to sdk/device) ──────────
 
@@ -3589,7 +3581,7 @@
       'profiles-sync': 'gramlink_profiles_sync_topic'
     };
 
-    var VERSION = '0.2.0';
+    var VERSION = '0.2.2';
 
     var authWs = null;
     var authCancelFlag$1 = false;
@@ -3664,9 +3656,17 @@
         var wsUrl = gatewayUrl + '/ws?clientId=' + encodeURIComponent(getDeviceId());
         var ws = new WebSocket(wsUrl);
         authWs = ws;
+        var uiLang = Lampa.Storage && Lampa.Storage.get('language', 'en') || 'en';
+        var systemLang = (navigator.language || navigator.userLanguage || 'en').split('-')[0] || 'en';
         ws.onopen = function () {
           statusEl.text('Sending code...');
-          doAuthFlow(ws, phone, creds, statusEl, enabledCtrl, onConnected);
+          doAuthFlow(ws, phone, creds, statusEl, enabledCtrl, onConnected, {
+            deviceModel: getDeviceName(),
+            systemVersion: getSystemVersion(),
+            appVersion: VERSION,
+            langCode: uiLang,
+            systemLangCode: systemLang
+          });
         };
         ws.onerror = function () {
           statusEl.text('WebSocket connection failed');
@@ -3690,14 +3690,17 @@
         };
       });
     }
-    function doAuthFlow(ws, phone, creds, statusEl, enabledCtrl, onConnected) {
+    function doAuthFlow(ws, phone, creds, statusEl, enabledCtrl, onConnected, clientInfo) {
       authSend({
         cmd: 'auth_start',
         phone: phone,
         apiId: creds.apiId,
         apiHash: creds.apiHash,
-        deviceModel: getDeviceName(),
-        appVersion: VERSION
+        deviceModel: clientInfo.deviceModel,
+        systemVersion: clientInfo.systemVersion,
+        appVersion: clientInfo.appVersion,
+        langCode: clientInfo.langCode,
+        systemLangCode: clientInfo.systemLangCode
       }).then(function (resp) {
         if (authCancelFlag$1) return;
         if (resp.event === 'auth_code_needed') {
@@ -3941,7 +3944,10 @@
         apiId: creds.apiId,
         apiHash: creds.apiHash,
         deviceModel: getDeviceName(),
-        appVersion: VERSION
+        systemVersion: getSystemVersion(),
+        appVersion: VERSION,
+        langCode: Lampa.Storage && Lampa.Storage.get('language', 'en') || 'en',
+        systemLangCode: (navigator.language || navigator.userLanguage || 'en').split('-')[0] || 'en'
       }).then(function (resp) {
         if (qrCancelFlag) return;
         if (!resp.ok) {
@@ -4016,18 +4022,18 @@
         nosave: true
       }, function (val) {
         if (val && String(val).trim()) {
-          setTimeout(function () {
-            Lampa.Modal.open({
-              title: 'Telegram Authorization (Gateway)',
-              html: $('<div class="gramlink-auth" style="padding:1em;text-align:center"><div style="margin:1em 0;font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password...</div></div>'),
-              size: 'medium',
-              onBack: function onBack() {
-                cancelQrAuth();
-                Lampa.Modal.close();
-                Lampa.Controller.toggle(enabledCtrl);
-              }
-            });
-          }, 200);
+          // ponytail: open single "Verifying" modal IMMEDIATELY (not after delay)
+          // so user has feedback, and we don't end up with stacked modals.
+          Lampa.Modal.open({
+            title: 'Telegram Authorization (Gateway)',
+            html: $('<div class="gramlink-auth" style="padding:1em;text-align:center"><div style="margin:1em 0;font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password (this may take up to 30s)...</div></div>'),
+            size: 'medium',
+            onBack: function onBack() {
+              cancelQrAuth();
+              Lampa.Modal.close();
+              Lampa.Controller.toggle(enabledCtrl);
+            }
+          });
           qrSend({
             cmd: 'auth_qr_password',
             password: String(val).trim()
@@ -4038,17 +4044,7 @@
               finalizeQrAuth(resp, enabledCtrl, onConnected);
             } else if (resp.ok && resp.event === 'password_submitted') {
               // Password accepted, server is now computing SRP (slow).
-              // Re-open modal (it was closed) and start polling for success.
-              Lampa.Modal.open({
-                title: 'Telegram Authorization (Gateway)',
-                html: $('<div class="gramlink-auth" style="padding:1em;text-align:center"><div style="margin:1em 0;font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password (this may take up to 30s)...</div></div>'),
-                size: 'medium',
-                onBack: function onBack() {
-                  cancelQrAuth();
-                  Lampa.Modal.close();
-                  Lampa.Controller.toggle(enabledCtrl);
-                }
-              });
+              // Modal already open. Just start polling for success.
               qrPollTimer = setTimeout(pollAfterPassword, 1000);
             } else {
               Lampa.Noty.show('GramLink: ' + (resp.error || 'Wrong password'));
