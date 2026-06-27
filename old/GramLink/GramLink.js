@@ -1666,7 +1666,7 @@
       }
     };
 
-    var VERSION = '0.1.1';
+    var VERSION = '0.2.0';
     var instance = null;
     function GatewayClient() {
       this._ws = null;
@@ -1802,6 +1802,8 @@
           self._sendCommand('connect', {
             dcId: dcId,
             authKeyHex: authKeyHex,
+            deviceModel: getDeviceName(),
+            appVersion: window.Lampa && Lampa.Manifest && Lampa.Manifest.app_version || VERSION,
             apiId: apiCreds.apiId,
             apiHash: apiCreds.apiHash
           }).then(function (resp) {
@@ -2333,7 +2335,9 @@
         cmd: 'auth_start',
         phone: phone,
         apiId: creds.apiId,
-        apiHash: creds.apiHash
+        apiHash: creds.apiHash,
+        deviceModel: getDeviceName(),
+        appVersion: window.Lampa && Lampa.Manifest && Lampa.Manifest.app_version || VERSION
       }).then(function (resp) {
         if (authCancelFlag) return;
         if (resp.event === 'auth_code_needed') {
@@ -2575,7 +2579,9 @@
       qrSend({
         cmd: 'auth_qr_export',
         apiId: creds.apiId,
-        apiHash: creds.apiHash
+        apiHash: creds.apiHash,
+        deviceModel: getDeviceName(),
+        appVersion: window.Lampa && Lampa.Manifest && Lampa.Manifest.app_version || VERSION
       }).then(function (resp) {
         if (qrCancelFlag) return;
         if (!resp.ok) {
@@ -2668,7 +2674,22 @@
           }).then(function (resp) {
             if (qrCancelFlag) return;
             if (resp.ok && resp.event === 'auth_success') {
+              // Got credentials directly (fast path)
               finalizeQrAuth(resp, enabledCtrl, onConnected);
+            } else if (resp.ok && resp.event === 'password_submitted') {
+              // Password accepted, server is now computing SRP (slow).
+              // Re-open modal (it was closed) and start polling for success.
+              Lampa.Modal.open({
+                title: 'Telegram Authorization (Gateway)',
+                html: $('<div class="gramlink-auth" style="padding:1em;text-align:center"><div style="margin:1em 0;font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password (this may take up to 30s)...</div></div>'),
+                size: 'medium',
+                onBack: function onBack() {
+                  cancelQrAuth();
+                  Lampa.Modal.close();
+                  Lampa.Controller.toggle(enabledCtrl);
+                }
+              });
+              qrPollTimer = setTimeout(pollAfterPassword, 1000);
             } else {
               Lampa.Noty.show('GramLink: ' + (resp.error || 'Wrong password'));
               cancelQrAuth();
@@ -2686,6 +2707,31 @@
           Lampa.Controller.toggle(enabledCtrl);
         }
       });
+      function pollAfterPassword() {
+        if (qrCancelFlag) return;
+        qrSend({
+          cmd: 'auth_qr_export',
+          apiId: creds.apiId,
+          apiHash: creds.apiHash
+        }).then(function (resp) {
+          if (qrCancelFlag) return;
+          if (resp.ok && resp.event === 'auth_success') {
+            Lampa.Modal.close();
+            finalizeQrAuth(resp, Lampa.Controller.enabled().name, onConnected);
+          } else if (resp.ok && resp.status === 'error') {
+            Lampa.Modal.close();
+            Lampa.Noty.show('GramLink: ' + (resp.error || '2FA failed'));
+            cancelQrAuth();
+            Lampa.Controller.toggle(Lampa.Controller.enabled().name);
+          } else {
+            // Still verifying — poll again
+            qrPollTimer = setTimeout(pollAfterPassword, 2000);
+          }
+        }).catch(function () {
+          if (qrCancelFlag) return;
+          qrPollTimer = setTimeout(pollAfterPassword, 3000);
+        });
+      }
     }
     function finalizeQrAuth(resp, enabledCtrl, onConnected) {
       var dcId = resp.dcId;
