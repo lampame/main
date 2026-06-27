@@ -2030,6 +2030,15 @@
     }
 
     /**
+     * sdk/version.js — Single source of truth for plugin version
+     *
+     * Used by both modern (GramJS) and gateway (WebSocket) clients.
+     * Keep this file simple — no imports, no side effects.
+     */
+
+    var VERSION = '0.2.2';
+
+    /**
      * crypto-lite.js — Pure-JS cryptographic primitives (zero dependencies)
      * SHA-256, HMAC-SHA256, PBKDF2-SHA256, AES-128-CTR, randomBytes
      * For Smart TV / legacy WebView targets.
@@ -2404,7 +2413,6 @@
       }
     };
 
-    var VERSION$1 = '0.2.2';
     var instance = null;
     var GramLinkClient = /*#__PURE__*/function () {
       function GramLinkClient() {
@@ -2603,7 +2611,7 @@
                 useWSS: true,
                 deviceModel: getDeviceName(),
                 systemVersion: getSystemVersion(),
-                appVersion: window.Lampa && Lampa.Manifest && Lampa.Manifest.app_version || VERSION$1,
+                appVersion: window.Lampa && Lampa.Manifest && Lampa.Manifest.app_version || VERSION,
                 langCode: window.Lampa && Lampa.Storage && Lampa.Storage.get('language', 'en') || 'en',
                 systemLangCode: (navigator.language || navigator.userLanguage || 'en').split('-')[0] || 'en'
               };
@@ -3581,8 +3589,6 @@
       'profiles-sync': 'gramlink_profiles_sync_topic'
     };
 
-    var VERSION = '0.2.2';
-
     var authWs = null;
     var authCancelFlag$1 = false;
     var authRequestId = 0;
@@ -4522,7 +4528,7 @@
           useWSS: true,
           deviceModel: 'Lampa Web',
           systemVersion: '1.0',
-          appVersion: VERSION$1,
+          appVersion: VERSION,
           langCode: 'en',
           systemLangCode: 'en'
         });
@@ -4705,7 +4711,7 @@
             useWSS: true,
             deviceModel: 'Lampa Web',
             systemVersion: '1.0',
-            appVersion: VERSION$1,
+            appVersion: VERSION,
             langCode: 'en',
             systemLangCode: 'en'
           });
@@ -7385,7 +7391,7 @@
           name: Lampa.Lang.translate('gramlink_settings_section_about')
         },
         onChange: function onChange() {
-          var html = '<div style="padding:1em">' + '<p>' + Lampa.Lang.translate('gramlink_about_description') + '</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_version') + ':</span> ' + VERSION$1 + '</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_author') + ':</span>' + Lampa.Lang.translate('gramlink_about_link_author') + '</p>' + '</div>';
+          var html = '<div style="padding:1em">' + '<p>' + Lampa.Lang.translate('gramlink_about_description') + '</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_version') + ':</span> ' + VERSION + '</p>' + '<p><span style="opacity:0.5">' + Lampa.Lang.translate('gramlink_about_author') + ':</span>' + Lampa.Lang.translate('gramlink_about_link_author') + '</p>' + '</div>';
           var enabledCtrl = Lampa.Controller.enabled().name;
           Lampa.Select.show({
             title: Lampa.Lang.translate('gramlink_settings_about'),
@@ -8108,7 +8114,7 @@
     function setupContextMenu() {
       var manifest = {
         type: 'video',
-        version: VERSION$1,
+        version: VERSION,
         name: 'Open on device',
         description: 'Open this content on another device',
         onContextMenu: function onContextMenu(object) {
@@ -9777,7 +9783,7 @@
       vault.migrateIfNeeded();
       var manifest = {
         type: 'plugin',
-        version: VERSION$1,
+        version: VERSION,
         author: '@lme_chat',
         name: 'GramLink',
         description: 'Telegram sync via MTProto',
