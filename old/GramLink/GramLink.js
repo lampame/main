@@ -1042,154 +1042,6 @@
       });
     }
 
-    function _classCallCheck(a, n) {
-      if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function");
-    }
-    function _defineProperties(e, r) {
-      for (var t = 0; t < r.length; t++) {
-        var o = r[t];
-        o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o);
-      }
-    }
-    function _createClass(e, r, t) {
-      return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", {
-        writable: !1
-      }), e;
-    }
-    function _defineProperty(e, r, t) {
-      return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
-        value: t,
-        enumerable: !0,
-        configurable: !0,
-        writable: !0
-      }) : e[r] = t, e;
-    }
-    function ownKeys(e, r) {
-      var t = Object.keys(e);
-      if (Object.getOwnPropertySymbols) {
-        var o = Object.getOwnPropertySymbols(e);
-        r && (o = o.filter(function (r) {
-          return Object.getOwnPropertyDescriptor(e, r).enumerable;
-        })), t.push.apply(t, o);
-      }
-      return t;
-    }
-    function _objectSpread2(e) {
-      for (var r = 1; r < arguments.length; r++) {
-        var t = null != arguments[r] ? arguments[r] : {};
-        r % 2 ? ownKeys(Object(t), !0).forEach(function (r) {
-          _defineProperty(e, r, t[r]);
-        }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) {
-          Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
-        });
-      }
-      return e;
-    }
-    function _toPrimitive(t, r) {
-      if ("object" != typeof t || !t) return t;
-      var e = t[Symbol.toPrimitive];
-      if (void 0 !== e) {
-        var i = e.call(t, r || "default");
-        if ("object" != typeof i) return i;
-        throw new TypeError("@@toPrimitive must return a primitive value.");
-      }
-      return ("string" === r ? String : Number)(t);
-    }
-    function _toPropertyKey(t) {
-      var i = _toPrimitive(t, "string");
-      return "symbol" == typeof i ? i : i + "";
-    }
-    function _typeof(o) {
-      "@babel/helpers - typeof";
-
-      return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
-        return typeof o;
-      } : function (o) {
-        return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
-      }, _typeof(o);
-    }
-
-    /**
-     * gramjs-loader.js
-     * Loads the GramJS browser bundle from rawcdn.githack.com (production CDN).
-     *
-     * Bundle is hosted at: https://github.com/lampame/TGSBundle
-     *
-     * URL strategy (githack.com):
-     *   Development : https://raw.githack.com/lampame/TGSBundle/main/telegram.min.js
-     *                 → new pushes reflected within minutes, no indexing wait
-     *   Production  : https://rawcdn.githack.com/lampame/TGSBundle/<commit-or-tag>/telegram.min.js
-     *                 → permanently cached based on URL (query string ignored)
-     *                 → to update: change BUNDLE_REF to new commit hash or tag
-     *                 → to force-invalidate: paste URL on githack.com and click "purge cache"
-     *
-     * After script load, window.telegram is available with:
-     *   window.telegram.TelegramClient  — the main client class
-     *   window.telegram.MemorySession   — in-memory session (no fs dependency)
-     *   window.telegram.Api             — all TL API types
-     */
-
-    var BUNDLE_REF = '653586b3ffec2f9003ec7e1806b5c2e41224eb64';
-    var BUNDLE_URLS = ['https://cdn.jsdelivr.net/gh/lampame/TGSBundle@' + BUNDLE_REF + '/telegram.min.js', 'https://rawcdn.githack.com/lampame/TGSBundle/' + BUNDLE_REF + '/telegram.min.js', 'https://raw.githack.com/lampame/TGSBundle/main/telegram.min.js'];
-    var _loadPromise = null;
-    function tryLoad(index) {
-      if (index >= BUNDLE_URLS.length) {
-        return Promise.reject(new Error('GramLink: All CDN URLs failed'));
-      }
-      return new Promise(function (resolve, reject) {
-        var script = document.createElement('script');
-        script.src = BUNDLE_URLS[index];
-        script.async = true;
-        script.onload = function () {
-          var tg = window.telegram;
-          if (!tg || !tg.TelegramClient) {
-            console.warn('GramLink', 'Bundle loaded but TelegramClient missing from:', BUNDLE_URLS[index]);
-            script.remove();
-            // ponytail: retry with next CDN fallback
-            tryLoad(index + 1).then(resolve, reject);
-            return;
-          }
-          console.log('GramLink', 'GramJS loaded from:', BUNDLE_URLS[index]);
-          resolve(tg);
-        };
-        script.onerror = function () {
-          console.warn('GramLink', 'Failed to load from:', BUNDLE_URLS[index]);
-          script.remove();
-          tryLoad(index + 1).then(resolve, reject);
-        };
-        document.head.appendChild(script);
-      });
-    }
-
-    /**
-     * Load the GramJS browser bundle.
-     * Returns a Promise that resolves with window.telegram when ready.
-     * Tries multiple CDN URLs in order with fallback.
-     * Safe to call multiple times — deduplicates via cached promise.
-     */
-    function loadGramJS() {
-      if (window.telegram && window.telegram.TelegramClient) {
-        return Promise.resolve(window.telegram);
-      }
-      if (_loadPromise) return _loadPromise;
-      _loadPromise = tryLoad(0).catch(function (err) {
-        _loadPromise = null;
-        throw err;
-      });
-      return _loadPromise;
-    }
-
-    /**
-     * Convert a hex string (auth_key_hex from backend) to Uint8Array.
-     */
-    function hexToBytes$1(hex) {
-      var bytes = new Uint8Array(hex.length / 2);
-      for (var i = 0; i < bytes.length; i++) {
-        bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
-      }
-      return bytes;
-    }
-
     /**
      * sdk/keys.js — Single source of storage keys and helpers for Lampa.Storage
      *
@@ -1264,527 +1116,6 @@
       if (def === undefined) def = 0;
       var v = parseInt(Lampa.Storage.get(key, String(def)), 10);
       return Number.isFinite(v) ? v : def;
-    }
-
-    var _tg = null;
-    var _tgPromise = null;
-
-    /**
-     * Loads TGSBundle (if not loaded yet) and returns window.telegram.
-     * Safe to call multiple times — subsequent calls return the same promise.
-     */
-    function telegram() {
-      if (_tg) return Promise.resolve(_tg);
-      if (!_tgPromise) {
-        _tgPromise = loadGramJS().then(function (tg) {
-          _tg = tg;
-          return tg;
-        });
-      }
-      return _tgPromise;
-    }
-
-    /**
-     * Lazy load of Api (TL objects).
-     */
-    function Api() {
-      return telegram().then(function (tg) {
-        return tg.Api;
-      });
-    }
-
-    /**
-     * Lazy load of Buffer.
-     */
-    function Buffer() {
-      return telegram().then(function (tg) {
-        return tg.Buffer;
-      });
-    }
-
-    /**
-     * sdk/channels.js — Telegram channel/topic operations
-     *
-     * Eliminates:
-     *   A-03 — createForum instead of manual Api.channels.CreateChannel + ToggleForum
-     *   A-04 — createTopic instead of manual Api.channels.CreateForumTopic
-     *   A-05 — findTopic instead of manual Api.channels.GetForumTopics
-     *   A-06 — getInputEntity now inside functions, not in component code
-     *
-     * All functions accept tgClient as the first parameter.
-     *
-     * Usage:
-     *   import { createForum, createTopic, findTopic, findChannel } from '../sdk/channels'
-     */
-
-    /**
-     * Creates a new megagroup channel with forum.
-     * Returns peerId (negative int) or null.
-     */
-    function createForum(tgClient, title, about) {
-      if (about === undefined) about = 'GramLink: Lampa device sync channel';
-      return Api().then(function (A) {
-        return tgClient.invoke(new A.channels.CreateChannel({
-          title: title,
-          about: about,
-          megagroup: true,
-          forImport: false,
-          forum: true
-        })).then(function (result) {
-          var chat = result.chats && result.chats[0];
-          if (!chat) throw new Error('Channel create: no chat in result');
-          var peerId = parseInt('-100' + chat.id, 10);
-          return tgClient.invoke(new A.channels.ToggleForum({
-            channel: chat,
-            enabled: true
-          })).catch(function () {}).then(function () {
-            return tgClient.invoke(new A.account.UpdateNotifySettings({
-              peer: new A.InputNotifyPeer({
-                peer: chat
-              }),
-              settings: new A.InputPeerNotifySettings({
-                silent: true,
-                mute_until: 2147483647
-              })
-            })).catch(function () {});
-          }).then(function () {
-            return peerId;
-          });
-        }).catch(function (err) {
-          console.error('GramLink', 'createForum error:', err);
-          return null;
-        });
-      });
-    }
-
-    /**
-     * Creates a topic in the channel.
-     * Returns topic_id (int) or null.
-     */
-    function createTopic(tgClient, channelId, topicTitle, iconColor) {
-      if (iconColor === undefined) iconColor = 0x0088CC;
-      return Api().then(function (A) {
-        return tgClient.getInputEntity(channelId).then(function (peer) {
-          return tgClient.invoke(new A.channels.CreateForumTopic({
-            channel: peer,
-            title: topicTitle,
-            iconColor: iconColor
-          }));
-        }).then(function (result) {
-          var updates = result.updates || [];
-          for (var i = 0; i < updates.length; i++) {
-            if (updates[i].id) return updates[i].id;
-          }
-          return null;
-        }).catch(function (err) {
-          console.error('GramLink', 'createTopic error:', err);
-          return null;
-        });
-      });
-    }
-
-    /**
-     * Finds a topic by name.
-     * Returns topic_id (int) or null.
-     */
-    function findTopic(tgClient, channelId, topicTitle, limit) {
-      if (limit === undefined) limit = 10;
-      return Api().then(function (A) {
-        return tgClient.getInputEntity(channelId).then(function (peer) {
-          return tgClient.invoke(new A.channels.GetForumTopics({
-            channel: peer,
-            q: topicTitle,
-            offsetDate: 0,
-            offsetId: 0,
-            offsetTopic: 0,
-            limit: limit
-          }));
-        }).then(function (result) {
-          var topics = result.topics || [];
-          for (var i = 0; i < topics.length; i++) {
-            if (topics[i].title === topicTitle) return topics[i].id;
-          }
-          return null;
-        }).catch(function () {
-          return null;
-        });
-      });
-    }
-
-    /**
-     * Finds a channel by name among user's dialogs.
-     * Returns peerId (negative int) or null.
-     */
-    function findChannel(tgClient, title, dialogLimit) {
-      if (dialogLimit === undefined) dialogLimit = 200;
-      return tgClient.getDialogs({
-        limit: dialogLimit
-      }).then(function (dialogs) {
-        for (var i = 0; i < dialogs.length; i++) {
-          var d = dialogs[i];
-          if (d.title === title) {
-            var rawId = d.entity && d.entity.id;
-            if (!rawId) continue;
-            return parseInt('-100' + rawId, 10);
-          }
-        }
-        return null;
-      }).catch(function () {
-        return null;
-      });
-    }
-
-    var CHUNK = 512 * 1024;
-
-    /**
-     * Uploads a file to the specified chat/topic.
-     *
-     * @param {Object} tgClient — GramJS TelegramClient instance
-     * @param {number} chatId
-     * @param {number|string} threadId — topic ID
-     * @param {string} dataStr — file content (string)
-     * @param {string} fileName
-     * @param {string} [caption] — file caption (JSON)
-     * @returns {Promise<number|null>} messageId or null
-     */
-    function upload(tgClient, chatId, threadId, dataStr, fileName, caption) {
-      if (!chatId) return Promise.resolve(null);
-      return Promise.all([Api(), Buffer()]).then(function (results) {
-        var A = results[0];
-        var Buf = results[1];
-        var arr = new Uint8Array(8);
-        crypto.getRandomValues(arr);
-        var fileId = arr.reduce(function (a, b, i) {
-          return a | BigInt(b) << BigInt(i * 8);
-        }, 0n);
-        var buf = Buf.from(dataStr, 'utf-8');
-        var total = Math.ceil(buf.length / CHUNK);
-        var seq = Promise.resolve();
-        for (var i = 0; i < total; i++) {
-          (function (part) {
-            var start = part * CHUNK;
-            var end = Math.min(start + CHUNK, buf.length);
-            var chunk = buf.slice(start, end);
-            seq = seq.then(function () {
-              return tgClient.invoke(new A.upload.SaveFilePart({
-                fileId: fileId,
-                filePart: part,
-                bytes: chunk
-              }));
-            });
-          })(i);
-        }
-        return seq.then(function () {
-          return tgClient.getInputEntity(chatId);
-        }).then(function (peer) {
-          var randomId = BigInt(crypto.getRandomValues(new Uint8Array(4)).reduce(function (a, b) {
-            return a * 256 + b;
-          }, 0));
-          return tgClient.invoke(new A.messages.SendMedia({
-            peer: peer,
-            replyTo: new A.InputReplyToMessage({
-              replyToMsgId: parseInt(threadId, 10)
-            }),
-            media: new A.InputMediaUploadedDocument({
-              file: new A.InputFile({
-                id: fileId,
-                parts: total,
-                name: fileName,
-                md5Checksum: ''
-              }),
-              mimeType: 'application/json',
-              attributes: [new A.DocumentAttributeFilename({
-                fileName: fileName
-              })]
-            }),
-            message: caption || '',
-            entities: caption ? [new A.MessageEntityPre({
-              offset: 0,
-              length: caption.length,
-              language: 'json'
-            })] : [],
-            randomId: randomId
-          }));
-        }).then(function (result) {
-          if (result && result.updates) {
-            for (var i = 0; i < result.updates.length; i++) {
-              if (result.updates[i].id) return result.updates[i].id;
-            }
-          }
-          return null;
-        }).catch(function (err) {
-          console.error('GramLink', 'upload error:', err);
-          return null;
-        });
-      });
-    }
-
-    /**
-     * Strips ```json ... ``` wrapping from message text.
-     */
-    function stripCodeFence$1(text) {
-      if (!text) return text;
-      return text.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-    }
-
-    /**
-     * Sends a raw text message to a topic.
-     * Returns messageId or false.
-     */
-    function publishRaw(tgClient, chatId, threadId, text, silent) {
-      if (!chatId) return Promise.resolve(false);
-      return Api().then(function (A) {
-        var formattingEntities = [new A.MessageEntityPre({
-          offset: 0,
-          length: text.length,
-          language: 'json'
-        })];
-        var sendArgs = {
-          message: text,
-          formattingEntities: formattingEntities
-        };
-        if (threadId) sendArgs.replyTo = parseInt(threadId, 10);
-        if (silent) sendArgs.silent = true;
-        return tgClient.sendMessage(chatId, sendArgs).then(function (result) {
-          return result ? result.id : 0;
-        }).catch(function (err) {
-          console.error('GramLink', 'publishRaw error:', err);
-          return false;
-        });
-      });
-    }
-
-    /**
-     * Sends a message with JSON metadata (used for heartbeat, remote-cmd).
-     * Returns messageId or false.
-     */
-    function publish(tgClient, chatId, threadId, type, payload, targetDeviceId, metaExtras) {
-      if (!chatId) return Promise.resolve(false);
-      if (!metaExtras) metaExtras = {};
-      var deviceId = Lampa.Storage.get('gramlink_device_id', '');
-      var deviceName = getDeviceNameFallback();
-      var msg = JSON.stringify({
-        meta: _objectSpread2({
-          type: type,
-          device_id: deviceId,
-          device_name: deviceName,
-          target_device_id: targetDeviceId || 'all',
-          timestamp: Math.floor(Date.now() / 1000),
-          schema_version: 1
-        }, metaExtras),
-        payload: payload || {}
-      }, null, 2);
-      return Api().then(function (A) {
-        var formattingEntities = [new A.MessageEntityPre({
-          offset: 0,
-          length: msg.length,
-          language: 'json'
-        })];
-        var sendArgs = {
-          message: msg,
-          formattingEntities: formattingEntities
-        };
-        if (threadId) sendArgs.replyTo = parseInt(threadId, 10);
-
-        // Heartbeat and sync-log are always silent
-        if (type === 'heartbeat' || threadId && String(threadId) === String(Lampa.Storage.get('gramlink_sync_log_topic', ''))) {
-          sendArgs.silent = true;
-        }
-        return tgClient.sendMessage(chatId, sendArgs).then(function (result) {
-          return result ? result.id : 0;
-        }).catch(function (err) {
-          console.error('GramLink', 'publish error:', err);
-          return false;
-        });
-      });
-    }
-    function getDeviceNameFallback() {
-      try {
-        var ua = navigator.userAgent || '';
-        var name = 'Unknown Device';
-        var DEVICE_TYPES = {
-          'Amazon Fire TV': /Fire TV|Amazon/i,
-          'NVIDIA Shield TV': /SHIELD|NVIDIA/i
-        };
-        for (var k in DEVICE_TYPES) {
-          if (ua.match(DEVICE_TYPES[k])) {
-            name = k;
-            break;
-          }
-        }
-        return name;
-      } catch (e) {
-        return 'Unknown Device';
-      }
-    }
-
-    /**
-     * Edits an existing message.
-     */
-    function editMessage(tgClient, chatId, messageId, newText, threadId) {
-      if (!chatId) return Promise.resolve(false);
-      return Api().then(function (A) {
-        var formattingEntities = [new A.MessageEntityPre({
-          offset: 0,
-          length: newText.length,
-          language: 'json'
-        })];
-        var opts = {
-          message: messageId,
-          text: newText,
-          formattingEntities: formattingEntities
-        };
-        if (threadId) opts.replyTo = parseInt(threadId, 10);
-        return tgClient.editMessage(chatId, opts).then(function () {
-          return true;
-        }).catch(function (err) {
-          console.error('GramLink', 'editMessage error:', err);
-          return false;
-        });
-      });
-    }
-
-    /**
-     * Deletes a message.
-     */
-    function deleteMessage(tgClient, chatId, messageId) {
-      if (!chatId) return Promise.resolve(false);
-      return tgClient.deleteMessages(chatId, [messageId], {
-        revoke: true
-      }).then(function () {
-        return true;
-      }).catch(function (err) {
-        console.error('GramLink', 'deleteMessage error:', err);
-        return false;
-      });
-    }
-
-    /**
-     * Gets messages from a chat/topic.
-     */
-    function getMessages(tgClient, chatId, threadId, limit) {
-      if (!chatId) return Promise.resolve([]);
-      var getArgs = {
-        limit: limit || 50
-      };
-      if (threadId) getArgs.replyTo = parseInt(threadId, 10);
-      return tgClient.getMessages(chatId, getArgs).then(function (messages) {
-        return (messages || []).map(function (m) {
-          return {
-            id: m.id,
-            text: m.message || m.text || '',
-            date: m.date,
-            _msg: m
-          };
-        });
-      }).catch(function () {
-        return [];
-      });
-    }
-
-    /**
-     * Gets messages newer than the specified timestamp.
-     */
-    function getMessagesSince(tgClient, chatId, threadId, sinceTimestamp, limit) {
-      if (!chatId) return Promise.resolve([]);
-      var getArgs = {
-        limit: limit || 50
-      };
-      if (threadId) getArgs.replyTo = parseInt(threadId, 10);
-      return tgClient.getMessages(chatId, getArgs).then(function (messages) {
-        return (messages || []).filter(function (m) {
-          return m.date >= sinceTimestamp;
-        }).map(function (m) {
-          return {
-            id: m.id,
-            text: m.message || m.text || '',
-            date: m.date,
-            _msg: m
-          };
-        });
-      }).catch(function () {
-        return [];
-      });
-    }
-
-    /**
-     * Downloads a message's attached file.
-     */
-    function downloadFile(tgClient, message) {
-      if (!message || !message._msg) return Promise.resolve(null);
-      return tgClient.downloadMedia(message._msg.media).then(function (data) {
-        if (!data) return null;
-        try {
-          return new TextDecoder('utf-8', {
-            fatal: false
-          }).decode(data);
-        } catch (e) {
-          var str = '';
-          for (var i = 0; i < data.length; i++) {
-            str += String.fromCharCode(data[i]);
-          }
-          return str;
-        }
-      }).catch(function (err) {
-        console.error('GramLink', 'downloadFile error:', err);
-        return null;
-      });
-    }
-
-    /**
-     * Gets list of backup files from a topic.
-     */
-    function getBackupFiles(tgClient, chatId, threadId, limit) {
-      if (!chatId) return Promise.resolve([]);
-      var getArgs = {
-        limit: limit || 20
-      };
-      if (threadId) getArgs.replyTo = parseInt(threadId, 10);
-      return tgClient.getMessages(chatId, getArgs).then(function (messages) {
-        return (messages || []).filter(function (m) {
-          return m.media && m.media.document;
-        }).map(function (m) {
-          var fileName = 'backup.json';
-          var attrs = m.media.document.attributes || [];
-          for (var i = 0; i < attrs.length; i++) {
-            if (attrs[i].fileName) {
-              fileName = attrs[i].fileName;
-              break;
-            }
-          }
-          return {
-            id: m.id,
-            date: m.date,
-            fileName: fileName,
-            size: m.media.document.size,
-            text: m.message || '',
-            _msg: m
-          };
-        });
-      }).catch(function () {
-        return [];
-      });
-    }
-
-    /**
-     * Downloads file from attachment (separate from downloadFile for backward compatibility).
-     */
-    function downloadMessageFile(tgClient, message) {
-      if (!message || !message._msg) return Promise.resolve(null);
-      if (!message._msg.media || !message._msg.media.document) return Promise.resolve(null);
-      return tgClient.downloadMedia(message._msg.media).then(function (data) {
-        if (!data) return null;
-        try {
-          return new TextDecoder('utf-8', {
-            fatal: false
-          }).decode(data);
-        } catch (e) {
-          return null;
-        }
-      }).catch(function (err) {
-        console.error('GramLink', 'downloadMessageFile error:', err);
-        return null;
-      });
     }
 
     // Note (A-16): getDeviceId generates tv_xxx_timestamp as session token,
@@ -2322,935 +1653,787 @@
 
     var VERSION = '0.1.1';
     var instance = null;
-    var GramLinkClient = /*#__PURE__*/function () {
-      function GramLinkClient() {
-        _classCallCheck(this, GramLinkClient);
-        this._connected = false;
-        this._connecting = false;
-        this._listeners = {};
-        this._heartbeatTimer = null;
-        this._pollTimer = null;
-        this._dcPollTimer = null;
-        this._heartbeatMsgId = null; // ponytail: cached heartbeat message ID
-        this.tgClient = null; // GramJS TelegramClient instance
+    function GatewayClient() {
+      this._ws = null;
+      this._connected = false;
+      this._connecting = false;
+      this._requestId = 0;
+      this._pending = {};
+      this._listeners = {};
+      this._heartbeatTimer = null;
+      this._heartbeatMsgId = null;
+      this._reconnectTimer = null;
+      this._reconnectAttempts = 0;
+      this._wsUrl = '';
+    }
+    GatewayClient.getInstance = function () {
+      if (!instance) instance = new GatewayClient();
+      return instance;
+    };
+
+    // ── Credentials ────────────────────────────────
+
+    GatewayClient.prototype.saveCredentials = function (dcId, authKeyHex) {
+      Lampa.Storage.set(STORAGE_KEYS.DC_ID, String(dcId));
+      vault.seal(authKeyHex);
+    };
+    GatewayClient.prototype.hasCredentials = function () {
+      var dc = Lampa.Storage.get(STORAGE_KEYS.DC_ID, '');
+      var key = vault.hasSealed();
+      return !!(dc && key);
+    };
+    GatewayClient.prototype.clearCredentials = function () {
+      Lampa.Storage.set(STORAGE_KEYS.DC_ID, '');
+      vault.clear();
+    };
+
+    // ── WS helpers ────────────────────────────────
+
+    GatewayClient.prototype._sendCommand = function (cmd, params) {
+      var self = this;
+      return new Promise(function (resolve, reject) {
+        if (!self._ws || self._ws.readyState !== 1) {
+          reject(new Error('Not connected'));
+          return;
+        }
+        var id = ++self._requestId;
+        var timer = setTimeout(function () {
+          delete self._pending[id];
+          reject(new Error('Gateway timeout: ' + cmd));
+        }, 30000);
+        self._pending[id] = {
+          resolve: resolve,
+          reject: reject,
+          timer: timer
+        };
+        self._ws.send(JSON.stringify({
+          id: id,
+          cmd: cmd,
+          params: params || {}
+        }));
+      });
+    };
+    GatewayClient.prototype._sendApi = function (method, params) {
+      var self = this;
+      return self._sendCommand('api', {
+        method: method,
+        params: params || {}
+      }).then(function (resp) {
+        return resp.result;
+      });
+    };
+    GatewayClient.prototype._processGatewayMessage = function (e) {
+      var msg;
+      try {
+        msg = JSON.parse(e.data);
+      } catch (x) {
+        return;
       }
-      return _createClass(GramLinkClient, [{
-        key: "saveCredentials",
-        value:
-        // ─── Auth helpers (used by auth.js) ────────────────────────
+      var pending = msg.id && this._pending[msg.id];
+      if (pending) {
+        clearTimeout(pending.timer);
+        delete this._pending[msg.id];
+        if (msg.ok) pending.resolve(msg);else pending.reject(new Error(msg.error || 'Gateway error'));
+      }
+      if (msg.event === 'disconnected') {
+        this._connected = false;
+        this._emit('connection', {
+          state: 'disconnected'
+        });
+      }
+      if (msg.event === 'message' && msg.data) {
+        this._emit('profile_delta', msg.data);
+      }
+    };
 
-        function saveCredentials(dcId, authKeyHex) {
-          Lampa.Storage.set(STORAGE_KEYS.DC_ID, String(dcId));
-          vault.seal(authKeyHex);
-        }
-      }, {
-        key: "hasCredentials",
-        value: function hasCredentials() {
-          var dc = Lampa.Storage.get(STORAGE_KEYS.DC_ID, '');
-          var key = vault.hasSealed();
-          return !!(dc && key);
-        }
-      }, {
-        key: "clearCredentials",
-        value: function clearCredentials() {
-          Lampa.Storage.set(STORAGE_KEYS.DC_ID, '');
-          vault.clear();
-        }
+    // ── Connection ────────────────────────────────
 
-        // ─── Connection ────────────────────────────────────────────
-      }, {
-        key: "connect",
-        value: function connect() {
-          var self = this;
-          if (!self.hasCredentials()) {
-            return Promise.reject(new Error('Authorization required'));
-          }
-
-          // Already connected
-          if (self._connected && self.tgClient) {
-            return Promise.resolve();
-          }
-
-          // Connection in progress — return the same promise
-          if (self._connecting) {
-            return new Promise(function (resolve, reject) {
-              var check = setInterval(function () {
-                if (self._connected) {
-                  clearInterval(check);
-                  resolve();
-                }
-                if (!self._connecting) {
-                  clearInterval(check);
-                  reject(new Error('Connection failed'));
-                }
-              }, 200);
-            });
-          }
-          self._connecting = true;
-          self._emit('connection', {
-            state: 'connecting'
-          });
-          return loadGramJS().then(function (tg) {
-            var TelegramClient = tg.TelegramClient;
-            var MemorySession = tg.MemorySession;
-            tg.Api;
-            var dcId = parseInt(Lampa.Storage.get(STORAGE_KEYS.DC_ID, ''), 10);
-            var authKeyHex = vault.unseal();
-            if (!dcId || !authKeyHex) {
+    GatewayClient.prototype.connect = function () {
+      var self = this;
+      if (self._connecting) {
+        return new Promise(function (resolve, reject) {
+          var check = setInterval(function () {
+            if (self._connected) {
+              clearInterval(check);
+              resolve();
+            }
+            if (!self._connecting) {
+              clearInterval(check);
+              reject(new Error('Connection failed'));
+            }
+          }, 200);
+        });
+      }
+      if (self._connected) return Promise.resolve();
+      if (!self.hasCredentials()) return Promise.reject(new Error('Authorization required'));
+      self._connecting = true;
+      self._emit('connection', {
+        state: 'connecting'
+      });
+      var dcId = parseInt(Lampa.Storage.get(STORAGE_KEYS.DC_ID, ''), 10);
+      var authKeyHex = vault.unseal();
+      if (!dcId || !authKeyHex) {
+        self._connecting = false;
+        return Promise.reject(new Error('No credentials'));
+      }
+      var deviceId = getDeviceId();
+      var apiCreds = getApiCredentials();
+      var gatewayUrl = Lampa.Storage.get('gramlink_gateway_url', 'wss://mtproto-master.fly.dev');
+      self._wsUrl = gatewayUrl + '/ws?clientId=' + encodeURIComponent(deviceId);
+      return new Promise(function (resolve, reject) {
+        var ws = new WebSocket(self._wsUrl);
+        self._ws = ws;
+        ws.onopen = function () {
+          self._sendCommand('connect', {
+            dcId: dcId,
+            authKeyHex: authKeyHex,
+            apiId: apiCreds.apiId,
+            apiHash: apiCreds.apiHash
+          }).then(function (resp) {
+            if (resp.event === 'connected') {
+              self._connected = true;
               self._connecting = false;
-              throw new Error('Authorization required');
-            }
-
-            // Restore session from raw key bytes
-            var session = new MemorySession();
-            var keyBytes = hexToBytes$1(authKeyHex);
-
-            // Setup authKey — prefer native AuthKey class from GramJS bundle,
-            // fallback to duck-typed with pure-JS SHA-1 for keyId calculation.
-            function setupAuthKey() {
-              // Attempt native AuthKey class (exported from bundle since v2.x)
-              if (tg.AuthKey) {
-                var nativeKey = new tg.AuthKey();
-                return nativeKey.setKey(keyBytes).then(function () {
-                  session.authKey = nativeKey;
-                });
-              }
-
-              // Duck-typed fallback: implement the AuthKey interface manually.
-              // Pure-JS SHA-1 for keyId / auxHash calculation:
-
-              function sha1(bytes) {
-                var words = [];
-                var len = bytes.length;
-                for (var i = 0; i < len; i++) {
-                  words[i >> 2] |= bytes[i] << 24 - i % 4 * 8;
-                }
-                words[len >> 2] |= 0x80 << 24 - len % 4 * 8;
-                words[(len + 8 >> 6 << 4) + 15] = len * 8;
-                var w = new Array(80);
-                var a = 1732584193;
-                var b = -271733879;
-                var c = -1732584194;
-                var d = 271733878;
-                var e = -1009589776;
-                for (var i = 0; i < words.length; i += 16) {
-                  var olda = a;
-                  var oldb = b;
-                  var oldc = c;
-                  var oldd = d;
-                  var olde = e;
-                  for (var j = 0; j < 80; j++) {
-                    if (j < 16) w[j] = words[i + j] | 0;else {
-                      var val = w[j - 3] ^ w[j - 8] ^ w[j - 14] ^ w[j - 16];
-                      w[j] = val << 1 | val >>> 31;
-                    }
-                    var t = (a << 5 | a >>> 27) + e + w[j] + (j < 20 ? 1518500249 + (b & c | ~b & d) : j < 40 ? 1859775393 + (b ^ c ^ d) : j < 60 ? -1894007588 + (b & c | b & d | c & d) : -899497514 + (b ^ c ^ d)) | 0;
-                    e = d;
-                    d = c;
-                    c = b << 30 | b >>> 2;
-                    b = a;
-                    a = t;
-                  }
-                  a = a + olda | 0;
-                  b = b + oldb | 0;
-                  c = c + oldc | 0;
-                  d = d + oldd | 0;
-                  e = e + olde | 0;
-                }
-                var result = new Uint8Array(20);
-                var output = [a, b, c, d, e];
-                for (var i = 0; i < 20; i++) {
-                  result[i] = output[i >> 2] >>> 24 - i % 4 * 8 & 0xff;
-                }
-                return result;
-              }
-              function readLE64(bytes, offset) {
-                var val = 0n;
-                for (var i = 0; i < 8; i++) {
-                  val |= BigInt(bytes[offset + i]) << BigInt(i * 8);
-                }
-                return val;
-              }
-              var hashBytes = sha1(keyBytes);
-              var keyIdVal = readLE64(hashBytes, 12);
-              var auxHashVal = readLE64(hashBytes, 0);
-              session.authKey = {
-                _key: keyBytes,
-                getKey: function getKey() {
-                  return this._key;
-                },
-                keyId: keyIdVal,
-                auxHash: auxHashVal,
-                waitForKey: function waitForKey() {
-                  return Promise.resolve();
-                },
-                setKey: function setKey(key) {
-                  var k = key && key.getKey ? key.getKey() : key;
-                  if (k) {
-                    this._key = k;
-                    var h = sha1(k);
-                    this.auxHash = readLE64(h, 0);
-                    this.keyId = readLE64(h, 12);
-                  }
-                  return Promise.resolve();
-                }
-              };
-              return Promise.resolve();
-            }
-            return setupAuthKey().then(function () {
-              var targetHost = '';
-              var targetPort = 443;
-              if (Lampa.Storage.get('gramlink_server_type', 'official') === 'custom') {
-                targetHost = Lampa.Storage.get('gramlink_custom_host', '');
-                targetPort = parseInt(Lampa.Storage.get('gramlink_custom_port', '443'), 10);
-              } else {
-                var dcDomains = {
-                  1: 'pluto.web.telegram.org',
-                  2: 'venus.web.telegram.org',
-                  3: 'aurora.web.telegram.org',
-                  4: 'vesta.web.telegram.org',
-                  5: 'flora.web.telegram.org'
-                };
-                targetHost = dcDomains[dcId] || 'vesta.web.telegram.org';
-              }
-              session.setDC(dcId, targetHost, targetPort);
-              var clientOptions = {
-                connectionRetries: 5,
-                useWSS: true,
-                deviceModel: getDeviceName(),
-                systemVersion: getSystemVersion(),
-                appVersion: window.Lampa && Lampa.Manifest && Lampa.Manifest.app_version || VERSION,
-                langCode: window.Lampa && Lampa.Storage && Lampa.Storage.get('language', 'en') || 'en',
-                systemLangCode: (navigator.language || navigator.userLanguage || 'en').split('-')[0] || 'en'
-              };
-              var proxyOptions = self.buildProxyOptions();
-              if (proxyOptions) {
-                clientOptions.proxy = proxyOptions;
-              }
-              var creds = getApiCredentials();
-              var client = new TelegramClient(session, creds.apiId, creds.apiHash, clientOptions);
-              try {
-                client.setLogLevel('error');
-              } catch (e) {}
-              return client.connect().then(function () {
-                self.tgClient = client;
-                self._connected = true;
-                self._connecting = false;
-                self._emit('connection', {
-                  state: 'connected'
-                });
-                console.log('GramLink', 'Connected directly to Telegram MTProto (dc=' + dcId + ')');
-
-                // Start listening for incoming updates (remote commands)
-                self._startUpdateListener();
-
-                // Start DC migration observation
-                self._startDcPoller();
-
-                // Start heartbeat if we already have the sync channel and log topic resolved
-                var channelId = Lampa.Storage.get('gramlink_channel_id', '');
-                var syncLogTopicId = Lampa.Storage.get('gramlink_sync_log_topic', '');
-                if (channelId && syncLogTopicId) {
-                  self.startHeartbeat(channelId, syncLogTopicId);
-                }
-                return Promise.resolve();
+              self._reconnectAttempts = 0;
+              self._emit('connection', {
+                state: 'connected'
               });
-            });
+              var channelId = Lampa.Storage.get('gramlink_channel_id', '');
+              var syncLogId = Lampa.Storage.get('gramlink_sync_log_topic', '');
+              if (channelId && syncLogId && self.isEnabled('gramlink_heartbeat')) {
+                self.startHeartbeat(channelId, syncLogId);
+              }
+              resolve();
+            } else {
+              self._connecting = false;
+              reject(new Error(resp.error || 'Gateway connect failed'));
+            }
           }).catch(function (err) {
             self._connecting = false;
-            self._connected = false;
-            self._emit('connection', {
-              state: 'disconnected'
-            });
-            console.error('GramLink', 'Connection error:', err);
-            if (self.hasCredentials()) {
-              var errMsg = err && (err.message || err.errorMessage || '');
-              if (errMsg.indexOf('AUTH_KEY_INVALID') >= 0 || errMsg.indexOf('AUTH_KEY_PERM_EMPTY') >= 0 || errMsg.indexOf('SESSION_PASSWORD_NEEDED') >= 0) {
-                self.clearCredentials();
-                Lampa.Noty.show(Lampa.Lang.translate('gramlink_error_session_invalid'));
-                return Promise.reject(err);
-              }
-            }
-            throw err;
+            reject(err);
           });
-        }
-      }, {
-        key: "disconnect",
-        value: function disconnect() {
-          this._stopDcPoller();
-          this.stopHeartbeat();
-          this._stopUpdateListener();
-          if (this.tgClient) {
-            try {
-              this.tgClient.disconnect();
-            } catch (e) {}
-            this.tgClient = null;
-          }
-          this._connected = false;
-          this._connecting = false;
-          this._emit('connection', {
+        };
+        ws.onmessage = function (e) {
+          self._processGatewayMessage(e);
+        };
+        ws.onclose = function () {
+          self._connected = false;
+          self._connecting = false;
+          self._emit('connection', {
             state: 'disconnected'
           });
-        }
-      }, {
-        key: "logout",
-        value: function logout() {
-          this.disconnect();
-          this.clearCredentials();
-        }
-      }, {
-        key: "isConnected",
-        value: function isConnected() {
-          return this._connected && this.tgClient !== null;
-        }
-      }, {
-        key: "isConnecting",
-        value: function isConnecting() {
-          return this._connecting;
-        }
-      }, {
-        key: "isEnabled",
-        value: function isEnabled(key) {
-          var v = Lampa.Storage.get(key, false);
-          return v === true || v === 'true';
-        }
-
-        // ─── Proxy options builder ────────────────────────────────
-      }, {
-        key: "buildProxyOptions",
-        value: function buildProxyOptions() {
-          if (this.isEnabled('gramlink_proxy_enabled')) {
-            return {
-              MTProxy: true,
-              server: Lampa.Storage.get('gramlink_proxy_host', ''),
-              port: parseInt(Lampa.Storage.get('gramlink_proxy_port', ''), 10),
-              secret: Lampa.Storage.get('gramlink_proxy_secret', '')
-            };
-          }
-          return null;
-        }
-
-        // ─── Reconnect (hot-reload after proxy/server changes) ────
-      }, {
-        key: "reconnect",
-        value: function reconnect() {
-          if (this.isConnected() && this.tgClient) {
-            var self = this;
-            var connectPromise = Promise.resolve().then(function () {
-              self.disconnect();
-            }).then(function () {
-              return self.connect();
-            });
-            if (self.isEnabled('gramlink_proxy_enabled')) {
-              var timeoutPromise = new Promise(function (_, reject) {
-                setTimeout(function () {
-                  reject(new Error('GramLink: Proxy connection timeout'));
-                }, 10000);
-              });
-              return Promise.race([connectPromise, timeoutPromise]).catch(function (err) {
-                Lampa.Noty.show(Lampa.Lang.translate('gramlink_error_proxy_failed'));
-                throw err;
-              });
-            }
-            return connectPromise;
-          }
-          return Promise.resolve();
-        }
-
-        // ─── Publish (send message to Telegram topic) ──────────────
-
-        /**
-         * Low-level publish. Sends raw text to a topic in the sync channel.
-         * Used by publishDelta() and for direct message sending.
-         */
-      }, {
-        key: "publishRaw",
-        value: function publishRaw$1(threadId, text, silent) {
-          if (!this.isConnected()) return Promise.resolve(false);
-          var chatId = parseInt(Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, ''), 10);
-          if (!chatId) return Promise.resolve(false);
-          return publishRaw(this.tgClient, chatId, threadId, text, silent);
-        }
-
-        /**
-         * Publish a profile delta (bookmark/timecode/plugin change).
-         * Goes to #profiles-sync topic for real-time cross-device sync.
-         */
-      }, {
-        key: "publishDelta",
-        value: function publishDelta(profilesSyncTopicId, subtype, profileMsgId, payload) {
-          var msg = JSON.stringify({
-            meta: {
-              type: 'profile_delta',
-              subtype: subtype,
-              profile_msg_id: profileMsgId,
-              device_id: getDeviceId(),
-              timestamp: Math.floor(Date.now() / 1000)
-            },
-            payload: payload || {}
-          });
-          return this.publishRaw(profilesSyncTopicId, msg, true);
-        }
-      }, {
-        key: "publish",
-        value: function publish$1(chatId, threadId, type, payload, targetDeviceId) {
-          if (!this.isConnected()) return Promise.resolve(false);
-          return publish(this.tgClient, chatId, threadId, type, payload, targetDeviceId);
-        }
-
-        // ─── Get online devices (read heartbeat messages) ──────────
-      }, {
-        key: "getOnlineDevices",
-        value: function getOnlineDevices(chatId, threadId) {
-          if (!this.isConnected()) return Promise.resolve([]);
-          return getMessages(this.tgClient, chatId, threadId, 50).then(function (messages) {
-            var now = Math.floor(Date.now() / 1000);
-            var seen = {};
-            (messages || []).forEach(function (m) {
-              try {
-                var d = JSON.parse(stripCodeFence$1(m.text || ''));
-                var meta = d && d.meta;
-                if (!meta || meta.type !== 'heartbeat') return;
-                if (now - meta.timestamp < 90) {
-                  if (!seen[meta.device_id] || seen[meta.device_id].timestamp < meta.timestamp) {
-                    seen[meta.device_id] = meta;
-                  }
-                }
-              } catch (e) {}
-            });
-            return Object.values(seen);
-          }).catch(function () {
-            return [];
-          });
-        }
-
-        // ─── Get messages from topic ────────────────────────────────
-      }, {
-        key: "getMessages",
-        value: function getMessages$1(chatId, threadId, limit) {
-          if (!this.isConnected()) return Promise.resolve([]);
-          return getMessages(this.tgClient, chatId, threadId, limit);
-        }
-
-        /**
-         * Get messages from a thread newer than a given timestamp.
-         * Used to replay deltas that arrived after the last snapshot.
-         */
-      }, {
-        key: "getMessagesSince",
-        value: function getMessagesSince$1(threadId, sinceTimestamp, limit) {
-          if (!this.isConnected()) return Promise.resolve([]);
-          var chatId = parseInt(Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, ''), 10);
-          if (!chatId) return Promise.resolve([]);
-          return getMessagesSince(this.tgClient, chatId, threadId, sinceTimestamp, limit);
-        }
-
-        // ─── Delete a message ───────────────────────────────────────
-      }, {
-        key: "deleteMessage",
-        value: function deleteMessage$1(chatId, messageId) {
-          if (!this.isConnected()) return Promise.resolve(false);
-          return deleteMessage(this.tgClient, chatId, messageId);
-        }
-
-        // ─── Edit a message ─────────────────────────────────────────
-      }, {
-        key: "editMessage",
-        value: function editMessage$1(chatId, messageId, newText, threadId) {
-          if (!this.isConnected()) return Promise.resolve(false);
-          return editMessage(this.tgClient, chatId, messageId, newText, threadId);
-        }
-
-        // ─── File/document operations (backup) ───────────────────────
-      }, {
-        key: "sendFile",
-        value: function sendFile(chatId, threadId, dataStr, fileName, caption) {
-          if (!this.isConnected()) return Promise.resolve(null);
-          return upload(this.tgClient, chatId, threadId, dataStr, fileName, caption);
-        }
-      }, {
-        key: "getBackupFiles",
-        value: function getBackupFiles$1(chatId, threadId, limit) {
-          if (!this.isConnected()) return Promise.resolve([]);
-          return getBackupFiles(this.tgClient, chatId, threadId, limit);
-        }
-      }, {
-        key: "downloadFile",
-        value: function downloadFile$1(message) {
-          if (!this.isConnected()) return Promise.resolve(null);
-          return downloadFile(this.tgClient, message);
-        }
-      }, {
-        key: "downloadMessageFile",
-        value: function downloadMessageFile$1(message) {
-          if (!this.isConnected()) return Promise.resolve(null);
-          return downloadMessageFile(this.tgClient, message);
-        }
-
-        // ─── Channel operations via GramJS invoke() ─────────────────
-
-        /**
-         * Find an existing channel/megagroup by title from user's dialogs.
-         * Returns channel peer_id (negative int) or null.
-         */
-      }, {
-        key: "findChannel",
-        value: function findChannel$1(title) {
-          if (!this.isConnected()) return Promise.resolve(null);
-          return findChannel(this.tgClient, title, 200);
-        }
-
-        /**
-         * Create a new megagroup with Forum topics enabled.
-         * Returns the channel peer_id (negative int) or null.
-         */
-      }, {
-        key: "createChannel",
-        value: function createChannel(title) {
-          if (!this.isConnected()) return Promise.resolve(null);
-          return createForum(this.tgClient, title, 'GramLink: Lampa device sync channel');
-        }
-
-        /**
-         * Create a forum topic inside a channel.
-         * Returns topic_id (int) or null.
-         */
-      }, {
-        key: "createTopic",
-        value: function createTopic$1(channelId, topicTitle) {
-          if (!this.isConnected()) return Promise.resolve(null);
-          return createTopic(this.tgClient, channelId, topicTitle, 0x0088CC);
-        }
-
-        /**
-         * Find a forum topic by name in a channel.
-         * Returns topic_id or null.
-         */
-      }, {
-        key: "findTopic",
-        value: function findTopic$1(channelId, topicTitle) {
-          if (!this.isConnected()) return Promise.resolve(null);
-          return findTopic(this.tgClient, channelId, topicTitle, 10);
-        }
-
-        // ─── Heartbeat ─────────────────────────────────────────────
-      }, {
-        key: "startHeartbeat",
-        value: function startHeartbeat(chatId, threadId) {
-          this.stopHeartbeat();
-          if (!this._connected || !this.isEnabled('gramlink_heartbeat')) return;
-          var self = this;
-          var myId = getDeviceId();
-          var doBeat = function doBeat() {
-            if (!self._connected) return;
-            if (!self.isEnabled('gramlink_heartbeat')) {
-              self.stopHeartbeat();
-              return;
-            }
-            var payload = JSON.stringify({
-              meta: {
-                type: 'heartbeat',
-                device_id: myId,
-                device_name: getDeviceName(),
-                timestamp: Math.floor(Date.now() / 1000),
-                schema_version: 1
-              },
-              payload: {}
-            }, null, 2);
-
-            // ponytail: use cached heartbeat message ID
-            if (self._heartbeatMsgId) {
-              return self.editMessage(chatId, self._heartbeatMsgId, payload, threadId);
-            }
-            self._findHeartbeatMessage(chatId, threadId, myId).then(function (result) {
-              if (result.id) {
-                self._heartbeatMsgId = result.id; // ponytail: cache it
-                return self.editMessage(chatId, result.id, payload, threadId);
-              } else {
-                return self.publish(chatId, threadId, 'heartbeat', {}).then(function (msgId) {
-                  if (msgId) self._heartbeatMsgId = msgId; // ponytail: cache new message
-                });
-              }
-            });
-          };
-          doBeat();
-          this._heartbeatTimer = setInterval(doBeat, 60000);
-        }
-      }, {
-        key: "_findHeartbeatMessage",
-        value: function _findHeartbeatMessage(chatId, threadId, myDeviceId) {
-          if (!this.isConnected()) return Promise.resolve({
-            id: null
-          });
-          var self = this;
-          var getArgs = {
-            limit: 50
-          };
-          if (threadId) getArgs.replyTo = parseInt(threadId, 10);
-          return this.tgClient.getMessages(chatId, getArgs).then(function (messages) {
-            var mine = [];
-            (messages || []).forEach(function (m) {
-              try {
-                var d = JSON.parse(stripCodeFence$1(m.message || m.text || ''));
-                var meta = d && d.meta;
-                if (!meta || meta.type !== 'heartbeat') return;
-                if (meta.device_id === myDeviceId) {
-                  mine.push({
-                    id: m.id,
-                    ts: meta.timestamp || 0
-                  });
-                }
-              } catch (e) {}
-            });
-            if (mine.length === 0) return {
-              id: null
-            };
-            mine.sort(function (a, b) {
-              return b.ts - a.ts;
-            });
-            if (mine.length > 1) {
-              var toDelete = mine.slice(1).map(function (m) {
-                return m.id;
-              });
-              self.tgClient.deleteMessages(chatId, toDelete, {
-                revoke: true
-              }).catch(function () {});
-            }
-            return {
-              id: mine[0].id
-            };
-          }).catch(function () {
-            return {
-              id: null
-            };
-          });
-        }
-      }, {
-        key: "stopHeartbeat",
-        value: function stopHeartbeat() {
-          if (this._heartbeatTimer) {
-            clearInterval(this._heartbeatTimer);
-            this._heartbeatTimer = null;
-          }
-        }
-
-        // ─── DC migration observer ────────────────────────────────
-      }, {
-        key: "_startDcPoller",
-        value: function _startDcPoller() {
-          var self = this;
-          self._stopDcPoller();
-          self._dcPollTimer = setInterval(function () {
-            if (!self.tgClient || !self.tgClient.session) return;
-            var currentDc = self.tgClient.session.dcId;
-            if (!currentDc) return;
-            var savedDc = parseInt(Lampa.Storage.get(STORAGE_KEYS.DC_ID, ''), 10);
-            if (currentDc !== savedDc) {
-              Lampa.Storage.set(STORAGE_KEYS.DC_ID, String(currentDc));
-            }
-          }, 300000); // ponytail: relaxed DC poller (5 min)
-        }
-      }, {
-        key: "_stopDcPoller",
-        value: function _stopDcPoller() {
-          if (this._dcPollTimer) {
-            clearInterval(this._dcPollTimer);
-            this._dcPollTimer = null;
-          }
-        }
-
-        // ─── Update listener (incoming remote commands) ─────────────
-      }, {
-        key: "_startUpdateListener",
-        value: function _startUpdateListener() {
-          var self = this;
-          if (!self.tgClient) return;
-
-          // ponytail: save handler for cleanup
-          self._updateHandler = function (update) {
-            try {
-              var msg = update.message;
-              if (!msg || !msg.message) return;
-              var d = JSON.parse(stripCodeFence$1(msg.message));
-              if (!d || !d.meta) return;
-              var myId = getDeviceId();
-
-              // Profile deltas: pass through for active profile processing
-              if (d.meta.type === 'profile_delta') {
-                self._emit('profile_delta', d);
-                return;
-              }
-
-              // Remote commands: check target_device_id
-              var targetId = d.meta.target_device_id;
-              if (targetId !== 'all' && targetId !== myId) return;
-              if (d.meta.device_id === myId) return;
-              self._emit(d.meta.type, d);
-            } catch (e) {}
-          };
-          self.tgClient.addEventHandler(self._updateHandler); // ponytail: use saved handler
-        }
-      }, {
-        key: "_stopUpdateListener",
-        value: function _stopUpdateListener() {
-          // ponytail: proper handler cleanup
-          if (this.tgClient && this._updateHandler) {
-            try {
-              this.tgClient.removeEventHandler(this._updateHandler);
-            } catch (e) {}
-            this._updateHandler = null;
-          }
-        }
-
-        // ─── Event emitter ─────────────────────────────────────────
-      }, {
-        key: "on",
-        value: function on(event, cb) {
-          if (!this._listeners[event]) this._listeners[event] = [];
-          this._listeners[event].push(cb);
-        }
-      }, {
-        key: "off",
-        value: function off(event, cb) {
-          if (!this._listeners[event]) return;
-          this._listeners[event] = this._listeners[event].filter(function (f) {
-            return f !== cb;
-          });
-        }
-      }, {
-        key: "_emit",
-        value: function _emit(event, data) {
-          var handlers = this._listeners[event] || [];
-          handlers.forEach(function (cb) {
-            try {
-              cb(data);
-            } catch (e) {
-              console.error('GramLink', 'Listener error:', e);
-            }
-          });
-        }
-      }], [{
-        key: "getInstance",
-        value: function getInstance() {
-          if (!instance) instance = new GramLinkClient();
-          return instance;
-        }
-      }]);
-    }(); // ─── System version extractor (from user agent) ──────────
-    // Returns a pretty OS version string for Telegram MTProto clientOptions.
-    // Examples: "Android 14", "iOS 17.0", "macOS 14.3", "Windows 10", "Windows 11"
-    function getSystemVersion() {
-      var ua = navigator.userAgent || '';
-
-      // Android: "Android 14", "Android 16"
-      var m = ua.match(/Android\s+([\d.]+)/);
-      if (m) return 'Android ' + m[1];
-
-      // iOS (iPhone/iPad): "... iPhone OS 17_0 ..." → "iOS 17.0"
-      m = ua.match(/(?:iPhone|iPad)\s+OS\s+([\d_]+)/);
-      if (m) return 'iOS ' + m[1].replace(/_/g, '.');
-
-      // macOS: "Mac OS X 10_15_7" → "macOS 10.15.7"
-      m = ua.match(/Mac\s+OS\s+X\s+([\d_]+)/);
-      if (m) return 'macOS ' + m[1].replace(/_/g, '.');
-
-      // Windows NT: "Windows NT 10.0" → "Windows 10" / "Windows 11" / "Windows 10.0.xxxx"
-      m = ua.match(/Windows\s+NT\s+([\d.]+)/);
-      if (m) {
-        var v = m[1];
-        if (v === '10.0') {
-          // Windows 11 often reports NT 10.0 too — check for "Windows 11" in UA
-          if (ua.match(/Windows\s+11|Win64|arm64/i) && !ua.match(/Windows\s+10\.0;\s*$|Touch/i)) return 'Windows 11';
-          return 'Windows 10';
-        }
-        if (v === '6.3') return 'Windows 8.1';
-        if (v === '6.2') return 'Windows 8';
-        if (v === '6.1') return 'Windows 7';
-        return 'Windows ' + v;
+          self._scheduleReconnect();
+        };
+        ws.onerror = function () {
+          self._connecting = false;
+          reject(new Error('WebSocket connection failed'));
+        };
+      });
+    };
+    GatewayClient.prototype._scheduleReconnect = function () {
+      var self = this;
+      if (self._reconnectTimer) return;
+      if (!self.hasCredentials()) return;
+      var delay = Math.min(1000 * Math.pow(2, self._reconnectAttempts), 30000);
+      self._reconnectAttempts++;
+      self._reconnectTimer = setTimeout(function () {
+        self._reconnectTimer = null;
+        self.connect().catch(function () {});
+      }, delay);
+    };
+    GatewayClient.prototype.disconnect = function () {
+      this.stopHeartbeat();
+      if (this._reconnectTimer) {
+        clearTimeout(this._reconnectTimer);
+        this._reconnectTimer = null;
       }
-
-      // Linux (generic): extract distro info if available
-      m = ua.match(/\(([^)]+)\)/);
-      if (m) {
-        var parts = m[1].split(';');
-        return parts[0].trim() || 'Linux';
+      if (this._ws) {
+        try {
+          this._ws.onclose = null;
+          this._ws.close();
+        } catch (e) {}
+        this._ws = null;
       }
-      return '1.0';
-    }
+      this._connected = false;
+      this._connecting = false;
+      this._emit('connection', {
+        state: 'disconnected'
+      });
+    };
+    GatewayClient.prototype.logout = function () {
+      this.disconnect();
+      this.clearCredentials();
+    };
+    GatewayClient.prototype.reconnect = function () {
+      var self = this;
+      return Promise.resolve().then(function () {
+        self.disconnect();
+      }).then(function () {
+        return self.connect();
+      });
+    };
 
-    // ─── Device fingerprinting (moved to sdk/device) ──────────
+    // ── Status ────────────────────────────────────
+
+    GatewayClient.prototype.isConnected = function () {
+      return this._connected && this._ws !== null && this._ws.readyState === 1;
+    };
+    GatewayClient.prototype.isConnecting = function () {
+      return this._connecting;
+    };
+    GatewayClient.prototype.isEnabled = function (key) {
+      var v = Lampa.Storage.get(key, false);
+      return v === true || v === 'true';
+    };
+
+    // ── Messages ──────────────────────────────────
+
+    GatewayClient.prototype.getMessages = function (chatId, threadId, limit) {
+      if (!this._connected) return Promise.resolve([]);
+      var params = {
+        entity: chatId,
+        limit: limit || 50
+      };
+      if (threadId) params.replyTo = parseInt(threadId, 10);
+      return this._sendApi('getMessages', params).then(function (r) {
+        return r || [];
+      }).catch(function () {
+        return [];
+      });
+    };
+    GatewayClient.prototype.getMessagesSince = function (threadId, sinceTimestamp, limit) {
+      if (!this._connected) return Promise.resolve([]);
+      var chatId = parseInt(Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, ''), 10);
+      if (!chatId) return Promise.resolve([]);
+      return this._sendApi('getMessagesSince', {
+        entity: chatId,
+        sinceTimestamp: sinceTimestamp,
+        limit: limit || 50
+      }).then(function (r) {
+        return r || [];
+      }).catch(function () {
+        return [];
+      });
+    };
+    GatewayClient.prototype.deleteMessage = function (chatId, messageId) {
+      if (!this._connected) return Promise.resolve(false);
+      return this._sendApi('deleteMessages', {
+        entity: chatId,
+        ids: [messageId],
+        revoke: true
+      }).then(function () {
+        return true;
+      }).catch(function () {
+        return false;
+      });
+    };
+    GatewayClient.prototype.editMessage = function (chatId, messageId, newText, threadId) {
+      if (!this._connected) return Promise.resolve(false);
+      return this._sendApi('editMessage', {
+        entity: chatId,
+        messageId: messageId,
+        text: newText
+      }).then(function () {
+        return true;
+      }).catch(function () {
+        return false;
+      });
+    };
+
+    // ── Publish ────────────────────────────────────
+
+    GatewayClient.prototype.publishRaw = function (threadId, text, silent) {
+      if (!this._connected) return Promise.resolve(false);
+      var chatId = parseInt(Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, ''), 10);
+      if (!chatId) return Promise.resolve(false);
+      return this._sendApi('sendMessage', {
+        entity: chatId,
+        message: text,
+        replyTo: threadId || 0
+      }).then(function (r) {
+        return r && r.id ? r.id : false;
+      }).catch(function () {
+        return false;
+      });
+    };
+    GatewayClient.prototype.publishDelta = function (profilesSyncTopicId, subtype, profileMsgId, payload) {
+      var msg = JSON.stringify({
+        meta: {
+          type: 'profile_delta',
+          subtype: subtype,
+          profile_msg_id: profileMsgId,
+          device_id: getDeviceId(),
+          timestamp: Math.floor(Date.now() / 1000)
+        },
+        payload: payload || {}
+      });
+      return this.publishRaw(profilesSyncTopicId, msg, true);
+    };
+    GatewayClient.prototype.publish = function (chatId, threadId, type, payload, targetDeviceId) {
+      if (!this._connected) return Promise.resolve(false);
+      var msg = JSON.stringify({
+        meta: {
+          type: type,
+          device_id: getDeviceId(),
+          target_device_id: targetDeviceId || 'all',
+          timestamp: Math.floor(Date.now() / 1000)
+        },
+        payload: payload || {}
+      });
+      return this.publishRaw(threadId, msg, true);
+    };
+
+    // ── Files ───────────────────────────────────────
+
+    GatewayClient.prototype.sendFile = function (chatId, threadId, dataStr, fileName, caption) {
+      if (!this._connected) return Promise.resolve(null);
+      return this._sendApi('sendFile', {
+        entity: chatId,
+        fileName: fileName,
+        caption: caption || '',
+        data: window.btoa(dataStr),
+        replyTo: threadId || 0
+      }).then(function (r) {
+        return r && r.id ? r.id : null;
+      }).catch(function () {
+        return null;
+      });
+    };
+    GatewayClient.prototype.downloadFile = function (message) {
+      if (!this._connected || !message || !message.id) return Promise.resolve(null);
+      var chatId = parseInt(Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, ''), 10);
+      if (!chatId) return Promise.resolve(null);
+      return this._sendApi('downloadMedia', {
+        entity: chatId,
+        messageId: message.id
+      }).then(function (r) {
+        return r && r.data ? r.data : null;
+      }).catch(function () {
+        return null;
+      });
+    };
+    GatewayClient.prototype.downloadMessageFile = function (message) {
+      return this.downloadFile(message);
+    };
+    GatewayClient.prototype.getBackupFiles = function (chatId, threadId, limit) {
+      return this.getMessages(chatId, threadId, limit || 50).then(function (msgs) {
+        if (!msgs || !Array.isArray(msgs)) return [];
+        return msgs.filter(function (m) {
+          return m.text && m.text.indexOf('.json') !== -1;
+        });
+      });
+    };
+
+    // ── Channel / Topic ──────────────────────────────
+
+    GatewayClient.prototype.findChannel = function (title) {
+      if (!this._connected) return Promise.resolve(null);
+      return this._sendApi('findChannel', {
+        title: title
+      }).then(function (r) {
+        return r && r.id ? r.id : null;
+      }).catch(function () {
+        return null;
+      });
+    };
+    GatewayClient.prototype.createChannel = function (title) {
+      if (!this._connected) return Promise.resolve(null);
+      return this._sendApi('createChannel', {
+        title: title,
+        about: 'GramLink: Lampa device sync channel'
+      }).then(function (r) {
+        return r && r.id ? r.id : null;
+      }).catch(function () {
+        return null;
+      });
+    };
+    GatewayClient.prototype.createTopic = function (channelId, topicTitle) {
+      if (!this._connected) return Promise.resolve(null);
+      return this._sendApi('createTopic', {
+        channelId: channelId,
+        title: topicTitle
+      }).then(function (r) {
+        return r && r.id ? r.id : null;
+      }).catch(function () {
+        return null;
+      });
+    };
+    GatewayClient.prototype.findTopic = function (channelId, topicTitle) {
+      if (!this._connected) return Promise.resolve(null);
+      return this._sendApi('findTopic', {
+        channelId: channelId,
+        title: topicTitle
+      }).then(function (r) {
+        return r && r.id ? r.id : null;
+      }).catch(function () {
+        return null;
+      });
+    };
+
+    // ── Heartbeat ────────────────────────────────────
+
+    GatewayClient.prototype.startHeartbeat = function (chatId, threadId) {
+      this.stopHeartbeat();
+      if (!this._connected || !this.isEnabled('gramlink_heartbeat')) return;
+      var self = this;
+      var myId = getDeviceId();
+      function doBeat() {
+        if (!self._connected || !self.isEnabled('gramlink_heartbeat')) {
+          self.stopHeartbeat();
+          return;
+        }
+        var payload = JSON.stringify({
+          meta: {
+            type: 'heartbeat',
+            device_id: myId,
+            device_name: getDeviceName(),
+            timestamp: Math.floor(Date.now() / 1000),
+            schema_version: 1
+          },
+          payload: {}
+        });
+        if (self._heartbeatMsgId) {
+          self.editMessage(chatId, self._heartbeatMsgId, payload, threadId);
+        } else {
+          self._findHeartbeatMessage(chatId, threadId, myId).then(function (result) {
+            if (result && result.id) {
+              self._heartbeatMsgId = result.id;
+              self.editMessage(chatId, result.id, payload, threadId);
+            } else {
+              self.publishRaw(threadId, payload, true).then(function (msgId) {
+                if (msgId) self._heartbeatMsgId = msgId;
+              });
+            }
+          });
+        }
+      }
+      doBeat();
+      this._heartbeatTimer = setInterval(doBeat, 60000);
+    };
+    GatewayClient.prototype._findHeartbeatMessage = function (chatId, threadId, myDeviceId) {
+      var self = this;
+      return this.getMessages(chatId, threadId, 50).then(function (messages) {
+        var mine = [];
+        function stripCodeFence(t) {
+          if (!t) return t;
+          return t.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+        }
+        (messages || []).forEach(function (m) {
+          try {
+            var d = JSON.parse(stripCodeFence(m.text || ''));
+            var meta = d && d.meta;
+            if (!meta || meta.type !== 'heartbeat') return;
+            if (meta.device_id === myDeviceId) mine.push({
+              id: m.id,
+              ts: meta.timestamp || 0
+            });
+          } catch (e) {}
+        });
+        if (mine.length === 0) return null;
+        mine.sort(function (a, b) {
+          return b.ts - a.ts;
+        });
+        if (mine.length > 1) {
+          var ids = mine.slice(1).map(function (m) {
+            return m.id;
+          });
+          self._sendApi('deleteMessages', {
+            entity: chatId,
+            ids: ids,
+            revoke: true
+          }).catch(function () {});
+        }
+        return mine[0];
+      }).catch(function () {
+        return null;
+      });
+    };
+    GatewayClient.prototype.stopHeartbeat = function () {
+      if (this._heartbeatTimer) {
+        clearInterval(this._heartbeatTimer);
+        this._heartbeatTimer = null;
+      }
+    };
+
+    // ── Online devices ──────────────────────────────
+
+    GatewayClient.prototype.getOnlineDevices = function (chatId, threadId) {
+      return this.getMessages(chatId, threadId, 50).then(function (messages) {
+        var now = Math.floor(Date.now() / 1000);
+        var seen = {};
+        function stripCodeFence(t) {
+          if (!t) return t;
+          return t.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+        }
+        (messages || []).forEach(function (m) {
+          try {
+            var d = JSON.parse(stripCodeFence(m.text || ''));
+            var meta = d && d.meta;
+            if (!meta || meta.type !== 'heartbeat') return;
+            if (now - meta.timestamp < 90) {
+              if (!seen[meta.device_id] || seen[meta.device_id].timestamp < meta.timestamp) {
+                seen[meta.device_id] = meta;
+              }
+            }
+          } catch (e) {}
+        });
+        var result = [];
+        for (var k in seen) result.push(seen[k]);
+        return result;
+      }).catch(function () {
+        return [];
+      });
+    };
+
+    // ── Event emitter ──────────────────────────────
+
+    GatewayClient.prototype.on = function (event, cb) {
+      if (!this._listeners[event]) this._listeners[event] = [];
+      this._listeners[event].push(cb);
+    };
+    GatewayClient.prototype.off = function (event, cb) {
+      if (!this._listeners[event]) return;
+      this._listeners[event] = this._listeners[event].filter(function (f) {
+        return f !== cb;
+      });
+    };
+    GatewayClient.prototype._emit = function (event, data) {
+      var handlers = this._listeners[event] || [];
+      for (var i = 0; i < handlers.length; i++) {
+        try {
+          handlers[i](data);
+        } catch (e) {
+          console.error('GramLink', 'Listener error:', e);
+        }
+      }
+    };
 
     // ─── Message parsing helpers ──────────────────────────────
 
-    function stripCodeFence(text) {
+    function stripCodeFence$1(text) {
       if (!text) return text;
       return text.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
     }
 
-    /**
-     * compat.js — GramJS compatibility checker
-     *
-     * Two groups of checks:
-     *   - Syntax (BigInt literal, async/await, generators, ?.) — NOT polyfilled,
-     *     fail at bundle parse stage with SyntaxError. Detected via new Function(snippet).
-     *   - Runtime API (WebAssembly, crypto.subtle, Map/Set, Proxy) — check typeof,
-     *     some are polyfilled, some not (BigInt64Array, Proxy).
-     *
-     * @returns {Object} { supported, blockers, warnings, details }
-     */
-    function checkGramJSCompatibility() {
-      var blockers = [];
-      var warnings = [];
-      var details = {
-        syntax: {},
-        runtime: {}
-      };
-
-      // ── 1. Syntax probes
-      function canParse(snippet) {
+    var authWs = null;
+    var authCancelFlag = false;
+    var authRequestId = 0;
+    var authPending = {};
+    function authSend(msg) {
+      return new Promise(function (resolve, reject) {
+        if (!authWs || authWs.readyState !== 1) {
+          reject(new Error('WebSocket not connected'));
+          return;
+        }
+        var id = ++authRequestId;
+        msg.id = id;
+        var timer = setTimeout(function () {
+          delete authPending[id];
+          reject(new Error('Auth timeout'));
+        }, 30000);
+        authPending[id] = {
+          resolve: resolve,
+          reject: reject,
+          timer: timer
+        };
+        authWs.send(JSON.stringify(msg));
+      });
+    }
+    function cancelAuth() {
+      authCancelFlag = true;
+      if (authWs) {
         try {
-          new Function(snippet);
-          return true;
-        } catch (e) {
-          return false;
-        }
+          authWs.onclose = null;
+          authWs.close();
+        } catch (e) {}
+        authWs = null;
       }
-      details.syntax.arrowFn = canParse('()=>{}');
-      details.syntax.letConst = canParse('let a=1; const b=2;');
-      details.syntax.templateLit = canParse('var x=`y`; var y=`${x}`;');
-      details.syntax.classKw = canParse('class X{}');
-      details.syntax.asyncAwait = canParse('async function f(){await 1;}');
-      details.syntax.generator = canParse('function* g(){yield 1;}');
-      details.syntax.bigIntLit = canParse('1n; 2n+3n;');
-      details.syntax.optChain = canParse('({})?.x; ({})?.[0]');
-      details.syntax.exponent = canParse('2**3;');
-      details.syntax.spread = canParse('var a=[1]; var b=[...a]; function f(...c){}');
-      details.syntax.destructuring = canParse('var {a}={a:1}; var [b]=[1];');
-      details.syntax.defaultParam = canParse('function f(a=1){}');
-
-      // ── 2. Runtime API checks
-      details.runtime.bigInt = typeof BigInt !== 'undefined';
-      details.runtime.bigInt64Array = typeof BigInt64Array !== 'undefined';
-      details.runtime.webAssembly = typeof WebAssembly !== 'undefined' && typeof WebAssembly.instantiate === 'function';
-      details.runtime.cryptoSubtle = !!(window.crypto && window.crypto.subtle && typeof window.crypto.subtle.digest === 'function');
-      details.runtime.cryptoRandom = !!(window.crypto && typeof window.crypto.getRandomValues === 'function');
-      details.runtime.textEncoder = typeof TextEncoder !== 'undefined';
-      details.runtime.textDecoder = typeof TextDecoder !== 'undefined';
-      details.runtime.promise = typeof Promise !== 'undefined';
-      details.runtime.mapSet = typeof Map !== 'undefined' && typeof Set !== 'undefined';
-      details.runtime.weakMap = typeof WeakMap !== 'undefined';
-      details.runtime.proxy = typeof Proxy !== 'undefined';
-      details.runtime.uint8Array = typeof Uint8Array !== 'undefined';
-      details.runtime.arrayFrom = typeof Array.from === 'function';
-      details.runtime.objectAssign = typeof Object.assign === 'function';
-
-      // ── 3. Classification: BLOCKERS vs WARNINGS
-      if (!details.syntax.bigIntLit || !details.runtime.bigInt) {
-        blockers.push('BigInt — 206× у бандлі, MTProto int128/int256, RSA, DH. Не поліфиться.');
+      for (var k in authPending) {
+        clearTimeout(authPending[k].timer);
       }
-      if (!details.runtime.bigInt64Array) {
-        blockers.push('BigInt64Array — 6×, TDLib-подібна серіалізація. Не поліфиться.');
-      }
-      if (!details.syntax.asyncAwait) {
-        blockers.push('async/await — 64× async + 405× await. Синтаксично, не поліфиться.');
-      }
-      if (!details.syntax.generator) {
-        blockers.push('Generators (function*) — 11×, async iteration helpers. Не поліфиться.');
-      }
-      if (!details.syntax.arrowFn) {
-        blockers.push('Arrow functions — 246×, синтаксично.');
-      }
-      if (!details.syntax.optChain) {
-        blockers.push('Optional chaining (?.) — 2×, ES2020. Синтаксично.');
-      }
-      if (!details.syntax.exponent) {
-        blockers.push('Exponent operator (**) — 17×. Синтаксично.');
-      }
-      if (!details.runtime.cryptoSubtle) {
-        warnings.push('crypto.subtle — немає (HTTP-контекст). TGSBundle має pure-JS fallback для SHA-1/256/512, HMAC, PBKDF2. Повільніше, але працює.');
-      }
-      if (!details.runtime.cryptoRandom) {
-        blockers.push('crypto.getRandomValues — генератор nonces у MTProto.');
-      }
-      if (!details.runtime.textEncoder || !details.runtime.textDecoder) {
-        blockers.push('TextEncoder/TextDecoder — UTF-8 серіалізація string\'ів у MTProto.');
-      }
-      if (!details.runtime.uint8Array) {
-        blockers.push('Uint8Array — бінарні дані всюди.');
-      }
-      if (!details.runtime.webAssembly) {
-        warnings.push('WebAssembly — AES-IGE fallback на pure-JS, ~5× повільніше.');
-      }
-      if (!details.runtime.proxy) {
-        warnings.push('Proxy — 1×, може зламати окремі reactive-обгортки.');
-      }
-      if (!details.runtime.mapSet) {
-        warnings.push('Map/Set — поліфляться core-js, але без них GramJS не стартане.');
-      }
-      if (!details.runtime.promise) {
-        blockers.push('Promise — 68×, основа асинхронного потоку.');
-      }
-      return {
-        supported: blockers.length === 0,
-        blockers: blockers,
-        warnings: warnings,
-        details: details
-      };
+      authPending = {};
     }
-    var _gramlinkCompatReport = null;
-    function getCompatReport() {
-      if (!_gramlinkCompatReport) _gramlinkCompatReport = checkGramJSCompatibility();
-      return _gramlinkCompatReport;
-    }
-    function showCompatReportModal() {
-      var report = getCompatReport();
+    function startPhoneAuthViaGateway(onConnected) {
+      authCancelFlag = false;
       var enabledCtrl = Lampa.Controller.enabled().name;
-      var closing = false; // re-entrance guard
-
-      var statusColor = report.supported ? report.warnings.length ? '#ffc107' : '#4caf50' : '#f44336';
-      var statusText = report.supported ? report.warnings.length ? Lampa.Lang.translate('gramlink_compat_partial') : Lampa.Lang.translate('gramlink_compat_ok') : Lampa.Lang.translate('gramlink_compat_fail');
-      var html = $('<div class="gramlink-compat" style="padding:1em;max-width:42em;margin:0 auto"></div>');
-      html.append('<div style="display:flex;align-items:center;gap:1em;padding:1em 1.2em;' + 'background:rgba(255,255,255,0.05);border-radius:0.6em;margin-bottom:1.5em">' + '<div style="width:1.2em;height:1.2em;border-radius:50%;flex-shrink:0;background:' + statusColor + ';box-shadow:0 0 .6em ' + statusColor + '80"></div>' + '<div style="flex:1">' + '<div style="font-size:1.2em;font-weight:600">' + statusText + '</div>' + '<div style="font-size:0.85em;color:rgba(255,255,255,0.5);margin-top:.2em">' + Lampa.Lang.translate('gramlink_compat_hint_disclaimer') + '</div>' + '</div></div>');
-      if (report.blockers.length > 0) {
-        html.append('<div style="font-size:1.1em;font-weight:600;margin-bottom:.8em;color:#f44336">' + Lampa.Lang.translate('gramlink_compat_blocked_label') + ' (' + report.blockers.length + ')</div>');
-        var bl = $('<ul style="list-style:none;padding:0;margin:0 0 1.5em"></ul>');
-        report.blockers.forEach(function (b) {
-          bl.append('<li style="padding:.6em .8em;margin-bottom:.4em;background:rgba(244,67,54,0.1);' + 'border-left:3px solid #f44336;border-radius:0 .4em .4em 0;font-size:.95em">' + b + '</li>');
-        });
-        html.append(bl);
-      } else {
-        html.append('<div style="padding:.8em 1em;background:rgba(76,175,80,0.1);border-left:3px solid #4caf50;' + 'border-radius:0 .4em .4em 0;font-size:.95em;margin-bottom:1.5em">' + Lampa.Lang.translate('gramlink_compat_no_blockers') + '</div>');
-      }
-      if (report.warnings.length > 0) {
-        html.append('<div style="font-size:1.1em;font-weight:600;margin-bottom:.8em;color:#ffc107">' + Lampa.Lang.translate('gramlink_compat_warning_label') + ' (' + report.warnings.length + ')</div>');
-        var wn = $('<ul style="list-style:none;padding:0;margin:0 0 1.5em"></ul>');
-        report.warnings.forEach(function (w) {
-          wn.append('<li style="padding:.6em .8em;margin-bottom:.4em;background:rgba(255,193,7,0.08);' + 'border-left:3px solid #ffc107;border-radius:0 .4em .4em 0;font-size:.95em">' + w + '</li>');
-        });
-        html.append(wn);
-      }
-
-      // ── Raw probe results (inline, scrollable — native Lampa pattern) ──
-      var d = report.details;
-      html.append('<div style="margin-top:1em;padding-top:0.8em;border-top:1px solid rgba(255,255,255,0.08)"></div>');
-      html.append('<div class="settings-param-title"><span>Raw probe results</span></div>');
-      html.append('<div style="display:grid;grid-template-columns:1fr 1fr;gap:1em;font-size:.85em;margin-top:.5em">' + '<div style="background:rgba(255,255,255,0.02);border-radius:.4em;padding:.5em .8em">' + '<div style="font-weight:600;margin-bottom:.4em;color:rgba(255,255,255,0.5)">Syntax</div>' + Object.keys(d.syntax).map(function (k) {
-        var v = d.syntax[k];
-        return '<div style="display:flex;justify-content:space-between;padding:.2em 0">' + '<span style="color:rgba(255,255,255,0.6)">' + k + '</span>' + '<span style="color:' + (v ? '#4caf50' : '#f44336') + '">' + (v ? "\u2713" : "\u2717") + '</span></div>';
-      }).join('') + '</div>' + '<div style="background:rgba(255,255,255,0.02);border-radius:.4em;padding:.5em .8em">' + '<div style="font-weight:600;margin-bottom:.4em;color:rgba(255,255,255,0.5)">Runtime</div>' + Object.keys(d.runtime).map(function (k) {
-        var v = d.runtime[k];
-        return '<div style="display:flex;justify-content:space-between;padding:.2em 0">' + '<span style="color:rgba(255,255,255,0.6)">' + k + '</span>' + '<span style="color:' + (v ? '#4caf50' : '#f44336') + '">' + (v ? "\u2713" : "\u2717") + '</span></div>';
-      }).join('') + '</div></div>');
-      Lampa.Modal.open({
-        title: Lampa.Lang.translate('gramlink_compat_title'),
-        html: html,
-        size: 'medium',
-        onBack: function onBack() {
-          if (closing) return;
-          closing = true;
-          Lampa.Modal.close();
+      var defaultPhonePrefix = '';
+      var uiLang = Lampa.Storage.get('language', '');
+      if (uiLang === 'uk') defaultPhonePrefix = '+380';
+      Lampa.Input.edit({
+        title: Lampa.Lang.translate('gramlink_auth_phone_title') || 'Enter phone number (international format)',
+        value: defaultPhonePrefix,
+        free: true,
+        nosave: true
+      }, function (phone) {
+        if (!phone || !String(phone).trim()) {
           Lampa.Controller.toggle(enabledCtrl);
+          return;
         }
+        phone = String(phone).trim();
+        var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="gs-status"></div>' + '</div>');
+        Lampa.Modal.open({
+          title: 'Telegram Login (Gateway)',
+          html: html,
+          size: 'medium',
+          onBack: function onBack() {
+            cancelAuth();
+            Lampa.Modal.close();
+            Lampa.Controller.toggle(enabledCtrl);
+          }
+        });
+        var statusEl = html.find('#gs-status');
+        statusEl.text('Connecting to Gateway...');
+        var creds = getApiCredentials();
+        var gatewayUrl = Lampa.Storage.get('gramlink_gateway_url', 'wss://mtproto-master.fly.dev');
+        var wsUrl = gatewayUrl + '/ws?clientId=' + encodeURIComponent(getDeviceId());
+        var ws = new WebSocket(wsUrl);
+        authWs = ws;
+        ws.onopen = function () {
+          statusEl.text('Sending code...');
+          doAuthFlow(ws, phone, creds, statusEl, enabledCtrl, onConnected);
+        };
+        ws.onerror = function () {
+          statusEl.text('WebSocket connection failed');
+          Lampa.Noty.show('GramLink: Cannot connect to Gateway');
+        };
+      });
+    }
+    function doAuthFlow(ws, phone, creds, statusEl, enabledCtrl, onConnected) {
+      authSend({
+        cmd: 'auth_start',
+        phone: phone,
+        apiId: creds.apiId,
+        apiHash: creds.apiHash
+      }).then(function (resp) {
+        if (authCancelFlag) return;
+        if (resp.event === 'auth_code_needed') {
+          return askCode(resp.phoneCodeHash, resp.sentType === 'app' ? 'Check Telegram app' : 'Check SMS', enabledCtrl).then(function (code) {
+            if (authCancelFlag) return;
+            statusEl.text('Signing in...');
+            return authSend({
+              cmd: 'auth_code',
+              phoneCodeHash: resp.phoneCodeHash,
+              code: code
+            });
+          }).then(function (resp2) {
+            if (authCancelFlag || !resp2) return;
+            if (resp2.event === 'auth_success') return finalizeAuth(resp2, enabledCtrl, onConnected);
+            if (resp2.event === 'auth_2fa_needed') return handle2FA(enabledCtrl, onConnected);
+            throw new Error(resp2.error || 'Auth failed');
+          });
+        }
+        throw new Error(resp.error || 'Unexpected response');
+      }).catch(function (err) {
+        if (authCancelFlag) return;
+        statusEl.text('Error: ' + (err.message || 'unknown'));
+        Lampa.Noty.show('GramLink: ' + (err.message || 'Auth failed'));
+      });
+    }
+    function askCode(phoneCodeHash, methodLabel, enabledCtrl) {
+      return new Promise(function (resolve, reject) {
+        var ui = $('<div style="padding:1em;text-align:center">' + '<div>Code sent</div>' + '<div style="font-size:0.85em;color:rgba(255,255,255,0.4);margin-bottom:0.8em">' + methodLabel + '</div>' + '<div class="modal__button selector" style="margin:0.5em auto;max-width:12em">Enter code</div>' + '</div>');
+        Lampa.Modal.update(ui);
+        ui.find('.selector').on('hover:enter', function () {
+          Lampa.Modal.close();
+          Lampa.Input.edit({
+            title: 'Login code',
+            subtitle: methodLabel,
+            value: '',
+            free: true,
+            nosave: true
+          }, function (val) {
+            if (val && String(val).trim()) {
+              resolve(String(val).trim());
+            } else {
+              cancelAuth();
+              Lampa.Controller.toggle(enabledCtrl);
+              reject(new Error('AUTH_USER_CANCEL'));
+            }
+          });
+        });
+      });
+    }
+    function handle2FA(enabledCtrl, onConnected, statusEl) {
+      return new Promise(function (resolve, reject) {
+        Lampa.Input.edit({
+          title: '2FA Password',
+          value: '',
+          free: true,
+          nosave: true
+        }, function (val) {
+          if (val && String(val).trim()) {
+            var password = String(val).trim();
+            setTimeout(function () {
+              Lampa.Modal.open({
+                title: 'Telegram Login (Gateway)',
+                html: $('<div class="gramlink-auth" style="padding:1em;text-align:center"><div style="margin:1em 0;font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password...</div></div>'),
+                size: 'medium',
+                onBack: function onBack() {
+                  cancelAuth();
+                  Lampa.Modal.close();
+                  Lampa.Controller.toggle(enabledCtrl);
+                  reject(new Error('AUTH_USER_CANCEL'));
+                }
+              });
+            }, 200);
+            authSend({
+              cmd: 'auth_2fa',
+              password: password
+            }).then(function (resp) {
+              if (resp.event === 'auth_success') resolve(finalizeAuth(resp, enabledCtrl, onConnected));else reject(new Error(resp.error || '2FA failed'));
+            }).catch(function (err) {
+              reject(err);
+            });
+          } else {
+            cancelAuth();
+            Lampa.Controller.toggle(enabledCtrl);
+            reject(new Error('AUTH_USER_CANCEL'));
+          }
+        });
+      });
+    }
+    function finalizeAuth(resp, enabledCtrl, onConnected) {
+      var dcId = resp.dcId;
+      var authKeyHex = resp.authKeyHex;
+      var userName = resp.userName || 'User';
+      if (!dcId || !authKeyHex) {
+        Lampa.Noty.show('GramLink: Invalid auth response');
+        throw new Error('Missing dcId or authKey');
+      }
+
+      // Save credentials directly (don't import client to avoid coupling)
+      Lampa.Storage.set('gramlink_dc_id', String(dcId));
+      vault.seal(authKeyHex);
+      Lampa.Storage.set('gramlink_user_name', userName);
+
+      // Clear stale sync state
+      var staleKeys = ['gramlink_channel_id', 'gramlink_sync_log_topic', 'gramlink_profiles_topic', 'gramlink_profiles_sync_topic', 'gramlink_backup_topic'];
+      for (var i = 0; i < staleKeys.length; i++) {
+        Lampa.Storage.set(staleKeys[i], '');
+      }
+      cancelAuth();
+      Lampa.Modal.close();
+      Lampa.Noty.show('GramLink: Connecting to Telegram...');
+      Lampa.Settings.update();
+
+      // Delegate connection to caller (provides right client)
+      if (typeof onConnected === 'function') {
+        onConnected(dcId, authKeyHex);
+      }
+    }
+
+    // Note: for old_release build, 'utils/client' is replaced with 'utils/gateway-client'
+
+    function startLogin() {
+      startPhoneAuthViaGateway(function (dcId, authKeyHex) {
+        // In old_release build, Client = GatewayClient
+        // Credentials already saved by gateway-auth — just connect
+        GatewayClient.getInstance().connect().then(function () {
+          Lampa.Noty.show('GramLink: Connected!');
+          Lampa.Settings.update();
+        }).catch(function (err) {
+          console.error('GramLink', 'Post-auth connect failed:', err);
+          Lampa.Noty.show('GramLink: Connection failed — ' + (err.message || 'unknown'));
+        });
       });
     }
 
@@ -3332,6 +2515,67 @@
       } catch (e) {
         return 'Plugin';
       }
+    }
+
+    function _defineProperty(e, r, t) {
+      return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+        value: t,
+        enumerable: !0,
+        configurable: !0,
+        writable: !0
+      }) : e[r] = t, e;
+    }
+    function ownKeys(e, r) {
+      var t = Object.keys(e);
+      if (Object.getOwnPropertySymbols) {
+        var o = Object.getOwnPropertySymbols(e);
+        r && (o = o.filter(function (r) {
+          return Object.getOwnPropertyDescriptor(e, r).enumerable;
+        })), t.push.apply(t, o);
+      }
+      return t;
+    }
+    function _objectSpread2(e) {
+      for (var r = 1; r < arguments.length; r++) {
+        var t = null != arguments[r] ? arguments[r] : {};
+        r % 2 ? ownKeys(Object(t), !0).forEach(function (r) {
+          _defineProperty(e, r, t[r]);
+        }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) {
+          Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
+        });
+      }
+      return e;
+    }
+    function _toPrimitive(t, r) {
+      if ("object" != typeof t || !t) return t;
+      var e = t[Symbol.toPrimitive];
+      if (void 0 !== e) {
+        var i = e.call(t, r || "default");
+        if ("object" != typeof i) return i;
+        throw new TypeError("@@toPrimitive must return a primitive value.");
+      }
+      return ("string" === r ? String : Number)(t);
+    }
+    function _toPropertyKey(t) {
+      var i = _toPrimitive(t, "string");
+      return "symbol" == typeof i ? i : i + "";
+    }
+    function _typeof(o) {
+      "@babel/helpers - typeof";
+
+      return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
+        return typeof o;
+      } : function (o) {
+        return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
+      }, _typeof(o);
+    }
+
+    /**
+     * Strips ```json ... ``` wrapping from message text.
+     */
+    function stripCodeFence(text) {
+      if (!text) return text;
+      return text.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
     }
 
     var PROFILE_META_VERSION = 3;
@@ -3432,7 +2676,7 @@
      */
     function parseCaption(text) {
       try {
-        var d = JSON.parse(stripCodeFence$1(text || ''));
+        var d = JSON.parse(stripCodeFence(text || ''));
         return d && d.payload && d.payload.profile;
       } catch (e) {
         return null;
@@ -3445,7 +2689,7 @@
      */
     function parseProfileMessage(text) {
       try {
-        var d = JSON.parse(stripCodeFence$1(text || ''));
+        var d = JSON.parse(stripCodeFence(text || ''));
         return d && d.meta && d.meta.type === 'profile' ? d : null;
       } catch (e) {
         return null;
@@ -3495,722 +2739,6 @@
     }
     function setLastDeltaSeen(timestamp) {
       Lampa.Storage.set(STORAGE_LAST_DELTA_SEEN, String(timestamp));
-    }
-
-    /**
-     * sdk/topic-config.js — Channel and topic configuration
-     *
-     * Eliminates:
-     *   D-02 — CHANNEL_TITLE and TOPIC_NAMES now in one place.
-     *          auth.js had its own TOPICS array (4 items, no remote-cmd);
-     *          hub.js had TOPIC_NAMES (5 items, with remote-cmd).
-     *          Now one source of truth: 5 topics.
-     *
-     * Usage:
-     *   import { CHANNEL_TITLE, TOPIC_NAMES, TOPIC_STORAGE_KEYS } from '../sdk/topic-config'
-     */
-
-    var CHANNEL_TITLE = "\uD83D\uDD04 Lampa Sync [DO NOT DELETE]";
-    var TOPIC_NAMES = ['sync-log', 'remote-cmd', 'backup', 'profiles', 'profiles-sync'];
-
-    /**
-     * Map topic name → storage key.
-     */
-    var TOPIC_STORAGE_KEYS = {
-      'sync-log': 'gramlink_sync_log_topic',
-      'remote-cmd': 'gramlink_remote_cmd_topic',
-      'backup': 'gramlink_backup_topic',
-      'profiles': 'gramlink_profiles_topic',
-      'profiles-sync': 'gramlink_profiles_sync_topic'
-    };
-
-    var TOPICS = [{
-      name: 'sync-log',
-      key: TOPIC_STORAGE_KEYS['sync-log']
-    }, {
-      name: 'remote-cmd',
-      key: TOPIC_STORAGE_KEYS['remote-cmd']
-    }, {
-      name: 'profiles',
-      key: TOPIC_STORAGE_KEYS['profiles']
-    }, {
-      name: 'profiles-sync',
-      key: TOPIC_STORAGE_KEYS['profiles-sync']
-    }, {
-      name: 'backup',
-      key: TOPIC_STORAGE_KEYS['backup']
-    }];
-    var authCancelFlag = false;
-    var tgClient = null; // Temporary GramJS client used during auth flow
-    var passwordPromptActive = false; // Bug 1: guard against duplicate 2FA UI
-
-    /**
-     * Cancel the current auth flow and dispose of the temporary client.
-     *
-     * Note: we deliberately do NOT call client.disconnect(). GramJS issue #615
-     * shows that disconnect() leaves _updateLoop running until its pending RPC
-     * times out (~10s) and that TIMEOUT surfaces as a console error we cannot
-     * suppress cleanly. The temporary client has fulfilled its purpose once auth
-     * succeeds; dropping the reference lets it idle until page reload. A second
-     * client (Client.getInstance().connect()) is unaffected — it owns its own
-     * TelegramClient instance.
-     */
-    function cancelAuth() {
-      authCancelFlag = true;
-      passwordPromptActive = false;
-      tgClient = null;
-    }
-
-    // ponytail: background channel init — avoids "Sync channel not ready" error
-    function autoEnsureSyncChannel() {
-      var client = GramLinkClient.getInstance();
-      if (Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, '')) return;
-      Lampa.Bell.push({
-        text: 'GramLink: Setting up sync channel...'
-      });
-      client.findChannel(CHANNEL_TITLE).then(function (id) {
-        if (id) {
-          Lampa.Storage.set(STORAGE_KEYS.CHANNEL_ID, id);
-          return ensureAllTopics();
-        }
-        return client.createChannel(CHANNEL_TITLE).then(function (peerId) {
-          if (!peerId) return;
-          Lampa.Storage.set(STORAGE_KEYS.CHANNEL_ID, peerId);
-          return createAllTopics(peerId);
-        });
-      }).then(function () {
-        Lampa.Bell.push({
-          text: 'GramLink: Sync channel ready!'
-        });
-        autoCreateDefaultProfile();
-      }).catch(function (err) {
-        console.warn('GramLink', 'Background channel init failed:', err && err.message);
-      });
-    }
-    function ensureAllTopics() {
-      var client = GramLinkClient.getInstance();
-      var channelId = getChannelId();
-      var seq = Promise.resolve();
-      TOPICS.forEach(function (t) {
-        if (Lampa.Storage.get(t.key, '')) return;
-        seq = seq.then(function () {
-          // try find first, create as fallback
-          return client.findTopic(channelId, t.name).then(function (id) {
-            if (id) {
-              Lampa.Storage.set(t.key, id);
-              return;
-            }
-            return client.createTopic(channelId, t.name).then(function (topicId) {
-              if (topicId) Lampa.Storage.set(t.key, topicId);
-            });
-          });
-        });
-      });
-      return seq;
-    }
-    function createAllTopics(peerId) {
-      var client = GramLinkClient.getInstance();
-      var seq = Promise.resolve();
-      TOPICS.forEach(function (t) {
-        seq = seq.then(function () {
-          return client.createTopic(peerId, t.name).then(function (topicId) {
-            if (topicId) Lampa.Storage.set(t.key, topicId);
-          });
-        });
-      });
-      return seq;
-    }
-
-    // ponytail: auto-create default profile so user can use plugin immediately
-    function autoCreateDefaultProfile() {
-      var profilesTopicId = Lampa.Storage.get(STORAGE_KEYS.PROFILES_TOPIC, '');
-      if (!profilesTopicId) return;
-      var client = GramLinkClient.getInstance();
-      if (!client.isConnected()) return;
-      var channelId = getChannelId();
-      if (!channelId) return;
-      client.getMessages(channelId, profilesTopicId, 10).then(function (msgs) {
-        var firstProfileMsg = null;
-        msgs.forEach(function (m) {
-          if (!m.text) return;
-          if (parseProfileMessage(m.text)) {
-            if (!firstProfileMsg) firstProfileMsg = m;
-          }
-        });
-        if (!firstProfileMsg) {
-          // No profiles — create default "General" profile
-          createGeneralProfile(channelId, profilesTopicId, client);
-        } else if (!Lampa.Storage.get(STORAGE_KEYS.ACTIVE_PROFILE, '')) {
-          // Existing profiles — auto-select the first one
-          autoLoadProfile(firstProfileMsg, client);
-        }
-      }).catch(function () {});
-    }
-
-    // ponytail: auto-select first existing profile after auth (non-empty account)
-    function autoLoadProfile(profileMsg, client) {
-      var msgId = profileMsg.id;
-      client.downloadMessageFile(profileMsg).then(function (fileData) {
-        if (!fileData) return;
-        var captionProfile = parseCaption(profileMsg.text);
-        var profileName = captionProfile && captionProfile.name;
-        if (profileName) Lampa.Storage.set('gramlink_active_profile_name', profileName);
-        var data;
-        try {
-          data = JSON.parse(fileData);
-        } catch (e) {
-          return;
-        }
-
-        // ── Apply bookmarks ──
-        if (data.bookmarks && data.bookmarks.favorite) {
-          Lampa.Storage.set('favorite', data.bookmarks.favorite);
-          if (Lampa.Favorite && Lampa.Favorite.read) {
-            Lampa.Favorite.read();
-          }
-        }
-
-        // ── Apply timeline ──
-        if (data.timeline) {
-          Lampa.Storage.set('file_view', data.timeline);
-        }
-
-        // ── Apply plugins ──
-        if (data.plugins) {
-          Lampa.Storage.set('plugins', data.plugins);
-        }
-
-        // ── Apply settings ──
-        if (data.settings) {
-          if (data.settings.sync_enabled !== undefined) Lampa.Storage.set('gramlink_sync_enabled', data.settings.sync_enabled);
-          if (data.settings.heartbeat !== undefined) Lampa.Storage.set('gramlink_heartbeat', data.settings.heartbeat);
-          if (data.settings.broadcast !== undefined) Lampa.Storage.set('gramlink_broadcast', data.settings.broadcast);
-        }
-
-        // ── Mark active ──
-        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE, String(msgId));
-        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE_TS, String(Math.floor(Date.now() / 1000)));
-        Lampa.Noty.show('GramLink: Profile activated');
-      }).catch(function (err) {
-        console.warn('GramLink', 'Auto-load first profile failed:', err);
-      });
-    }
-    function createGeneralProfile(channelId, profilesTopicId, client) {
-      var name = 'General';
-      var avatar = getInitials(name);
-      var now = Math.floor(Date.now() / 1000);
-      var caption = buildCaption({
-        name: name,
-        avatar: avatar,
-        updated: now
-      });
-      var fileData = buildFileData({
-        name: name,
-        avatar: avatar,
-        bookmarks: {
-          favorite: readJSON('favorite', {})
-        },
-        timeline: readJSON('file_view', {}),
-        plugins: readJSON('plugins', []),
-        settings: readJSON('gramlink_sync_settings', {})
-      });
-      client.sendFile(channelId, profilesTopicId, JSON.stringify(fileData, null, 2), 'profile_General_' + now + '.json', caption).then(function (msgId) {
-        if (!msgId) return;
-        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE, String(msgId));
-        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE_TS, String(now));
-        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE_NAME, name);
-        // Reload to apply cached/imported data
-        setTimeout(function () {
-          window.location.reload();
-        }, 1500);
-      }).catch(function (err) {
-        console.warn('GramLink', 'Auto-create profile failed:', err);
-      });
-    }
-
-    // ── Shared auth success handler ────────────────────────────────────
-    // ponytail: both QR and phone auth share the same credential extraction
-    function _onAuthSuccess(user, enabledCtrl) {
-      if (authCancelFlag || !user) return;
-      var activeClient = tgClient;
-      if (!activeClient || !activeClient.session) {
-        throw new Error('No active session after auth');
-      }
-      var dcId = activeClient.session.dcId;
-      var authKeyObj = activeClient.session.authKey;
-      if (!authKeyObj || typeof authKeyObj.getKey !== 'function') {
-        throw new Error('No auth key in session after auth');
-      }
-      var authKeyBytes = authKeyObj.getKey();
-      if (!dcId || !authKeyBytes || authKeyBytes.length !== 256) {
-        throw new Error('Invalid dcId or authKey after auth (key length: ' + (authKeyBytes ? authKeyBytes.length : 0) + ')');
-      }
-      function bytesToHex(bytes) {
-        var hex = '';
-        for (var i = 0; i < bytes.length; i++) {
-          var b = bytes[i];
-          hex += (b < 16 ? '0' : '') + b.toString(16);
-        }
-        return hex;
-      }
-      var authKeyHex = bytesToHex(authKeyBytes);
-      console.log('GramLink', 'Auth success — dcId:', dcId, 'key length:', authKeyHex.length);
-
-      // Save user display name (username > firstName+lastName > phone)
-      var displayName = user.username || '' || [user.firstName, user.lastName].filter(Boolean).join(' ') || user.phone || 'User';
-      Lampa.Storage.set(STORAGE_KEYS.USER_NAME, displayName);
-      GramLinkClient.getInstance().saveCredentials(dcId, authKeyHex);
-      cancelAuth();
-      Lampa.Modal.close();
-      Lampa.Noty.show('GramLink: Connecting to Telegram...');
-      Lampa.Settings.update();
-      var staleKeys = ['gramlink_channel_id', 'gramlink_sync_log_topic', 'gramlink_profiles_topic', 'gramlink_profiles_sync_topic', 'gramlink_backup_topic'];
-      staleKeys.forEach(function (k) {
-        Lampa.Storage.set(k, '');
-      });
-      GramLinkClient.getInstance().connect().then(function () {
-        Lampa.Noty.show('GramLink: Connected!');
-        Lampa.Settings.update();
-        autoEnsureSyncChannel();
-      }).catch(function (err) {
-        console.error('GramLink', 'Post-auth connect failed:', err);
-        Lampa.Noty.show('GramLink: Connection failed — ' + (err.message || 'unknown error'));
-      });
-    }
-
-    // ── Shared auth error handler ──────────────────────────────────────
-    // ponytail: QR and phone auth show errors the same way
-    function _onAuthError(err) {
-      if (authCancelFlag) return;
-      if (err && err.message === 'AUTH_USER_CANCEL') return;
-      var msg = err && (err.message || err.errorMessage || '');
-      console.error('GramLink', 'Auth flow error:', msg);
-      var displayMsg = 'Auth failed';
-      if (msg.indexOf('FLOOD_WAIT') !== -1 || msg.indexOf('wait of') !== -1) {
-        var sec = msg.match(/\d+/);
-        sec = sec ? parseInt(sec[0]) : 0;
-        if (sec > 3600) displayMsg = 'Too many attempts. Try again in ' + Math.round(sec / 3600) + 'h';else if (sec > 60) displayMsg = 'Too many attempts. Try again in ' + Math.round(sec / 60) + 'min';else displayMsg = 'Too many attempts. Try again in ' + sec + 's';
-      } else {
-        displayMsg = msg;
-      }
-      Lampa.Noty.show('GramLink: ' + displayMsg);
-    }
-    function startLogin() {
-      // ── 0. Compatibility guard ──────────────────────────────────────
-      var compat = getCompatReport();
-      if (!compat.supported) {
-        Lampa.Noty.show(Lampa.Lang.translate('gramlink_compat_fail') + ' — ' + compat.blockers.length + ' blocking issue(s)');
-        showCompatReportModal();
-        return;
-      }
-
-      // Cancel any previous auth session that may still be connected
-      cancelAuth();
-      authCancelFlag = false;
-
-      // ── Modal HTML (preserves existing structure and CSS classes) ──────
-      var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div class="gramlink-auth__qr-placeholder" style="width:16em;height:16em;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:1em;margin:0 auto">' + '<svg viewBox="0 0 64 64" width="48" height="48" fill="rgba(255,255,255,0.3)">' + '<rect x="4" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="36" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="4" y="36" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="44" y="44" width="8" height="8" rx="1" fill="currentColor"/>' + '<rect x="36" y="44" width="4" height="8" rx="1" fill="currentColor"/>' + '<rect x="44" y="36" width="8" height="4" rx="1" fill="currentColor"/>' + '</svg>' + '</div>' + '<div class="gramlink-auth__qr-code" style="display:none;width:16em;height:16em;margin:0 auto"></div>' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="gs-status"></div>' + '<div class="gramlink-auth__phone-wrap" style="margin-top:1.2em;padding-top:1em;border-top:1px solid rgba(255,255,255,0.1)">' + '<div class="simple-button selector gramlink-auth__phone-btn">Log in by phone number</div>' + '</div>' + '</div>');
-      var enabledCtrl = Lampa.Controller.enabled().name;
-      Lampa.Modal.open({
-        title: 'Telegram Authorization',
-        html: html,
-        size: 'medium',
-        onBack: function onBack() {
-          cancelAuth();
-          Lampa.Modal.close();
-          Lampa.Controller.toggle(enabledCtrl);
-        }
-      });
-      var statusEl = html.find('#gs-status');
-      var qrEl = html.find('.gramlink-auth__qr-code');
-      var qrPlaceholder = html.find('.gramlink-auth__qr-placeholder');
-
-      // ponytail: phone auth button — replaces the old deeplink
-      html.find('.gramlink-auth__phone-btn').on('hover:enter hover:click hover:touch', function () {
-        cancelAuth();
-        Lampa.Modal.close();
-        setTimeout(function () {
-          startPhoneAuth(creds);
-        }, 300);
-      });
-
-      // ── 1. Validate API credentials ──────────────────────────────────
-      var creds = getApiCredentials();
-      if (!creds.apiId || !creds.apiHash) {
-        statusEl.text('API credentials missing — configure in Settings');
-        Lampa.Noty.show('GramLink: Set API ID/Hash in Settings first');
-        return;
-      }
-      statusEl.text('Loading GramJS...');
-
-      // ── 2. Load GramJS bundle, connect, start QR auth ───────────────
-      loadGramJS().then(function (tg) {
-        if (authCancelFlag) return;
-        var TelegramClient = tg.TelegramClient;
-        var MemorySession = tg.MemorySession;
-        statusEl.text('Connecting to Telegram...');
-
-        // Build a GramJS client with a FRESH empty MemorySession.
-        // No saved credentials — this is a first-time auth flow.
-        var session = new MemorySession();
-        var client = new TelegramClient(session, creds.apiId, creds.apiHash, {
-          connectionRetries: 3,
-          useWSS: true,
-          deviceModel: 'Lampa Web',
-          systemVersion: '1.0',
-          appVersion: VERSION,
-          langCode: 'en',
-          systemLangCode: 'en'
-        });
-        try {
-          client.setLogLevel('error');
-        } catch (e) {}
-        tgClient = client; // Save for cancelAuth cleanup
-
-        // Step A: Establish MTProto connection (key exchange)
-        return client.connect().then(function () {
-          if (authCancelFlag) return;
-          statusEl.html('<div>Scan with Telegram</div>' + '<div style="font-size:0.85em;color:rgba(255,255,255,0.4)">' + 'Open Telegram → Settings → Devices → Scan QR' + '</div>');
-
-          // Step B: High-level QR auth flow.
-          // GramJS handles: ExportLoginToken polling, UpdateLoginToken push,
-          // DC migration, and SESSION_PASSWORD_NEEDED → signInWithPassword.
-          return client.signInUserWithQrCode({
-            apiId: creds.apiId,
-            apiHash: creds.apiHash
-          }, {
-            // ── QR code render callback ───────────────────────
-            qrCode: function qrCode(qrData) {
-              var token = qrData.token;
-              var b64 = token.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-              var qrUrl = 'tg://login?token=' + b64;
-              qrPlaceholder.hide();
-              qrEl.show().empty();
-              Lampa.Utils.qrcode(qrUrl, qrEl, function () {});
-              setTimeout(function () {
-                var s = qrEl.find('svg');
-                if (s.length) s.css({
-                  width: '14em',
-                  height: '14em'
-                });
-              }, 100);
-            },
-            // ── 2FA password callback ─────────────────────────
-            password: function password(hint) {
-              // Called by GramJS when SESSION_PASSWORD_NEEDED is caught.
-              // Returns a Promise<string> — GramJS waits for resolution,
-              // then computes SRP and calls auth.CheckPassword.
-              return new Promise(function (resolve, reject) {
-                // Bug 1: prevent duplicate UI if GramJS retries password callback
-                if (passwordPromptActive) {
-                  reject(new Error('Password prompt already active'));
-                  return;
-                }
-                passwordPromptActive = true;
-
-                // Close QR modal briefly to show Input.edit
-                Lampa.Modal.close();
-                Lampa.Input.edit({
-                  title: hint ? '2FA Password (hint: ' + hint + ')' : '2FA Password',
-                  value: '',
-                  free: true,
-                  nosave: true
-                }, function (val) {
-                  passwordPromptActive = false;
-                  if (val && String(val).trim()) {
-                    // Re-open QR modal for final status
-                    Lampa.Modal.open({
-                      title: 'Telegram Authorization',
-                      html: html,
-                      size: 'medium',
-                      onBack: function onBack() {
-                        cancelAuth();
-                        Lampa.Modal.close();
-                        Lampa.Controller.toggle(enabledCtrl);
-                        reject(new Error('AUTH_USER_CANCEL'));
-                      }
-                    });
-                    statusEl.text('Verifying password...');
-                    resolve(String(val).trim());
-                  } else {
-                    // User cancelled password input (pressed Back)
-                    cancelAuth();
-                    Lampa.Noty.show('Auth cancelled');
-                    Lampa.Controller.toggle(enabledCtrl);
-                    reject(new Error('AUTH_USER_CANCEL'));
-                  }
-                });
-              });
-            },
-            // ── Error callback ────────────────────────────────
-            onError: function onError(err) {
-              console.error('GramLink', 'Auth error:', err && (err.message || err.errorMessage));
-              if (authCancelFlag) return true;
-              var errMsg = err && (err.message || err.errorMessage || '');
-              // Bug 1: stop retry on password errors — prevents infinite loop + UI duplication
-              if (errMsg.indexOf('PASSWORD') !== -1 || errMsg.indexOf('password') !== -1) {
-                passwordPromptActive = false;
-                authCancelFlag = true; // Suppress duplicate Noty from _onAuthError
-                Lampa.Noty.show('Wrong password: ' + errMsg);
-                return true; // Stop retry
-              }
-              Lampa.Noty.show('GramLink auth error: ' + errMsg);
-              return false; // Don't stop the auth flow for other errors
-            }
-          });
-        });
-      }).then(function (user) {
-        return _onAuthSuccess(user);
-      }).catch(function (err) {
-        _onAuthError(err);
-        var msgEl = html.find('#gs-status');
-        if (msgEl.length) {
-          msgEl.text('Error: ' + (err.message || err.errorMessage || 'unknown'));
-        }
-      });
-    }
-
-    // ── Phone number auth (one-device flow) ──────────────────────────
-    // ponytail: platform-specific Telegram keys — Android uses 6, others 2040
-    function detectPhoneAuthKeys() {
-      var plat = 'Desktop';
-      if (typeof Lampa !== 'undefined' && Lampa.Platform && Lampa.Platform.is('android')) {
-        plat = 'Android';
-      }
-      console.log('GramLink', 'Phone auth platform:', plat);
-      return plat === 'Android' ? {
-        apiId: 6,
-        apiHash: 'eb06d4abfb49dc3eeb1aeb98ae0f581e',
-        platform: plat
-      } : {
-        apiId: 2040,
-        apiHash: 'b18441a1ff607e10a989891a5462e627',
-        platform: plat
-      };
-    }
-    function startPhoneAuth(creds) {
-      authCancelFlag = false;
-      var keys = detectPhoneAuthKeys();
-      creds = {
-        apiId: keys.apiId,
-        apiHash: keys.apiHash
-      };
-      var enabledCtrl = Lampa.Controller.enabled().name;
-
-      // Auto-detect country code prefix from UI language
-      var defaultPhonePrefix = '';
-      var uiLang = Lampa.Storage.get('language', '');
-      if (uiLang === 'uk') defaultPhonePrefix = '+380';
-      Lampa.Input.edit({
-        title: Lampa.Lang.translate('gramlink_auth_phone_title'),
-        value: defaultPhonePrefix,
-        free: true,
-        nosave: true
-      }, function (phone) {
-        if (!phone || !String(phone).trim()) {
-          Lampa.Controller.toggle(enabledCtrl);
-          return;
-        }
-        phone = String(phone).trim();
-        var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="gs-status"></div>' + '</div>');
-        Lampa.Modal.open({
-          title: 'Telegram Login',
-          html: html,
-          size: 'medium',
-          onBack: function onBack() {
-            cancelAuth();
-            Lampa.Modal.close();
-            Lampa.Controller.toggle(enabledCtrl);
-          }
-        });
-        var statusEl = html.find('#gs-status');
-        statusEl.text('Connecting...');
-        loadGramJS().then(function (tg) {
-          if (authCancelFlag) return;
-          var TelegramClient = tg.TelegramClient;
-          var MemorySession = tg.MemorySession;
-          var session = new MemorySession();
-          var client = new TelegramClient(session, creds.apiId, creds.apiHash, {
-            connectionRetries: 3,
-            useWSS: true,
-            deviceModel: 'Lampa Web',
-            systemVersion: '1.0',
-            appVersion: VERSION,
-            langCode: 'en',
-            systemLangCode: 'en'
-          });
-          try {
-            client.setLogLevel('error');
-          } catch (e) {}
-          tgClient = client;
-          return client.connect().then(function () {
-            if (authCancelFlag) return;
-            statusEl.text('Sending code...');
-            var Api = tg.Api;
-            return client.invoke(new Api.auth.SendCode({
-              phoneNumber: phone,
-              apiId: creds.apiId,
-              apiHash: creds.apiHash,
-              // ponytail: no CodeSettings flags — GramJS default, avoids
-              // Telegram trying device-specific delivery (flash call, app push)
-              settings: new Api.CodeSettings({})
-            })).then(function (sendResult) {
-              if (authCancelFlag) return;
-              var phoneCodeHash = sendResult.phoneCodeHash;
-              var sentType = sendResult.type;
-              var isCodeViaApp = sentType instanceof Api.auth.SentCodeTypeApp;
-              var isCodeViaSms = sentType instanceof Api.auth.SentCodeTypeSms;
-              console.log('GramLink', 'sendCode result:', 'type className:', sentType.className, 'phoneCodeHash:', phoneCodeHash, 'nextType:', sendResult.nextType ? sendResult.nextType.className : 'none', 'timeout:', sendResult.timeout);
-              var methodLabel = 'Check Telegram app';
-              if (isCodeViaSms) methodLabel = 'Check SMS';else if (sentType instanceof Api.auth.SentCodeTypeCall) methodLabel = 'Answer incoming call';else if (sentType instanceof Api.auth.SentCodeTypeMissedCall) methodLabel = 'Wait for missed call';
-
-              // ponytail: use Modal.update() so Lampa's bind() re-wires .selector events
-              var p = new Promise(function (resolve, reject) {
-                function showCodeUi(hash, label) {
-                  var ui = $('<div style="padding:1em;text-align:center">' + '<div>Code sent</div>' + '<div style="font-size:0.85em;color:rgba(255,255,255,0.4);margin-bottom:0.8em">' + label + '</div>' + '<div class="modal__button selector">Enter code</div>' + '<div class="modal__button selector" style="margin-top:0.4em;opacity:0.7">Resend code</div>' + '</div>');
-                  Lampa.Modal.update(ui);
-                  // ponytail: use ONLY hover:enter (not click) to prevent
-                  // double-firing. On TV platforms hover:enter fires once per
-                  // OK press; adding click causes 2-3x duplicate Input.edit calls.
-                  // Guard flag prevents cascading re-entry from Lampa.Controller.toggle.
-                  ui.find('.selector').on('hover:enter', function (e) {
-                    // Guard: prevent re-entry from stacked events (click + hover:enter cascade)
-                    if (window.__gramlink_code_entry_active) return;
-                    window.__gramlink_code_entry_active = true;
-                    var idx = ui.find('.selector').index(this);
-                    if (idx === 0) {
-                      // Enter code
-                      Lampa.Modal.close();
-                      // ponytail: no Controller.toggle here — Input.edit manages
-                      // its own controller context internally.
-                      Lampa.Input.edit({
-                        title: 'Login code',
-                        subtitle: isCodeViaApp ? 'Code sent via Telegram' : 'Code sent via SMS',
-                        value: '',
-                        free: true,
-                        nosave: true
-                      }, function (val) {
-                        window.__gramlink_code_entry_active = false;
-                        if (val && String(val).trim()) {
-                          resolve({
-                            phoneCodeHash: String(hash),
-                            code: String(val).trim()
-                          });
-                        } else {
-                          cancelAuth();
-                          Lampa.Controller.toggle(enabledCtrl);
-                          reject(new Error('AUTH_USER_CANCEL'));
-                        }
-                      });
-                    } else {
-                      // Resend code — no guard needed, but clear it just in case
-                      window.__gramlink_code_entry_active = false;
-                      ui.html('<div style="padding:1em;text-align:center"><div>Resending code...</div></div>');
-                      Lampa.Modal.update(ui);
-                      client.invoke(new Api.auth.ResendCode({
-                        phoneNumber: phone,
-                        phoneCodeHash: hash
-                      })).then(function (resendResult) {
-                        if (authCancelFlag) return;
-                        var sentType = resendResult.type;
-                        var resendLabel = 'Check your Telegram';
-                        if (sentType instanceof Api.auth.SentCodeTypeSms) resendLabel = 'Check SMS';else if (sentType instanceof Api.auth.SentCodeTypeCall) resendLabel = 'Answer incoming call';
-                        console.log('GramLink', 'resendCode result:', sentType.className, 'hash:', resendResult.phoneCodeHash);
-                        showCodeUi(resendResult.phoneCodeHash, resendLabel);
-                      }).catch(function (resendErr) {
-                        if (authCancelFlag) return;
-                        var msg = resendErr.errorMessage || resendErr.message || 'unknown';
-                        if (msg === 'SEND_CODE_UNAVAILABLE') {
-                          Lampa.Noty.show('SMS resend not available. Try QR code instead.');
-                        } else {
-                          Lampa.Noty.show('Resend failed: ' + msg);
-                        }
-                        showCodeUi(hash, label);
-                      });
-                    }
-                  });
-                }
-                showCodeUi(phoneCodeHash, methodLabel);
-              });
-              return p;
-            }).then(function (params) {
-              if (authCancelFlag) return;
-              statusEl.text('Signing in...');
-              return client.invoke(new Api.auth.SignIn({
-                phoneNumber: phone,
-                phoneCodeHash: params.phoneCodeHash,
-                phoneCode: params.code
-              })).then(function (signInResult) {
-                if (signInResult instanceof Api.auth.Authorization) {
-                  return signInResult.user;
-                }
-                throw new Error('Unexpected sign-in result');
-              }).catch(function (err) {
-                if (err.errorMessage === 'PHONE_NUMBER_UNOCCUPIED' || err.errorMessage === 'PHONE_CODE_EXPIRED') {
-                  statusEl.text('Register in Telegram app first, then retry.');
-                  cancelAuth();
-                  Lampa.Controller.toggle(enabledCtrl);
-                  return;
-                }
-                if (err.errorMessage === 'SESSION_PASSWORD_NEEDED') {
-                  return new Promise(function (resolve, reject) {
-                    Lampa.Input.edit({
-                      title: '2FA Password',
-                      value: '',
-                      free: true,
-                      nosave: true
-                    }, function (val) {
-                      if (val && String(val).trim()) {
-                        // ponytail: setTimeout lets Input.edit fully close before Modal.open
-                        resolve(String(val).trim());
-                        setTimeout(function () {
-                          Lampa.Modal.open({
-                            title: 'Telegram Login',
-                            html: $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div style="font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password...</div>' + '</div>'),
-                            size: 'medium',
-                            onBack: function onBack() {
-                              cancelAuth();
-                              Lampa.Modal.close();
-                              Lampa.Controller.toggle(enabledCtrl);
-                              reject(new Error('AUTH_USER_CANCEL'));
-                            }
-                          });
-                        }, 200);
-                      } else {
-                        cancelAuth();
-                        Lampa.Controller.toggle(enabledCtrl);
-                        reject(new Error('AUTH_USER_CANCEL'));
-                      }
-                    });
-                  }).then(function (_password) {
-                    return client.signInWithPassword({
-                      apiId: creds.apiId,
-                      apiHash: creds.apiHash
-                    }, {
-                      password: function password() {
-                        return Promise.resolve(_password);
-                      },
-                      onError: function onError(pwErr) {
-                        Lampa.Noty.show('2FA error: ' + (pwErr.message || ''));
-                        // Bug 2: return true to stop retry — false causes infinite loop
-                        cancelAuth();
-                        Lampa.Modal.close();
-                        Lampa.Controller.toggle(enabledCtrl);
-                        return true;
-                      }
-                    });
-                  });
-                }
-                throw err;
-              });
-            });
-          });
-        }).then(function (user) {
-          return _onAuthSuccess(user);
-        }).catch(function (err) {
-          _onAuthError(err);
-        });
-      });
     }
 
     function startMigration(profilesTopicId) {
@@ -4438,7 +2966,7 @@
     // ─── Main migration flow ─────────────────────────────────────────
 
     function doMigration(profilesTopicId) {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) {
         Lampa.Noty.show('Not connected to Telegram');
         return;
@@ -4610,7 +3138,7 @@
     // ─── Fallback if plugins/all fails: migrate with local data ─────
 
     function fallbackMigration(profiles, activeProfileId, profilesTopicId) {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) return;
       console.log('[GramLink] fallbackMigration — profiles:', profiles.length, 'activeProfileId:', activeProfileId);
       var imported = 0;
@@ -4975,7 +3503,7 @@
     function refreshCacheFromTelegram() {
       var profilesTopicId = Lampa.Storage.get(STORAGE_PROFILES_TOPIC$1, '');
       if (!profilesTopicId) return;
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) return;
       client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
         var profileMessages = msgs.filter(function (m) {
@@ -4992,7 +3520,7 @@
 
     function refreshProfiles(profilesTopicId, profilesSyncTopicId, container, onDone) {
       if (!profilesTopicId) return;
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) return;
       client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
         container.empty();
@@ -5053,7 +3581,7 @@
       });
     }
     function doSwitch(msgId, profilesTopicId, profilesSyncTopicId, container) {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) {
         Lampa.Noty.show('Not connected');
         return;
@@ -5101,13 +3629,13 @@
 
     function replayDeltas(profilesSyncTopicId, profileMsgId, sinceTimestamp, snapshotData) {
       if (!profilesSyncTopicId) return Promise.resolve(snapshotData);
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       return client.getMessagesSince(profilesSyncTopicId, sinceTimestamp, 50).then(function (deltas) {
         var data = deepClone(snapshotData);
         deltas.forEach(function (msg) {
           var d;
           try {
-            d = JSON.parse(stripCodeFence(msg.text));
+            d = JSON.parse(stripCodeFence$1(msg.text));
           } catch (e) {
             return;
           }
@@ -5322,7 +3850,7 @@
         align: 'center'
       }, function (name) {
         if (!name) return;
-        var client = GramLinkClient.getInstance();
+        var client = GatewayClient.getInstance();
         if (!client.isConnected()) {
           Lampa.Noty.show('Not connected');
           return;
@@ -5379,7 +3907,7 @@
     // ─── Sync / Auto-save ───────────────────────────────────
 
     function syncProfile(msgId, profilesTopicId) {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) {
         Lampa.Noty.show('Not connected');
         return;
@@ -5442,7 +3970,7 @@
     // ─── Rename profile ─────────────────────────────────────
 
     function renameProfile(msgId, profilesTopicId, newName, onDone) {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) {
         Lampa.Noty.show('Not connected');
         if (onDone) onDone();
@@ -5532,7 +4060,7 @@
     // ─── Delta publisher (called from outside) ──────────────
 
     function publishLocalDelta(profilesSyncTopicId, subtype, payload) {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected() || !profilesSyncTopicId) return;
       var activeProfileId = Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, '');
       if (!activeProfileId) return;
@@ -5542,7 +4070,7 @@
 
     // Publish a device-targeted delta (includes target_device_id for filtering)
     function publishDeviceDelta(profilesSyncTopicId, subtype, payload, targetDeviceId) {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected() || !profilesSyncTopicId) return;
       var activeProfileId = Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, '');
       if (!activeProfileId) return;
@@ -5590,7 +4118,7 @@
       var activeId = Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, '');
       var channelId = getChannelId();
       if (!profilesTopicId || !activeId || !channelId) return;
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) return;
 
       // Get current profile message — from there name, avatar, meta
@@ -5652,7 +4180,7 @@
     function startAutoActivation(profilesTopicId, profilesSyncTopicId) {
       var activeId = Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, '');
       if (!activeId) return;
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) return;
       client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
         var target = findMessageById(msgs, activeId);
@@ -5870,7 +4398,7 @@
     function refreshDeltas() {
       var profilesSyncTopicId = Lampa.Storage.get(STORAGE_PROFILES_SYNC_TOPIC$1, '');
       if (!profilesSyncTopicId) return;
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) return;
       var lastSeen = getLastDeltaSeen();
       client.getMessagesSince(profilesSyncTopicId, lastSeen, 30).then(function (msgs) {
@@ -5878,7 +4406,7 @@
         msgs.forEach(function (m) {
           if (m.date > newest) newest = m.date;
           try {
-            var d = JSON.parse(stripCodeFence(m.text));
+            var d = JSON.parse(stripCodeFence$1(m.text));
             if (d && d.meta && d.meta.type === 'profile_delta') {
               applyDelta(d);
             }
@@ -5932,7 +4460,7 @@
     // ─── Quick switch (from sidebar, full reload) ──────────────
 
     function quickSwitchProfile(msgId) {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) {
         Lampa.Noty.show('Not connected');
         return;
@@ -6423,7 +4951,7 @@
       // ─── Save snapshot for inactive profile ──────────────────
 
       function saveSnapshot(onDone) {
-        var client = GramLinkClient.getInstance();
+        var client = GatewayClient.getInstance();
         var channelId = getChannelId();
         var topicId = Lampa.Storage.get('gramlink_profiles_topic', '');
         if (!client.isConnected() || !channelId || !topicId) {
@@ -6488,7 +5016,7 @@
     // ═══════════════════════════════════════════════════════════════════
 
     function loadSnapshotThenPush(profileMsgId, profileName) {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       var channelId = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
       var topicId = Lampa.Storage.get('gramlink_profiles_topic', '');
       if (!channelId || !topicId) {
@@ -6555,7 +5083,7 @@
             });
           }, 200);
         } else {
-          if (!GramLinkClient.getInstance().isConnected()) {
+          if (!GatewayClient.getInstance().isConnected()) {
             Lampa.Noty.show(Lampa.Lang.translate('gramlink_not_connected'));
             return;
           }
@@ -6578,6 +5106,173 @@
       } catch (e) {
         return url.length > 50 ? url.slice(0, 47) + '…' : url;
       }
+    }
+
+    /**
+     * compat.js — GramJS compatibility checker
+     *
+     * Two groups of checks:
+     *   - Syntax (BigInt literal, async/await, generators, ?.) — NOT polyfilled,
+     *     fail at bundle parse stage with SyntaxError. Detected via new Function(snippet).
+     *   - Runtime API (WebAssembly, crypto.subtle, Map/Set, Proxy) — check typeof,
+     *     some are polyfilled, some not (BigInt64Array, Proxy).
+     *
+     * @returns {Object} { supported, blockers, warnings, details }
+     */
+    function checkGramJSCompatibility() {
+      var blockers = [];
+      var warnings = [];
+      var details = {
+        syntax: {},
+        runtime: {}
+      };
+
+      // ── 1. Syntax probes
+      function canParse(snippet) {
+        try {
+          new Function(snippet);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      details.syntax.arrowFn = canParse('()=>{}');
+      details.syntax.letConst = canParse('let a=1; const b=2;');
+      details.syntax.templateLit = canParse('var x=`y`; var y=`${x}`;');
+      details.syntax.classKw = canParse('class X{}');
+      details.syntax.asyncAwait = canParse('async function f(){await 1;}');
+      details.syntax.generator = canParse('function* g(){yield 1;}');
+      details.syntax.bigIntLit = canParse('1n; 2n+3n;');
+      details.syntax.optChain = canParse('({})?.x; ({})?.[0]');
+      details.syntax.exponent = canParse('2**3;');
+      details.syntax.spread = canParse('var a=[1]; var b=[...a]; function f(...c){}');
+      details.syntax.destructuring = canParse('var {a}={a:1}; var [b]=[1];');
+      details.syntax.defaultParam = canParse('function f(a=1){}');
+
+      // ── 2. Runtime API checks
+      details.runtime.bigInt = typeof BigInt !== 'undefined';
+      details.runtime.bigInt64Array = typeof BigInt64Array !== 'undefined';
+      details.runtime.webAssembly = typeof WebAssembly !== 'undefined' && typeof WebAssembly.instantiate === 'function';
+      details.runtime.cryptoSubtle = !!(window.crypto && window.crypto.subtle && typeof window.crypto.subtle.digest === 'function');
+      details.runtime.cryptoRandom = !!(window.crypto && typeof window.crypto.getRandomValues === 'function');
+      details.runtime.textEncoder = typeof TextEncoder !== 'undefined';
+      details.runtime.textDecoder = typeof TextDecoder !== 'undefined';
+      details.runtime.promise = typeof Promise !== 'undefined';
+      details.runtime.mapSet = typeof Map !== 'undefined' && typeof Set !== 'undefined';
+      details.runtime.weakMap = typeof WeakMap !== 'undefined';
+      details.runtime.proxy = typeof Proxy !== 'undefined';
+      details.runtime.uint8Array = typeof Uint8Array !== 'undefined';
+      details.runtime.arrayFrom = typeof Array.from === 'function';
+      details.runtime.objectAssign = typeof Object.assign === 'function';
+
+      // ── 3. Classification: BLOCKERS vs WARNINGS
+      if (!details.syntax.bigIntLit || !details.runtime.bigInt) {
+        blockers.push('BigInt — 206× у бандлі, MTProto int128/int256, RSA, DH. Не поліфиться.');
+      }
+      if (!details.runtime.bigInt64Array) {
+        blockers.push('BigInt64Array — 6×, TDLib-подібна серіалізація. Не поліфиться.');
+      }
+      if (!details.syntax.asyncAwait) {
+        blockers.push('async/await — 64× async + 405× await. Синтаксично, не поліфиться.');
+      }
+      if (!details.syntax.generator) {
+        blockers.push('Generators (function*) — 11×, async iteration helpers. Не поліфиться.');
+      }
+      if (!details.syntax.arrowFn) {
+        blockers.push('Arrow functions — 246×, синтаксично.');
+      }
+      if (!details.syntax.optChain) {
+        blockers.push('Optional chaining (?.) — 2×, ES2020. Синтаксично.');
+      }
+      if (!details.syntax.exponent) {
+        blockers.push('Exponent operator (**) — 17×. Синтаксично.');
+      }
+      if (!details.runtime.cryptoSubtle) {
+        warnings.push('crypto.subtle — немає (HTTP-контекст). TGSBundle має pure-JS fallback для SHA-1/256/512, HMAC, PBKDF2. Повільніше, але працює.');
+      }
+      if (!details.runtime.cryptoRandom) {
+        blockers.push('crypto.getRandomValues — генератор nonces у MTProto.');
+      }
+      if (!details.runtime.textEncoder || !details.runtime.textDecoder) {
+        blockers.push('TextEncoder/TextDecoder — UTF-8 серіалізація string\'ів у MTProto.');
+      }
+      if (!details.runtime.uint8Array) {
+        blockers.push('Uint8Array — бінарні дані всюди.');
+      }
+      if (!details.runtime.webAssembly) {
+        warnings.push('WebAssembly — AES-IGE fallback на pure-JS, ~5× повільніше.');
+      }
+      if (!details.runtime.proxy) {
+        warnings.push('Proxy — 1×, може зламати окремі reactive-обгортки.');
+      }
+      if (!details.runtime.mapSet) {
+        warnings.push('Map/Set — поліфляться core-js, але без них GramJS не стартане.');
+      }
+      if (!details.runtime.promise) {
+        blockers.push('Promise — 68×, основа асинхронного потоку.');
+      }
+      return {
+        supported: blockers.length === 0,
+        blockers: blockers,
+        warnings: warnings,
+        details: details
+      };
+    }
+    var _gramlinkCompatReport = null;
+    function getCompatReport() {
+      if (!_gramlinkCompatReport) _gramlinkCompatReport = checkGramJSCompatibility();
+      return _gramlinkCompatReport;
+    }
+    function showCompatReportModal() {
+      var report = getCompatReport();
+      var enabledCtrl = Lampa.Controller.enabled().name;
+      var closing = false; // re-entrance guard
+
+      var statusColor = report.supported ? report.warnings.length ? '#ffc107' : '#4caf50' : '#f44336';
+      var statusText = report.supported ? report.warnings.length ? Lampa.Lang.translate('gramlink_compat_partial') : Lampa.Lang.translate('gramlink_compat_ok') : Lampa.Lang.translate('gramlink_compat_fail');
+      var html = $('<div class="gramlink-compat" style="padding:1em;max-width:42em;margin:0 auto"></div>');
+      html.append('<div style="display:flex;align-items:center;gap:1em;padding:1em 1.2em;' + 'background:rgba(255,255,255,0.05);border-radius:0.6em;margin-bottom:1.5em">' + '<div style="width:1.2em;height:1.2em;border-radius:50%;flex-shrink:0;background:' + statusColor + ';box-shadow:0 0 .6em ' + statusColor + '80"></div>' + '<div style="flex:1">' + '<div style="font-size:1.2em;font-weight:600">' + statusText + '</div>' + '<div style="font-size:0.85em;color:rgba(255,255,255,0.5);margin-top:.2em">' + Lampa.Lang.translate('gramlink_compat_hint_disclaimer') + '</div>' + '</div></div>');
+      if (report.blockers.length > 0) {
+        html.append('<div style="font-size:1.1em;font-weight:600;margin-bottom:.8em;color:#f44336">' + Lampa.Lang.translate('gramlink_compat_blocked_label') + ' (' + report.blockers.length + ')</div>');
+        var bl = $('<ul style="list-style:none;padding:0;margin:0 0 1.5em"></ul>');
+        report.blockers.forEach(function (b) {
+          bl.append('<li style="padding:.6em .8em;margin-bottom:.4em;background:rgba(244,67,54,0.1);' + 'border-left:3px solid #f44336;border-radius:0 .4em .4em 0;font-size:.95em">' + b + '</li>');
+        });
+        html.append(bl);
+      } else {
+        html.append('<div style="padding:.8em 1em;background:rgba(76,175,80,0.1);border-left:3px solid #4caf50;' + 'border-radius:0 .4em .4em 0;font-size:.95em;margin-bottom:1.5em">' + Lampa.Lang.translate('gramlink_compat_no_blockers') + '</div>');
+      }
+      if (report.warnings.length > 0) {
+        html.append('<div style="font-size:1.1em;font-weight:600;margin-bottom:.8em;color:#ffc107">' + Lampa.Lang.translate('gramlink_compat_warning_label') + ' (' + report.warnings.length + ')</div>');
+        var wn = $('<ul style="list-style:none;padding:0;margin:0 0 1.5em"></ul>');
+        report.warnings.forEach(function (w) {
+          wn.append('<li style="padding:.6em .8em;margin-bottom:.4em;background:rgba(255,193,7,0.08);' + 'border-left:3px solid #ffc107;border-radius:0 .4em .4em 0;font-size:.95em">' + w + '</li>');
+        });
+        html.append(wn);
+      }
+
+      // ── Raw probe results (inline, scrollable — native Lampa pattern) ──
+      var d = report.details;
+      html.append('<div style="margin-top:1em;padding-top:0.8em;border-top:1px solid rgba(255,255,255,0.08)"></div>');
+      html.append('<div class="settings-param-title"><span>Raw probe results</span></div>');
+      html.append('<div style="display:grid;grid-template-columns:1fr 1fr;gap:1em;font-size:.85em;margin-top:.5em">' + '<div style="background:rgba(255,255,255,0.02);border-radius:.4em;padding:.5em .8em">' + '<div style="font-weight:600;margin-bottom:.4em;color:rgba(255,255,255,0.5)">Syntax</div>' + Object.keys(d.syntax).map(function (k) {
+        var v = d.syntax[k];
+        return '<div style="display:flex;justify-content:space-between;padding:.2em 0">' + '<span style="color:rgba(255,255,255,0.6)">' + k + '</span>' + '<span style="color:' + (v ? '#4caf50' : '#f44336') + '">' + (v ? "\u2713" : "\u2717") + '</span></div>';
+      }).join('') + '</div>' + '<div style="background:rgba(255,255,255,0.02);border-radius:.4em;padding:.5em .8em">' + '<div style="font-weight:600;margin-bottom:.4em;color:rgba(255,255,255,0.5)">Runtime</div>' + Object.keys(d.runtime).map(function (k) {
+        var v = d.runtime[k];
+        return '<div style="display:flex;justify-content:space-between;padding:.2em 0">' + '<span style="color:rgba(255,255,255,0.6)">' + k + '</span>' + '<span style="color:' + (v ? '#4caf50' : '#f44336') + '">' + (v ? "\u2713" : "\u2717") + '</span></div>';
+      }).join('') + '</div></div>');
+      Lampa.Modal.open({
+        title: Lampa.Lang.translate('gramlink_compat_title'),
+        html: html,
+        size: 'medium',
+        onBack: function onBack() {
+          if (closing) return;
+          closing = true;
+          Lampa.Modal.close();
+          Lampa.Controller.toggle(enabledCtrl);
+        }
+      });
     }
 
     function initSettings() {
@@ -6612,7 +5307,7 @@
           name: Lampa.Lang.translate('gramlink_settings_section_auth')
         },
         onRender: function onRender(item) {
-          var client = GramLinkClient.getInstance();
+          var client = GatewayClient.getInstance();
           if (client.hasCredentials()) {
             var userName = Lampa.Storage.get('gramlink_user_name', '');
             item.find('.settings-param__name').text(Lampa.Lang.translate('gramlink_settings_auth_logout') + (userName ? ': ' + userName : ''));
@@ -6621,7 +5316,7 @@
           }
         },
         onChange: function onChange() {
-          var client = GramLinkClient.getInstance();
+          var client = GatewayClient.getInstance();
           var enabledCtrl = Lampa.Controller.enabled().name;
           if (client.hasCredentials()) {
             Lampa.Modal.open({
@@ -6828,7 +5523,7 @@
         },
         onChange: function onChange(value) {
           Lampa.Storage.set('gramlink_heartbeat', value);
-          var client = GramLinkClient.getInstance();
+          var client = GatewayClient.getInstance();
           if (value) {
             var channelId = Lampa.Storage.get('gramlink_channel_id', '');
             var syncLogTopicId = Lampa.Storage.get('gramlink_sync_log_topic', '');
@@ -7042,7 +5737,8 @@
           type: 'select',
           values: {
             'official': 'gramlink_settings_server_type_official',
-            'custom': 'gramlink_settings_server_type_custom'
+            'custom': 'gramlink_settings_server_type_custom',
+            'gateway': 'Gateway (WebSocket Proxy)'
           },
           default: 'official'
         },
@@ -7050,7 +5746,7 @@
           name: Lampa.Lang.translate('gramlink_settings_server_type')
         },
         onChange: function onChange(value) {
-          var client = GramLinkClient.getInstance();
+          var client = GatewayClient.getInstance();
           var oldVal = value === 'official' ? 'custom' : 'official';
           if (client.hasCredentials()) {
             Lampa.Modal.open({
@@ -7068,6 +5764,7 @@
                   }
                   $('.scroll__body').find('[data-name="gramlink_custom_host"]').toggleClass('hide', value !== 'custom');
                   $('.scroll__body').find('[data-name="gramlink_custom_port"]').toggleClass('hide', value !== 'custom');
+                  $('.scroll__body').find('[data-name="gramlink_gateway_url"]').toggleClass('hide', value !== 'gateway');
                   Lampa.Modal.close();
                   Lampa.Settings.create('gramlink_server', {
                     onBack: function onBack() {
@@ -7100,6 +5797,7 @@
             Lampa.Storage.set('gramlink_server_type', value);
             $('.scroll__body').find('[data-name="gramlink_custom_host"]').toggleClass('hide', value !== 'custom');
             $('.scroll__body').find('[data-name="gramlink_custom_port"]').toggleClass('hide', value !== 'custom');
+            $('.scroll__body').find('[data-name="gramlink_gateway_url"]').toggleClass('hide', value !== 'gateway');
           }
         }
       });
@@ -7160,10 +5858,10 @@
         },
         onChange: function onChange(value) {
           Lampa.Storage.set('gramlink_proxy_enabled', value);
-          $('.scroll__body').find('[data-name="gramlink_proxy_host"]').toggleClass('hide', !GramLinkClient.getInstance().isEnabled('gramlink_proxy_enabled'));
-          $('.scroll__body').find('[data-name="gramlink_proxy_port"]').toggleClass('hide', !GramLinkClient.getInstance().isEnabled('gramlink_proxy_enabled'));
-          $('.scroll__body').find('[data-name="gramlink_proxy_secret"]').toggleClass('hide', !GramLinkClient.getInstance().isEnabled('gramlink_proxy_enabled'));
-          GramLinkClient.getInstance().reconnect();
+          $('.scroll__body').find('[data-name="gramlink_proxy_host"]').toggleClass('hide', !GatewayClient.getInstance().isEnabled('gramlink_proxy_enabled'));
+          $('.scroll__body').find('[data-name="gramlink_proxy_port"]').toggleClass('hide', !GatewayClient.getInstance().isEnabled('gramlink_proxy_enabled'));
+          $('.scroll__body').find('[data-name="gramlink_proxy_secret"]').toggleClass('hide', !GatewayClient.getInstance().isEnabled('gramlink_proxy_enabled'));
+          GatewayClient.getInstance().reconnect();
         }
       });
 
@@ -7181,11 +5879,11 @@
           name: Lampa.Lang.translate('gramlink_settings_proxy_host')
         },
         onRender: function onRender(item) {
-          toggleField(item, GramLinkClient.getInstance().isEnabled('gramlink_proxy_enabled'));
+          toggleField(item, GatewayClient.getInstance().isEnabled('gramlink_proxy_enabled'));
         },
         onChange: function onChange(value) {
           if (value) Lampa.Storage.set('gramlink_proxy_host', value);
-          GramLinkClient.getInstance().reconnect();
+          GatewayClient.getInstance().reconnect();
         }
       });
 
@@ -7203,11 +5901,11 @@
           name: Lampa.Lang.translate('gramlink_settings_proxy_port')
         },
         onRender: function onRender(item) {
-          toggleField(item, GramLinkClient.getInstance().isEnabled('gramlink_proxy_enabled'));
+          toggleField(item, GatewayClient.getInstance().isEnabled('gramlink_proxy_enabled'));
         },
         onChange: function onChange(value) {
           if (value) Lampa.Storage.set('gramlink_proxy_port', value);
-          GramLinkClient.getInstance().reconnect();
+          GatewayClient.getInstance().reconnect();
         }
       });
 
@@ -7225,11 +5923,58 @@
           name: Lampa.Lang.translate('gramlink_settings_proxy_secret')
         },
         onRender: function onRender(item) {
-          toggleField(item, GramLinkClient.getInstance().isEnabled('gramlink_proxy_enabled'));
+          toggleField(item, GatewayClient.getInstance().isEnabled('gramlink_proxy_enabled'));
         },
         onChange: function onChange(value) {
           if (value) Lampa.Storage.set('gramlink_proxy_secret', value);
-          GramLinkClient.getInstance().reconnect();
+          GatewayClient.getInstance().reconnect();
+        }
+      });
+
+      // ═══════════════════════════════════════════════════
+      //  Gateway (WebSocket Proxy) Settings
+      // ═══════════════════════════════════════════════════
+
+      // ── Gateway URL ──────────────────────────────────────
+      SettingsApi.addParam({
+        component: 'gramlink_server',
+        param: {
+          name: 'gramlink_gateway_url',
+          type: 'input',
+          placeholder: 'wss://mtproto-master.fly.dev',
+          values: '',
+          default: 'wss://mtproto-master.fly.dev'
+        },
+        field: {
+          name: 'Gateway URL',
+          description: 'WebSocket URL for MTProto Gateway (old devices)'
+        },
+        onRender: function onRender(item) {
+          toggleField(item, Lampa.Storage.get('gramlink_server_type', 'official') === 'gateway');
+        },
+        onChange: function onChange(value) {
+          if (value) Lampa.Storage.set('gramlink_gateway_url', value);
+        }
+      });
+
+      // ── Force Gateway mode toggle ────────────────────────
+      SettingsApi.addParam({
+        component: 'gramlink_server',
+        param: {
+          name: 'gramlink_gateway_mode',
+          type: 'trigger',
+          default: false
+        },
+        field: {
+          name: 'Force Gateway mode',
+          description: 'Use Gateway WebSocket instead of direct GramJS'
+        },
+        onChange: function onChange(value) {
+          Lampa.Storage.set('gramlink_gateway_mode', value);
+          if (value) {
+            Lampa.Storage.set('gramlink_server_type', 'gateway');
+          }
+          Lampa.Settings.update();
         }
       });
     }
@@ -7283,7 +6028,7 @@
     // ─── Discovery ──────────────────────────────────────────
 
     function discoverDevices() {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) return Promise.resolve([]);
       var channelId = Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, '');
       var syncLogTopicId = Lampa.Storage.get(STORAGE_KEYS.SYNC_LOG_TOPIC, '');
@@ -7294,7 +6039,7 @@
     // ─── Send remote commands ───────────────────────────────
 
     function sendOpenCard(deviceId, cardData) {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) return;
       var channelId = Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, '');
       var remoteCmdTopicId = Lampa.Storage.get(STORAGE_KEYS.REMOTE_CMD_TOPIC, '');
@@ -7304,7 +6049,7 @@
       }, deviceId);
     }
     function sendPlayVideo(deviceId, mediaData) {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) return;
       var channelId = Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, '');
       var remoteCmdTopicId = Lampa.Storage.get(STORAGE_KEYS.REMOTE_CMD_TOPIC, '');
@@ -7378,7 +6123,7 @@
         name: 'Open on device',
         description: 'Open this content on another device',
         onContextMenu: function onContextMenu(object) {
-          var client = GramLinkClient.getInstance();
+          var client = GatewayClient.getInstance();
           if (!client.isConnected()) return null;
           return {
             name: 'Open on device',
@@ -7403,7 +6148,7 @@
 
     function setupPlayerPanel() {
       Lampa.PlayerPanel.listener.follow('share', function (e) {
-        var client = GramLinkClient.getInstance();
+        var client = GatewayClient.getInstance();
         if (!client.isConnected()) return;
         showDevicePicker({
           title: 'Play on device',
@@ -7425,7 +6170,7 @@
       var $broadcastBtn = $('<div class="head__action selector open--broadcast" style="display:none">' + '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' + '<path d="M1.04272 7.22978V6.76392C1.04272 4.00249 3.2813 1.76392 6.04272 1.76392H17.7877C20.5491 1.76392 22.7877 4.00249 22.7877 6.76392V17.2999C22.7877 20.0613 20.5491 22.2999 17.7877 22.2999H15.8387" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path>' + '<circle cx="6.69829" cy="16.6443" r="5.65556" fill="currentColor"></circle>' + '</svg>' + '</div>');
       $('.head__action.open--search').after($broadcastBtn);
       function updateVisibility() {
-        var client = GramLinkClient.getInstance();
+        var client = GatewayClient.getInstance();
         var active = Lampa.Activity.active();
         if (client.isConnected() && active && active.component === 'full') {
           $broadcastBtn.show();
@@ -7459,7 +6204,7 @@
     // ─── Init ───────────────────────────────────────────────
 
     function setupBroadcast() {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) return;
       setupContextMenu();
       setupPlayerPanel();
@@ -7475,6 +6220,22 @@
       addBroadcastButton: addBroadcastButton,
       setupBroadcast: setupBroadcast
     };
+
+    /**
+     * sdk/topic-config.js — Channel and topic configuration
+     *
+     * Eliminates:
+     *   D-02 — CHANNEL_TITLE and TOPIC_NAMES now in one place.
+     *          auth.js had its own TOPICS array (4 items, no remote-cmd);
+     *          hub.js had TOPIC_NAMES (5 items, with remote-cmd).
+     *          Now one source of truth: 5 topics.
+     *
+     * Usage:
+     *   import { CHANNEL_TITLE, TOPIC_NAMES, TOPIC_STORAGE_KEYS } from '../sdk/topic-config'
+     */
+
+    var CHANNEL_TITLE = "\uD83D\uDD04 Lampa Sync [DO NOT DELETE]";
+    var TOPIC_NAMES = ['sync-log', 'remote-cmd', 'backup', 'profiles', 'profiles-sync'];
 
     /**
      * sdk/manifest_schema.js — Backup manifest schema and key categorization
@@ -8009,7 +6770,7 @@
           if (scroll && scroll.body) scroll.body().off();
         } catch (e) {} // ponytail:
         if (self._deltaHandler) {
-          GramLinkClient.getInstance().off('profile_delta', self._deltaHandler);
+          GatewayClient.getInstance().off('profile_delta', self._deltaHandler);
           self._deltaHandler = null;
         }
         try {
@@ -8106,7 +6867,7 @@
           focusFirst();
           return;
         }
-        var client = GramLinkClient.getInstance();
+        var client = GatewayClient.getInstance();
         if (!client.isConnected()) {
           showEmpty(body, Lampa.Lang.translate('gramlink_not_connected') || 'Not connected');
           focusFirst();
@@ -8121,7 +6882,7 @@
           var pms = msgs.filter(function (m) {
             if (!m.text) return false;
             try {
-              var d = JSON.parse(stripCodeFence(m.text));
+              var d = JSON.parse(stripCodeFence$1(m.text));
               return d && d.meta && d.meta.type === 'profile';
             } catch (e) {
               return false;
@@ -8142,7 +6903,7 @@
           // ── Profile items (2-column grid) ──
           pms.forEach(function (m) {
             try {
-              var d = JSON.parse(stripCodeFence(m.text));
+              var d = JSON.parse(stripCodeFence$1(m.text));
             } catch (e) {
               return;
             }
@@ -8199,7 +6960,7 @@
           align: 'center'
         }, function (name) {
           if (!name) return;
-          var client = GramLinkClient.getInstance();
+          var client = GatewayClient.getInstance();
           if (!client.isConnected()) {
             Lampa.Noty.show('Not connected');
             return;
@@ -8216,7 +6977,7 @@
             var hasProfiles = msgs.some(function (m) {
               if (!m.text) return false;
               try {
-                var d = JSON.parse(stripCodeFence(m.text));
+                var d = JSON.parse(stripCodeFence$1(m.text));
                 return d && d.meta && d.meta.type === 'profile';
               } catch (e) {
                 return false;
@@ -8263,7 +7024,7 @@
         body.innerHTML = '';
         body.insertAdjacentHTML('beforeend', renderTabBar());
         bindTabEvents();
-        var client = GramLinkClient.getInstance();
+        var client = GatewayClient.getInstance();
         var isConnected = client.isConnected();
 
         // Status item (inline — needs colored dot, not createItem)
@@ -8662,7 +7423,7 @@
       // ─── Backup (chunked) ──────────────────────────────
 
       function exportBackup() {
-        var c = GramLinkClient.getInstance(),
+        var c = GatewayClient.getInstance(),
           bt = Lampa.Storage.get(STORAGE_BACKUP_TOPIC, '');
         if (!c.isConnected()) {
           Lampa.Noty.show(Lampa.Lang.translate('gramlink_not_connected'));
@@ -8717,7 +7478,7 @@
         });
       }
       function importBackup() {
-        var c = GramLinkClient.getInstance(),
+        var c = GatewayClient.getInstance(),
           bt = Lampa.Storage.get(STORAGE_BACKUP_TOPIC, '');
         if (!c.isConnected()) {
           Lampa.Noty.show(Lampa.Lang.translate('gramlink_not_connected'));
@@ -8878,7 +7639,7 @@
       function deleteProfile(id) {
         var ch = parseInt(Lampa.Storage.get('gramlink_channel_id', ''), 10);
         if (!ch) return;
-        GramLinkClient.getInstance().deleteMessage(ch, parseInt(id, 10)).then(function (ok) {
+        GatewayClient.getInstance().deleteMessage(ch, parseInt(id, 10)).then(function (ok) {
           if (ok) {
             if (String(Lampa.Storage.get('gramlink_active_profile', '')) === String(id)) {
               Lampa.Storage.set('gramlink_active_profile', '');
@@ -8902,7 +7663,7 @@
         currentProfilesTopicId = Lampa.Storage.get(STORAGE_PROFILES_TOPIC, null);
         Lampa.Storage.get(STORAGE_PROFILES_SYNC_TOPIC, null);
         Lampa.Storage.get(STORAGE_BACKUP_TOPIC, null);
-        var client = GramLinkClient.getInstance();
+        var client = GatewayClient.getInstance();
         // Bug 3: show loading while ensureSyncChannel() runs
         _initializing = true;
         renderProfiles(); // Shows "Loading..." because _initializing is true
@@ -8937,7 +7698,7 @@
       // ═══════════════════════════════════════════════════════
 
       function ensureSyncChannel() {
-        var client = GramLinkClient.getInstance();
+        var client = GatewayClient.getInstance();
         if (currentChannelId) return ensureTopics();
         return client.findChannel(CHANNEL_TITLE).then(function (id) {
           if (id) {
@@ -8949,7 +7710,7 @@
         });
       }
       function ensureTopics() {
-        var client = GramLinkClient.getInstance(),
+        var client = GatewayClient.getInstance(),
           ps = [];
         function ensure(name, storeKey, setter) {
           var s = Lampa.Storage.get(storeKey, '');
@@ -8983,7 +7744,7 @@
         return Promise.all(ps);
       }
       function createChannel() {
-        var client = GramLinkClient.getInstance();
+        var client = GatewayClient.getInstance();
         return client.createChannel(CHANNEL_TITLE).then(function (peerId) {
           if (!peerId) throw new Error('Create channel failed');
           currentChannelId = peerId;
@@ -9049,7 +7810,7 @@
         description: 'Telegram sync via MTProto',
         component: 'gramlink_hub',
         onContextMenu: function onContextMenu(object) {
-          var client = GramLinkClient.getInstance();
+          var client = GatewayClient.getInstance();
           if (!client.isConnected()) return null;
           return {
             name: 'Open on device',
@@ -9104,7 +7865,7 @@
         deltaPollTimer = null;
       }
       // Start after connection is established
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       var pollInterval = getInt(STORAGE_KEYS.POLL_INTERVAL, 10) * 1000;
       var check = setInterval(function () {
         if (client.isConnected()) {
@@ -9201,7 +7962,7 @@
       var profilesTopicId = Lampa.Storage.get('gramlink_profiles_topic', '');
       var profilesSyncTopicId = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
       if (!profilesTopicId) return;
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       var check = setInterval(function () {
         if (document.hidden) return; // ponytail: skip when tab hidden
         if (client.isConnected()) {
@@ -9218,7 +7979,7 @@
     // ─── Auto-connect on startup ──────────────────────────────
 
     function autoConnect() {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.hasCredentials()) return;
 
       // Connect in background once the app is fully ready
@@ -9240,7 +8001,7 @@
     // ─── Cross-Device Broadcast Handler ──────────────────────
 
     function setupBroadcastListener() {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       client.on('open_card', function (data) {
         // Received "open on this device" command
         Lampa.Noty.show(Lampa.Lang.translate('gramlink_noty_card_received').replace('{device}', data.meta && data.meta.device_name || ''));
@@ -9290,7 +8051,7 @@
         $('.head__action.open--search').after($profileBtn);
       }
       function updateProfileButton() {
-        var client = GramLinkClient.getInstance();
+        var client = GatewayClient.getInstance();
         var activeId = Lampa.Storage.get('gramlink_active_profile', '');
         var activeName = Lampa.Storage.get('gramlink_active_profile_name', '');
         if (!client.hasCredentials() || !activeId || !activeName) {
@@ -9310,7 +8071,7 @@
       // ponytail: connection state → data-state on the button wrapper
       // connected: no attribute (clean), connecting: pulsing, disconnected: dimmed border
       function updateConnectionIndicator() {
-        var client = GramLinkClient.getInstance();
+        var client = GatewayClient.getInstance();
         if (!client.hasCredentials() || $profileBtn.css('display') === 'none') {
           $profileBtn.removeAttr('data-state');
           return;
@@ -9326,7 +8087,7 @@
       updateProfileButton();
 
       // ponytail: react to connection state changes from the client
-      var connClient = GramLinkClient.getInstance();
+      var connClient = GatewayClient.getInstance();
       connClient.on('connection', function (e) {
         updateConnectionIndicator();
       });
@@ -9354,7 +8115,7 @@
     // ─── Profile Sidebar ──────────────────────────────────────
 
     function showProfileSidebar() {
-      var client = GramLinkClient.getInstance();
+      var client = GatewayClient.getInstance();
       if (!client.isConnected()) {
         Lampa.Noty.show('Connect to Telegram first');
         return;

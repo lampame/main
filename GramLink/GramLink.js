@@ -3589,6 +3589,213 @@
       'profiles-sync': 'gramlink_profiles_sync_topic'
     };
 
+    var authWs = null;
+    var authCancelFlag$1 = false;
+    var authRequestId = 0;
+    var authPending = {};
+    function authSend(msg) {
+      return new Promise(function (resolve, reject) {
+        if (!authWs || authWs.readyState !== 1) {
+          reject(new Error('WebSocket not connected'));
+          return;
+        }
+        var id = ++authRequestId;
+        msg.id = id;
+        var timer = setTimeout(function () {
+          delete authPending[id];
+          reject(new Error('Auth timeout'));
+        }, 30000);
+        authPending[id] = {
+          resolve: resolve,
+          reject: reject,
+          timer: timer
+        };
+        authWs.send(JSON.stringify(msg));
+      });
+    }
+    function cancelAuth$1() {
+      authCancelFlag$1 = true;
+      if (authWs) {
+        try {
+          authWs.onclose = null;
+          authWs.close();
+        } catch (e) {}
+        authWs = null;
+      }
+      for (var k in authPending) {
+        clearTimeout(authPending[k].timer);
+      }
+      authPending = {};
+    }
+    function startPhoneAuthViaGateway(onConnected) {
+      authCancelFlag$1 = false;
+      var enabledCtrl = Lampa.Controller.enabled().name;
+      var defaultPhonePrefix = '';
+      var uiLang = Lampa.Storage.get('language', '');
+      if (uiLang === 'uk') defaultPhonePrefix = '+380';
+      Lampa.Input.edit({
+        title: Lampa.Lang.translate('gramlink_auth_phone_title') || 'Enter phone number (international format)',
+        value: defaultPhonePrefix,
+        free: true,
+        nosave: true
+      }, function (phone) {
+        if (!phone || !String(phone).trim()) {
+          Lampa.Controller.toggle(enabledCtrl);
+          return;
+        }
+        phone = String(phone).trim();
+        var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="gs-status"></div>' + '</div>');
+        Lampa.Modal.open({
+          title: 'Telegram Login (Gateway)',
+          html: html,
+          size: 'medium',
+          onBack: function onBack() {
+            cancelAuth$1();
+            Lampa.Modal.close();
+            Lampa.Controller.toggle(enabledCtrl);
+          }
+        });
+        var statusEl = html.find('#gs-status');
+        statusEl.text('Connecting to Gateway...');
+        var creds = getApiCredentials();
+        var gatewayUrl = Lampa.Storage.get('gramlink_gateway_url', 'wss://mtproto-master.fly.dev');
+        var wsUrl = gatewayUrl + '/ws?clientId=' + encodeURIComponent(getDeviceId());
+        var ws = new WebSocket(wsUrl);
+        authWs = ws;
+        ws.onopen = function () {
+          statusEl.text('Sending code...');
+          doAuthFlow(ws, phone, creds, statusEl, enabledCtrl, onConnected);
+        };
+        ws.onerror = function () {
+          statusEl.text('WebSocket connection failed');
+          Lampa.Noty.show('GramLink: Cannot connect to Gateway');
+        };
+      });
+    }
+    function doAuthFlow(ws, phone, creds, statusEl, enabledCtrl, onConnected) {
+      authSend({
+        cmd: 'auth_start',
+        phone: phone,
+        apiId: creds.apiId,
+        apiHash: creds.apiHash
+      }).then(function (resp) {
+        if (authCancelFlag$1) return;
+        if (resp.event === 'auth_code_needed') {
+          return askCode(resp.phoneCodeHash, resp.sentType === 'app' ? 'Check Telegram app' : 'Check SMS', enabledCtrl).then(function (code) {
+            if (authCancelFlag$1) return;
+            statusEl.text('Signing in...');
+            return authSend({
+              cmd: 'auth_code',
+              phoneCodeHash: resp.phoneCodeHash,
+              code: code
+            });
+          }).then(function (resp2) {
+            if (authCancelFlag$1 || !resp2) return;
+            if (resp2.event === 'auth_success') return finalizeAuth(resp2, enabledCtrl, onConnected);
+            if (resp2.event === 'auth_2fa_needed') return handle2FA(enabledCtrl, onConnected);
+            throw new Error(resp2.error || 'Auth failed');
+          });
+        }
+        throw new Error(resp.error || 'Unexpected response');
+      })["catch"](function (err) {
+        if (authCancelFlag$1) return;
+        statusEl.text('Error: ' + (err.message || 'unknown'));
+        Lampa.Noty.show('GramLink: ' + (err.message || 'Auth failed'));
+      });
+    }
+    function askCode(phoneCodeHash, methodLabel, enabledCtrl) {
+      return new Promise(function (resolve, reject) {
+        var ui = $('<div style="padding:1em;text-align:center">' + '<div>Code sent</div>' + '<div style="font-size:0.85em;color:rgba(255,255,255,0.4);margin-bottom:0.8em">' + methodLabel + '</div>' + '<div class="modal__button selector" style="margin:0.5em auto;max-width:12em">Enter code</div>' + '</div>');
+        Lampa.Modal.update(ui);
+        ui.find('.selector').on('hover:enter', function () {
+          Lampa.Modal.close();
+          Lampa.Input.edit({
+            title: 'Login code',
+            subtitle: methodLabel,
+            value: '',
+            free: true,
+            nosave: true
+          }, function (val) {
+            if (val && String(val).trim()) {
+              resolve(String(val).trim());
+            } else {
+              cancelAuth$1();
+              Lampa.Controller.toggle(enabledCtrl);
+              reject(new Error('AUTH_USER_CANCEL'));
+            }
+          });
+        });
+      });
+    }
+    function handle2FA(enabledCtrl, onConnected, statusEl) {
+      return new Promise(function (resolve, reject) {
+        Lampa.Input.edit({
+          title: '2FA Password',
+          value: '',
+          free: true,
+          nosave: true
+        }, function (val) {
+          if (val && String(val).trim()) {
+            var password = String(val).trim();
+            setTimeout(function () {
+              Lampa.Modal.open({
+                title: 'Telegram Login (Gateway)',
+                html: $('<div class="gramlink-auth" style="padding:1em;text-align:center"><div style="margin:1em 0;font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password...</div></div>'),
+                size: 'medium',
+                onBack: function onBack() {
+                  cancelAuth$1();
+                  Lampa.Modal.close();
+                  Lampa.Controller.toggle(enabledCtrl);
+                  reject(new Error('AUTH_USER_CANCEL'));
+                }
+              });
+            }, 200);
+            authSend({
+              cmd: 'auth_2fa',
+              password: password
+            }).then(function (resp) {
+              if (resp.event === 'auth_success') resolve(finalizeAuth(resp, enabledCtrl, onConnected));else reject(new Error(resp.error || '2FA failed'));
+            })["catch"](function (err) {
+              reject(err);
+            });
+          } else {
+            cancelAuth$1();
+            Lampa.Controller.toggle(enabledCtrl);
+            reject(new Error('AUTH_USER_CANCEL'));
+          }
+        });
+      });
+    }
+    function finalizeAuth(resp, enabledCtrl, onConnected) {
+      var dcId = resp.dcId;
+      var authKeyHex = resp.authKeyHex;
+      var userName = resp.userName || 'User';
+      if (!dcId || !authKeyHex) {
+        Lampa.Noty.show('GramLink: Invalid auth response');
+        throw new Error('Missing dcId or authKey');
+      }
+
+      // Save credentials directly (don't import client to avoid coupling)
+      Lampa.Storage.set('gramlink_dc_id', String(dcId));
+      vault.seal(authKeyHex);
+      Lampa.Storage.set('gramlink_user_name', userName);
+
+      // Clear stale sync state
+      var staleKeys = ['gramlink_channel_id', 'gramlink_sync_log_topic', 'gramlink_profiles_topic', 'gramlink_profiles_sync_topic', 'gramlink_backup_topic'];
+      for (var i = 0; i < staleKeys.length; i++) {
+        Lampa.Storage.set(staleKeys[i], '');
+      }
+      cancelAuth$1();
+      Lampa.Modal.close();
+      Lampa.Noty.show('GramLink: Connecting to Telegram...');
+      Lampa.Settings.update();
+
+      // Delegate connection to caller (provides right client)
+      if (typeof onConnected === 'function') {
+        onConnected(dcId, authKeyHex);
+      }
+    }
+
     /**
      * auth.js — QR + 2FA authorization flow via GramJS (no backend)
      *
@@ -3892,8 +4099,7 @@
       var compat = getCompatReport();
       if (!compat.supported) {
         Lampa.Noty.show(Lampa.Lang.translate('gramlink_compat_fail') + ' — ' + compat.blockers.length + ' blocking issue(s)');
-        showCompatReportModal();
-        return;
+        // Don't return — show UI with only Phone v2 option for old devices
       }
 
       // Cancel any previous auth session that may still be connected
@@ -3901,7 +4107,7 @@
       authCancelFlag = false;
 
       // ── Modal HTML (preserves existing structure and CSS classes) ──────
-      var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div class="gramlink-auth__qr-placeholder" style="width:16em;height:16em;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:1em;margin:0 auto">' + '<svg viewBox="0 0 64 64" width="48" height="48" fill="rgba(255,255,255,0.3)">' + '<rect x="4" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="36" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="4" y="36" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="44" y="44" width="8" height="8" rx="1" fill="currentColor"/>' + '<rect x="36" y="44" width="4" height="8" rx="1" fill="currentColor"/>' + '<rect x="44" y="36" width="8" height="4" rx="1" fill="currentColor"/>' + '</svg>' + '</div>' + '<div class="gramlink-auth__qr-code" style="display:none;width:16em;height:16em;margin:0 auto"></div>' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="gs-status"></div>' + '<div class="gramlink-auth__phone-wrap" style="margin-top:1.2em;padding-top:1em;border-top:1px solid rgba(255,255,255,0.1)">' + '<div class="simple-button selector gramlink-auth__phone-btn">Log in by phone number</div>' + '</div>' + '</div>');
+      var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div class="gramlink-auth__qr-placeholder" style="width:16em;height:16em;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:1em;margin:0 auto">' + '<svg viewBox="0 0 64 64" width="48" height="48" fill="rgba(255,255,255,0.3)">' + '<rect x="4" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="36" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="4" y="36" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="44" y="44" width="8" height="8" rx="1" fill="currentColor"/>' + '<rect x="36" y="44" width="4" height="8" rx="1" fill="currentColor"/>' + '<rect x="44" y="36" width="8" height="4" rx="1" fill="currentColor"/>' + '</svg>' + '</div>' + '<div class="gramlink-auth__qr-code" style="display:none;width:16em;height:16em;margin:0 auto"></div>' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="gs-status"></div>' + '<div class="gramlink-auth__phone-wrap" style="margin-top:1.2em;padding-top:1em;border-top:1px solid rgba(255,255,255,0.1)">' + '<div class="simple-button selector gramlink-auth__phone-btn">Log in by phone number</div>' + '<div class="simple-button selector gramlink-auth__phone-v2-btn" style="margin-top:0.5em">Log in by phone v2 (Gateway)</div>' + '</div>' + '</div>');
       var enabledCtrl = Lampa.Controller.enabled().name;
       Lampa.Modal.open({
         title: 'Telegram Authorization',
@@ -3917,12 +4123,39 @@
       var qrEl = html.find('.gramlink-auth__qr-code');
       var qrPlaceholder = html.find('.gramlink-auth__qr-placeholder');
 
+      // Gateway mode: hide QR and phone v1 on incompatible devices
+      if (!getCompatReport().supported) {
+        qrPlaceholder.hide();
+        qrEl.hide();
+        html.find('.gramlink-auth__phone-btn').hide();
+      }
+
       // ponytail: phone auth button — replaces the old deeplink
       html.find('.gramlink-auth__phone-btn').on('hover:enter hover:click hover:touch', function () {
         cancelAuth();
         Lampa.Modal.close();
         setTimeout(function () {
           startPhoneAuth(creds);
+        }, 300);
+      });
+
+      // ponytail: phone v2 (Gateway) button
+      html.find('.gramlink-auth__phone-v2-btn').on('hover:enter hover:click hover:touch', function () {
+        cancelAuth();
+        Lampa.Modal.close();
+        setTimeout(function () {
+          startPhoneAuthViaGateway(function (dcId, authKeyHex) {
+            // Modern build: Client = GramLinkClient — connect directly to Telegram
+            GramLinkClient.getInstance().saveCredentials(dcId, authKeyHex);
+            GramLinkClient.getInstance().connect().then(function () {
+              Lampa.Noty.show('GramLink: Connected!');
+              Lampa.Settings.update();
+              autoEnsureSyncChannel();
+            })["catch"](function (err) {
+              console.error('GramLink', 'Post-auth connect failed:', err);
+              Lampa.Noty.show('GramLink: Connection failed');
+            });
+          });
         }, 300);
       });
 
@@ -4010,20 +4243,26 @@
                 }, function (val) {
                   passwordPromptActive = false;
                   if (val && String(val).trim()) {
-                    // Re-open QR modal for final status
-                    Lampa.Modal.open({
-                      title: 'Telegram Authorization',
-                      html: html,
-                      size: 'medium',
-                      onBack: function onBack() {
-                        cancelAuth();
-                        Lampa.Modal.close();
-                        Lampa.Controller.toggle(enabledCtrl);
-                        reject(new Error('AUTH_USER_CANCEL'));
-                      }
-                    });
-                    statusEl.text('Verifying password...');
-                    resolve(String(val).trim());
+                    // ponytail: setTimeout defers Modal.open so Lampa.Input.edit
+                    // has time to fully release its controller context before
+                    // Modal tries to bind its own. Without this delay, on some
+                    // devices (Android TV 11 WebView) the controller locks up
+                    // and the interface becomes unresponsive.
+                    setTimeout(function () {
+                      Lampa.Modal.open({
+                        title: 'Telegram Authorization',
+                        html: html,
+                        size: 'medium',
+                        onBack: function onBack() {
+                          cancelAuth();
+                          Lampa.Modal.close();
+                          Lampa.Controller.toggle(enabledCtrl);
+                          reject(new Error('AUTH_USER_CANCEL'));
+                        }
+                      });
+                      statusEl.text('Verifying password...');
+                      resolve(String(val).trim());
+                    }, 300);
                   } else {
                     // User cancelled password input (pressed Back)
                     cancelAuth();
@@ -7141,7 +7380,8 @@
           type: 'select',
           values: {
             'official': 'gramlink_settings_server_type_official',
-            'custom': 'gramlink_settings_server_type_custom'
+            'custom': 'gramlink_settings_server_type_custom',
+            'gateway': 'Gateway (WebSocket Proxy)'
           },
           "default": 'official'
         },
@@ -7167,6 +7407,7 @@
                   }
                   $('.scroll__body').find('[data-name="gramlink_custom_host"]').toggleClass('hide', value !== 'custom');
                   $('.scroll__body').find('[data-name="gramlink_custom_port"]').toggleClass('hide', value !== 'custom');
+                  $('.scroll__body').find('[data-name="gramlink_gateway_url"]').toggleClass('hide', value !== 'gateway');
                   Lampa.Modal.close();
                   Lampa.Settings.create('gramlink_server', {
                     onBack: function onBack() {
@@ -7199,6 +7440,7 @@
             Lampa.Storage.set('gramlink_server_type', value);
             $('.scroll__body').find('[data-name="gramlink_custom_host"]').toggleClass('hide', value !== 'custom');
             $('.scroll__body').find('[data-name="gramlink_custom_port"]').toggleClass('hide', value !== 'custom');
+            $('.scroll__body').find('[data-name="gramlink_gateway_url"]').toggleClass('hide', value !== 'gateway');
           }
         }
       });
@@ -7329,6 +7571,53 @@
         onChange: function onChange(value) {
           if (value) Lampa.Storage.set('gramlink_proxy_secret', value);
           GramLinkClient.getInstance().reconnect();
+        }
+      });
+
+      // ═══════════════════════════════════════════════════
+      //  Gateway (WebSocket Proxy) Settings
+      // ═══════════════════════════════════════════════════
+
+      // ── Gateway URL ──────────────────────────────────────
+      SettingsApi.addParam({
+        component: 'gramlink_server',
+        param: {
+          name: 'gramlink_gateway_url',
+          type: 'input',
+          placeholder: 'wss://mtproto-master.fly.dev',
+          values: '',
+          "default": 'wss://mtproto-master.fly.dev'
+        },
+        field: {
+          name: 'Gateway URL',
+          description: 'WebSocket URL for MTProto Gateway (old devices)'
+        },
+        onRender: function onRender(item) {
+          toggleField(item, Lampa.Storage.get('gramlink_server_type', 'official') === 'gateway');
+        },
+        onChange: function onChange(value) {
+          if (value) Lampa.Storage.set('gramlink_gateway_url', value);
+        }
+      });
+
+      // ── Force Gateway mode toggle ────────────────────────
+      SettingsApi.addParam({
+        component: 'gramlink_server',
+        param: {
+          name: 'gramlink_gateway_mode',
+          type: 'trigger',
+          "default": false
+        },
+        field: {
+          name: 'Force Gateway mode',
+          description: 'Use Gateway WebSocket instead of direct GramJS'
+        },
+        onChange: function onChange(value) {
+          Lampa.Storage.set('gramlink_gateway_mode', value);
+          if (value) {
+            Lampa.Storage.set('gramlink_server_type', 'gateway');
+          }
+          Lampa.Settings.update();
         }
       });
     }
