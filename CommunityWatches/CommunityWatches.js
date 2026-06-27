@@ -150,17 +150,19 @@
       i = 0;
     }
     _regeneratorDefine = function (e, r, n, t) {
-      function o(r, n) {
-        _regeneratorDefine(e, r, function (e) {
-          return this._invoke(r, n, e);
-        });
-      }
-      r ? i ? i(e, r, {
+      if (r) i ? i(e, r, {
         value: n,
         enumerable: !t,
         configurable: !t,
         writable: !t
-      }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2));
+      }) : e[r] = n;else {
+        function o(r, n) {
+          _regeneratorDefine(e, r, function (e) {
+            return this._invoke(r, n, e);
+          });
+        }
+        o("next", 0), o("throw", 1), o("return", 2);
+      }
     }, _regeneratorDefine(e, r, n, t);
   }
   function _toPrimitive(t, r) {

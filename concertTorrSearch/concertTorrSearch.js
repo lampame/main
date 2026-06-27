@@ -1025,6 +1025,7 @@
           _this2.start();
         };
         filter.render().find('.selector').on('hover:focus', function (e) {
+          e.target;
         });
         filter.addButtonBack();
         files.appendHead(filter.render());

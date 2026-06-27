@@ -2372,7 +2372,7 @@
       }
     };
 
-    var VERSION = '0.1.1';
+    var VERSION = '0.1.2';
     var instance = null;
     var GramLinkClient = /*#__PURE__*/function () {
       function GramLinkClient() {
@@ -3796,6 +3796,232 @@
       }
     }
 
+    var qrWs = null;
+    var qrCancelFlag = false;
+    var qrRequestId = 0;
+    var qrPending = {};
+    var qrPollTimer = null;
+    function qrSend(msg) {
+      return new Promise(function (resolve, reject) {
+        if (!qrWs || qrWs.readyState !== 1) {
+          reject(new Error('WebSocket not connected'));
+          return;
+        }
+        var id = ++qrRequestId;
+        msg.id = id;
+        var timer = setTimeout(function () {
+          delete qrPending[id];
+          reject(new Error('QR auth timeout'));
+        }, 60000);
+        qrPending[id] = {
+          resolve: resolve,
+          reject: reject,
+          timer: timer
+        };
+        qrWs.send(JSON.stringify(msg));
+      });
+    }
+    function cancelQrAuth() {
+      qrCancelFlag = true;
+      if (qrPollTimer) {
+        clearTimeout(qrPollTimer);
+        qrPollTimer = null;
+      }
+      if (qrWs) {
+        try {
+          qrWs.onclose = null;
+          qrWs.close();
+        } catch (e) {}
+        qrWs = null;
+      }
+      for (var k in qrPending) {
+        clearTimeout(qrPending[k].timer);
+      }
+      qrPending = {};
+    }
+    function startQrAuthViaGateway(onConnected, showPhoneButton) {
+      qrCancelFlag = false;
+      var enabledCtrl = Lampa.Controller.enabled().name;
+      var statusId = 'gramlink-gateway-qr-status';
+      var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div class="gramlink-auth__qr-placeholder" style="width:16em;height:16em;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:1em;margin:0 auto">' + '<svg viewBox="0 0 64 64" width="48" height="48" fill="rgba(255,255,255,0.3)">' + '<rect x="4" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="36" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="4" y="36" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="44" y="44" width="8" height="8" rx="1" fill="currentColor"/>' + '<rect x="36" y="44" width="4" height="8" rx="1" fill="currentColor"/>' + '<rect x="44" y="36" width="8" height="4" rx="1" fill="currentColor"/>' + '</svg>' + '</div>' + '<div class="gramlink-auth__qr-code" style="display:none;width:16em;height:16em;margin:0 auto"></div>' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="' + statusId + '"></div>' + (showPhoneButton ? '<div class="gramlink-auth__phone-wrap" style="margin-top:1.2em;padding-top:1em;border-top:1px solid rgba(255,255,255,0.1)">' + '<div class="simple-button selector gramlink-auth__phone-gw-btn">Log in by phone number (Gateway)</div>' + '</div>' : '') + '</div>');
+      Lampa.Modal.open({
+        title: 'Telegram Authorization (Gateway)',
+        html: html,
+        size: 'medium',
+        onBack: function onBack() {
+          cancelQrAuth();
+          Lampa.Modal.close();
+          Lampa.Controller.toggle(enabledCtrl);
+        }
+      });
+      var qrPlaceholder = html.find('.gramlink-auth__qr-placeholder');
+      var qrEl = html.find('.gramlink-auth__qr-code');
+      var statusEl = html.find('#' + statusId);
+      statusEl.text('Connecting to Gateway...');
+
+      // ponytail: phone button in same modal — switches to phone auth
+      if (showPhoneButton) {
+        html.find('.gramlink-auth__phone-gw-btn').on('hover:enter hover:click hover:touch', function () {
+          cancelQrAuth();
+          Lampa.Modal.close();
+          setTimeout(function () {
+            startPhoneAuthViaGateway(onConnected);
+          }, 300);
+        });
+      }
+
+      // ── Open WebSocket to Gateway ──────────────────────────────
+      var creds = getApiCredentials();
+      var gatewayUrl = Lampa.Storage.get('gramlink_gateway_url', 'wss://mtproto-master.fly.dev');
+      var wsUrl = gatewayUrl + '/ws?clientId=' + encodeURIComponent(getDeviceId());
+      var ws = new WebSocket(wsUrl);
+      qrWs = ws;
+      ws.onopen = function () {
+        statusEl.text('Requesting QR code...');
+        doQrExport(creds, qrPlaceholder, qrEl, statusEl, enabledCtrl, onConnected);
+      };
+      ws.onerror = function () {
+        statusEl.text('WebSocket connection failed');
+        Lampa.Noty.show('GramLink: Cannot connect to Gateway');
+      };
+    }
+    function doQrExport(creds, qrPlaceholder, qrEl, statusEl, enabledCtrl, onConnected) {
+      qrSend({
+        cmd: 'auth_qr_export',
+        apiId: creds.apiId,
+        apiHash: creds.apiHash
+      }).then(function (resp) {
+        if (qrCancelFlag) return;
+        if (resp.ok && resp.event === 'qr_code') {
+          var token = resp.token;
+          qrPlaceholder.hide();
+          qrEl.show().empty();
+          var qrUrl = 'tg://login?token=' + token;
+          Lampa.Utils.qrcode(qrUrl, qrEl, function () {});
+          setTimeout(function () {
+            var s = qrEl.find('svg');
+            if (s.length) s.css({
+              width: '14em',
+              height: '14em'
+            });
+          }, 100);
+          statusEl.html('<div>Scan with Telegram</div>' + '<div style="font-size:0.85em;color:rgba(255,255,255,0.4)">' + 'Open Telegram → Settings → Devices → Scan QR' + '</div>');
+
+          // Start polling for scan
+          startPolling(creds, statusEl, enabledCtrl, onConnected);
+        } else {
+          statusEl.text('Error: ' + (resp.error || 'Unexpected response'));
+        }
+      })["catch"](function (err) {
+        if (qrCancelFlag) return;
+        statusEl.text('Error: ' + (err.message || 'unknown'));
+        Lampa.Noty.show('GramLink: ' + (err.message || 'QR auth failed'));
+      });
+    }
+    function startPolling(creds, statusEl, enabledCtrl, onConnected) {
+      function poll() {
+        if (qrCancelFlag) return;
+        qrSend({
+          cmd: 'auth_qr_export',
+          apiId: creds.apiId,
+          apiHash: creds.apiHash
+        }).then(function (resp) {
+          if (qrCancelFlag) return;
+          if (resp.ok && resp.event === 'auth_success') {
+            finalizeQrAuth(resp, enabledCtrl, onConnected);
+          } else if (resp.ok && resp.event === 'password_needed') {
+            handleQrPassword(creds, resp.hint || '', statusEl, enabledCtrl, onConnected);
+          } else if (resp.ok && resp.event === 'qr_poll' && resp.status === 'waiting') {
+            qrPollTimer = setTimeout(poll, 3000);
+          } else if (resp.ok && resp.event === 'qr_code') {
+            qrPollTimer = setTimeout(poll, 3000);
+          } else if (resp.ok && resp.event === 'qr_migrate_done') {
+            qrPollTimer = setTimeout(poll, 3000);
+          } else {
+            statusEl.text('Error: ' + (resp.error || 'Poll failed'));
+            Lampa.Noty.show('GramLink: QR auth error');
+          }
+        })["catch"](function (err) {
+          if (qrCancelFlag) return;
+          statusEl.text('Poll error: ' + (err.message || 'unknown'));
+          qrPollTimer = setTimeout(poll, 5000);
+        });
+      }
+      qrPollTimer = setTimeout(poll, 3000);
+    }
+    function handleQrPassword(creds, hint, statusEl, enabledCtrl, onConnected) {
+      statusEl.text('2FA password required...');
+      Lampa.Modal.close();
+      Lampa.Input.edit({
+        title: hint ? '2FA Password (hint: ' + hint + ')' : '2FA Password',
+        value: '',
+        free: true,
+        nosave: true
+      }, function (val) {
+        if (val && String(val).trim()) {
+          setTimeout(function () {
+            Lampa.Modal.open({
+              title: 'Telegram Authorization (Gateway)',
+              html: $('<div class="gramlink-auth" style="padding:1em;text-align:center"><div style="margin:1em 0;font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password...</div></div>'),
+              size: 'medium',
+              onBack: function onBack() {
+                cancelQrAuth();
+                Lampa.Modal.close();
+                Lampa.Controller.toggle(enabledCtrl);
+              }
+            });
+          }, 200);
+          qrSend({
+            cmd: 'auth_qr_password',
+            password: String(val).trim()
+          }).then(function (resp) {
+            if (qrCancelFlag) return;
+            if (resp.ok && resp.event === 'auth_success') {
+              finalizeQrAuth(resp, enabledCtrl, onConnected);
+            } else {
+              Lampa.Noty.show('GramLink: ' + (resp.error || 'Wrong password'));
+              cancelQrAuth();
+              Lampa.Modal.close();
+              Lampa.Controller.toggle(enabledCtrl);
+            }
+          })["catch"](function (err) {
+            Lampa.Noty.show('GramLink: ' + (err.message || '2FA error'));
+            cancelQrAuth();
+            Lampa.Modal.close();
+            Lampa.Controller.toggle(enabledCtrl);
+          });
+        } else {
+          cancelQrAuth();
+          Lampa.Controller.toggle(enabledCtrl);
+        }
+      });
+    }
+    function finalizeQrAuth(resp, enabledCtrl, onConnected) {
+      var dcId = resp.dcId;
+      var authKeyHex = resp.authKeyHex;
+      var userName = resp.userName || 'User';
+      if (!dcId || !authKeyHex) {
+        Lampa.Noty.show('GramLink: Invalid auth response');
+        cancelQrAuth();
+        Lampa.Controller.toggle(enabledCtrl);
+        return;
+      }
+      Lampa.Storage.set('gramlink_dc_id', String(dcId));
+      vault.seal(authKeyHex);
+      Lampa.Storage.set('gramlink_user_name', userName);
+      var staleKeys = ['gramlink_channel_id', 'gramlink_sync_log_topic', 'gramlink_profiles_topic', 'gramlink_profiles_sync_topic', 'gramlink_backup_topic'];
+      for (var i = 0; i < staleKeys.length; i++) {
+        Lampa.Storage.set(staleKeys[i], '');
+      }
+      cancelQrAuth();
+      Lampa.Modal.close();
+      Lampa.Noty.show('GramLink: Connecting to Telegram...');
+      Lampa.Settings.update();
+      if (typeof onConnected === 'function') {
+        onConnected(dcId, authKeyHex);
+      }
+    }
+
     /**
      * auth.js — QR + 2FA authorization flow via GramJS (no backend)
      *
@@ -4099,7 +4325,8 @@
       var compat = getCompatReport();
       if (!compat.supported) {
         Lampa.Noty.show(Lampa.Lang.translate('gramlink_compat_fail') + ' — ' + compat.blockers.length + ' blocking issue(s)');
-        // Don't return — show UI with only Phone v2 option for old devices
+        // Don't return — show QR + Phone v2. Hide phone v1 (GramJS) because
+        // it can't run on old devices. QR will try but fail gracefully.
       }
 
       // Cancel any previous auth session that may still be connected
@@ -4123,10 +4350,9 @@
       var qrEl = html.find('.gramlink-auth__qr-code');
       var qrPlaceholder = html.find('.gramlink-auth__qr-placeholder');
 
-      // Gateway mode: hide QR and phone v1 on incompatible devices
+      // ponytail: on old devices (no BigInt/async) hide phone v1 (GramJS),
+      // but keep QR visible (will gracefully fail) and phone v2 (Gateway).
       if (!getCompatReport().supported) {
-        qrPlaceholder.hide();
-        qrEl.hide();
         html.find('.gramlink-auth__phone-btn').hide();
       }
 
@@ -4167,6 +4393,26 @@
         return;
       }
       statusEl.text('Loading GramJS...');
+
+      // ponytail: on old devices, use Gateway QR instead of GramJS QR
+      if (!getCompatReport().supported) {
+        cancelAuth();
+        Lampa.Modal.close();
+        setTimeout(function () {
+          startQrAuthViaGateway(function (dcId, authKeyHex) {
+            GramLinkClient.getInstance().saveCredentials(dcId, authKeyHex);
+            GramLinkClient.getInstance().connect().then(function () {
+              Lampa.Noty.show('GramLink: Connected!');
+              Lampa.Settings.update();
+              autoEnsureSyncChannel();
+            })["catch"](function (err) {
+              console.error('GramLink', 'Post-auth connect failed:', err);
+              Lampa.Noty.show('GramLink: Connection failed');
+            });
+          });
+        }, 300);
+        return;
+      }
 
       // ── 2. Load GramJS bundle, connect, start QR auth ───────────────
       loadGramJS().then(function (tg) {

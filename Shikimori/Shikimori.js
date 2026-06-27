@@ -164,17 +164,19 @@
       i = 0;
     }
     _regeneratorDefine = function (e, r, n, t) {
-      function o(r, n) {
-        _regeneratorDefine(e, r, function (e) {
-          return this._invoke(r, n, e);
-        });
-      }
-      r ? i ? i(e, r, {
+      if (r) i ? i(e, r, {
         value: n,
         enumerable: !t,
         configurable: !t,
         writable: !t
-      }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2));
+      }) : e[r] = n;else {
+        function o(r, n) {
+          _regeneratorDefine(e, r, function (e) {
+            return this._invoke(r, n, e);
+          });
+        }
+        o("next", 0), o("throw", 1), o("return", 2);
+      }
     }, _regeneratorDefine(e, r, n, t);
   }
   function _toConsumableArray(r) {
@@ -784,7 +786,7 @@
       var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(e) {
         var getMAL, response, dubbers, subbers, shikimoriRates, _t;
         return _regenerator().w(function (_context) {
-          while (1) switch (_context.p = _context.n) {
+          while (1) switch (_context.n) {
             case 0:
               if (!(e.type === "complite")) {
                 _context.n = 6;
