@@ -2372,7 +2372,7 @@
       }
     };
 
-    var VERSION$1 = '0.2.0';
+    var VERSION$1 = '0.2.1';
     var instance = null;
     var GramLinkClient = /*#__PURE__*/function () {
       function GramLinkClient() {
@@ -3697,7 +3697,7 @@
         apiId: creds.apiId,
         apiHash: creds.apiHash,
         deviceModel: getDeviceName(),
-        appVersion: window.Lampa && Lampa.Manifest && Lampa.Manifest.app_version || VERSION
+        appVersion: VERSION
       }).then(function (resp) {
         if (authCancelFlag$1) return;
         if (resp.event === 'auth_code_needed') {
@@ -3941,7 +3941,7 @@
         apiId: creds.apiId,
         apiHash: creds.apiHash,
         deviceModel: getDeviceName(),
-        appVersion: window.Lampa && Lampa.Manifest && Lampa.Manifest.app_version || VERSION
+        appVersion: VERSION
       }).then(function (resp) {
         if (qrCancelFlag) return;
         if (!resp.ok) {

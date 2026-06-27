@@ -1803,7 +1803,7 @@
             dcId: dcId,
             authKeyHex: authKeyHex,
             deviceModel: getDeviceName(),
-            appVersion: window.Lampa && Lampa.Manifest && Lampa.Manifest.app_version || VERSION,
+            appVersion: VERSION,
             apiId: apiCreds.apiId,
             apiHash: apiCreds.apiHash
           }).then(function (resp) {
@@ -2337,7 +2337,7 @@
         apiId: creds.apiId,
         apiHash: creds.apiHash,
         deviceModel: getDeviceName(),
-        appVersion: window.Lampa && Lampa.Manifest && Lampa.Manifest.app_version || VERSION
+        appVersion: VERSION
       }).then(function (resp) {
         if (authCancelFlag) return;
         if (resp.event === 'auth_code_needed') {
@@ -2581,7 +2581,7 @@
         apiId: creds.apiId,
         apiHash: creds.apiHash,
         deviceModel: getDeviceName(),
-        appVersion: window.Lampa && Lampa.Manifest && Lampa.Manifest.app_version || VERSION
+        appVersion: VERSION
       }).then(function (resp) {
         if (qrCancelFlag) return;
         if (!resp.ok) {
