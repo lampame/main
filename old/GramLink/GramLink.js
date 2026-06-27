@@ -1324,6 +1324,15 @@
     }
 
     /**
+     * sdk/version.js — Single source of truth for plugin version
+     *
+     * Used by both modern (GramJS) and gateway (WebSocket) clients.
+     * Keep this file simple — no imports, no side effects.
+     */
+
+    var VERSION = '0.2.2';
+
+    /**
      * crypto-lite.js — Pure-JS cryptographic primitives (zero dependencies)
      * SHA-256, HMAC-SHA256, PBKDF2-SHA256, AES-128-CTR, randomBytes
      * For Smart TV / legacy WebView targets.
@@ -1698,7 +1707,6 @@
       }
     };
 
-    var VERSION = '0.2.2';
     var instance = null;
     function GatewayClient() {
       this._ws = null;
