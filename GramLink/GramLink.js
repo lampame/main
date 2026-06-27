@@ -1135,14 +1135,28 @@
         return Promise.reject(new Error('GramLink: All CDN URLs failed'));
       }
       return new Promise(function (resolve, reject) {
+        // ponytail: Catch syntax errors (BigInt, async/await, etc. in old browsers)
+        // window.onerror catches parse errors from dynamically created <script> tags,
+        // while script.onerror only catches network errors.
+        var _scriptErrorHandler = function scriptErrorHandler(e) {
+          if (e.filename && e.filename.indexOf('telegram.min.js') !== -1) {
+            window.removeEventListener('error', _scriptErrorHandler);
+            console.warn('GramLink', 'Syntax error loading GramJS from:', BUNDLE_URLS[index], e.message);
+            script && script.parentNode && script.parentNode.removeChild(script);
+            tryLoad(index + 1).then(resolve, reject);
+            e.preventDefault();
+          }
+        };
+        window.addEventListener('error', _scriptErrorHandler);
         var script = document.createElement('script');
         script.src = BUNDLE_URLS[index];
         script.async = true;
         script.onload = function () {
+          window.removeEventListener('error', _scriptErrorHandler);
           var tg = window.telegram;
           if (!tg || !tg.TelegramClient) {
             console.warn('GramLink', 'Bundle loaded but TelegramClient missing from:', BUNDLE_URLS[index]);
-            script.remove();
+            script.parentNode && script.parentNode.removeChild(script);
             // ponytail: retry with next CDN fallback
             tryLoad(index + 1).then(resolve, reject);
             return;
@@ -1151,8 +1165,9 @@
           resolve(tg);
         };
         script.onerror = function () {
+          window.removeEventListener('error', _scriptErrorHandler);
           console.warn('GramLink', 'Failed to load from:', BUNDLE_URLS[index]);
-          script.remove();
+          script.parentNode && script.parentNode.removeChild(script);
           tryLoad(index + 1).then(resolve, reject);
         };
         document.head.appendChild(script);
