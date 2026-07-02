@@ -8503,9 +8503,27 @@
   var isProcessing = false;
   var processTimerId = null;
   function buildScrobbleBody$1(media, progress) {
-    var isShow = media.method === 'tv' || media.method === 'show' || media.card_type === 'tv' || media.card_type === 'show' || media.original_name ? true : false;
+    var isShow = media.method === 'tv' || media.method === 'show' || media.card_type === 'tv' || media.card_type === 'show' || !!media.original_name;
     var safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
     if (isShow) {
+      var season = media.season_number || media.season;
+      var episode = media.episode_number || media.episode;
+      if (!season || !episode) {
+        if (debugEnabled()) {
+          logWarn('scrobble_queue: season/episode missing for show, skipping', {
+            media: {
+              id: media.id,
+              season_number: media.season_number,
+              season: media.season,
+              episode_number: media.episode_number,
+              episode: media.episode
+            },
+            season: season,
+            episode: episode
+          });
+        }
+        return null;
+      }
       return {
         show: {
           ids: {
@@ -8513,8 +8531,8 @@
           }
         },
         episode: {
-          season: media.season_number || 1,
-          number: media.episode_number || 1
+          season: season,
+          number: episode
         },
         progress: safeProgress
       };
@@ -8812,6 +8830,24 @@
         progress: safeProgress
       };
     }
+    var season = media.season_number || media.season;
+    var episode = media.episode_number || media.episode;
+    if (!season || !episode) {
+      if (debugEnabled()) {
+        logWarn('scrobble: season/episode missing for show, skipping', {
+          media: {
+            id: media.id,
+            season_number: media.season_number,
+            season: media.season,
+            episode_number: media.episode_number,
+            episode: media.episode
+          },
+          season: season,
+          episode: episode
+        });
+      }
+      return null;
+    }
     return {
       show: {
         ids: {
@@ -8819,8 +8855,8 @@
         }
       },
       episode: {
-        season: media.season_number || 1,
-        number: media.episode_number || 1
+        season: season,
+        number: episode
       },
       progress: safeProgress
     };
