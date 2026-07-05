@@ -5993,6 +5993,78 @@
     }
   }
 
+  var DOWNLOAD_ICON$1 = "<svg class=\"btnTDdownload\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><path d=\"M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><path d=\"M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><path d=\"M18 17H12H6\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\"></path><path d=\"M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z\" stroke=\"#ffffff\" stroke-width=\"1.5\"></path></g></svg>";
+  var CLIENT_MENU$1 = {
+    qBittorent: {
+      title: "qBittorrent",
+      type: "client",
+      clientName: "qBittorent"
+    },
+    transmission: {
+      title: "Transmission",
+      type: "client",
+      clientName: "transmission"
+    },
+    keenetic: {
+      title: "Keenetic",
+      type: "client",
+      clientName: "keenetic"
+    },
+    synology: {
+      title: "Synology",
+      type: "client",
+      clientName: "synology"
+    },
+    universalClient: {
+      title: "Universal",
+      type: "universal"
+    }
+  };
+  function sendToClient$1(clientName, selectedTorrent, labels, dtype) {
+    executeClientMethod(clientName, "SendTask", [selectedTorrent, labels, dtype], {
+      silentAuth: true
+    })["catch"](function () {});
+  }
+  function sendToUniversal$1(selectedTorrent) {
+    Main(selectedTorrent);
+  }
+  function buildButtonTitle$1(label) {
+    return "<div class=\"btnTDdownload wait\">".concat(DOWNLOAD_ICON$1).concat(label, "</div>");
+  }
+  function resolveTorrentLabels$1(movie) {
+    var type = movie && movie.first_air_date ? "tv" : "movie";
+    return "".concat(type, "/").concat(movie && movie.id);
+  }
+  function resolveDestinationType$1(movie) {
+    return movie && movie.first_air_date ? "TV" : "Movies";
+  }
+  function Send() {
+    Lampa.Listener.follow("torrent", function (e) {
+      if (e.type !== "onlong") {
+        return;
+      }
+      var selectedTorrent = e.element;
+      var activeMovie = Lampa.Activity.active().movie;
+      var labels = resolveTorrentLabels$1(activeMovie);
+      var dtype = resolveDestinationType$1(activeMovie);
+      var selectedClient = Lampa.Storage.field("lmetorrentSelect");
+      var menuConfig = CLIENT_MENU$1[selectedClient];
+      if (!menuConfig) {
+        return;
+      }
+      e.menu.push({
+        title: buildButtonTitle$1(menuConfig.title),
+        onSelect: function onSelect() {
+          if (menuConfig.type === "universal") {
+            sendToUniversal$1(selectedTorrent);
+            return;
+          }
+          sendToClient$1(menuConfig.clientName, selectedTorrent, labels, dtype);
+        }
+      });
+    });
+  }
+
   var DOWNLOAD_ICON = "<svg class=\"btnTDdownload\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><path d=\"M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><path d=\"M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><path d=\"M18 17H12H6\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\"></path><path d=\"M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z\" stroke=\"#ffffff\" stroke-width=\"1.5\"></path></g></svg>";
   var CLIENT_MENU = {
     qBittorent: {
@@ -6038,15 +6110,27 @@
   function resolveDestinationType(movie) {
     return movie && movie.first_air_date ? "TV" : "Movies";
   }
-  function Send() {
-    Lampa.Listener.follow("torrent", function (e) {
+  function buildMagnetUri(hash, title) {
+    return "magnet:?xt=urn:btih:".concat(hash, "&dn=").concat(encodeURIComponent(title));
+  }
+  function MyTorrents() {
+    Lampa.Listener.follow("mytorrents", function (e) {
       if (e.type !== "onlong") {
         return;
       }
-      var selectedTorrent = e.element;
-      var activeMovie = Lampa.Activity.active().movie;
-      var labels = resolveTorrentLabels(activeMovie);
-      var dtype = resolveDestinationType(activeMovie);
+      var item = e.object;
+      var hash = item && item.hash;
+      var title = item && item.title;
+      var movie = item && item.data && item.data.movie;
+      if (!hash) {
+        return;
+      }
+      var magnetUri = buildMagnetUri(hash, title);
+      var selectedTorrent = {
+        MagnetUri: magnetUri
+      };
+      var labels = resolveTorrentLabels(movie);
+      var dtype = resolveDestinationType(movie);
       var selectedClient = Lampa.Storage.field("lmetorrentSelect");
       var menuConfig = CLIENT_MENU[selectedClient];
       if (!menuConfig) {
@@ -6454,6 +6538,9 @@
 
       // Initialize downloader
       Send();
+
+      // Initialize mytorrents integration
+      MyTorrents();
 
       // Initialize client authentication
       initializeClientAuth();
