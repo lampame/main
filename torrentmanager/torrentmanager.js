@@ -428,6 +428,13 @@
         zh: "复制到缓冲区",
         ro: "Copiază link-ul"
       },
+      openAndroid: {
+        ru: "Открыть через Android (выбор приложения)",
+        en: "Open via Android (app chooser)",
+        uk: "Відкрити через Android (вибір додатку)",
+        zh: "通过 Android 打开（应用选择器）",
+        ro: "Deschide prin Android (selector aplicații)"
+      },
       tweak: {
         ru: "Tweak",
         en: "Tweak",
@@ -5065,16 +5072,20 @@
     //     }
     // })
     //Universal action
+    var universalActionValues = Lampa.Platform.is('android') ? {
+      openAndroid: Lampa.Lang.translate('openUniversal'),
+      click: Lampa.Lang.translate('copyUniversal')
+    } : {
+      open: Lampa.Lang.translate('openUniversal'),
+      click: Lampa.Lang.translate('copyUniversal')
+    };
     Lampa.SettingsApi.addParam({
       component: manifest.component,
       param: {
         name: manifest.component + 'UniversalAction',
         type: 'select',
         "default": 'no_client',
-        values: {
-          open: Lampa.Lang.translate('openUniversal'),
-          click: Lampa.Lang.translate('copyUniversal')
-        }
+        values: universalActionValues
       },
       field: {
         name: Lampa.Lang.translate('UniversalAction')
@@ -5976,12 +5987,14 @@
   }
 
   function Main(selectedTorrent) {
-    if (Lampa.Storage.field("lmetorrentUniversalAction") === "open") {
-      //if (Lampa.Platform.is('android')) $('<a href="' + selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link + '"><a/>')[0].click()
-      //else
-      window.location.assign(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link);
+    var uri = selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link;
+    var action = Lampa.Storage.field("lmetorrentUniversalAction");
+    if (action === "openAndroid" && typeof AndroidJS !== 'undefined' && typeof AndroidJS.openTorrentLink !== 'undefined') {
+      AndroidJS.openTorrentLink(uri, "{}");
+    } else if (action === "open") {
+      window.location.assign(uri);
     } else {
-      Lampa.Utils.copyTextToClipboard(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link, function () {
+      Lampa.Utils.copyTextToClipboard(uri, function () {
         Lampa.Bell.push({
           text: Lampa.Lang.translate('copy_secuses')
         });
@@ -6424,7 +6437,7 @@
    */
   var MANIFEST = {
     type: 'other',
-    version: '3.1',
+    version: '3.2',
     author: '@lme_chat',
     name: 'Torrent Manager',
     description: 'Manager and Runner query',
