@@ -701,7 +701,7 @@
     };
 
     function component(object) {
-      console.log('object', object);
+      console.log('concertTorrSearch', 'component:', object);
       var network = new Lampa.Reguest();
       var scroll = new Lampa.Scroll({
         mask: true,

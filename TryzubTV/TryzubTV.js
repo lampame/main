@@ -934,7 +934,7 @@
           case 2:
             _context3.p = 2;
             _t = _context3.v;
-            console.error('TryzubTV: loadMain failed', _t);
+            console.error('TryzubTV', 'loadMain failed', _t);
             onerror(_t);
           case 3:
             return _context3.a(2);
@@ -1012,7 +1012,7 @@
           case 6:
             _context4.p = 6;
             _t3 = _context4.v;
-            console.error('TryzubTV: loadCategory failed', _t3);
+            console.error('TryzubTV', 'loadCategory failed', _t3);
             onerror(_t3);
           case 7:
             return _context4.a(2);
@@ -1144,18 +1144,18 @@
           currentHost = host;
           socket = new WebSocket("wss://".concat(host, "/ws"));
           socket.onopen = function () {
-            console.log('TryzubTV: WebSocket connected');
+            console.log('TryzubTV', 'WebSocket connected');
           };
           socket.onmessage = function (event) {
             handleMessage(event, resolve, reject);
           };
           socket.onerror = function () {
-            console.error('TryzubTV: WebSocket error');
+            console.error('TryzubTV', 'WebSocket error');
             reject('TryzubTV: WebSocket error');
             disconnect();
           };
           socket.onclose = function () {
-            console.log('TryzubTV: WebSocket disconnected');
+            console.log('TryzubTV', 'WebSocket disconnected');
             socket = null;
             key = null;
           };
@@ -1166,7 +1166,7 @@
           var data = JSON.parse(event.data);
           if (data.type === 'auth' && data.payload && data.payload.hash) {
             key = data.payload.hash;
-            console.log('TryzubTV: Key received');
+            console.log('TryzubTV', 'Key received');
             resolve(key);
           } else {
             reject('TryzubTV: Invalid auth response');
@@ -1188,7 +1188,7 @@
       };
       var listen = function listen() {
         Lampa.Player.listener.follow('destroy', function () {
-          console.log('TryzubTV: Player destroyed, closing socket.');
+          console.log('TryzubTV', 'Player destroyed, closing socket.');
           disconnect();
         });
       };
@@ -1357,7 +1357,7 @@
           case 5:
             _context5.p = 5;
             _t = _context5.v;
-            console.error('TryzubTV: fresh stream resolve failed', _t);
+            console.error('TryzubTV', 'fresh stream resolve failed', _t);
           case 6:
             return _context5.a(2, fallback);
         }
@@ -1408,7 +1408,7 @@
                     case 3:
                       _context6.p = 3;
                       _t2 = _context6.v;
-                      console.error('TryzubTV: stream prefetch failed', _t2);
+                      console.error('TryzubTV', 'stream prefetch failed', _t2);
                     case 4:
                       _context6.n = 0;
                       break;
@@ -1668,7 +1668,7 @@
         resolveStreamFresh(selected.provider, selected.id).then(function (url) {
           if (url) selected.url = url;
         })["catch"](function (error) {
-          console.error('TryzubTV: stream resolve failed', error);
+          console.error('TryzubTV', 'stream resolve failed', error);
         });
       },
       onGetChannel: function onGetChannel(position) {
@@ -1717,7 +1717,7 @@
             total: items.length
           });
         })["catch"](function (error) {
-          console.error('TryzubTV: channel epg load failed', error);
+          console.error('TryzubTV', 'channel epg load failed', error);
           epgCache[cacheKey] = {
             items: [],
             position: 0
@@ -1767,7 +1767,7 @@
           }
           Lampa.Player.playlist(playlist);
         })["catch"](function (error) {
-          console.error('TryzubTV: playlist load failed', error);
+          console.error('TryzubTV', 'playlist load failed', error);
           Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_epg_failed'));
         });
       }
@@ -1836,7 +1836,7 @@
           case 6:
             _context10.p = 6;
             _t3 = _context10.v;
-            console.error('TryzubTV: channel list play failed', _t3);
+            console.error('TryzubTV', 'channel list play failed', _t3);
             Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
             return _context10.a(2, false);
           case 7:
@@ -1882,7 +1882,7 @@
         }], 0, categoryTitle);
       })["catch"](function (error) {
         Lampa.Loading.stop();
-        console.error('TryzubTV: stream resolve failed', error);
+        console.error('TryzubTV', 'stream resolve failed', error);
         Lampa.Noty.show(Lampa.Lang.translate('tryzubtv_no_link'));
       });
       return;
@@ -1940,7 +1940,7 @@
             while (1) switch (_context2.n) {
               case 0:
                 Lampa.Loading.stop();
-                console.error('TryzubTV: category channels load failed', error);
+                console.error('TryzubTV', 'category channels load failed', error);
                 _context2.n = 1;
                 return playChannelList([buildSingleChannel(cardData, provider, channelId, title, logo)], 0, categoryTitle, {
                   provider: provider,
@@ -1998,7 +1998,7 @@
               match = response.url.match(/vod-maincast-\d+\.mw-02\.cosmonova-broadcast\.tv/);
               if (match) {
                 host = match[0];
-                console.log('TryzubTV: resolved host via proxy', host);
+                console.log('TryzubTV', 'resolved host via proxy', host);
               }
             }
             _context11.n = 6;
@@ -2006,7 +2006,7 @@
           case 5:
             _context11.p = 5;
             _t4 = _context11.v;
-            console.error('TryzubTV: failed to resolve host via proxy', _t4);
+            console.error('TryzubTV', 'failed to resolve host via proxy', _t4);
             // Якщо проксі або редірект не спрацювали, використовуємо один з відомих хостів як фолбек
             host = 'vod-maincast-1.mw-02.cosmonova-broadcast.tv';
           case 6:
@@ -2025,7 +2025,7 @@
           case 8:
             _context11.p = 8;
             _t5 = _context11.v;
-            console.error('TryzubTV: replay playback failed', _t5);
+            console.error('TryzubTV', 'replay playback failed', _t5);
             Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
           case 9:
             _context11.p = 9;
@@ -2468,10 +2468,10 @@
               list = listState.status === 'fulfilled' ? listState.value : [];
               catalog = catalogState.status === 'fulfilled' ? catalogState.value : [];
               if (listState.status === 'rejected') {
-                console.error('TryzubTV: tv channels request failed', listState.reason);
+                console.error('TryzubTV', 'tv channels request failed', listState.reason);
               }
               if (catalogState.status === 'rejected') {
-                console.error('TryzubTV: tv catalog request failed', catalogState.reason);
+                console.error('TryzubTV', 'tv catalog request failed', catalogState.reason);
               }
               categoryMap = {};
               (catalog || []).forEach(function (line) {
@@ -2502,7 +2502,7 @@
             case 3:
               _context.p = 3;
               _t = _context.v;
-              console.error('TryzubTV: tv channels load failed', _t);
+              console.error('TryzubTV', 'tv channels load failed', _t);
               renderCards([]);
             case 4:
               _context.p = 4;
@@ -2556,7 +2556,7 @@
             case 5:
               _context2.p = 5;
               _t2 = _context2.v;
-              console.error('TryzubTV: play failed', _t2);
+              console.error('TryzubTV', 'play failed', _t2);
               fallbackCard = mapChannelCard(channel, {
                 categoryKey: categoryKey,
                 categoryTitle: getCategoryTitleByKey(categoryKey)
@@ -2793,7 +2793,7 @@
       });
       card_view.append(tpl);
     } catch (e) {
-      console.error('TryzubTV: replay card overlay error', e);
+      console.error('TryzubTV', 'replay card overlay error', e);
     }
   }
   function loadLineContent$1(lineItem, lineData) {
@@ -2820,7 +2820,7 @@
         lineItem.emit('scroll');
       }
     })["catch"](function (error) {
-      console.error('TryzubTV: replay line load failed', error);
+      console.error('TryzubTV', 'replay line load failed', error);
       lineData.tryzubtv_loaded = false;
     });
   }
@@ -3107,7 +3107,7 @@
       });
       card_view.append(tpl);
     } catch (e) {
-      console.error('TryzubTV: replay card overlay error', e);
+      console.error('TryzubTV', 'replay card overlay error', e);
     }
   }
   function loadLineContent(lineItem, lineData) {
@@ -3152,7 +3152,7 @@
         lineItem.emit('scroll');
       }
     })["catch"](function (error) {
-      console.error('TryzubTV: line load failed', error);
+      console.error('TryzubTV', 'line load failed', error);
       lineData.tryzubtv_loaded = false;
     });
   }
@@ -3567,7 +3567,7 @@
               });
               card_view.append(tpl);
             } catch (e) {
-              console.error('TryzubTV: replay card overlay create error', e);
+              console.error('TryzubTV', 'replay card overlay create error', e);
             }
           },
           onEnter: function () {

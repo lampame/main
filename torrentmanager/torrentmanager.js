@@ -888,7 +888,7 @@
           case 6:
             _context.p = 6;
             _t = _context.v;
-            console.log('getPosterFromLabels: images API failed', _t);
+            console.log('TDM', 'getPosterFromLabels: images API failed', _t);
           case 7:
             return _context.a(2, './img/img_load.svg');
         }
@@ -2253,7 +2253,7 @@
   function getTableName() {
     var client = Lampa.Storage.field('lmetorrentSelect');
     if (!client) {
-      console.error('[DB] Активний клієнт не вибрано!');
+      console.error('TDM', 'Активний клієнт не вибрано!');
       return 'default_metadata';
     }
     return "".concat(client.toLowerCase(), "_metadata");
@@ -2278,7 +2278,7 @@
                 _context.n = 1;
                 break;
               }
-              console.error('Lampa.DB не визначено.');
+              console.error('TDM', 'Lampa.DB не визначено.');
               dbPromise = null; // Скидаємо для повторної спроби
               return _context.a(2, reject(new Error('Lampa.DB is not defined')));
             case 1:
@@ -6202,7 +6202,7 @@
               data: data,
               info: info
             };
-            console.log('TDM:', result);
+            console.log('TDM', 'result:', result);
             return _context2.a(2, result);
           case 7:
             _context2.p = 7;

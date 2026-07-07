@@ -326,7 +326,7 @@
         var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
         var onerror = arguments.length > 2 ? arguments[2] : undefined;
         var parts_limit = 6;
-        console.log('LMENetworks', parts_limit);
+        console.log('LMENetworks', 'parts_limit:', parts_limit);
         var parts_data = [function (call) {
           owner.get('movie/now_playing', params, function (json) {
             json.title = Lampa.Lang.translate('title_now_watch');
@@ -834,11 +834,11 @@
       var page = Math.max(0, (params.page || 1) - 1);
       network["native"]('https://apx.lme.isroot.in/trakt/networks', function (networks) {
         if (params.searchQuery) {
-          console.log('Search query:', params.searchQuery);
+          console.log('LMENetworks', 'Search query:', params.searchQuery);
           networks = networks.filter(function (network) {
             return network.name.toLowerCase().includes(params.searchQuery.toLowerCase());
           });
-          console.log('Filtered networks by searchQuery:', networks);
+          console.log('LMENetworks', 'Filtered networks by searchQuery:', networks);
         }
         if (!params.searchQuery && (params.geoSearchQuery || Lampa.Storage.get('nc_networksListGeo'))) {
           var countryCode = (Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery).toLowerCase();
@@ -1863,7 +1863,7 @@
                   if (a.action === 'bookmarkAdd') {
                     var result = Api.bookmarkSave(a);
                     if (result === true) {
-                      console.log('Запись была успешно добавлена.');
+                      console.log('LMENetworks', 'Запись была успешно добавлена.');
                       Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
                     } else if (result === false) {
                       console.error('Не удалось добавить запись.');
@@ -2315,7 +2315,7 @@
                     //Api.bookmarkRemove(a)
                     var result = Api.bookmarkRemove(a);
                     if (result === true) {
-                      console.log('Запись была успешно удалена.');
+                      console.log('LMENetworks', 'Запись была успешно удалена.');
                       Lampa.Activity.replace({
                         url: '',
                         title: Lampa.Lang.translate('nc_bookmark'),
@@ -2686,7 +2686,7 @@
             onMenu: function onMenu() {
               var result = Api.collectionBookmarkSave('collectionBookmarkAdd', this.data);
               if (result === true) {
-                console.log('Запись была успешно добавлена.');
+                console.log('LMENetworks', 'Запись была успешно добавлена.');
                 Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
               } else if (result === false) {
                 console.error('Не удалось добавить запись.');
@@ -2907,7 +2907,7 @@
     }
 
     function component$1(object) {
-      console.log('Collection', object);
+      console.log('LMENetworks', 'Collection:', object);
       var comp = new Lampa.InteractionCategory(object);
       comp.create = function () {
         Api.mainCollectionGet(object, this.build.bind(this), this.empty.bind(this));
@@ -3013,7 +3013,7 @@
             onMenu: function onMenu() {
               var result = Api.collectionBookmarkRemove('collectionBookmarkRemove', this.data);
               if (result === true) {
-                console.log('Запись была успешно удалена.');
+                console.log('LMENetworks', 'Запись была успешно удалена.');
                 Lampa.Activity.replace({
                   url: '',
                   title: Lampa.Lang.translate('nc_bookmark'),
@@ -3252,7 +3252,7 @@
     function handleLongHover(card_data) {
       var result = Api.collectionBookmarkSave('collectionBookmarkAdd', card_data);
       if (result === true) {
-        console.log('Запись была успешно добавлена.');
+        console.log('LMENetworks', 'Запись была успешно добавлена.');
         Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
       } else if (result === false) {
         console.error('Не удалось добавить запись.');
@@ -3382,7 +3382,7 @@
           if (a.action === 'bookmarkAdd') {
             var result = Api.bookmarkSave(a);
             if (result === true) {
-              console.log('Запись была успешно добавлена.');
+              console.log('LMENetworks', 'Запись была успешно добавлена.');
               Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
             } else if (result === false) {
               console.error('Не удалось добавить запись.');
@@ -3482,7 +3482,7 @@
                 localStorage.removeItem(category);
                 Lampa.Noty.show(Lampa.Lang.translate('nc_favoriteMigrate'));
               } else {
-                console.log("\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0441 \u043A\u043B\u044E\u0447\u043E\u043C ".concat(Lampa.Storage.get(category), " \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0432 localStorage."));
+                console.log('LMENetworks', "\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0441 \u043A\u043B\u044E\u0447\u043E\u043C ".concat(Lampa.Storage.get(category), " \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0432 localStorage."));
               }
             }
         }

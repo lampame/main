@@ -340,18 +340,18 @@
           }
           socket = new WebSocket('wss://vod-maincast.cosmonova-broadcast.tv/ws');
           socket.onopen = function () {
-            console.log('SaloPower: WebSocket connected');
+            console.log('SaloPower', 'WebSocket connected');
           };
           socket.onmessage = function (event) {
             handleMessage(event, resolve, reject);
           };
           socket.onerror = function (error) {
-            console.error('SaloPower: WebSocket error');
+            console.error('SaloPower', 'WebSocket error');
             reject('SaloPower: WebSocket error');
             disconnect();
           };
           socket.onclose = function () {
-            console.log('SaloPower: WebSocket disconnected');
+            console.log('SaloPower', 'WebSocket disconnected');
             socket = null;
             key = null;
           };
@@ -362,7 +362,7 @@
           var data = JSON.parse(event.data);
           if (data.type === 'auth' && data.payload && data.payload.hash) {
             key = data.payload.hash;
-            console.log('SaloPower: Key received');
+            console.log('SaloPower', 'Key received');
             resolve(key);
           } else {
             reject('SaloPower: Invalid auth response');
@@ -380,7 +380,7 @@
       // Слухаємо подію знищення плеєра, щоб закрити сокет
       var listen = function listen() {
         Lampa.Player.listener.follow('destroy', function () {
-          console.log('SaloPower: Player destroyed, closing socket.');
+          console.log('SaloPower', 'Player destroyed, closing socket.');
           disconnect();
         });
       };
@@ -456,7 +456,7 @@
                   });
                   card_view.append(tpl);
                 } catch (e) {
-                  console.error('SaloPower: card overlay create error', e);
+                  console.error('SaloPower', 'card overlay create error', e);
                 }
               },
               onEnter: function () {
@@ -488,7 +488,7 @@
                       case 4:
                         _context.p = 4;
                         _t = _context.v;
-                        console.error('SaloPower: Failed to start playback', _t);
+                        console.error('SaloPower', 'Failed to start playback', _t);
                         Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
                       case 5:
                         _context.p = 5;
@@ -549,7 +549,7 @@
                   });
                   card_view.append(tpl);
                 } catch (e) {
-                  console.error('SaloPower Category: card overlay create error', e);
+                  console.error('SaloPower Category', 'card overlay create error', e);
                 }
               },
               onEnter: function () {
@@ -581,7 +581,7 @@
                       case 4:
                         _context.p = 4;
                         _t = _context.v;
-                        console.error('SaloPower: Failed to start playback', _t);
+                        console.error('SaloPower', 'Failed to start playback', _t);
                         Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
                       case 5:
                         _context.p = 5;

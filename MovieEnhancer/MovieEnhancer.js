@@ -1056,33 +1056,33 @@
     };
 
     function main() {
-      console.log('StreamingDiscovery: Module initialized');
+      console.log('StreamingDiscovery', 'Module initialized');
 
       // Add CSS styles first
       var styleElement = $('<style>').text("\n        .full-start-new__streaming-ratings {\n            display: flex;\n            align-items: center;\n            margin-bottom: 1em;\n            flex-wrap: wrap;\n        }\n        \n        .streaming-rating {\n            display: flex;\n            align-items: center;\n            margin-right: 1.5em;\n            margin-bottom: 0.5em;\n        }\n        \n        .streaming-rating__icon {\n            width: 2em;\n            height: 2em;\n            margin-right: 0.5em;\n            border-radius: 0.3em;\n            object-fit: contain;\n        }\n        \n        .streaming-rating__score {\n            font-size: 1.2em;\n            font-weight: bold;\n        }\n        \n        @media (max-width: 768px) {\n            .streaming-rating__icon {\n                width: 1.8em;\n                height: 1.8em;\n            }\n            \n            .streaming-rating__score {\n                font-size: 1.1em;\n            }\n        }\n        \n        @media (max-width: 480px) {\n            .streaming-rating__icon {\n                width: 1.5em;\n                height: 1.5em;\n            }\n            \n            .streaming-rating__score {\n                font-size: 1em;\n            }\n        }\n    ");
       $('head').append(styleElement);
-      console.log('StreamingDiscovery: CSS styles added');
+      console.log('StreamingDiscovery', 'CSS styles added');
 
       // Add streaming discovery listener
       Lampa.Listener.follow("full", function (e) {
-        console.log('StreamingDiscovery: "full" event received', e.type);
+        console.log('StreamingDiscovery', '"full" event received', e.type);
         var cardData = e.object;
         if (e.type == "complite") {
-          console.log('StreamingDiscovery: Card data loaded', cardData);
+          console.log('StreamingDiscovery', 'Card data loaded', cardData);
 
           // Get IMDB ID from card data
           var imdbId = '';
           if (cardData.card.imdb_id) {
             imdbId = cardData.card.imdb_id;
-            console.log('StreamingDiscovery: Found IMDB ID in cardData.imdb_id', imdbId);
+            console.log('StreamingDiscovery', 'Found IMDB ID in cardData.imdb_id', imdbId);
           } else if (cardData.movie && cardData.movie.imdb_id) {
             imdbId = cardData.movie.imdb_id;
-            console.log('StreamingDiscovery: Found IMDB ID in cardData.movie.imdb_id', imdbId);
+            console.log('StreamingDiscovery', 'Found IMDB ID in cardData.movie.imdb_id', imdbId);
           } else if (cardData.external_ids && cardData.external_ids.imdb_id) {
             imdbId = cardData.external_ids.imdb_id;
-            console.log('StreamingDiscovery: Found IMDB ID in cardData.external_ids.imdb_id', imdbId);
+            console.log('StreamingDiscovery', 'Found IMDB ID in cardData.external_ids.imdb_id', imdbId);
           } else {
-            console.log('StreamingDiscovery: No IMDB ID found in card data', cardData.card.imdb_id);
+            console.log('StreamingDiscovery', 'No IMDB ID found in card data', cardData.card.imdb_id);
           }
 
           // If IMDB ID is found, make the API request
@@ -1090,19 +1090,19 @@
             // Ensure IMDB ID has the 'tt' prefix
             if (!imdbId.startsWith('tt')) {
               imdbId = 'tt' + imdbId;
-              console.log('StreamingDiscovery: Added tt prefix to IMDB ID', imdbId);
+              console.log('StreamingDiscovery', 'Added tt prefix to IMDB ID', imdbId);
             }
             var settings = {
               url: "https://apx.lme.isroot.in/destination/https://www.streamingdiscovery.com/api/public/cache/ratings/movie?id=".concat(imdbId),
               method: "GET",
               timeout: 0
             };
-            console.log('StreamingDiscovery: Making API request', settings.url);
+            console.log('StreamingDiscovery', 'Making API request', settings.url);
             $.ajax(settings).done(function (response) {
-              console.log('StreamingDiscovery: API response received', response);
+              console.log('StreamingDiscovery', 'API response received', response);
               if (response && response.Data) {
                 var data = response.Data;
-                console.log('StreamingDiscovery: Data extracted from response', data);
+                console.log('StreamingDiscovery', 'Data extracted from response', data);
                 var ratingServices = [{
                   name: 'imdb',
                   label: 'IMDb',
@@ -1128,7 +1128,7 @@
                   label: 'FilmAffinity',
                   value: data.filmAffinity
                 }];
-                console.log('StreamingDiscovery: Rating services prepared', ratingServices);
+                console.log('StreamingDiscovery', 'Rating services prepared', ratingServices);
 
                 // Create container for streaming ratings
                 var ratingsContainer = $('<div class="full-start-new__streaming-ratings"></div>');
@@ -1136,7 +1136,7 @@
                 // Add each available rating
                 ratingServices.forEach(function (service) {
                   if (service.value) {
-                    console.log('StreamingDiscovery: Adding rating for', service.name, service.value);
+                    console.log('StreamingDiscovery', 'Adding rating for', service.name, service.value);
                     var ratingElement = $("\n                                    <div class=\"streaming-rating streaming-rating--".concat(service.name, "\">\n                                        <img class=\"streaming-rating__icon\" style=\"filter: grayscale(100%)\" src=\"https://www.streamingdiscovery.com/logo/").concat(service.name, ".png\" alt=\"").concat(service.label, "\">\n                                        <div class=\"streaming-rating__score\">").concat(service.value, "</div>\n                                    </div>\n                                "));
                     ratingsContainer.append(ratingElement);
                   }
@@ -1144,49 +1144,49 @@
 
                 // Find the rate line element and insert our ratings before it
                 var rateLineElement = $('.full-start-new__rate-line');
-                console.log('StreamingDiscovery: Rate line element found?', rateLineElement.length > 0);
+                console.log('StreamingDiscovery', 'Rate line element found?', rateLineElement.length > 0);
                 if (rateLineElement.length) {
                   // /* if (rateLineElement.length) {
                   //     rateLineElement.before(ratingsContainer);
-                  //     console.log('StreamingDiscovery: Ratings container inserted before rate line');
+                  //     console.log('StreamingDiscovery', 'Ratings container inserted before rate line');
                   // } else {
-                  //     console.log('StreamingDiscovery: Rate line element not found, trying alternative insertion');
+                  //     console.log('StreamingDiscovery', 'Rate line element not found, trying alternative insertion');
                   //     // Try alternative insertion points
                   //     const fullInfo = $('.full-start-new__details');
                   //     if (fullInfo.length) {
                   //         fullInfo.prepend(ratingsContainer);
-                  //         console.log('StreamingDiscovery: Ratings container inserted at beginning of details');
+                  //         console.log('StreamingDiscovery', 'Ratings container inserted at beginning of details');
                   //     } else {
-                  //         console.log('StreamingDiscovery: No suitable insertion point found');
+                  //         console.log('StreamingDiscovery', 'No suitable insertion point found');
                   //     }
                   // }*/
 
                   // Replace the contents of the rate line element
                   rateLineElement.html(ratingsContainer);
-                  console.log('StreamingDiscovery: Ratings container replaced contents of rate line');
+                  console.log('StreamingDiscovery', 'Ratings container replaced contents of rate line');
                 } else {
                   // Fallback insertion point
                   var fullInfo = $('.full-start-new__details');
                   if (fullInfo.length) {
                     fullInfo.prepend(ratingsContainer);
-                    console.log('StreamingDiscovery: Ratings container inserted at beginning of details');
+                    console.log('StreamingDiscovery', 'Ratings container inserted at beginning of details');
                   } else {
-                    console.log('StreamingDiscovery: No suitable insertion point found');
+                    console.log('StreamingDiscovery', 'No suitable insertion point found');
                   }
                 }
               } else {
-                console.log('StreamingDiscovery: No data in response or invalid response format', response);
+                console.log('StreamingDiscovery', 'No data in response or invalid response format', response);
               }
             }).fail(function (jqXHR, textStatus, errorThrown) {
               console.error("StreamingDiscovery request failed:", textStatus, errorThrown);
-              console.log('StreamingDiscovery: AJAX error details', jqXHR);
+              console.log('StreamingDiscovery', 'AJAX error details', jqXHR);
             });
           } else {
-            console.log('StreamingDiscovery: No valid IMDB ID found, skipping API request');
+            console.log('StreamingDiscovery', 'No valid IMDB ID found, skipping API request');
           }
         }
       });
-      console.log('StreamingDiscovery: Event listener registered');
+      console.log('StreamingDiscovery', 'Event listener registered');
     }
     var streamingdiscovery = {
       main: main

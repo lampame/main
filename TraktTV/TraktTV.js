@@ -12829,7 +12829,7 @@
       })["catch"](function (err) {
         if (e.line.destroyed) return;
         e.line.loading_started = false;
-        console.error('[TraktTV Debug] Lazy load failed:', {
+        console.error('TraktTV', 'Lazy load failed:', {
           title: definition.title,
           path: definition.path,
           status: err && err.status,

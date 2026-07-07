@@ -343,7 +343,7 @@
       var parserId = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : getSelectedParserId();
       var selectedParser = getParserById(parserId);
       if (!selectedParser || !selectedParser.settings) {
-        if (parserId !== NO_PARSER_ID) console.warn('PubTorr: parser not found', parserId);
+        if (parserId !== NO_PARSER_ID) console.warn('PubTorr', 'parser not found', parserId);
         return false;
       }
       var settings = selectedParser.settings;

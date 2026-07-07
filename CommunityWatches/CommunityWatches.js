@@ -760,7 +760,7 @@
         line: line
       });
     } catch (err) {
-      console.warn('CommunityWatches: cache save error', err);
+      console.warn('CommunityWatches', 'cache save error', err);
     }
   }
   function loadLineFromCache(cacheKey) {
@@ -773,7 +773,7 @@
       if (Date.now() - time > STALE_CACHE_TTL_MS) return null;
       return line;
     } catch (err) {
-      console.warn('CommunityWatches: cache load error', err);
+      console.warn('CommunityWatches', 'cache load error', err);
       return null;
     }
   }
@@ -826,7 +826,7 @@
           container.empty().append(titleNode);
         }
       } catch (err) {
-        console.error('CommunityWatches: line title decorate error', err);
+        console.error('CommunityWatches', 'line title decorate error', err);
       }
     });
   }

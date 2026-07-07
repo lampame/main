@@ -234,7 +234,7 @@
           oncomplite(response.data.animes);
         },
         error: function error(_error) {
-          console.error('Error:', _error);
+          console.error('Shikimori', 'Error:', _error);
           onerror(_error); // Вызов onerror при ошибке запроса
         }
       });
@@ -257,19 +257,19 @@
     // Первый GET запрос к https://animeapi.my.id/shikimori/{animeData.id}
     $.get("https://arm.haglund.dev/api/v2/ids?source=myanimelist&id=".concat(animeData.id), function (response) {
       if (response === null) {
-        console.log('We here step#1');
+        console.log('Shikimori', 'We here step#1');
         // Если получили 404, продолжаем искать на TMDB
         searchTmdb(animeData.name, function (tmdbResponse) {
           handleTmdbResponse(tmdbResponse, animeData.japanese);
         });
       } else if (response.themoviedb === null) {
-        console.log('We here step#2');
+        console.log('Shikimori', 'We here step#2');
         // Если themoviedb: null, делаем запрос к https://api.themoviedb.org/3/search/multi?include_adult=true&query={animeData.name}
         searchTmdb(animeData.name, function (tmdbResponse) {
           handleTmdbResponse(tmdbResponse, animeData.japanese);
         });
       } else {
-        console.log('We here step#3', animeData.kind);
+        console.log('Shikimori', 'We here step#3', animeData.kind);
         // Если themoviedb не равно null, делаем запрос к https://api.themoviedb.org/3/movie/{response.themoviedb}
         getTmdb(response.themoviedb, animeData.kind, processResults);
       }
@@ -294,7 +294,7 @@
     function getTmdb(id) {
       var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'movie';
       var callback = arguments.length > 2 ? arguments[2] : undefined;
-      console.log(id, type);
+      console.log('Shikimori', 'id:', id, 'type:', type);
       var apiKey = "4ef0d7355d9ffb5151e987764708ce96";
       var apiUrlTMDB = 'https://api.themoviedb.org/3/';
       var apiUrlProxy = 'apitmdb.' + (Lampa.Manifest && Lampa.Manifest.cub_domain ? Lampa.Manifest.cub_domain : 'cub.red') + '/3/';

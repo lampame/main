@@ -5047,7 +5047,7 @@
     })["catch"](function (err) {
       if (e.line.destroyed) return;
       e.line.loading_started = false;
-      console.error('[Kinobaza Debug] Lazy load failed:', err);
+      console.error('Kinobaza', 'Lazy load failed:', err);
 
       // Показуємо картку помилки
       e.line.scroll.clear();
@@ -5119,7 +5119,7 @@
       } catch (err) {
         // Defence-in-depth: never let an exception in our handler crash
         // the whole Lampa.Listener.send cycle and block sibling handlers.
-        console.error('[Kinobaza] lazy-line handler error:', err);
+        console.error('Kinobaza', 'lazy-line handler error:', err);
         if (e && e.line) e.line.loading_started = false;
       }
     };
@@ -8873,7 +8873,7 @@
       return _regenerator().w(function (_context3) {
         while (1) switch (_context3.p = _context3.n) {
           case 0:
-            console.log('[KinoBaza Sync] handleTimelineUpdate called - Hash:', hash, 'Percent:', percent);
+            console.log('KinoBaza Sync', 'handleTimelineUpdate called - Hash:', hash, 'Percent:', percent);
 
             // Перевіряємо, чи увімкнена realtime синхронізація
             realtimeKey = storage.getProfileKey('kinobaza_sync_realtime');
@@ -8916,7 +8916,7 @@
             return _context3.a(2);
           case 4:
             watchedCache.add(hash);
-            console.log('[KinoBaza Sync] Mark watched - S' + season + 'E' + episode + ' (Card: ' + (card.title || card.name) + ')');
+            console.log('KinoBaza Sync', 'Mark watched - S' + season + 'E' + episode + ' (Card: ' + (card.title || card.name) + ')');
             _context3.n = 5;
             return resolveEpisodeId(card, season, episode);
           case 5:
@@ -9009,7 +9009,7 @@
    */
   function init$3() {
     try {
-      console.log('[KinoBaza Sync] Initializing listeners using Lampa native event API...');
+      console.log('KinoBaza Sync', 'Initializing listeners using Lampa native event API...');
 
       // Спільний обробник подій закладок
       var handleFavoriteChange = /*#__PURE__*/function () {
@@ -9104,7 +9104,7 @@
 
       // 2. Слухач старту програвача (Lampa.Player.listener)
       activeListeners.playerStart = function (data) {
-        console.log('[KinoBaza Sync] Native Player:start event received', data);
+        console.log('KinoBaza Sync', 'Native Player:start event received', data);
         var card = data && data.card || Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie);
         if (!card) return;
         var timeline = data && data.timeline;
@@ -9116,7 +9116,7 @@
             season: se ? se.season : undefined,
             episode: se ? se.episode : undefined
           });
-          console.log('[KinoBaza Sync] Cached hash metadata:', hash, 'S' + (se ? se.season : '?') + 'E' + (se ? se.episode : '?'));
+          console.log('KinoBaza Sync', 'Cached hash metadata:', hash, 'S' + (se ? se.season : '?') + 'E' + (se ? se.episode : '?'));
         }
       };
       if (Lampa.Player && Lampa.Player.listener) {
