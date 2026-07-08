@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this))};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
+    if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this));};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
 
     function data() {
       Lampa.Lang.add({
@@ -328,7 +328,7 @@
         var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
         var onerror = arguments.length > 2 ? arguments[2] : undefined;
         var parts_limit = 6;
-        console.log('LMENetworks', parts_limit);
+        console.log('LMENetworks', 'parts_limit:', parts_limit);
         var parts_data = [function (call) {
           owner.get('movie/now_playing', params, function (json) {
             json.title = Lampa.Lang.translate('title_now_watch');
@@ -836,11 +836,11 @@
       var page = Math.max(0, (params.page || 1) - 1);
       network.native('https://apx.lme.isroot.in/trakt/networks', function (networks) {
         if (params.searchQuery) {
-          console.log('Search query:', params.searchQuery);
+          console.log('LMENetworks', 'Search query:', params.searchQuery);
           networks = networks.filter(function (network) {
             return network.name.toLowerCase().includes(params.searchQuery.toLowerCase());
           });
-          console.log('Filtered networks by searchQuery:', networks);
+          console.log('LMENetworks', 'Filtered networks by searchQuery:', networks);
         }
         if (!params.searchQuery && (params.geoSearchQuery || Lampa.Storage.get('nc_networksListGeo'))) {
           var countryCode = (Lampa.Storage.get('nc_networksListGeo') || params.geoSearchQuery).toLowerCase();
@@ -1865,7 +1865,7 @@
                   if (a.action === 'bookmarkAdd') {
                     var result = Api.bookmarkSave(a);
                     if (result === true) {
-                      console.log('Запись была успешно добавлена.');
+                      console.log('LMENetworks', 'Запись была успешно добавлена.');
                       Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
                     } else if (result === false) {
                       console.error('Не удалось добавить запись.');
@@ -2317,7 +2317,7 @@
                     //Api.bookmarkRemove(a)
                     var result = Api.bookmarkRemove(a);
                     if (result === true) {
-                      console.log('Запись была успешно удалена.');
+                      console.log('LMENetworks', 'Запись была успешно удалена.');
                       Lampa.Activity.replace({
                         url: '',
                         title: Lampa.Lang.translate('nc_bookmark'),
@@ -2688,7 +2688,7 @@
             onMenu: function onMenu() {
               var result = Api.collectionBookmarkSave('collectionBookmarkAdd', this.data);
               if (result === true) {
-                console.log('Запись была успешно добавлена.');
+                console.log('LMENetworks', 'Запись была успешно добавлена.');
                 Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
               } else if (result === false) {
                 console.error('Не удалось добавить запись.');
@@ -2909,7 +2909,7 @@
     }
 
     function component$1(object) {
-      console.log('Collection', object);
+      console.log('LMENetworks', 'Collection:', object);
       var comp = new Lampa.InteractionCategory(object);
       comp.create = function () {
         Api.mainCollectionGet(object, this.build.bind(this), this.empty.bind(this));
@@ -3015,7 +3015,7 @@
             onMenu: function onMenu() {
               var result = Api.collectionBookmarkRemove('collectionBookmarkRemove', this.data);
               if (result === true) {
-                console.log('Запись была успешно удалена.');
+                console.log('LMENetworks', 'Запись была успешно удалена.');
                 Lampa.Activity.replace({
                   url: '',
                   title: Lampa.Lang.translate('nc_bookmark'),
@@ -3254,7 +3254,7 @@
     function handleLongHover(card_data) {
       var result = Api.collectionBookmarkSave('collectionBookmarkAdd', card_data);
       if (result === true) {
-        console.log('Запись была успешно добавлена.');
+        console.log('LMENetworks', 'Запись была успешно добавлена.');
         Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
       } else if (result === false) {
         console.error('Не удалось добавить запись.');
@@ -3384,7 +3384,7 @@
           if (a.action === 'bookmarkAdd') {
             var result = Api.bookmarkSave(a);
             if (result === true) {
-              console.log('Запись была успешно добавлена.');
+              console.log('LMENetworks', 'Запись была успешно добавлена.');
               Lampa.Noty.show(Lampa.Lang.translate('nc_bookmarkAdded'));
             } else if (result === false) {
               console.error('Не удалось добавить запись.');
@@ -3484,7 +3484,7 @@
                 localStorage.removeItem(category);
                 Lampa.Noty.show(Lampa.Lang.translate('nc_favoriteMigrate'));
               } else {
-                console.log("\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0441 \u043A\u043B\u044E\u0447\u043E\u043C ".concat(Lampa.Storage.get(category), " \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0432 localStorage."));
+                console.log('LMENetworks', "\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0441 \u043A\u043B\u044E\u0447\u043E\u043C ".concat(Lampa.Storage.get(category), " \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0432 localStorage."));
               }
             }
         }

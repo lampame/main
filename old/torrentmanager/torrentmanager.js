@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this))};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
+  if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this));};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
 
   function _arrayLikeToArray(r, a) {
     (null == a || a > r.length) && (a = r.length);
@@ -431,6 +431,13 @@
         uk: "Скопіювати посилання",
         zh: "复制到缓冲区",
         ro: "Copiază link-ul"
+      },
+      openAndroid: {
+        ru: "Открыть через Android (выбор приложения)",
+        en: "Open via Android (app chooser)",
+        uk: "Відкрити через Android (вибір додатку)",
+        zh: "通过 Android 打开（应用选择器）",
+        ro: "Deschide prin Android (selector aplicații)"
       },
       tweak: {
         ru: "Tweak",
@@ -885,7 +892,7 @@
           case 6:
             _context.p = 6;
             _t = _context.v;
-            console.log('getPosterFromLabels: images API failed', _t);
+            console.log('TDM', 'getPosterFromLabels: images API failed', _t);
           case 7:
             return _context.a(2, './img/img_load.svg');
         }
@@ -2250,7 +2257,7 @@
   function getTableName() {
     var client = Lampa.Storage.field('lmetorrentSelect');
     if (!client) {
-      console.error('[DB] Активний клієнт не вибрано!');
+      console.error('TDM', 'Активний клієнт не вибрано!');
       return 'default_metadata';
     }
     return "".concat(client.toLowerCase(), "_metadata");
@@ -2275,7 +2282,7 @@
                 _context.n = 1;
                 break;
               }
-              console.error('Lampa.DB не визначено.');
+              console.error('TDM', 'Lampa.DB не визначено.');
               dbPromise = null; // Скидаємо для повторної спроби
               return _context.a(2, reject(new Error('Lampa.DB is not defined')));
             case 1:
@@ -5070,16 +5077,20 @@
     //     }
     // })
     //Universal action
+    var universalActionValues = Lampa.Platform.is('android') ? {
+      openAndroid: Lampa.Lang.translate('openUniversal'),
+      click: Lampa.Lang.translate('copyUniversal')
+    } : {
+      open: Lampa.Lang.translate('openUniversal'),
+      click: Lampa.Lang.translate('copyUniversal')
+    };
     Lampa.SettingsApi.addParam({
       component: manifest.component,
       param: {
         name: manifest.component + 'UniversalAction',
         type: 'select',
         default: 'no_client',
-        values: {
-          open: Lampa.Lang.translate('openUniversal'),
-          click: Lampa.Lang.translate('copyUniversal')
-        }
+        values: universalActionValues
       },
       field: {
         name: Lampa.Lang.translate('UniversalAction')
@@ -5981,12 +5992,14 @@
   }
 
   function Main(selectedTorrent) {
-    if (Lampa.Storage.field("lmetorrentUniversalAction") === "open") {
-      //if (Lampa.Platform.is('android')) $('<a href="' + selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link + '"><a/>')[0].click()
-      //else
-      window.location.assign(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link);
+    var uri = selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link;
+    var action = Lampa.Storage.field("lmetorrentUniversalAction");
+    if (action === "openAndroid" && typeof AndroidJS !== 'undefined' && typeof AndroidJS.openTorrentLink !== 'undefined') {
+      AndroidJS.openTorrentLink(uri, "{}");
+    } else if (action === "open") {
+      window.location.assign(uri);
     } else {
-      Lampa.Utils.copyTextToClipboard(selectedTorrent.MagnetUri ? selectedTorrent.MagnetUri : selectedTorrent.Link, function () {
+      Lampa.Utils.copyTextToClipboard(uri, function () {
         Lampa.Bell.push({
           text: Lampa.Lang.translate('copy_secuses')
         });
@@ -5996,6 +6009,78 @@
         });
       });
     }
+  }
+
+  var DOWNLOAD_ICON$1 = "<svg class=\"btnTDdownload\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><path d=\"M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><path d=\"M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><path d=\"M18 17H12H6\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\"></path><path d=\"M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z\" stroke=\"#ffffff\" stroke-width=\"1.5\"></path></g></svg>";
+  var CLIENT_MENU$1 = {
+    qBittorent: {
+      title: "qBittorrent",
+      type: "client",
+      clientName: "qBittorent"
+    },
+    transmission: {
+      title: "Transmission",
+      type: "client",
+      clientName: "transmission"
+    },
+    keenetic: {
+      title: "Keenetic",
+      type: "client",
+      clientName: "keenetic"
+    },
+    synology: {
+      title: "Synology",
+      type: "client",
+      clientName: "synology"
+    },
+    universalClient: {
+      title: "Universal",
+      type: "universal"
+    }
+  };
+  function sendToClient$1(clientName, selectedTorrent, labels, dtype) {
+    executeClientMethod(clientName, "SendTask", [selectedTorrent, labels, dtype], {
+      silentAuth: true
+    }).catch(function () {});
+  }
+  function sendToUniversal$1(selectedTorrent) {
+    Main(selectedTorrent);
+  }
+  function buildButtonTitle$1(label) {
+    return "<div class=\"btnTDdownload wait\">".concat(DOWNLOAD_ICON$1).concat(label, "</div>");
+  }
+  function resolveTorrentLabels$1(movie) {
+    var type = movie && movie.first_air_date ? "tv" : "movie";
+    return "".concat(type, "/").concat(movie && movie.id);
+  }
+  function resolveDestinationType$1(movie) {
+    return movie && movie.first_air_date ? "TV" : "Movies";
+  }
+  function Send() {
+    Lampa.Listener.follow("torrent", function (e) {
+      if (e.type !== "onlong") {
+        return;
+      }
+      var selectedTorrent = e.element;
+      var activeMovie = Lampa.Activity.active().movie;
+      var labels = resolveTorrentLabels$1(activeMovie);
+      var dtype = resolveDestinationType$1(activeMovie);
+      var selectedClient = Lampa.Storage.field("lmetorrentSelect");
+      var menuConfig = CLIENT_MENU$1[selectedClient];
+      if (!menuConfig) {
+        return;
+      }
+      e.menu.push({
+        title: buildButtonTitle$1(menuConfig.title),
+        onSelect: function onSelect() {
+          if (menuConfig.type === "universal") {
+            sendToUniversal$1(selectedTorrent);
+            return;
+          }
+          sendToClient$1(menuConfig.clientName, selectedTorrent, labels, dtype);
+        }
+      });
+    });
   }
 
   var DOWNLOAD_ICON = "<svg class=\"btnTDdownload\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"><path d=\"M8.5 7L8.5 14M8.5 14L11 11M8.5 14L6 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><path d=\"M15.5 7L15.5 14M15.5 14L18 11M15.5 14L13 11\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><path d=\"M18 17H12H6\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\"></path><path d=\"M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z\" stroke=\"#ffffff\" stroke-width=\"1.5\"></path></g></svg>";
@@ -6043,15 +6128,27 @@
   function resolveDestinationType(movie) {
     return movie && movie.first_air_date ? "TV" : "Movies";
   }
-  function Send() {
-    Lampa.Listener.follow("torrent", function (e) {
+  function buildMagnetUri(hash, title) {
+    return "magnet:?xt=urn:btih:".concat(hash, "&dn=").concat(encodeURIComponent(title));
+  }
+  function MyTorrents() {
+    Lampa.Listener.follow("mytorrents", function (e) {
       if (e.type !== "onlong") {
         return;
       }
-      var selectedTorrent = e.element;
-      var activeMovie = Lampa.Activity.active().movie;
-      var labels = resolveTorrentLabels(activeMovie);
-      var dtype = resolveDestinationType(activeMovie);
+      var item = e.object;
+      var hash = item && item.hash;
+      var title = item && item.title;
+      var movie = item && item.data && item.data.movie;
+      if (!hash) {
+        return;
+      }
+      var magnetUri = buildMagnetUri(hash, title);
+      var selectedTorrent = {
+        MagnetUri: magnetUri
+      };
+      var labels = resolveTorrentLabels(movie);
+      var dtype = resolveDestinationType(movie);
       var selectedClient = Lampa.Storage.field("lmetorrentSelect");
       var menuConfig = CLIENT_MENU[selectedClient];
       if (!menuConfig) {
@@ -6111,7 +6208,7 @@
               data: data,
               info: info
             };
-            console.log('TDM:', result);
+            console.log('TDM', 'result:', result);
             return _context2.a(2, result);
           case 7:
             _context2.p = 7;
@@ -6346,7 +6443,7 @@
    */
   var MANIFEST = {
     type: 'other',
-    version: '3.1',
+    version: '3.2',
     author: '@lme_chat',
     name: 'Torrent Manager',
     description: 'Manager and Runner query',
@@ -6460,6 +6557,9 @@
 
       // Initialize downloader
       Send();
+
+      // Initialize mytorrents integration
+      MyTorrents();
 
       // Initialize client authentication
       initializeClientAuth();

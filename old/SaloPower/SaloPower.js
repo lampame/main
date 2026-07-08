@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this))};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
+  if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this));};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
 
   function asyncGeneratorStep(n, t, e, r, o, a, c) {
     try {
@@ -344,18 +344,18 @@
           }
           socket = new WebSocket('wss://vod-maincast.cosmonova-broadcast.tv/ws');
           socket.onopen = function () {
-            console.log('SaloPower: WebSocket connected');
+            console.log('SaloPower', 'WebSocket connected');
           };
           socket.onmessage = function (event) {
             handleMessage(event, resolve, reject);
           };
           socket.onerror = function (error) {
-            console.error('SaloPower: WebSocket error');
+            console.error('SaloPower', 'WebSocket error');
             reject('SaloPower: WebSocket error');
             disconnect();
           };
           socket.onclose = function () {
-            console.log('SaloPower: WebSocket disconnected');
+            console.log('SaloPower', 'WebSocket disconnected');
             socket = null;
             key = null;
           };
@@ -366,7 +366,7 @@
           var data = JSON.parse(event.data);
           if (data.type === 'auth' && data.payload && data.payload.hash) {
             key = data.payload.hash;
-            console.log('SaloPower: Key received');
+            console.log('SaloPower', 'Key received');
             resolve(key);
           } else {
             reject('SaloPower: Invalid auth response');
@@ -384,7 +384,7 @@
       // Слухаємо подію знищення плеєра, щоб закрити сокет
       var listen = function listen() {
         Lampa.Player.listener.follow('destroy', function () {
-          console.log('SaloPower: Player destroyed, closing socket.');
+          console.log('SaloPower', 'Player destroyed, closing socket.');
           disconnect();
         });
       };
@@ -460,7 +460,7 @@
                   });
                   card_view.append(tpl);
                 } catch (e) {
-                  console.error('SaloPower: card overlay create error', e);
+                  console.error('SaloPower', 'card overlay create error', e);
                 }
               },
               onEnter: function () {
@@ -492,7 +492,7 @@
                       case 4:
                         _context.p = 4;
                         _t = _context.v;
-                        console.error('SaloPower: Failed to start playback', _t);
+                        console.error('SaloPower', 'Failed to start playback', _t);
                         Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
                       case 5:
                         _context.p = 5;
@@ -553,7 +553,7 @@
                   });
                   card_view.append(tpl);
                 } catch (e) {
-                  console.error('SaloPower Category: card overlay create error', e);
+                  console.error('SaloPower Category', 'card overlay create error', e);
                 }
               },
               onEnter: function () {
@@ -585,7 +585,7 @@
                       case 4:
                         _context.p = 4;
                         _t = _context.v;
-                        console.error('SaloPower: Failed to start playback', _t);
+                        console.error('SaloPower', 'Failed to start playback', _t);
                         Lampa.Noty.show('Не вдалося отримати ключ для відтворення.');
                       case 5:
                         _context.p = 5;

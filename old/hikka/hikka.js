@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this))};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
+  if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this));};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
 
   function _arrayLikeToArray(r, a) {
     (null == a || a > r.length) && (a = r.length);
@@ -998,14 +998,14 @@
         only_translated: false,
         sort: ['score:desc']
       };
-      console.log('[Hikka] Fetching anime list...');
+      console.log('Hikka', 'Fetching anime list...');
       network.native(url, function (data) {
-        console.log('[Hikka] Response:', data);
+        console.log('Hikka', 'Response:', data);
         if (typeof data === 'string') {
           try {
             data = JSON.parse(data);
           } catch (e) {
-            console.error('[Hikka] Failed to parse response:', e);
+            console.error('Hikka', 'Failed to parse response:', e);
             error();
             return;
           }
@@ -1018,11 +1018,11 @@
             page: 1
           });
         } else {
-          console.log('[Hikka] No data received');
+          console.log('Hikka', 'No data received');
           error();
         }
       }, function (err) {
-        console.log('[Hikka] Error:', err);
+        console.log('Hikka', 'Error:', err);
         error();
       }, JSON.stringify(postData), {
         method: 'POST',
@@ -1057,14 +1057,14 @@
       }
       var query = typeof filters.query === 'string' ? filters.query.trim() : '';
       if (query) postData.query = query;
-      console.log('[Hikka] Fetching anime with filters:', postData, 'Page:', page);
+      console.log('Hikka', 'Fetching anime with filters:', postData, 'Page:', page);
       network.native(url, function (data) {
-        console.log('[Hikka] Response:', data);
+        console.log('Hikka', 'Response:', data);
         if (typeof data === 'string') {
           try {
             data = JSON.parse(data);
           } catch (e) {
-            console.error('[Hikka] Failed to parse response:', e);
+            console.error('Hikka', 'Failed to parse response:', e);
             error();
             return;
           }
@@ -1077,11 +1077,11 @@
             page: data.pagination ? data.pagination.page : 1
           });
         } else {
-          console.log('[Hikka] No data received');
+          console.log('Hikka', 'No data received');
           error();
         }
       }, function (err) {
-        console.log('[Hikka] Error:', err);
+        console.log('Hikka', 'Error:', err);
         error();
       }, JSON.stringify(postData), {
         method: 'POST',
@@ -1114,7 +1114,7 @@
       try {
         network.clear();
       } catch (e) {
-        console.log('[Hikka] cancelRequests error:', e);
+        console.log('Hikka', 'cancelRequests error:', e);
       }
     },
     resolveTrailerBackgroundByMalId: function resolveTrailerBackgroundByMalId(malId, success, error) {
@@ -1182,7 +1182,7 @@
           try {
             data = JSON.parse(data);
           } catch (e) {
-            console.error('[Hikka] Failed to parse schedule response:', e);
+            console.error('Hikka', 'Failed to parse schedule response:', e);
             if (error) error(e);
             return;
           }
@@ -1193,7 +1193,7 @@
           if (error) error('No schedule data');
         }
       }, function (err) {
-        console.log('[Hikka] Error fetching schedule:', err);
+        console.log('Hikka', 'Error fetching schedule:', err);
         if (error) error(err);
       }, JSON.stringify(postData), {
         method: 'POST',
@@ -1203,23 +1203,23 @@
       });
     },
     getAnimeDetails: function getAnimeDetails(hikka_slug, success, error) {
-      console.log('[Hikka] Fetching anime details for:', hikka_slug);
+      console.log('Hikka', 'Fetching anime details for:', hikka_slug);
 
       // Return from cache if available
       if (Cache$1.has(hikka_slug)) {
         var cached = Cache$1.get(hikka_slug);
-        console.log('[Hikka] Details from cache:', hikka_slug);
+        console.log('Hikka', 'Details from cache:', hikka_slug);
         success(cached);
         return;
       }
       var url = ENDPOINTS.DETAILS(hikka_slug);
       network.silent(url, function (data) {
-        console.log('[Hikka] Details response:', data);
+        console.log('Hikka', 'Details response:', data);
         if (typeof data === 'string') {
           try {
             data = JSON.parse(data);
           } catch (e) {
-            console.error('[Hikka] Failed to parse details response:', e);
+            console.error('Hikka', 'Failed to parse details response:', e);
             if (error) error(e);
             return;
           }
@@ -1229,11 +1229,11 @@
           Cache$1.set(hikka_slug, data);
           success(data);
         } else {
-          console.log('[Hikka] No details data received');
+          console.log('Hikka', 'No details data received');
           if (error) error('No details');
         }
       }, function (err) {
-        console.log('[Hikka] Error fetching details:', err);
+        console.log('Hikka', 'Error fetching details:', err);
         if (error) error(err);
       }, false, {
         headers: getProxyHeaders({
@@ -1257,7 +1257,7 @@
           try {
             data = JSON.parse(data);
           } catch (e) {
-            console.error('[Hikka] Failed to parse episodes response:', e);
+            console.error('Hikka', 'Failed to parse episodes response:', e);
             if (error) error(e);
             return;
           }
@@ -1268,7 +1268,7 @@
           if (error) error('No episodes data');
         }
       }, function (err) {
-        console.log('[Hikka] Error fetching episodes:', err);
+        console.log('Hikka', 'Error fetching episodes:', err);
         if (error) error(err);
       }, false, {
         headers: getProxyHeaders({
@@ -1291,7 +1291,7 @@
           try {
             data = JSON.parse(data);
           } catch (e) {
-            console.error('[Hikka] Failed to parse comments response:', e);
+            console.error('Hikka', 'Failed to parse comments response:', e);
             if (error) error(e);
             return;
           }
@@ -1302,7 +1302,7 @@
           if (error) error('No comments data');
         }
       }, function (err) {
-        console.log('[Hikka] Error fetching comments:', err);
+        console.log('Hikka', 'Error fetching comments:', err);
         if (error) error(err);
       }, false, {
         headers: getProxyHeaders({
@@ -1311,15 +1311,15 @@
       });
     },
     getGenres: function getGenres(success, error) {
-      console.log('[Hikka] Fetching genres from API');
+      console.log('Hikka', 'Fetching genres from API');
       var url = ENDPOINTS.GENRES;
       network.silent(url, function (data) {
-        console.log('[Hikka] Genres response:', data);
+        console.log('Hikka', 'Genres response:', data);
         if (typeof data === 'string') {
           try {
             data = JSON.parse(data);
           } catch (e) {
-            console.error('[Hikka] Failed to parse genres response:', e);
+            console.error('Hikka', 'Failed to parse genres response:', e);
             error();
             return;
           }
@@ -1327,11 +1327,11 @@
         if (data && data.list) {
           success(data);
         } else {
-          console.log('[Hikka] No genres data received');
+          console.log('Hikka', 'No genres data received');
           error();
         }
       }, function (err) {
-        console.log('[Hikka] Error fetching genres:', err);
+        console.log('Hikka', 'Error fetching genres:', err);
         error();
       }, false, {
         headers: getProxyHeaders({
@@ -1349,7 +1349,7 @@
       network.silent(url, function (data) {
         success && success(data);
       }, function (err) {
-        console.log('[Hikka] Error fetching characters:', err);
+        console.log('Hikka', 'Error fetching characters:', err);
         error && error(err);
       }, false, {
         headers: getProxyHeaders({
@@ -1373,7 +1373,7 @@
           try {
             data = JSON.parse(data);
           } catch (e) {
-            console.error('[Hikka] Failed to parse staff response:', e);
+            console.error('Hikka', 'Failed to parse staff response:', e);
             if (error) error(e);
             return;
           }
@@ -1384,7 +1384,7 @@
           if (error) error('No staff data');
         }
       }, function (err) {
-        console.log('[Hikka] Error fetching staff:', err);
+        console.log('Hikka', 'Error fetching staff:', err);
         if (error) error(err);
       }, false, {
         headers: getProxyHeaders({
@@ -1408,7 +1408,7 @@
           try {
             data = JSON.parse(data);
           } catch (e) {
-            console.error('[Hikka] Failed to parse voices response:', e);
+            console.error('Hikka', 'Failed to parse voices response:', e);
             if (error) error(e);
             return;
           }
@@ -1419,7 +1419,7 @@
           if (error) error('No voices data');
         }
       }, function (err) {
-        console.log('[Hikka] Error fetching voices:', err);
+        console.log('Hikka', 'Error fetching voices:', err);
         if (error) error(err);
       }, false, {
         headers: getProxyHeaders({
@@ -1439,7 +1439,7 @@
           try {
             data = JSON.parse(data);
           } catch (e) {
-            console.error('[Hikka] Failed to parse person response:', e);
+            console.error('Hikka', 'Failed to parse person response:', e);
             if (error) error(e);
             return;
           }
@@ -1450,7 +1450,7 @@
           if (error) error('No person data');
         }
       }, function (err) {
-        console.log('[Hikka] Error fetching person:', err);
+        console.log('Hikka', 'Error fetching person:', err);
         if (error) error(err);
       }, false, {
         headers: getProxyHeaders({
@@ -1474,7 +1474,7 @@
           try {
             data = JSON.parse(data);
           } catch (e) {
-            console.error('[Hikka] Failed to parse person anime response:', e);
+            console.error('Hikka', 'Failed to parse person anime response:', e);
             if (error) error(e);
             return;
           }
@@ -1485,7 +1485,7 @@
           if (error) error('No person anime data');
         }
       }, function (err) {
-        console.log('[Hikka] Error fetching person anime:', err);
+        console.log('Hikka', 'Error fetching person anime:', err);
         if (error) error(err);
       }, false, {
         headers: getProxyHeaders({
@@ -1503,7 +1503,7 @@
       network.silent(url, function (data) {
         success && success(data);
       }, function (err) {
-        console.log('[Hikka] Error fetching franchise:', err);
+        console.log('Hikka', 'Error fetching franchise:', err);
         error && error(err);
       }, false, {
         headers: getProxyHeaders({
@@ -1736,7 +1736,7 @@
           if (incoming.studios !== undefined) this.filters.studios = toArray(incoming.studios);
           if (typeof incoming.only_translated === 'boolean') this.filters.only_translated = incoming.only_translated;
         } catch (e) {
-          console.log('[Hikka] Apply initial filters error:', e);
+          console.log('Hikka', 'Apply initial filters error:', e);
         }
       }
     }, {
@@ -1847,7 +1847,7 @@
           title: 'Оберіть опцію',
           items: options,
           onSelect: function onSelect(item) {
-            console.log('[Hikka Filter] Selected:', filterType, item);
+            console.log('Hikka Filter', 'Selected:', filterType, item);
             if (filterType === 'sort') {
               _this2.filterManager.filters.sort = [item.value];
             } else {
@@ -1920,11 +1920,11 @@
             _this5.genresCache = data.list;
             callback(_this5.genresCache);
           } else {
-            console.error('[Hikka] No genres received');
+            console.error('Hikka', 'No genres received');
             callback([]);
           }
         }, function (error) {
-          console.error('[Hikka] Error loading genres:', error);
+          console.error('Hikka', 'Error loading genres:', error);
           callback([]);
         });
       }
@@ -2041,7 +2041,7 @@
       key: "create",
       value: function create() {
         var _this = this;
-        console.log('[Hikka] Component.create called');
+        console.log('Hikka', 'Component.create called');
         if (this.rendered) return this.html;
         this.rendered = true;
         this.destroyed = false;
@@ -2052,7 +2052,7 @@
         // For now, assume this.activity is set before create() or we access global Lampa.Activity.active()
 
         if (!this.activity) {
-          console.warn('[Hikka] this.activity is missing in create(), attempting to fix');
+          console.warn('Hikka', 'this.activity is missing in create(), attempting to fix');
           this.activity = Lampa.Activity.active().activity;
         }
         this.activity.loader(true);
@@ -2339,7 +2339,7 @@
         return MainComponent(params);
       }
     } catch (e) {
-      console.log('[Hikka] Failed to start lines component, fallback to legacy:', e);
+      console.log('Hikka', 'Failed to start lines component, fallback to legacy:', e);
     }
     return new Component(params);
   }
@@ -4301,7 +4301,7 @@
         if (Array.isArray(row.results) && row.results.length) rows.push(row);
         done();
       }, function (err) {
-        console.log('[Hikka] main row error:', err);
+        console.log('Hikka', 'main row error:', err);
         done();
       });
     });
@@ -4362,7 +4362,7 @@
           loadPart(resolve, reject);
         };
       } catch (e) {
-        console.log('[Hikka] main exception:', e);
+        console.log('Hikka', 'main exception:', e);
         if (onerror) onerror(e);
       }
     },
@@ -4379,7 +4379,7 @@
       try {
         var slug = params.id || params.card && (params.card.hikka_slug || params.card.id) || null;
         if (!slug) {
-          console.log('[Hikka] SourceProvider: missing slug in params', params);
+          console.log('Hikka', 'SourceProvider: missing slug in params', params);
           if (onerror) onerror('Hikka Source: slug is empty');
           return;
         }
@@ -4404,7 +4404,7 @@
             }, function () {});
           }
           if (!payload || !payload.card) {
-            console.log('[Hikka] SourceProvider: invalid payload after details', payload);
+            console.log('Hikka', 'SourceProvider: invalid payload after details', payload);
             if (onerror) onerror('Hikka Source: invalid payload');
             return;
           }
@@ -4448,11 +4448,11 @@
             finalize();
           });
         }, function (err) {
-          console.log('[Hikka] SourceProvider: error loading details', err);
+          console.log('Hikka', 'SourceProvider: error loading details', err);
           if (onerror) onerror(err);
         });
       } catch (e) {
-        console.log('[Hikka] SourceProvider: exception', e);
+        console.log('Hikka', 'SourceProvider: exception', e);
         if (onerror) onerror(e);
       }
     },
@@ -4514,7 +4514,7 @@
           });
         });
       } catch (e) {
-        console.log('[Hikka] seasons exception:', e);
+        console.log('Hikka', 'seasons exception:', e);
         finish({});
       }
     },
@@ -4541,7 +4541,7 @@
           if (onerror) onerror(err);
         });
       } catch (e) {
-        console.log('[Hikka] discussGet exception:', e);
+        console.log('Hikka', 'discussGet exception:', e);
         if (onerror) onerror(e);
       }
     },
@@ -4575,7 +4575,7 @@
           if (onerror) onerror(err);
         });
       } catch (e) {
-        console.log('[Hikka] franchiseGet exception:', e);
+        console.log('Hikka', 'franchiseGet exception:', e);
         if (onerror) onerror(e);
       }
     },
@@ -4626,7 +4626,7 @@
         };
         _next2();
       } catch (e) {
-        console.log('[Hikka] staffGet exception:', e);
+        console.log('Hikka', 'staffGet exception:', e);
         if (onerror) onerror(e);
       }
     },
@@ -4660,7 +4660,7 @@
           if (onerror) onerror(err);
         });
       } catch (e) {
-        console.log('[Hikka] castGet exception:', e);
+        console.log('Hikka', 'castGet exception:', e);
         if (onerror) onerror(e);
       }
     },
@@ -4707,7 +4707,7 @@
             personDetailsCache.set(slug, person);
             done();
           }, function (err) {
-            console.log('[Hikka] person details error:', err);
+            console.log('Hikka', 'person details error:', err);
             done();
           });
         }
@@ -4716,7 +4716,7 @@
           done();
         });
       } catch (e) {
-        console.log('[Hikka] person exception:', e);
+        console.log('Hikka', 'person exception:', e);
         if (onerror) onerror(e);
       }
     },
@@ -4741,11 +4741,11 @@
         Api.getAnimeListWithFilters(filters, page, function (data) {
           oncomplite && oncomplite(data);
         }, function (err) {
-          console.log('[Hikka] category error:', err);
+          console.log('Hikka', 'category error:', err);
           if (onerror) onerror(err);
         });
       } catch (e) {
-        console.log('[Hikka] category exception:', e);
+        console.log('Hikka', 'category exception:', e);
         if (onerror) onerror(e);
       }
     },
@@ -4770,11 +4770,11 @@
         Api.getAnimeListWithFilters(filters, page, function (data) {
           oncomplite && oncomplite(data);
         }, function (err) {
-          console.log('[Hikka] company error:', err);
+          console.log('Hikka', 'company error:', err);
           if (onerror) onerror(err);
         });
       } catch (e) {
-        console.log('[Hikka] company exception:', e);
+        console.log('Hikka', 'company exception:', e);
         if (onerror) onerror(e);
       }
     },
@@ -4794,7 +4794,7 @@
           Api.searchAnime(query, page, filters, function (data) {
             oncomplite && oncomplite(data);
           }, function (err) {
-            console.log('[Hikka] list search error:', err);
+            console.log('Hikka', 'list search error:', err);
             if (onerror) onerror(err);
           });
           return;
@@ -4802,11 +4802,11 @@
         Api.getAnimeListWithFilters(filters, page, function (data) {
           oncomplite && oncomplite(data);
         }, function (err) {
-          console.log('[Hikka] list error:', err);
+          console.log('Hikka', 'list error:', err);
           if (onerror) onerror(err);
         });
       } catch (e) {
-        console.log('[Hikka] list exception:', e);
+        console.log('Hikka', 'list exception:', e);
         if (onerror) onerror(e);
       }
     },
@@ -5114,7 +5114,7 @@
           try {
             cb(value);
           } catch (err) {
-            console.log('[Hikka] lazy waiter error:', err);
+            console.log('Hikka', 'lazy waiter error:', err);
           }
         });
       };
@@ -5128,7 +5128,7 @@
           return flush(null);
         });
       } catch (err) {
-        console.log('[Hikka] lazy request error:', err);
+        console.log('Hikka', 'lazy request error:', err);
         flush(null);
       }
     }
@@ -5195,7 +5195,7 @@
           });
         }
       } catch (err) {
-        console.log('[Hikka] destroy line items error:', err);
+        console.log('Hikka', 'destroy line items error:', err);
       }
       line.items = [];
       line.active = 0;
@@ -5204,7 +5204,7 @@
         try {
           if (typeof line.more.destroy === 'function') line.more.destroy();
         } catch (err) {
-          console.log('[Hikka] destroy line more error:', err);
+          console.log('Hikka', 'destroy line more error:', err);
         }
         line.more = null;
       }
@@ -5226,7 +5226,7 @@
         var titleEl = line.html && typeof line.html.find === 'function' ? line.html.find('.items-line__title') : null;
         if (titleEl && titleEl.length) titleEl.text(title);
       } catch (err) {
-        console.log('[Hikka] setLineTitle error:', err);
+        console.log('Hikka', 'setLineTitle error:', err);
       }
     }
     function cloneParamsTemplate(params) {
@@ -5442,7 +5442,7 @@
           }, 0);
         }
       } catch (err) {
-        console.log('[Hikka] focusFirstVisibleCommentFrom error:', err);
+        console.log('Hikka', 'focusFirstVisibleCommentFrom error:', err);
       }
     }
     function cleanupHikkaFullUI() {
@@ -5475,7 +5475,7 @@
           return el.remove();
         });
       } catch (err) {
-        console.log('[Hikka] Cleanup UI error:', err);
+        console.log('Hikka', 'Cleanup UI error:', err);
       } finally {
         cleanupBusy = false;
       }
@@ -6129,7 +6129,7 @@
           updateTypeBadge(movie);
           applyApplecationIntegration(movie, 0, currentFullBody);
         } catch (err) {
-          console.log('[Hikka] Override chips error:', err);
+          console.log('Hikka', 'Override chips error:', err);
         }
 
         // Додатково спостерігаємо за змінами тегів і перев’язуємо при оновленні DOM
@@ -6146,7 +6146,7 @@
             });
           }
         } catch (err) {
-          console.log('[Hikka] Chips observer error:', err);
+          console.log('Hikka', 'Chips observer error:', err);
         }
       }
     });
@@ -6195,7 +6195,7 @@
         line: line
       });
     } catch (err) {
-      console.warn('[Hikka] rows cache save error:', err);
+      console.warn('Hikka', 'rows cache save error:', err);
     }
   }
   function clearLineCache(cacheKey) {
@@ -6203,7 +6203,7 @@
     try {
       Lampa.Storage.set(cacheKey, null);
     } catch (err) {
-      console.warn('[Hikka] rows cache clear error:', err);
+      console.warn('Hikka', 'rows cache clear error:', err);
     }
   }
   function loadLineFromCache(cacheKey) {
@@ -6216,7 +6216,7 @@
       if (Date.now() - time > STALE_CACHE_TTL_MS) return null;
       return line;
     } catch (err) {
-      console.warn('[Hikka] rows cache load error:', err);
+      console.warn('Hikka', 'rows cache load error:', err);
       return null;
     }
   }
@@ -6262,7 +6262,7 @@
         var container = e.line.render().find('.items-line__title');
         if (container && container.length) container.empty().append(titleNode);
       } catch (err) {
-        console.error('[Hikka] line title decorate error', err);
+        console.error('Hikka', 'line title decorate error', err);
       }
     });
   }
@@ -6495,9 +6495,9 @@
       if (Lampa.Favorite && typeof Lampa.Favorite.read === 'function') {
         Lampa.Favorite.read();
       }
-      console.log('[Hikka] Favorite posters migration applied');
+      console.log('Hikka', 'Favorite posters migration applied');
     } catch (e) {
-      console.warn('[Hikka] Favorite posters migration error:', e);
+      console.warn('Hikka', 'Favorite posters migration error:', e);
     }
   }
   function patchFavoriteApiImageNormalization() {
@@ -6519,7 +6519,7 @@
             });
           }
         } catch (e) {
-          console.warn('[Hikka] Favorite API normalize error:', e);
+          console.warn('Hikka', 'Favorite API normalize error:', e);
         }
         if (typeof oncomplite === 'function') oncomplite(data);
       }, onerror);
@@ -6550,7 +6550,7 @@
         Lampa.__hikkaPatchedTmdbImage = true;
       }
     } catch (e) {
-      console.log('[Hikka] Failed to patch TMDB.image:', e);
+      console.log('Hikka', 'Failed to patch TMDB.image:', e);
     }
 
     // Захист від "битих" елементів у collection, які можуть ламати toggleClass у Controller.
@@ -6577,7 +6577,7 @@
         Lampa.__hikkaPatchedNavigatorCollection = true;
       }
     } catch (e) {
-      console.log('[Hikka] Failed to patch Navigator collection:', e);
+      console.log('Hikka', 'Failed to patch Navigator collection:', e);
     }
 
     // Додаємо пункт меню
@@ -6589,11 +6589,11 @@
         Lampa.Api.sources = Lampa.Api.sources || {};
         if (!Lampa.Api.sources.hikka) {
           Lampa.Api.sources.hikka = HikkaSourceProvider;
-          console.log('[Hikka] Source provider registered');
+          console.log('Hikka', 'Source provider registered');
         }
       }
     } catch (e) {
-      console.warn('[Hikka] Failed to register source provider:', e);
+      console.warn('Hikka', 'Failed to register source provider:', e);
     }
 
     // Додаємо лайни Hikka на головну через ContentRows
@@ -6643,13 +6643,13 @@
               });
             }
           } catch (err) {
-            console.log('[Hikka] interceptActivityPush error:', err);
+            console.log('Hikka', 'interceptActivityPush error:', err);
           }
           return __origPush(obj);
         };
       }
     } catch (e) {
-      console.log('[Hikka] Failed to patch Activity.push:', e);
+      console.log('Hikka', 'Failed to patch Activity.push:', e);
     }
   }
 

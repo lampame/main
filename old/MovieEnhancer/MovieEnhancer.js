@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this))};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
+    if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this));};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
 
     function main$8() {
       Lampa.Lang.add({
@@ -1058,33 +1058,33 @@
     };
 
     function main() {
-      console.log('StreamingDiscovery: Module initialized');
+      console.log('StreamingDiscovery', 'Module initialized');
 
       // Add CSS styles first
       var styleElement = $('<style>').text("\n        .full-start-new__streaming-ratings {\n            display: flex;\n            align-items: center;\n            margin-bottom: 1em;\n            flex-wrap: wrap;\n        }\n        \n        .streaming-rating {\n            display: flex;\n            align-items: center;\n            margin-right: 1.5em;\n            margin-bottom: 0.5em;\n        }\n        \n        .streaming-rating__icon {\n            width: 2em;\n            height: 2em;\n            margin-right: 0.5em;\n            border-radius: 0.3em;\n            object-fit: contain;\n        }\n        \n        .streaming-rating__score {\n            font-size: 1.2em;\n            font-weight: bold;\n        }\n        \n        @media (max-width: 768px) {\n            .streaming-rating__icon {\n                width: 1.8em;\n                height: 1.8em;\n            }\n            \n            .streaming-rating__score {\n                font-size: 1.1em;\n            }\n        }\n        \n        @media (max-width: 480px) {\n            .streaming-rating__icon {\n                width: 1.5em;\n                height: 1.5em;\n            }\n            \n            .streaming-rating__score {\n                font-size: 1em;\n            }\n        }\n    ");
       $('head').append(styleElement);
-      console.log('StreamingDiscovery: CSS styles added');
+      console.log('StreamingDiscovery', 'CSS styles added');
 
       // Add streaming discovery listener
       Lampa.Listener.follow("full", function (e) {
-        console.log('StreamingDiscovery: "full" event received', e.type);
+        console.log('StreamingDiscovery', '"full" event received', e.type);
         var cardData = e.object;
         if (e.type == "complite") {
-          console.log('StreamingDiscovery: Card data loaded', cardData);
+          console.log('StreamingDiscovery', 'Card data loaded', cardData);
 
           // Get IMDB ID from card data
           var imdbId = '';
           if (cardData.card.imdb_id) {
             imdbId = cardData.card.imdb_id;
-            console.log('StreamingDiscovery: Found IMDB ID in cardData.imdb_id', imdbId);
+            console.log('StreamingDiscovery', 'Found IMDB ID in cardData.imdb_id', imdbId);
           } else if (cardData.movie && cardData.movie.imdb_id) {
             imdbId = cardData.movie.imdb_id;
-            console.log('StreamingDiscovery: Found IMDB ID in cardData.movie.imdb_id', imdbId);
+            console.log('StreamingDiscovery', 'Found IMDB ID in cardData.movie.imdb_id', imdbId);
           } else if (cardData.external_ids && cardData.external_ids.imdb_id) {
             imdbId = cardData.external_ids.imdb_id;
-            console.log('StreamingDiscovery: Found IMDB ID in cardData.external_ids.imdb_id', imdbId);
+            console.log('StreamingDiscovery', 'Found IMDB ID in cardData.external_ids.imdb_id', imdbId);
           } else {
-            console.log('StreamingDiscovery: No IMDB ID found in card data', cardData.card.imdb_id);
+            console.log('StreamingDiscovery', 'No IMDB ID found in card data', cardData.card.imdb_id);
           }
 
           // If IMDB ID is found, make the API request
@@ -1092,19 +1092,19 @@
             // Ensure IMDB ID has the 'tt' prefix
             if (!imdbId.startsWith('tt')) {
               imdbId = 'tt' + imdbId;
-              console.log('StreamingDiscovery: Added tt prefix to IMDB ID', imdbId);
+              console.log('StreamingDiscovery', 'Added tt prefix to IMDB ID', imdbId);
             }
             var settings = {
               url: "https://apx.lme.isroot.in/destination/https://www.streamingdiscovery.com/api/public/cache/ratings/movie?id=".concat(imdbId),
               method: "GET",
               timeout: 0
             };
-            console.log('StreamingDiscovery: Making API request', settings.url);
+            console.log('StreamingDiscovery', 'Making API request', settings.url);
             $.ajax(settings).done(function (response) {
-              console.log('StreamingDiscovery: API response received', response);
+              console.log('StreamingDiscovery', 'API response received', response);
               if (response && response.Data) {
                 var data = response.Data;
-                console.log('StreamingDiscovery: Data extracted from response', data);
+                console.log('StreamingDiscovery', 'Data extracted from response', data);
                 var ratingServices = [{
                   name: 'imdb',
                   label: 'IMDb',
@@ -1130,7 +1130,7 @@
                   label: 'FilmAffinity',
                   value: data.filmAffinity
                 }];
-                console.log('StreamingDiscovery: Rating services prepared', ratingServices);
+                console.log('StreamingDiscovery', 'Rating services prepared', ratingServices);
 
                 // Create container for streaming ratings
                 var ratingsContainer = $('<div class="full-start-new__streaming-ratings"></div>');
@@ -1138,7 +1138,7 @@
                 // Add each available rating
                 ratingServices.forEach(function (service) {
                   if (service.value) {
-                    console.log('StreamingDiscovery: Adding rating for', service.name, service.value);
+                    console.log('StreamingDiscovery', 'Adding rating for', service.name, service.value);
                     var ratingElement = $("\n                                    <div class=\"streaming-rating streaming-rating--".concat(service.name, "\">\n                                        <img class=\"streaming-rating__icon\" style=\"filter: grayscale(100%)\" src=\"https://www.streamingdiscovery.com/logo/").concat(service.name, ".png\" alt=\"").concat(service.label, "\">\n                                        <div class=\"streaming-rating__score\">").concat(service.value, "</div>\n                                    </div>\n                                "));
                     ratingsContainer.append(ratingElement);
                   }
@@ -1146,49 +1146,49 @@
 
                 // Find the rate line element and insert our ratings before it
                 var rateLineElement = $('.full-start-new__rate-line');
-                console.log('StreamingDiscovery: Rate line element found?', rateLineElement.length > 0);
+                console.log('StreamingDiscovery', 'Rate line element found?', rateLineElement.length > 0);
                 if (rateLineElement.length) {
                   // /* if (rateLineElement.length) {
                   //     rateLineElement.before(ratingsContainer);
-                  //     console.log('StreamingDiscovery: Ratings container inserted before rate line');
+                  //     console.log('StreamingDiscovery', 'Ratings container inserted before rate line');
                   // } else {
-                  //     console.log('StreamingDiscovery: Rate line element not found, trying alternative insertion');
+                  //     console.log('StreamingDiscovery', 'Rate line element not found, trying alternative insertion');
                   //     // Try alternative insertion points
                   //     const fullInfo = $('.full-start-new__details');
                   //     if (fullInfo.length) {
                   //         fullInfo.prepend(ratingsContainer);
-                  //         console.log('StreamingDiscovery: Ratings container inserted at beginning of details');
+                  //         console.log('StreamingDiscovery', 'Ratings container inserted at beginning of details');
                   //     } else {
-                  //         console.log('StreamingDiscovery: No suitable insertion point found');
+                  //         console.log('StreamingDiscovery', 'No suitable insertion point found');
                   //     }
                   // }*/
 
                   // Replace the contents of the rate line element
                   rateLineElement.html(ratingsContainer);
-                  console.log('StreamingDiscovery: Ratings container replaced contents of rate line');
+                  console.log('StreamingDiscovery', 'Ratings container replaced contents of rate line');
                 } else {
                   // Fallback insertion point
                   var fullInfo = $('.full-start-new__details');
                   if (fullInfo.length) {
                     fullInfo.prepend(ratingsContainer);
-                    console.log('StreamingDiscovery: Ratings container inserted at beginning of details');
+                    console.log('StreamingDiscovery', 'Ratings container inserted at beginning of details');
                   } else {
-                    console.log('StreamingDiscovery: No suitable insertion point found');
+                    console.log('StreamingDiscovery', 'No suitable insertion point found');
                   }
                 }
               } else {
-                console.log('StreamingDiscovery: No data in response or invalid response format', response);
+                console.log('StreamingDiscovery', 'No data in response or invalid response format', response);
               }
             }).fail(function (jqXHR, textStatus, errorThrown) {
               console.error("StreamingDiscovery request failed:", textStatus, errorThrown);
-              console.log('StreamingDiscovery: AJAX error details', jqXHR);
+              console.log('StreamingDiscovery', 'AJAX error details', jqXHR);
             });
           } else {
-            console.log('StreamingDiscovery: No valid IMDB ID found, skipping API request');
+            console.log('StreamingDiscovery', 'No valid IMDB ID found, skipping API request');
           }
         }
       });
-      console.log('StreamingDiscovery: Event listener registered');
+      console.log('StreamingDiscovery', 'Event listener registered');
     }
     var streamingdiscovery = {
       main: main

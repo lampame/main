@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this))};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
+    if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this));};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
 
     function lang () {
       Lampa.Lang.add({
@@ -3032,7 +3032,7 @@
           }
         }
       });
-      console.log('[GramLink] buildCaption — name="' + profile.name + '" extras:', JSON.stringify(extras), 'result:', result);
+      console.log('GramLink', 'buildCaption — name="' + profile.name + '" extras:', JSON.stringify(extras), 'result:', result);
       return result;
     }
 
@@ -3154,7 +3154,7 @@
 
       // ── Import Analyzer: show counts before migration ───────────────
       Lampa.Noty.show('Analyzing Cub data...');
-      console.log('[GramLink] startMigration — fetching profiles/all and plugins/all');
+      console.log('GramLink', 'startMigration — fetching profiles/all and plugins/all');
       Promise.all([Lampa.Account.Api.load('profiles/all').catch(function () {
         return {
           profiles: []
@@ -3170,13 +3170,13 @@
         var allPlugins = pluginsResult && pluginsResult.secuses ? pluginsResult.plugins || [] : [];
         var profileCount = profiles.length;
         var pluginCount = allPlugins.length;
-        console.log('[GramLink] Cub profiles:', profileCount, JSON.stringify(profiles.map(function (p) {
+        console.log('GramLink', 'Cub profiles:', profileCount, JSON.stringify(profiles.map(function (p) {
           return {
             id: p.id,
             name: p.name
           };
         })));
-        console.log('[GramLink] Cub plugins total:', pluginCount, 'has_secuses:', pluginsResult && pluginsResult.secuses);
+        console.log('GramLink', 'Cub plugins total:', pluginCount, 'has_secuses:', pluginsResult && pluginsResult.secuses);
         if (profileCount === 0) {
           Lampa.Noty.show('No Cub profiles found');
           return;
@@ -3331,7 +3331,7 @@
           status: p.status !== undefined ? p.status : 1
         });
       });
-      console.log('[GramLink] filterPluginsForProfile profileId=' + profileId + ' plugins=' + result.length + ' (of ' + allPlugins.length + ' total)');
+      console.log('GramLink', 'filterPluginsForProfile profileId=' + profileId + ' plugins=' + result.length + ' (of ' + allPlugins.length + ' total)');
       return result;
     }
 
@@ -3373,11 +3373,11 @@
         return;
       }
       Lampa.Noty.show('Reading Cub profiles...');
-      console.log('[GramLink] doMigration — starting, profilesTopicId:', profilesTopicId);
+      console.log('GramLink', 'doMigration — starting, profilesTopicId:', profilesTopicId);
       Lampa.Account.Api.load('profiles/all').then(function (result) {
         if (!result || !result.profiles || !result.profiles.length) {
           Lampa.Noty.show('No Cub profiles found');
-          console.warn('[GramLink] doMigration — no profiles from API');
+          console.warn('GramLink', 'doMigration — no profiles from API');
           return;
         }
         var profiles = result.profiles;
@@ -3385,20 +3385,20 @@
         var imported = 0;
         var activatedId = null;
         var activatedName = null;
-        console.log('[GramLink] doMigration — profiles loaded:', profiles.length, 'activeProfileId:', activeProfileId);
+        console.log('GramLink', 'doMigration — profiles loaded:', profiles.length, 'activeProfileId:', activeProfileId);
         profiles.forEach(function (p, i) {
-          console.log('[GramLink]   profile[' + i + ']: id=' + p.id + ' name="' + (p.name || '') + '" main=' + (p.main ? 'yes' : 'no'));
+          console.log('GramLink', '  profile[' + i + ']: id=' + p.id + ' name="' + (p.name || '') + '" main=' + (p.main ? 'yes' : 'no'));
         });
 
         // ── 1. Fetch ALL plugins once ──────────────────────────
         Lampa.Account.Api.load('plugins/all').then(function (pluginResult) {
           var allPlugins = pluginResult && pluginResult.secuses ? pluginResult.plugins || [] : [];
-          console.log('[GramLink] doMigration — plugins loaded:', allPlugins.length, 'secuses:', pluginResult && pluginResult.secuses);
+          console.log('GramLink', 'doMigration — plugins loaded:', allPlugins.length, 'secuses:', pluginResult && pluginResult.secuses);
 
           // ── 2. Process each profile sequentially ───────────
           function processNext(index) {
             if (index >= profiles.length) {
-              console.log('[GramLink] doMigration — all profiles processed, imported:', imported);
+              console.log('GramLink', 'doMigration — all profiles processed, imported:', imported);
               finishMigration(imported, activatedId, activatedName);
               return;
             }
@@ -3417,8 +3417,8 @@
               avatar: avatar,
               updated: now
             }, captionExtras);
-            console.log('[GramLink] processNext[' + index + ']: name="' + name + '" cubProfile.id=' + cubProfile.id + ' activeProfileId=' + activeProfileId);
-            console.log('[GramLink]   caption:', caption);
+            console.log('GramLink', 'processNext[' + index + ']: name="' + name + '" cubProfile.id=' + cubProfile.id + ' activeProfileId=' + activeProfileId);
+            console.log('GramLink', '  caption:', caption);
             Lampa.Noty.show('Importing "' + name + '" (' + (index + 1) + '/' + profiles.length + ')…');
 
             // ── 2a. Fetch this profile's Bookmarks ─────────
@@ -3429,10 +3429,10 @@
               dataType: 'text'
             }).then(function (raw) {
               var fav = cubDumpToFavorite(raw);
-              console.log('[GramLink]   bookmarks for "' + name + '": ' + (fav && fav.card ? fav.card.length : 0) + ' cards');
+              console.log('GramLink', '  bookmarks for "' + name + '": ' + (fav && fav.card ? fav.card.length : 0) + ' cards');
               return fav;
             }).catch(function (err) {
-              console.warn('[GramLink]   bookmarks failed for "' + name + '":', err && err.message);
+              console.warn('GramLink', '  bookmarks failed for "' + name + '":', err && err.message);
               var f = {
                 card: []
               };
@@ -3450,10 +3450,10 @@
               dataType: 'text'
             }).then(function (raw) {
               var tl = cubDumpToTimeline(raw);
-              console.log('[GramLink]   timeline for "' + name + '": ' + Object.keys(tl).length + ' entries');
+              console.log('GramLink', '  timeline for "' + name + '": ' + Object.keys(tl).length + ' entries');
               return tl;
             }).catch(function (err) {
-              console.warn('[GramLink]   timeline failed for "' + name + '":', err && err.message);
+              console.warn('GramLink', '  timeline failed for "' + name + '":', err && err.message);
               return {};
             });
 
@@ -3462,7 +3462,7 @@
               var bookmarks = results[0];
               var timeline = results[1];
               var profilePlugins = mergeWithLocalPlugins(filterPluginsForProfile(allPlugins, cubProfile.id));
-              console.log('[GramLink]   building fileData for "' + name + '" — plugins:', profilePlugins.length);
+              console.log('GramLink', '  building fileData for "' + name + '" — plugins:', profilePlugins.length);
               var fileData = buildFileData({
                 name: name,
                 avatar: avatar,
@@ -3477,24 +3477,24 @@
               var fileName = 'profile_' + name.replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_').slice(0, 64) + '_' + now + '.json';
               var channelId = getChannelId();
               client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
-                console.log('[GramLink]   sendFile result for "' + name + '": msgId=' + msgId);
+                console.log('GramLink', '  sendFile result for "' + name + '": msgId=' + msgId);
                 if (msgId) {
                   imported++;
                   if (String(cubProfile.id) === String(activeProfileId)) {
                     activatedId = msgId;
                     activatedName = name;
-                    console.log('[GramLink]   -> this profile will be activated after migration');
+                    console.log('GramLink', '  -> this profile will be activated after migration');
                   }
                 } else {
-                  console.warn('[GramLink]   sendFile returned no msgId for "' + name + '"');
+                  console.warn('GramLink', '  sendFile returned no msgId for "' + name + '"');
                 }
                 processNext(index + 1);
               }).catch(function (err) {
-                console.error('[GramLink]   sendFile failed for "' + name + '":', err && err.message);
+                console.error('GramLink', '  sendFile failed for "' + name + '":', err && err.message);
                 processNext(index + 1);
               });
             }).catch(function () {
-              console.warn('[GramLink]   bookmark+timeline both failed for "' + name + '", creating empty profile');
+              console.warn('GramLink', '  bookmark+timeline both failed for "' + name + '", creating empty profile');
               // If both bookmark+timeline fail, still create profile with empty data
               var profilePlugins = mergeWithLocalPlugins(filterPluginsForProfile(allPlugins, cubProfile.id));
               var fileData = buildFileData({
@@ -3507,7 +3507,7 @@
               var fileName = 'profile_' + name.replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_').slice(0, 64) + '_' + now + '.json';
               var channelId = getChannelId();
               client.sendFile(channelId, profilesTopicId, fileJson, fileName, caption).then(function (msgId) {
-                console.log('[GramLink]   sendFile (empty fallback) for "' + name + '": msgId=' + msgId);
+                console.log('GramLink', '  sendFile (empty fallback) for "' + name + '": msgId=' + msgId);
                 if (msgId) {
                   imported++;
                   if (String(cubProfile.id) === String(activeProfileId)) {
@@ -3517,21 +3517,21 @@
                 }
                 processNext(index + 1);
               }).catch(function (err) {
-                console.error('[GramLink]   sendFile (empty fallback) failed for "' + name + '":', err && err.message);
+                console.error('GramLink', '  sendFile (empty fallback) failed for "' + name + '":', err && err.message);
                 processNext(index + 1);
               });
             });
           }
           processNext(0);
         }).catch(function (e) {
-          console.error('[GramLink] Migration fetch plugins error:', e);
+          console.error('GramLink', 'Migration fetch plugins error:', e);
           Lampa.Noty.show('Failed to read Cub plugins');
 
           // Still try to migrate profiles without plugins
           fallbackMigration(profiles, activeProfileId, profilesTopicId);
         });
       }).catch(function (e) {
-        console.error('[GramLink] Migration fetch error:', e);
+        console.error('GramLink', 'Migration fetch error:', e);
         Lampa.Noty.show('Failed to read Cub profiles: ' + (e.message || 'API error'));
       });
     }
@@ -3541,14 +3541,14 @@
     function fallbackMigration(profiles, activeProfileId, profilesTopicId) {
       var client = GatewayClient.getInstance();
       if (!client.isConnected()) return;
-      console.log('[GramLink] fallbackMigration — profiles:', profiles.length, 'activeProfileId:', activeProfileId);
+      console.log('GramLink', 'fallbackMigration — profiles:', profiles.length, 'activeProfileId:', activeProfileId);
       var imported = 0;
       var activatedId = null;
       var activatedName = null;
       var now = Math.floor(Date.now() / 1000);
       function processNext(index) {
         if (index >= profiles.length) {
-          console.log('[GramLink] fallbackMigration — done, imported:', imported);
+          console.log('GramLink', 'fallbackMigration — done, imported:', imported);
           finishMigration(imported, activatedId, activatedName);
           return;
         }
@@ -3566,7 +3566,7 @@
           avatar: avatar,
           updated: ts
         }, captionExtras);
-        console.log('[GramLink] fallback processNext[' + index + ']: name="' + name + '" id=' + cubProfile.id + ' caption:', caption);
+        console.log('GramLink', 'fallback processNext[' + index + ']: name="' + name + '" id=' + cubProfile.id + ' caption:', caption);
         var fileData = buildFileData({
           name: name,
           avatar: avatar,
@@ -3595,14 +3595,14 @@
     // ─── Finish ──────────────────────────────────────────────────────
 
     function finishMigration(count, activatedId, activatedName) {
-      console.log('[GramLink] finishMigration — imported:', count, 'activatedId:', activatedId, 'activatedName:', activatedName);
+      console.log('GramLink', 'finishMigration — imported:', count, 'activatedId:', activatedId, 'activatedName:', activatedName);
       if (activatedId) {
         Lampa.Storage.set('gramlink_active_profile', String(activatedId));
         Lampa.Storage.set('gramlink_active_profile_ts', String(Math.floor(Date.now() / 1000)));
         if (activatedName) Lampa.Storage.set('gramlink_active_profile_name', activatedName);
-        console.log('[GramLink]   activated profile saved:', activatedName, 'msgId:', activatedId);
+        console.log('GramLink', '  activated profile saved:', activatedName, 'msgId:', activatedId);
       } else {
-        console.warn('[GramLink]   no profile activated — activeProfileId did not match any cubProfile.id');
+        console.warn('GramLink', '  no profile activated — activeProfileId did not match any cubProfile.id');
       }
 
       // Restore gramlink_tools with correct onBack instead of Settings.update()

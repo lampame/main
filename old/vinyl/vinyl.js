@@ -1,6 +1,8 @@
 (function () {
     'use strict';
 
+    if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this));};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
+
     // plugins/vinyl/lib/card.js — Card item following radio/item.js pattern
 
     // BUG FIX #2 #5 #6: JioSaavn API returns `image` as an array of quality objects:
@@ -196,7 +198,7 @@
        */
       this.getFeaturedPlaylists = function (page, oncomplite, onerror) {
         var url = DEST_PROXY + encodeURIComponent('https://www.jiosaavn.com/api.php?__call=content.getFeaturedPlaylists' + '&fetch_from_serialized_files=true' + '&p=' + page + '&n=12' + '&api_version=4' + '&ctx=web6dot0' + '&languages=english');
-        network["native"](url, function (raw) {
+        network.native(url, function (raw) {
           var data = Api.parseResponse(raw);
           if (data && data.data) oncomplite(data.data);else if (onerror) onerror();
         }, function (a, c) {
@@ -214,7 +216,7 @@
        */
       this.getAlbums = function (page, oncomplite, onerror) {
         var url = DEST_PROXY + encodeURIComponent('https://www.jiosaavn.com/api.php?__call=content.getAlbums' + '&api_version=4' + '&n=12' + '&p=' + page + '&ctx=web6dot0' + '&languages=english,ukrainian');
-        network["native"](url, function (raw) {
+        network.native(url, function (raw) {
           var data = Api.parseResponse(raw);
           if (data && data.data) oncomplite(data.data);else if (onerror) onerror();
         }, function (a, c) {
@@ -233,7 +235,7 @@
        */
       this.getPlaylistDetail = function (id, page, oncomplite, onerror) {
         var url = getProxyBase() + '/api/playlists?id=' + encodeURIComponent(id) + '&page=' + (page || 0) + '&limit=10' + '&sortBy=popularity&sortOrder=desc';
-        network["native"](url, function (json) {
+        network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
         }, function (a, c) {
@@ -250,7 +252,7 @@
        */
       this.getAlbumDetail = function (id, page, oncomplite, onerror) {
         var url = getProxyBase() + '/api/albums?id=' + encodeURIComponent(id) + '&page=' + (page || 0) + '&limit=10';
-        network["native"](url, function (json) {
+        network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
         }, function (a, c) {
@@ -266,7 +268,7 @@
        */
       this.getArtistDetail = function (id, oncomplite, onerror) {
         var url = getProxyBase() + '/api/artists/' + encodeURIComponent(id) + '?page=0&songCount=50&albumCount=50&sortBy=popularity&sortOrder=desc';
-        network["native"](url, function (json) {
+        network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
         }, function (a, c) {
@@ -282,7 +284,7 @@
        */
       this.search = function (query, oncomplite, onerror) {
         var url = getProxyBase() + '/api/search?query=' + encodeURIComponent(query);
-        network["native"](url, function (json) {
+        network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
         }, function (a, c) {
@@ -299,7 +301,7 @@
        */
       this.searchPlaylists = function (query, page, oncomplite, onerror) {
         var url = getProxyBase() + '/api/search/playlists?query=' + encodeURIComponent(query) + '&page=' + (page || 0) + '&limit=12';
-        network["native"](url, function (json) {
+        network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
         }, function (a, c) {
@@ -316,7 +318,7 @@
        */
       this.searchAlbums = function (query, page, oncomplite, onerror) {
         var url = getProxyBase() + '/api/search/albums?query=' + encodeURIComponent(query) + '&page=' + (page || 0) + '&limit=12';
-        network["native"](url, function (json) {
+        network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
         }, function (a, c) {
@@ -333,7 +335,7 @@
        */
       this.searchArtists = function (query, page, oncomplite, onerror) {
         var url = getProxyBase() + '/api/search/artists?query=' + encodeURIComponent(query) + '&page=' + (page || 0) + '&limit=12';
-        network["native"](url, function (json) {
+        network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
         }, function (a, c) {
@@ -349,7 +351,7 @@
        */
       this.getSongDetail = function (id, oncomplite, onerror) {
         var url = getProxyBase() + '/api/songs/' + encodeURIComponent(id);
-        network["native"](url, function (json) {
+        network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
         }, function (a, c) {
@@ -364,7 +366,7 @@
        */
       this.getRadioStations = function (oncomplite, onerror) {
         var url = getProxyBase() + '/api/radio';
-        network["native"](url, function (json) {
+        network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
         }, function (a, c) {
@@ -380,7 +382,7 @@
        */
       this.getRadioGenre = function (name, oncomplite, onerror) {
         var url = getProxyBase() + '/api/radio/genre/' + encodeURIComponent(name);
-        network["native"](url, function (json) {
+        network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
         }, function (a, c) {
@@ -397,7 +399,7 @@
        */
       this.getRadioArtist = function (name, artistId, oncomplite, onerror) {
         var url = getProxyBase() + '/api/radio/artist/' + encodeURIComponent(name) + '/' + encodeURIComponent(artistId);
-        network["native"](url, function (json) {
+        network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
         }, function (a, c) {
@@ -412,7 +414,7 @@
        */
       this.getGenres = function (oncomplite, onerror) {
         var url = DEST_PROXY + encodeURIComponent(JAMMIFY_BASE + '/api/genres');
-        network["native"](url, function (raw) {
+        network.native(url, function (raw) {
           try {
             var json = JSON.parse(raw);
             var data = Api.unwrap(json);
@@ -435,7 +437,7 @@
        */
       this.getGenreDetail = function (genreId, oncomplite, onerror) {
         var url = DEST_PROXY + encodeURIComponent(JAMMIFY_BASE + '/api/genres/' + encodeURIComponent(genreId));
-        network["native"](url, function (raw) {
+        network.native(url, function (raw) {
           try {
             var json = JSON.parse(raw);
             var data = Api.unwrap(json);
@@ -460,7 +462,7 @@
        */
       this.getSectionPlaylists = function (sectionId, page, limit, oncomplite, onerror) {
         var url = DEST_PROXY + encodeURIComponent(JAMMIFY_BASE + '/api/spotify-playlists?sectionId=' + encodeURIComponent(sectionId) + '&limit=' + limit + '&page=' + page);
-        network["native"](url, function (raw) {
+        network.native(url, function (raw) {
           try {
             var json = JSON.parse(raw);
             var data = Api.unwrap(json);
@@ -489,7 +491,7 @@
        */
       this.getPlaylistById = function (playlistId, oncomplite, onerror) {
         var url = DEST_PROXY + encodeURIComponent(JAMMIFY_BASE + '/api/playlists/' + encodeURIComponent(playlistId));
-        network["native"](url, function (raw) {
+        network.native(url, function (raw) {
           try {
             var json = JSON.parse(raw);
             var data = Api.unwrap(json);
@@ -525,7 +527,7 @@
             return;
           }
           var url = getProxyBase() + '/api/songs?ids=' + chunk.join(',');
-          network["native"](url, function (json) {
+          network.native(url, function (json) {
             var data = Api.unwrap(json);
             if (Array.isArray(data)) {
               allSongs = allSongs.concat(data);
@@ -657,9 +659,9 @@
         pScript.onload = function () {
           isLoaded = true;
           isLoading = false;
-          butterchurn = window.butterchurn["default"] || window.butterchurn;
+          butterchurn = window.butterchurn.default || window.butterchurn;
           var pm = window.butterchurnPresetsMinimal;
-          presets = pm && pm["default"] ? pm["default"] : pm;
+          presets = pm && pm.default ? pm.default : pm;
           if (presets && presets.getPresets) {
             var allPresets = presets.getPresets();
             presetNames = Object.keys(allPresets);
@@ -784,7 +786,7 @@
         if (ctx.state === 'suspended') {
           ctx.resume().then(function () {
             doConnect();
-          })["catch"](function () {
+          }).catch(function () {
             doConnect();
           });
         } else {
@@ -3921,7 +3923,7 @@
             '160': '160 kbps',
             '320': '320 kbps'
           },
-          "default": '320'
+          default: '320'
         },
         field: {
           name: Lampa.Lang.translate('vinyl_quality')
@@ -3932,7 +3934,7 @@
         param: {
           name: 'vinyl_auto_next',
           type: 'trigger',
-          "default": true
+          default: true
         },
         field: {
           name: Lampa.Lang.translate('vinyl_auto_next')
@@ -3943,7 +3945,7 @@
         param: {
           name: 'vinyl_visualizer',
           type: 'trigger',
-          "default": false
+          default: false
         },
         field: {
           name: Lampa.Lang.translate('vinyl_visualizer')
@@ -3957,16 +3959,15 @@
           values: {
             'random': Lampa.Lang.translate('vinyl_viz_random')
           },
-          "default": 'random'
+          default: 'random'
         },
         field: {
           name: Lampa.Lang.translate('vinyl_visualizer_preset')
         }
       })
 
-      // 5a. Register music player type setting in the Player settings page
-      // (data-component="player") after the player_torrent selector
-    ;
+      // 5a. Register music player type setting with platform-appropriate options
+      ;
       (function registerMusicPlayerSetting() {
         var opts = {
           'inner': '#{settings_param_player_inner}'
@@ -3998,25 +3999,15 @@
           opts['infuse'] = 'Infuse';
         }
         Lampa.SettingsApi.addParam({
-          component: 'player',
+          component: 'vinyl',
           param: {
             name: 'player_music',
             type: 'select',
             values: opts,
-            "default": 'inner'
+            default: 'inner'
           },
           field: {
             name: Lampa.Lang.translate('vinyl_player_type')
-          },
-          onRender: function onRender(item) {
-            // Defer reposition until after comp.append(item) adds element to DOM
-            setTimeout(function () {
-              var torrentField = $('[data-name="player_torrent"]');
-              if (torrentField.length) {
-                torrentField.after(item);
-                Lampa.Params.listener.send('update_scroll');
-              }
-            }, 0);
           }
         });
       })();
