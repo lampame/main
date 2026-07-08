@@ -348,7 +348,7 @@
        * @param {function} onerror
        */
       this.getSongDetail = function (id, oncomplite, onerror) {
-        var url = 'https://saavn.sumit.co/api/songs/' + encodeURIComponent(id);
+        var url = getProxyBase() + '/api/songs/' + encodeURIComponent(id);
         network["native"](url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
