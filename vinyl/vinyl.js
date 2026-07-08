@@ -636,6 +636,8 @@
     var currentPresetName = 'random';
     var presetNames = [];
     var autoSwitchTimer = null;
+    var _visibilityHandlerAdded = false;
+    var _handleVisibilityChangeFn = null;
     function isSupported() {
       return typeof WebGL2RenderingContext !== 'undefined';
     }
@@ -703,10 +705,18 @@
     }
 
     // Ensure container/canvas exists, create if needed. Returns false if player DOM not ready.
+    // Checks parentNode so re-attachment works when Lampa switches window-mode/PIP and
+    // the DOM structure changes — the container may still exist in memory but be orphaned.
     function ensureContainer() {
-      if (containerEl) return true;
       var parent = getPlayerContainer();
       if (!parent) return false;
+      if (containerEl) {
+        // Re-attach if orphaned or parent changed (e.g. window-mode/PIP on Android)
+        if (!containerEl.parentNode || containerEl.parentNode !== parent) {
+          parent.appendChild(containerEl);
+        }
+        return true;
+      }
       containerEl = createContainer();
       parent.appendChild(containerEl);
       return true;
@@ -859,6 +869,25 @@
       var enabled = Lampa.Storage.get('vinyl_visualizer', false);
       if (!enabled || !isSupported()) return;
       if (!ensureContainer()) return;
+
+      // Update canvas size immediately — window may have changed since last call
+      updateCanvasSize();
+
+      // One-time visibilitychange listener: re-attaches container when returning
+      // from window-mode/PIP (DOM structure changes on Android).
+      if (!_visibilityHandlerAdded) {
+        _visibilityHandlerAdded = true;
+        _handleVisibilityChangeFn = function handleVisibilityChange() {
+          if (!document.hidden && isActive) {
+            ensureContainer();
+            updateCanvasSize();
+            if (containerEl && containerEl.parentNode && !animFrameId) {
+              startRenderLoop();
+            }
+          }
+        };
+        document.addEventListener('visibilitychange', _handleVisibilityChangeFn);
+      }
       handleVisibility(true);
       isActive = true;
 
@@ -951,6 +980,13 @@
         } catch (e) {}
         audioContext = null;
       }
+
+      // Remove visibilitychange listener added in start()
+      if (_handleVisibilityChangeFn) {
+        document.removeEventListener('visibilitychange', _handleVisibilityChangeFn);
+        _handleVisibilityChangeFn = null;
+        _visibilityHandlerAdded = false;
+      }
       isLoaded = false;
       isLoading = false;
       isActive = false;
@@ -982,6 +1018,43 @@
     // plugins/vinyl/player.js — Player with auto-load next track
     var currentPlaylist = [];
     var currentIndex = 0;
+
+    // --- Download speed monitoring for PlayerInfo ---
+    function formatSpeed(bps) {
+      if (bps >= 1000000) return (bps / 1000000).toFixed(1) + ' Mbps';
+      if (bps >= 1000) return (bps / 1000).toFixed(0) + ' kbps';
+      return bps.toFixed(0) + ' bps';
+    }
+    var speedMonitor = {
+      timer: null,
+      startQual: '320',
+      start: function start(videoEl, quality) {
+        this.stop();
+        this.startQual = quality || '320';
+        var startTime = Date.now();
+        this.timer = setInterval(function () {
+          if (!videoEl || !videoEl.buffered || videoEl.buffered.length === 0) return;
+          try {
+            var bufferedEnd = videoEl.buffered.end(videoEl.buffered.length - 1);
+            if (bufferedEnd <= 0) return;
+            var bitrateBps = parseInt(speedMonitor.startQual) * 1000;
+            var estimatedBytes = bufferedEnd * bitrateBps / 8;
+            var elapsedSec = (Date.now() - startTime) / 1000;
+            if (elapsedSec <= 0) return;
+            var speedBps = estimatedBytes * 8 / elapsedSec;
+            var speedText = formatSpeed(speedBps);
+            var speedEl = document.querySelector('.value--speed span');
+            if (speedEl) speedEl.textContent = speedText;
+          } catch (e) {}
+        }, 2000);
+      },
+      stop: function stop() {
+        if (this.timer) {
+          clearInterval(this.timer);
+          this.timer = null;
+        }
+      }
+    };
     // vinylOrigSend removed — we use follow() pattern instead of send() monkey-patch
 
     // ponytail: JioSaavn API returns image as [{quality, url}, ...] not string URL.
@@ -1111,6 +1184,8 @@
         currentIndex = 0;
         // Clear vinyl active flag — listener.send restore removed, using follow() pattern now
         window.__vinyl_active = false;
+        // Stop download speed monitor
+        speedMonitor.stop();
       };
 
       /**
@@ -1172,12 +1247,21 @@
         Lampa.Player.listener.follow('ready', function (data) {
           // data.image → auto-next (playlist item has image at top level)
           // data.vinyl + currentPlaylist → initial play (card has image)
+          var videoEl = Lampa.PlayerVideo && Lampa.PlayerVideo.video();
           var imgUrl = data && (data.image || data.vinyl && currentPlaylist[currentIndex] && normalizeImage(currentPlaylist[currentIndex]));
           if (imgUrl && typeof imgUrl === 'string') {
-            var videoEl = Lampa.PlayerVideo && Lampa.PlayerVideo.video();
             if (videoEl) videoEl.style.background = 'url(' + imgUrl + ') center/cover no-repeat rgb(20,20,20)';
             var footerImg = document.querySelector('.player-footer-card__poster-img');
             if (footerImg) footerImg.src = imgUrl;
+          }
+
+          // Set bitrate info in player info panel
+          var quality = Lampa.Storage.get('vinyl_quality', '320');
+          Lampa.PlayerInfo.set('bitrate', quality + ' kbps');
+
+          // Start download speed monitoring
+          if (videoEl) {
+            speedMonitor.start(videoEl, quality);
           }
 
           // Start butterchurn visualizer if enabled
