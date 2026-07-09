@@ -1312,18 +1312,21 @@
             if (footerImg) footerImg.src = imgUrl;
           }
 
-          // Set bitrate info in player info panel
-          var quality = Lampa.Storage.get('vinyl_quality', '320');
-          Lampa.PlayerInfo.set('bitrate', quality + ' kbps');
+          // Only for vinyl tracks — avoid interfering with movies/TV shows
+          if (data && data.vinyl) {
+            // Set bitrate info in player info panel
+            var quality = Lampa.Storage.get('vinyl_quality', '320');
+            Lampa.PlayerInfo.set('bitrate', quality + ' kbps');
 
-          // Start download speed monitoring
-          if (videoEl) {
-            speedMonitor.start(videoEl, quality);
-          }
+            // Start download speed monitoring
+            if (videoEl) {
+              speedMonitor.start(videoEl, quality);
+            }
 
-          // Start butterchurn visualizer if enabled
-          if (Lampa.Storage.get('vinyl_visualizer', false)) {
-            ButterchurnViz.start();
+            // Start butterchurn visualizer if enabled
+            if (Lampa.Storage.get('vinyl_visualizer', false)) {
+              ButterchurnViz.start();
+            }
           }
         });
       }
@@ -4062,7 +4065,7 @@
 
       // 5a. Register music player type setting in the Player settings page
       // (data-component="player") after the player_torrent selector
-    ;
+      ;
       (function registerMusicPlayerSetting() {
         var opts = {
           'inner': '#{settings_param_player_inner}'
@@ -4123,8 +4126,8 @@
       Search.init();
 
       // Pause/resume visualizer on video play/pause events
-      Lampa.Player.listener.follow('start', function () {
-        if (Lampa.Storage.get('vinyl_visualizer', false)) {
+      Lampa.Player.listener.follow('start', function (data) {
+        if (data && data.vinyl && Lampa.Storage.get('vinyl_visualizer', false)) {
           ButterchurnViz.resume();
         }
       });
