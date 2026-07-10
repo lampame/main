@@ -572,6 +572,18 @@
         uk: "Не вдалося підключитися до торрент-клієнта. Перевірте адресу, проксі та мережу",
         ro: "Clientul torrent nu poate fi accesat. Verifică adresa, proxy-ul și rețeaua"
       },
+      torrentmanager_connection_error: {
+        en: "Connection error: server unreachable",
+        ru: "Ошибка соединения: сервер недоступен",
+        uk: "Помилка з'єднання: сервер недоступний",
+        ro: "Eroare de conexiune: serverul nu răspunde"
+      },
+      torrentmanager_server_error: {
+        en: "Server error",
+        ru: "Ошибка сервера",
+        uk: "Помилка сервера",
+        ro: "Eroare de server"
+      },
       torrentmanager_url_requires_protocol: {
         en: "Address must start with http:// or https://",
         ru: "Адрес должен начинаться с http:// или https://",
@@ -1698,6 +1710,14 @@
       if (error && typeof error.status !== "undefined") {
         normalized.status = error.status;
       }
+
+      // Preserve diagnostic fields from jqXHR
+      if (error && error.decode_error) {
+        normalized.decode_error = error.decode_error;
+      }
+      if (error && error.error_time) {
+        normalized.error_time = error.error_time;
+      }
       return normalized;
     }
     function setLabels(_x2, _x3) {
@@ -1732,6 +1752,7 @@
       _auth = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
         var showNotification,
           sessionId,
+          status,
           _args3 = arguments,
           _t2;
         return _regenerator().w(function (_context3) {
@@ -1758,7 +1779,7 @@
                 _context3.n = 4;
                 break;
               }
-              sessionId = _t2.getResponseHeader("X-Transmission-Session-Id");
+              sessionId = _t2.getResponseHeader ? _t2.getResponseHeader("X-Transmission-Session-Id") : null;
               if (!sessionId) {
                 _context3.n = 4;
                 break;
@@ -1773,9 +1794,28 @@
             case 4:
               console.error("TDM", "".concat(clientName, " authentication failed"), _t2);
               if (showNotification) {
-                Lampa.Bell.push({
-                  text: Lampa.Lang.translate("AuthDenied")
-                });
+                status = Number(_t2 && _t2.status);
+                if (status === 0) {
+                  // Network connection error (server unreachable)
+                  Lampa.Bell.push({
+                    text: Lampa.Lang.translate("torrentmanager_connection_error")
+                  });
+                } else if (status === 401 || status === 403) {
+                  // Authentication denied
+                  Lampa.Bell.push({
+                    text: Lampa.Lang.translate("AuthDenied")
+                  });
+                } else if (status >= 500) {
+                  // Server-side error
+                  Lampa.Bell.push({
+                    text: Lampa.Lang.translate("torrentmanager_server_error")
+                  });
+                } else {
+                  // Fallback
+                  Lampa.Bell.push({
+                    text: Lampa.Lang.translate("AuthDenied")
+                  });
+                }
               }
               throw _t2;
             case 5:
@@ -6437,7 +6477,7 @@
    */
   var MANIFEST = {
     type: 'other',
-    version: '3.2',
+    version: '3.3',
     author: '@lme_chat',
     name: 'Torrent Manager',
     description: 'Manager and Runner query',
@@ -6499,7 +6539,7 @@
         return Qbittorent.auth(false)["catch"](function () {});
       },
       transmission: function transmission() {
-        return Transmission.auth();
+        return Transmission.auth()["catch"](function () {});
       },
       keenetic: function keenetic() {
         return Keenetic.auth();
