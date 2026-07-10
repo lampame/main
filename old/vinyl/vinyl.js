@@ -1132,7 +1132,7 @@
         currentIndex = playlist ? playlist.indexOf(song) : 0;
         if (currentIndex < 0) currentIndex = 0;
         var artistName = song.subtitle || song.artist || '';
-        var songTitle = song.title || 'Unknown';
+        var songTitle = song.name || song.title || 'Unknown';
         var fullTitle = songTitle;
         if (artistName && String(songTitle).indexOf(artistName) === -1) {
           fullTitle = artistName + ' - ' + songTitle;
@@ -1248,7 +1248,7 @@
         return songs.map(function (song, i) {
           var u = resolveUrl(song, q);
           var artistName = song.subtitle || song.artist || '';
-          var songTitle = song.title || 'Unknown';
+          var songTitle = song.name || song.title || 'Unknown';
           var fullTitle = songTitle;
           if (artistName && String(songTitle).indexOf(artistName) === -1) {
             fullTitle = artistName + ' - ' + songTitle;
@@ -1277,6 +1277,7 @@
     // 'player' on Lampa.Listener: for older Lampa versions that publish here.
     Lampa.Listener.follow('player', function (e) {
       if (e.type === 'ended') {
+        if (!window.__vinyl_active) return;
         var autoNext = Lampa.Storage.field('vinyl_auto_next');
         if (autoNext !== false && currentPlaylist.length && currentIndex < currentPlaylist.length - 1) {
           currentIndex++;
@@ -1301,6 +1302,12 @@
         Lampa.Player.listener.follow('create', function (e) {
           if (e.data && e.data.vinyl) {
             e.data.launch_player = Lampa.Storage.field('player_music') || 'inner';
+          } else {
+            // Non-vinyl content started — clear vinyl playlist state to prevent bleed
+            currentPlaylist = [];
+            currentIndex = 0;
+            window.__vinyl_active = false;
+            speedMonitor.stop();
           }
         });
         Lampa.Player.listener.follow('ready', function (data) {
@@ -3300,6 +3307,7 @@
       var html = $('<div class="vinyl-full layer--wheight"></div>');
       var grid = $('<div class="vinyl-all-grid"></div>');
       var items = [];
+      var allSongs = [];
       var last = null;
       var page = 1;
       var isLoading = false;
@@ -3320,6 +3328,7 @@
           isEnd = false;
           grid.empty();
           items = [];
+          allSongs = [];
         }
         var self = this;
         var query = object.query || '';
@@ -3348,6 +3357,18 @@
               vinyl_type: vinyl_type,
               vinyl_data: elem
             };
+            if (type === 'songs') {
+              allSongs.push({
+                id: elem.id,
+                name: elem.name || elem.title || 'Unknown',
+                title: elem.name || elem.title || 'Unknown',
+                subtitle: elem.subtitle || elem.primaryArtists || elem.artist || '',
+                artist: elem.primaryArtists || elem.artist || '',
+                image: elem.image || elem.picture || '',
+                duration: elem.duration,
+                downloadUrl: elem.downloadUrl || []
+              });
+            }
             var card = new Card(cardData);
             card.render().addClass('card--vinyl');
             card.render().on('hover:focus', function () {
@@ -3363,8 +3384,13 @@
             });
             card.render().on('hover:enter', function () {
               if (type === 'songs') {
-                var song = cardData.vinyl_data || cardData;
-                if (song.id) Player.get().play(song, [song]);
+                if (allSongs.length > 0) {
+                  var idx = -1;
+                  allSongs.forEach(function (s, i) {
+                    if (s.id === (cardData.id || elem.id)) idx = i;
+                  });
+                  Player.get().playPlaylist(allSongs, idx >= 0 ? idx : 0);
+                }
               } else if (type === 'playlists') {
                 playPlaylist(api, cardData.id, false);
               } else if (type === 'albums') {
@@ -3827,7 +3853,7 @@
       // 1. Manifest
       Lampa.Manifest.plugins = {
         type: 'audio',
-        version: '1.0.0',
+        version: '1.0.1',
         name: Lampa.Lang.translate('vinyl_title'),
         component: 'vinyl',
         description: 'JioSaavn music — playlists, albums, radio'
