@@ -1,4 +1,4 @@
-(function () {
+var plugin = (function () {
     'use strict';
 
     function lang () {
@@ -5521,6 +5521,10 @@
       return prevController;
     }
 
+    var callbacks = {
+      onOpenPluginManager: null
+    };
+
     // ponytail: counter instead of boolean — batch operations fire multiple events
     var _publishSuppressed = 0;
     var STORAGE_ACTIVE_PROFILE = STORAGE_KEYS.ACTIVE_PROFILE;
@@ -6719,7 +6723,8 @@
       refreshCacheFromTelegram: refreshCacheFromTelegram,
       getPluginRegistry: getPluginRegistry,
       addToPluginRegistry: addToPluginRegistry,
-      removeFromPluginRegistry: removeFromPluginRegistry
+      removeFromPluginRegistry: removeFromPluginRegistry,
+      callbacks: callbacks
     };
 
     /**
@@ -9788,6 +9793,7 @@
 
     function startPlugin() {
       window.plugin_gramlink_ready = true;
+      Profiles.callbacks.onOpenPluginManager = PluginManager.open;
 
       // ── Auto-detect GramLink's own URL for safeguard ──────────
       // Captured at script-parse time (IIFE via Rollup) so
