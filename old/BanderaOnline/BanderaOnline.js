@@ -907,6 +907,16 @@
           if (fail) fail();
           return;
         }
+
+        // site111477: content response already contains direct .mkv URLs in ref.url
+        if (sourceKey === 'site111477' && ref.url) {
+          var streams = [{
+            url: ref.url,
+            quality: 'auto'
+          }];
+          stream_cache[cache_key] = streams;
+          return success(streams);
+        }
         api_client.getStream(sourceKey, ref, function (json) {
           if (!json || !json.ok || !Array.isArray(json.streams)) {
             handleStreamError(json);
@@ -2472,7 +2482,7 @@
         enabled: item.enabled !== false
       };
     }).filter(function (item) {
-      return isVisibleSource(item.key);
+      return isVisibleSource(item.key) && item.enabled;
     });
     if (sorted.length) {
       var ordered = [];
