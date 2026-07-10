@@ -209,19 +209,17 @@
       i = 0;
     }
     _regeneratorDefine = function (e, r, n, t) {
-      if (r) i ? i(e, r, {
+      function o(r, n) {
+        _regeneratorDefine(e, r, function (e) {
+          return this._invoke(r, n, e);
+        });
+      }
+      r ? i ? i(e, r, {
         value: n,
         enumerable: !t,
         configurable: !t,
         writable: !t
-      }) : e[r] = n;else {
-        function o(r, n) {
-          _regeneratorDefine(e, r, function (e) {
-            return this._invoke(r, n, e);
-          });
-        }
-        o("next", 0), o("throw", 1), o("return", 2);
-      }
+      }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2));
     }, _regeneratorDefine(e, r, n, t);
   }
   function _regeneratorValues(e) {
@@ -1026,6 +1024,7 @@
       // Ідентифікатори
       id: item.id,
       kinobaza_id: item.id,
+      themoviedb_id: item.themoviedb_id || 0,
       slug: item.slug,
       needsEnrichment: true,
       source: SOURCE,
@@ -1686,7 +1685,7 @@
     _resolveByImdb = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(imdbId) {
       var formattedId, url, response, data, entry, _t;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             if (imdbId) {
               _context.n = 1;
@@ -1756,7 +1755,7 @@
     _searchByTitle = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(card) {
       var query, year, searchQuery, json, items, isTV, cardYear, found, _t2;
       return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+        while (1) switch (_context2.p = _context2.n) {
           case 0:
             query = card.original_name || card.original_title || card.title || card.name || '';
             if (query) {
@@ -1886,7 +1885,7 @@
     _resolveForImport = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(kbItem) {
       var isTV, resolved, data;
       return _regenerator().w(function (_context4) {
-        while (1) switch (_context4.n) {
+        while (1) switch (_context4.p = _context4.n) {
           case 0:
             if (kbItem) {
               _context4.n = 1;
@@ -1944,7 +1943,6 @@
             break;
           case 8:
             _context4.p = 8;
-            _context4.v;
           case 9:
             return _context4.a(2, {
               kinobaza_id: kbItem.id,
@@ -7649,7 +7647,7 @@
         _args = arguments,
         _t;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             useAuth = _args.length > 1 && _args[1] !== undefined ? _args[1] : false;
             page = 1;
@@ -7731,7 +7729,7 @@
         _t2,
         _t3;
       return _regenerator().w(function (_context3) {
-        while (1) switch (_context3.n) {
+        while (1) switch (_context3.p = _context3.n) {
           case 0:
             stats = _args3.length > 0 && _args3[0] !== undefined ? _args3[0] : {
               found: 0,
@@ -7822,7 +7820,7 @@
               _context3.n = 8;
               break;
             }
-            _step$value = _slicedToArray(_step.value, 2), _step$value[0], kbEntry = _step$value[1];
+            _step$value = _slicedToArray(_step.value, 2), kbEntry = _step$value[1];
             _context3.n = 6;
             return resolver.resolveForImport(kbEntry.raw);
           case 6:
@@ -7991,7 +7989,7 @@
     _pullIncremental = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
       var PERSONAL_LISTS, userId, commonParams, responses, allItems, totalItems, _iterator2, _step2, _loop2, item, _t4, _t5;
       return _regenerator().w(function (_context5) {
-        while (1) switch (_context5.n) {
+        while (1) switch (_context5.p = _context5.n) {
           case 0:
             if (!isImportingState) {
               _context5.n = 1;
@@ -8282,7 +8280,7 @@
             _loop = /*#__PURE__*/_regenerator().m(function _loop() {
               var command, card, target, path, status, _t, _t2;
               return _regenerator().w(function (_context) {
-                while (1) switch (_context.n) {
+                while (1) switch (_context.p = _context.n) {
                   case 0:
                     if (!(typeof window !== 'undefined' && navigator && !navigator.onLine)) {
                       _context.n = 1;
@@ -8432,7 +8430,7 @@
     _execute = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(command) {
       var path, body, _t;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             if (!(!command || !command.kinobaza_id)) {
               _context.n = 1;
@@ -8536,7 +8534,7 @@
     _runSyncPhases = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(modal, $ui) {
       var stats, setPhase, kbTmdbIds, localCards, categories, lampaOnly, _iterator, _step, _card, priority, _i2, _lampaOnly, card, target, activeCat, _iterator2, _step2, cat, actionCmd, _t, _t2, _t3;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             stats = {
               found: 0,
@@ -8830,7 +8828,7 @@
     _resolveEpisodeId = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(card, season, episode) {
       var target, data, ep, _t2;
       return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+        while (1) switch (_context2.p = _context2.n) {
           case 0:
             _context2.n = 1;
             return resolver.resolveForExport(card);
@@ -8876,7 +8874,7 @@
     _handleTimelineUpdate = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(hash, percent) {
       var realtimeKey, realtime, meta, card, isTV, season, episode, epId, command, movieHash, target, _command, _t3;
       return _regenerator().w(function (_context3) {
-        while (1) switch (_context3.n) {
+        while (1) switch (_context3.p = _context3.n) {
           case 0:
             console.log('KinoBaza Sync', 'handleTimelineUpdate called - Hash:', hash, 'Percent:', percent);
 
@@ -8994,7 +8992,6 @@
             break;
           case 15:
             _context3.p = 15;
-            _context3.v;
           case 16:
             return _context3.a(2);
         }
@@ -9022,7 +9019,7 @@
         var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(action, e) {
           var realtime, mappedEvent, target, command, _t;
           return _regenerator().w(function (_context) {
-            while (1) switch (_context.n) {
+            while (1) switch (_context.p = _context.n) {
               case 0:
                 if (!importer.isImporting()) {
                   _context.n = 1;
@@ -9857,7 +9854,7 @@
       if (!Lampa.Manifest) return;
       var manifest = {
         type: 'video',
-        version: '0.7',
+        version: '0.8',
         name: Lampa.Lang.translate('kinobaza_title') || 'КіноБаза',
         component: 'kinobaza',
         description: 'Контент-провайдер КіноБаза (kinobaza.com.ua)'
@@ -9886,8 +9883,20 @@
     var fav = Lampa.Favorite.full();
     if (!fav || !fav.card) return null;
     return fav.card.find(function (c) {
-      if (c.source !== 'kinobaza') return false;
       return c.id === card.id || c.kinobaza_id && c.kinobaza_id === card.id || c.themoviedb_id && c.themoviedb_id === card.id || card.kinobaza_id && c.id === card.kinobaza_id || card.themoviedb_id && c.id === card.themoviedb_id || card.kinobaza_id && c.kinobaza_id === card.kinobaza_id || card.themoviedb_id && c.themoviedb_id === card.themoviedb_id;
+    });
+  }
+
+  /**
+   * Find any stored card matching by kinobaza_id, themoviedb_id, or id — regardless of source.
+   * Used as secondary lookup when findDbCard() returns null.
+   */
+  function findAnyCard(card) {
+    if (!Lampa.Favorite || typeof Lampa.Favorite.full !== 'function') return null;
+    var fav = Lampa.Favorite.full();
+    if (!fav || !fav.card) return null;
+    return fav.card.find(function (c) {
+      return c.kinobaza_id && c.kinobaza_id === card.kinobaza_id || c.kinobaza_id && card.id && c.kinobaza_id === card.id || c.themoviedb_id && c.themoviedb_id === card.themoviedb_id || c.themoviedb_id && card.id && c.themoviedb_id === card.id || card.themoviedb_id && c.id === card.themoviedb_id || c.id === card.id;
     });
   }
 
@@ -9902,6 +9911,8 @@
         if (card && card.source === 'kinobaza') {
           var dbCard = findDbCard(card);
           if (dbCard) return originalCheck(dbCard);
+          var anyCard = findAnyCard(card);
+          if (anyCard) return originalCheck(anyCard);
         }
         return originalCheck(card);
       };
@@ -9910,6 +9921,8 @@
         if (card && card.source === 'kinobaza') {
           var dbCard = findDbCard(card);
           if (dbCard) return originalAdd(where, dbCard, limit);
+          var anyCard = findAnyCard(card);
+          if (anyCard) return originalAdd(where, anyCard, limit);
         }
         return originalAdd(where, card, limit);
       };
@@ -9918,6 +9931,8 @@
         if (card && card.source === 'kinobaza') {
           var dbCard = findDbCard(card);
           if (dbCard) return originalRemove(where, dbCard);
+          var anyCard = findAnyCard(card);
+          if (anyCard) return originalRemove(where, anyCard);
         }
         return originalRemove(where, card);
       };
@@ -9926,6 +9941,8 @@
         if (card && card.source === 'kinobaza') {
           var dbCard = findDbCard(card);
           if (dbCard) return originalToggle(where, dbCard);
+          var anyCard = findAnyCard(card);
+          if (anyCard) return originalToggle(where, anyCard);
         }
         return originalToggle(where, card);
       };

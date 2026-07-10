@@ -190,19 +190,17 @@
       i = 0;
     }
     _regeneratorDefine = function (e, r, n, t) {
-      if (r) i ? i(e, r, {
+      function o(r, n) {
+        _regeneratorDefine(e, r, function (e) {
+          return this._invoke(r, n, e);
+        });
+      }
+      r ? i ? i(e, r, {
         value: n,
         enumerable: !t,
         configurable: !t,
         writable: !t
-      }) : e[r] = n;else {
-        function o(r, n) {
-          _regeneratorDefine(e, r, function (e) {
-            return this._invoke(r, n, e);
-          });
-        }
-        o("next", 0), o("throw", 1), o("return", 2);
-      }
+      }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2));
     }, _regeneratorDefine(e, r, n, t);
   }
   function _slicedToArray(r, e) {
@@ -295,7 +293,7 @@
     _fetchAllChannels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(force) {
       var cached, response, items, stale, _t;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             cached = !force ? readCache(false) : null;
             if (!cached) {
@@ -380,7 +378,7 @@
     _fetchCatalogLines$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(force) {
       var cached, response, lines, stale, _t2;
       return _regenerator().w(function (_context3) {
-        while (1) switch (_context3.n) {
+        while (1) switch (_context3.p = _context3.n) {
           case 0:
             cached = !force ? readCatalogCache(false) : null;
             if (!cached) {
@@ -464,7 +462,7 @@
     _fetchCatalog = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
       var response;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             _context.p = 0;
             _context.n = 1;
@@ -474,7 +472,6 @@
             return _context.a(2, response && Array.isArray(response.lines) ? response.lines : []);
           case 2:
             _context.p = 2;
-            _context.v;
             return _context.a(2, []);
         }
       }, _callee, null, [[0, 2]]);
@@ -488,7 +485,7 @@
     _fetchChannels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(categoryKey) {
       var url, response, items, title;
       return _regenerator().w(function (_context2) {
-        while (1) switch (_context2.n) {
+        while (1) switch (_context2.p = _context2.n) {
           case 0:
             _context2.p = 0;
             url = "".concat(API_BASE, "/channels?category_key=").concat(encodeURIComponent(categoryKey));
@@ -504,7 +501,6 @@
             });
           case 2:
             _context2.p = 2;
-            _context2.v;
             return _context2.a(2, {
               categoryTitle: '',
               items: []
@@ -913,7 +909,7 @@
     _loadMain = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(oncomplete, onerror) {
       var linesMeta, ordered, hidden, isTvEnabled, isReplayEnabled, visible, LineModule, lines, _t;
       return _regenerator().w(function (_context3) {
-        while (1) switch (_context3.n) {
+        while (1) switch (_context3.p = _context3.n) {
           case 0:
             _context3.p = 0;
             _context3.n = 1;
@@ -956,7 +952,7 @@
     _loadCategory$1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(categorySlug, categoryTitle, oncomplete, onerror) {
       var categoryKey, response, shortKey, title, channels, items, total, lineTitle, _t2, _t3;
       return _regenerator().w(function (_context4) {
-        while (1) switch (_context4.n) {
+        while (1) switch (_context4.p = _context4.n) {
           case 0:
             _context4.p = 0;
             categoryKey = categorySlug || '';
@@ -1331,7 +1327,7 @@
     _ensurePlayableUrl = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(channel) {
       var fallback, fresh, _t;
       return _regenerator().w(function (_context5) {
-        while (1) switch (_context5.n) {
+        while (1) switch (_context5.p = _context5.n) {
           case 0:
             if (channel) {
               _context5.n = 1;
@@ -1395,7 +1391,7 @@
               var _ref3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
                 var current, url, _t2;
                 return _regenerator().w(function (_context6) {
-                  while (1) switch (_context6.n) {
+                  while (1) switch (_context6.p = _context6.n) {
                     case 0:
                       if (!(index < queue.length)) {
                         _context6.n = 5;
@@ -1787,7 +1783,7 @@
     _playChannelList = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10(channels, startIndex, groupTitle, startRef) {
       var list, startByRef, playableStart, startChannel, _t3;
       return _regenerator().w(function (_context10) {
-        while (1) switch (_context10.n) {
+        while (1) switch (_context10.p = _context10.n) {
           case 0:
             list = (channels || []).map(function (channel) {
               var provider = channel.provider || Api$1.PROVIDER_DYVY;
@@ -1980,7 +1976,7 @@
     _playReplay = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(cardData) {
       var host, proxy, response, match, socket, key, newLink, _t4, _t5;
       return _regenerator().w(function (_context11) {
-        while (1) switch (_context11.n) {
+        while (1) switch (_context11.p = _context11.n) {
           case 0:
             if (!(!cardData || !cardData.salo_vod_id)) {
               _context11.n = 1;
@@ -2460,7 +2456,7 @@
       _loadChannels = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
         var _yield$Promise$allSet, _yield$Promise$allSet2, listState, catalogState, list, catalog, isUkrainian, _t;
         return _regenerator().w(function (_context) {
-          while (1) switch (_context.n) {
+          while (1) switch (_context.p = _context.n) {
             case 0:
               setLoading(true);
               _context.p = 1;
@@ -2528,7 +2524,7 @@
       _playFromList = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(index) {
         var channel, fallbackCard, _t2;
         return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
+          while (1) switch (_context2.p = _context2.n) {
             case 0:
               if (!playLock) {
                 _context2.n = 1;
@@ -3494,7 +3490,7 @@
     _loadCategory = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(disciplineId, oncomplete, onerror) {
       var url, response, vods, items, _t;
       return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
+        while (1) switch (_context.p = _context.n) {
           case 0:
             _context.p = 0;
             url = "".concat(REPLAY_BASE, "/vod?filter={\"discipline\":").concat(disciplineId, "}&sort=-date&limit=100");

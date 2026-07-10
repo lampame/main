@@ -4069,7 +4069,7 @@
 
       // 5a. Register music player type setting in the Player settings page
       // (data-component="player") after the player_torrent selector
-      ;
+    ;
       (function registerMusicPlayerSetting() {
         var opts = {
           'inner': '#{settings_param_player_inner}'

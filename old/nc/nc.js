@@ -341,7 +341,7 @@
             title: Lampa.Lang.translate('title_upcoming_episodes'),
             nomore: true,
             cardClass: function cardClass(_elem, _params) {
-              return new Episode(_elem);
+              return new Episode(_elem, _params);
             }
           });
         }, function (call) {

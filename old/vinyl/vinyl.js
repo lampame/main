@@ -293,6 +293,23 @@
       };
 
       /**
+       * Пошук пісень через проксі
+       * @param {string} query
+       * @param {number} page
+       * @param {function} oncomplite
+       * @param {function} onerror
+       */
+      this.searchSongs = function (query, page, oncomplite, onerror) {
+        var url = getProxyBase() + '/api/search/songs?query=' + encodeURIComponent(query) + '&page=' + (page || 1) + '&limit=12';
+        network.native(url, function (json) {
+          var data = Api.unwrap(json);
+          if (data) oncomplite(data);else if (onerror) onerror();
+        }, function (a, c) {
+          if (onerror) onerror(a, c);
+        });
+      };
+
+      /**
        * Поиск плейлистов через прокси
        * @param {string} query
        * @param {number} page
@@ -300,7 +317,7 @@
        * @param {function} onerror
        */
       this.searchPlaylists = function (query, page, oncomplite, onerror) {
-        var url = getProxyBase() + '/api/search/playlists?query=' + encodeURIComponent(query) + '&page=' + (page || 0) + '&limit=12';
+        var url = getProxyBase() + '/api/search/playlists?query=' + encodeURIComponent(query) + '&page=' + (page || 1) + '&limit=12';
         network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
@@ -317,7 +334,7 @@
        * @param {function} onerror
        */
       this.searchAlbums = function (query, page, oncomplite, onerror) {
-        var url = getProxyBase() + '/api/search/albums?query=' + encodeURIComponent(query) + '&page=' + (page || 0) + '&limit=12';
+        var url = getProxyBase() + '/api/search/albums?query=' + encodeURIComponent(query) + '&page=' + (page || 1) + '&limit=12';
         network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
@@ -334,7 +351,7 @@
        * @param {function} onerror
        */
       this.searchArtists = function (query, page, oncomplite, onerror) {
-        var url = getProxyBase() + '/api/search/artists?query=' + encodeURIComponent(query) + '&page=' + (page || 0) + '&limit=12';
+        var url = getProxyBase() + '/api/search/artists?query=' + encodeURIComponent(query) + '&page=' + (page || 1) + '&limit=12';
         network.native(url, function (json) {
           var data = Api.unwrap(json);
           if (data) oncomplite(data);else if (onerror) onerror();
@@ -1086,7 +1103,8 @@
           // Fetch song detail to obtain downloadUrl
           if (song && song.id) {
             Lampa.Noty.show('Loading track...');
-            api.getSongDetail(song.id, function (detail) {
+            api.getSongsByIds([song.id], function (songs) {
+              var detail = songs && songs[0];
               // Api.unwrap already normalised {success,data:[{...}]} → single song object
               var downloadUrl = detail && (detail.downloadUrl || detail.download_url) || [];
               if (!Array.isArray(downloadUrl)) downloadUrl = [];
@@ -1157,11 +1175,42 @@
        */
       this.playPlaylist = function (songs, startIndex) {
         if (!songs || !songs.length) return;
-        startIndex = startIndex || 0;
-        if (startIndex >= songs.length) startIndex = 0;
-        currentPlaylist = songs;
-        currentIndex = startIndex;
-        this.play(songs[startIndex], songs);
+        var missingIds = songs.filter(function (s) {
+          return !s.downloadUrl || !s.downloadUrl.length;
+        }).map(function (s) {
+          return s.id;
+        }).filter(Boolean);
+        if (missingIds.length) {
+          Lampa.Noty.show('Loading ' + missingIds.length + ' tracks...');
+          api.getSongsByIds(missingIds, function (fetched) {
+            if (Array.isArray(fetched)) {
+              var urlMap = {};
+              fetched.forEach(function (f) {
+                if (f.id) urlMap[f.id] = f.downloadUrl || [];
+              });
+              songs.forEach(function (s) {
+                if (!s.downloadUrl || !s.downloadUrl.length) {
+                  s.downloadUrl = urlMap[s.id] || s.downloadUrl || [];
+                }
+              });
+            }
+            currentPlaylist = songs;
+            currentIndex = startIndex || 0;
+            if (currentIndex >= songs.length) currentIndex = 0;
+            this.play(songs[currentIndex], songs);
+          }.bind(this), function () {
+            // On error — still try to play
+            currentPlaylist = songs;
+            currentIndex = startIndex || 0;
+            if (currentIndex >= songs.length) currentIndex = 0;
+            this.play(songs[currentIndex], songs);
+          }.bind(this));
+        } else {
+          currentPlaylist = songs;
+          currentIndex = startIndex || 0;
+          if (currentIndex >= songs.length) currentIndex = 0;
+          this.play(songs[currentIndex], songs);
+        }
       };
 
       /**
@@ -1265,18 +1314,25 @@
             if (footerImg) footerImg.src = imgUrl;
           }
 
-          // Set bitrate info in player info panel
-          var quality = Lampa.Storage.get('vinyl_quality', '320');
-          Lampa.PlayerInfo.set('bitrate', quality + ' kbps');
+          // Only for vinyl tracks — avoid interfering with movies/TV shows
+          if (data && data.vinyl) {
+            // Set bitrate info in player info panel
+            var quality = Lampa.Storage.get('vinyl_quality', '320');
+            Lampa.PlayerInfo.set('bitrate', quality + ' kbps');
 
-          // Start download speed monitoring
-          if (videoEl) {
-            speedMonitor.start(videoEl, quality);
-          }
+            // Set size info — for audio streams there are no video dimensions
+            var sizeEl = document.querySelector('.value--size span');
+            if (sizeEl) sizeEl.textContent = 'Audio';
 
-          // Start butterchurn visualizer if enabled
-          if (Lampa.Storage.get('vinyl_visualizer', false)) {
-            ButterchurnViz.start();
+            // Start download speed monitoring
+            if (videoEl) {
+              speedMonitor.start(videoEl, quality);
+            }
+
+            // Start butterchurn visualizer if enabled
+            if (Lampa.Storage.get('vinyl_visualizer', false)) {
+              ButterchurnViz.start();
+            }
           }
         });
       }
@@ -3282,12 +3338,15 @@
             return;
           }
           list.forEach(function (elem) {
+            var vinyl_type = type === 'playlists' ? 'playlist' : type === 'albums' ? 'album' : type === 'artists' ? 'artist' : type === 'songs' ? 'song' : type;
             var cardData = {
               id: elem.id || elem._id || '',
               title: elem.title || elem.name || 'Unknown',
-              subtitle: elem.subtitle || elem.artist || elem.language || elem.year || '',
+              subtitle: elem.subtitle || elem.artist || elem.primaryArtists || elem.language || elem.year || '',
               image: elem.image || elem.picture || elem.coverImage || '',
-              media: type === 'playlists' ? 'playlist' : type === 'albums' ? 'album' : type === 'artists' ? 'artist' : type
+              media: vinyl_type,
+              vinyl_type: vinyl_type,
+              vinyl_data: elem
             };
             var card = new Card(cardData);
             card.render().addClass('card--vinyl');
@@ -3303,7 +3362,10 @@
               }
             });
             card.render().on('hover:enter', function () {
-              if (type === 'playlists') {
+              if (type === 'songs') {
+                var song = cardData.vinyl_data || cardData;
+                if (song.id) Player.get().play(song, [song]);
+              } else if (type === 'playlists') {
                 playPlaylist(api, cardData.id, false);
               } else if (type === 'albums') {
                 playAlbum(api, cardData.id, false);
@@ -3319,7 +3381,7 @@
               } else if (type === 'section') {
                 playJammifyPlaylist(api, cardData.id);
               } else {
-                // artists — navigate to detail (unchanged)
+                // artists — navigate to detail
                 Lampa.Activity.push({
                   url: '',
                   title: cardData.title,
@@ -3377,7 +3439,7 @@
         // Determine API method based on type and context
         if (query) {
           // Search pagination
-          if (type === 'playlists') api.searchPlaylists(query, page, onsuccess, o_error);else if (type === 'albums') api.searchAlbums(query, page, onsuccess, o_error);else if (type === 'artists') api.searchArtists(query, page, onsuccess, o_error);
+          if (type === 'songs') api.searchSongs(query, page, onsuccess, o_error);else if (type === 'playlists') api.searchPlaylists(query, page, onsuccess, o_error);else if (type === 'albums') api.searchAlbums(query, page, onsuccess, o_error);else if (type === 'artists') api.searchArtists(query, page, onsuccess, o_error);
         } else {
           // Browse pagination
           if (type === 'playlists') api.getFeaturedPlaylists(page, onsuccess, o_error);else if (type === 'albums') api.getAlbums(page, onsuccess, o_error);else if (type === 'genres') api.getGenres(onsuccess, o_error);else if (type === 'section' && object.sectionId) api.getSectionPlaylists(object.sectionId, page, 12, onsuccess, o_error);
@@ -3534,7 +3596,8 @@
               section: {
                 title: Lampa.Lang.translate('vinyl_songs') + ' (' + all.length + ')',
                 results: items,
-                total_pages: all.length > 3 ? 2 : 1
+                total_pages: all.length >= 3 ? 2 : 1,
+                vinyl_section_type: 'songs'
               }
             });
           }
@@ -3546,7 +3609,8 @@
               section: {
                 title: Lampa.Lang.translate('vinyl_albums') + ' (' + _all.length + ')',
                 results: _items,
-                total_pages: _all.length > 3 ? 2 : 1
+                total_pages: _all.length >= 3 ? 2 : 1,
+                vinyl_section_type: 'albums'
               }
             });
           }
@@ -3558,7 +3622,8 @@
               section: {
                 title: Lampa.Lang.translate('vinyl_artists') + ' (' + _all2.length + ')',
                 results: _items2,
-                total_pages: _all2.length > 3 ? 2 : 1
+                total_pages: _all2.length >= 3 ? 2 : 1,
+                vinyl_section_type: 'artists'
               }
             });
           }
@@ -3570,7 +3635,8 @@
               section: {
                 title: Lampa.Lang.translate('vinyl_playlists') + ' (' + _all3.length + ')',
                 results: _items3,
-                total_pages: _all3.length > 3 ? 2 : 1
+                total_pages: _all3.length >= 3 ? 2 : 1,
+                vinyl_section_type: 'playlists'
               }
             });
           }
@@ -3603,7 +3669,13 @@
         // Mark every rendered Line so CSS `.main-search .vinyl-search-line .card__view`
         // can target the square aspect ratio without colliding with movie cards elsewhere.
         onRender: function onRender(line) {
-          line.render(true).addClass('vinyl-search-line');
+          var el = line.render(true);
+          el.addClass('vinyl-search-line');
+          el.on('visible', function () {
+            setTimeout(function () {
+              line.emit('scroll');
+            }, 100);
+          });
         },
         search: function search(params, oncomplite) {
           var query = decodeURIComponent(params.query);
@@ -3611,82 +3683,113 @@
             oncomplite(results);
           });
         },
-        onMore: function onMore(params) {
+        onMore: function onMore(params, callback) {
           // params = { data, line, query }
-          var type = 'playlists';
-          var title = Lampa.Lang.translate('vinyl_playlists');
-          if (params.data.title.indexOf(Lampa.Lang.translate('vinyl_songs')) !== -1) {
-            type = 'playlists'; // Fallback to playlist search or keep query type
-            // Note: since all track layouts in album/playlist details are now Lines,
-            // we can map detailed search types
-            type = 'playlists';
-          } else if (params.data.title.indexOf(Lampa.Lang.translate('vinyl_albums')) !== -1) {
-            type = 'albums';
-            title = Lampa.Lang.translate('vinyl_albums');
-          } else if (params.data.title.indexOf(Lampa.Lang.translate('vinyl_artists')) !== -1) {
-            type = 'artists';
-            title = Lampa.Lang.translate('vinyl_artists');
-          }
+          // Читаємо тип секції напряму з data — надійніше ніж парсити title
+          var sectionType = params.data.vinyl_section_type;
+          var typeMap = {
+            songs: {
+              type: 'songs',
+              title: Lampa.Lang.translate('vinyl_songs')
+            },
+            albums: {
+              type: 'albums',
+              title: Lampa.Lang.translate('vinyl_albums')
+            },
+            artists: {
+              type: 'artists',
+              title: Lampa.Lang.translate('vinyl_artists')
+            },
+            playlists: {
+              type: 'playlists',
+              title: Lampa.Lang.translate('vinyl_playlists')
+            }
+          };
+          var resolved = typeMap[sectionType] || typeMap['playlists'];
+          if (callback) callback();
           Lampa.Activity.push({
             url: '',
-            title: title + ': ' + params.query,
+            title: resolved.title + ': ' + params.query,
             component: 'vinyl_all',
             query: params.query,
-            type: type,
+            type: resolved.type,
             page: 1
           });
         },
-        onSelect: function onSelect(data) {
+        onSelect: function onSelect(data, callback) {
           var item = data.item_data || data.element;
           if (!item) return;
           if (item.vinyl_type === 'song') {
             var song = item.vinyl_data || item;
             Player.get().play(song, [song]);
-          } else if (item.vinyl_type === 'album') {
-            Lampa.Activity.push({
-              url: '',
-              title: item.title || '',
-              component: 'vinyl_album',
-              id: item.id,
-              page: 1,
-              movie: {
+          } else {
+            if (callback) callback();
+            if (item.vinyl_type === 'album') {
+              Lampa.Activity.push({
+                url: '',
+                title: item.title || '',
+                component: 'vinyl_album',
                 id: item.id,
-                title: item.title,
-                image: item.img || item.poster || item.image || ''
-              }
-            });
-          } else if (item.vinyl_type === 'playlist') {
-            Lampa.Activity.push({
-              url: '',
-              title: item.title || '',
-              component: 'vinyl_playlist',
-              id: item.id,
-              page: 1,
-              movie: {
+                page: 1,
+                movie: {
+                  id: item.id,
+                  title: item.title,
+                  image: item.img || item.poster || item.image || ''
+                }
+              });
+            } else if (item.vinyl_type === 'playlist') {
+              Lampa.Activity.push({
+                url: '',
+                title: item.title || '',
+                component: 'vinyl_playlist',
                 id: item.id,
-                title: item.title,
-                image: item.img || item.poster || item.image || ''
-              }
-            });
-          } else if (item.vinyl_type === 'artist') {
-            Lampa.Activity.push({
-              url: '',
-              title: item.title || '',
-              component: 'vinyl_artist',
-              id: item.id,
-              page: 1,
-              movie: {
+                page: 1,
+                movie: {
+                  id: item.id,
+                  title: item.title,
+                  image: item.img || item.poster || item.image || ''
+                }
+              });
+            } else if (item.vinyl_type === 'artist') {
+              Lampa.Activity.push({
+                url: '',
+                title: item.title || '',
+                component: 'vinyl_artist',
                 id: item.id,
-                title: item.title,
-                image: item.img || item.poster || item.image || ''
-              }
-            });
+                page: 1,
+                movie: {
+                  id: item.id,
+                  title: item.title,
+                  image: item.img || item.poster || item.image || ''
+                }
+              });
+            }
           }
         },
         onCancel: function onCancel() {
           searchInst.destroy();
         }
       });
+
+      // Listen to sources initialization to override the results count badge with the count of active sections
+      if (Lampa.Search && Lampa.Search.listener) {
+        Lampa.Search.listener.follow('sources', function (e) {
+          if (e.sources && e.sources.listener) {
+            e.sources.listener.follow('finded', function (event) {
+              var targetTitle = Lampa.Lang.translate('vinyl_title');
+              if (event.source.title === targetTitle) {
+                var tabs = $(e.sources.tabs()).find('.search-source');
+                var tab = tabs.filter(function () {
+                  return $(this).find('.search-source__tab').text() === targetTitle;
+                });
+                if (tab.length && Array.isArray(event.data)) {
+                  tab.find('.search-source__count').text(event.data.length);
+                }
+              }
+            });
+          }
+        });
+      }
     };
 
     // plugins/vinyl/vinyl.js — Entry point
@@ -3966,8 +4069,9 @@
         }
       })
 
-      // 5a. Register music player type setting with platform-appropriate options
-      ;
+      // 5a. Register music player type setting in the Player settings page
+      // (data-component="player") after the player_torrent selector
+    ;
       (function registerMusicPlayerSetting() {
         var opts = {
           'inner': '#{settings_param_player_inner}'
@@ -3999,7 +4103,7 @@
           opts['infuse'] = 'Infuse';
         }
         Lampa.SettingsApi.addParam({
-          component: 'vinyl',
+          component: 'player',
           param: {
             name: 'player_music',
             type: 'select',
@@ -4008,6 +4112,16 @@
           },
           field: {
             name: Lampa.Lang.translate('vinyl_player_type')
+          },
+          onRender: function onRender(item) {
+            // Defer reposition until after comp.append(item) adds element to DOM
+            setTimeout(function () {
+              var torrentField = $('[data-name="player_torrent"]');
+              if (torrentField.length) {
+                torrentField.after(item);
+                Lampa.Params.listener.send('update_scroll');
+              }
+            }, 0);
           }
         });
       })();
@@ -4018,8 +4132,8 @@
       Search.init();
 
       // Pause/resume visualizer on video play/pause events
-      Lampa.Player.listener.follow('start', function () {
-        if (Lampa.Storage.get('vinyl_visualizer', false)) {
+      Lampa.Player.listener.follow('start', function (data) {
+        if (data && data.vinyl && Lampa.Storage.get('vinyl_visualizer', false)) {
           ButterchurnViz.resume();
         }
       });
