@@ -1318,6 +1318,10 @@
             var quality = Lampa.Storage.get('vinyl_quality', '320');
             Lampa.PlayerInfo.set('bitrate', quality + ' kbps');
 
+            // Set size info — for audio streams there are no video dimensions
+            var sizeEl = document.querySelector('.value--size span');
+            if (sizeEl) sizeEl.textContent = 'Audio';
+
             // Start download speed monitoring
             if (videoEl) {
               speedMonitor.start(videoEl, quality);

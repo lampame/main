@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this));};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
+    if(!window.Promise){var $p=function(e,t){if('function'!=typeof t&&'object'!=typeof t)throw new TypeError('Promise resolver undefined is not a function');this._s=0,this._v=void 0,this._h=[],this._c=!1;var n=this;try{t(function(t){n._resolve(t)},function(t){n._reject(t)})}catch(r){n._reject(r)}};$p.prototype={_resolve:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){if(n._s)return;if(t&&'function'==typeof t.then){t.then(function(t){n._resolve(t)},function(t){n._reject(t)});return}n._s=1,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},_reject:function(t){if(this._c)return;this._c=!0;var n=this;setTimeout(function(){n._s=2,n._v=t;for(var r=0;r<n._h.length;r++)n._h[r](t)})},then:function(e,t){var n=this;return new $p(function(r,i){n._h.push(function(t){if('function'==typeof e)try{r(e(t))}catch(o){i(o)}else r(t);if('function'==typeof t)try{i(t)}catch(o){i(o)}else i(t)})})},catch:function(e){return this.then(null,e)}};window.Promise=$p;window.Promise.resolve=function(t){return new $p(function(n){n(t)})};window.Promise.reject=function(t){return new $p(function(n,r){r(t)})};window.Promise.all=function(e){return new $p(function(t,n){var r=0,i=[];if(!e||!e.length){t([]);return}for(var o=0;o<e.length;o++)!function(o){$p.resolve(e[o]).then(function(e){i[o]=e;if(++r===e.length)t(i)}.bind(this),n)}(o)}.bind(this))};}if(!Object.assign)Object.assign=function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];if(n)for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r])}return e};if(!Array.from)Array.from=function(e){var t=[];if('length'in e)for(var n=0;n<e.length;n++)t.push(e[n]);else if('function'==typeof e.forEach)e.forEach(function(e){t.push(e)});return t};if(!String.prototype.startsWith)String.prototype.startsWith=function(e,t){return this.substr(t||0,e.length)===e};if(!String.prototype.endsWith)String.prototype.endsWith=function(e,t){var n=void 0===t?this.length:t;return n-e.length>=0&&this.indexOf(e,n-e.length)===n-e.length};if(!String.prototype.includes)String.prototype.includes=function(e,t){return-1!==this.indexOf(e,t||0)};if(!Array.prototype.includes)Array.prototype.includes=function(e,t){if(null==this)throw new TypeError('"this" is null or not defined');var n=Object(this),r=n.length>>>0;if(0===r)return!1;for(var i=0|t||0,o=Math.max(0<=i?i:r-Math.abs(i),0);o<r;o++)if(n[o]===e)return!0;return!1};
 
     function lang () {
       Lampa.Lang.add({
@@ -1330,7 +1330,7 @@
      * Keep this file simple — no imports, no side effects.
      */
 
-    var VERSION = '0.2.2';
+    var VERSION = '0.2.2.5';
 
     /**
      * crypto-lite.js — Pure-JS cryptographic primitives (zero dependencies)
@@ -1652,6 +1652,7 @@
     }
     var vault = {
       seal: function seal(authKeyHex) {
+        _cache = null;
         try {
           var authKey = hexToBytes(authKeyHex);
           var salt = randomBytes(SALT_LEN);
@@ -1717,8 +1718,6 @@
       this._listeners = {};
       this._heartbeatTimer = null;
       this._heartbeatMsgId = null;
-      this._reconnectTimer = null;
-      this._reconnectAttempts = 0;
       this._wsUrl = '';
     }
     GatewayClient.getInstance = function () {
@@ -1799,12 +1798,25 @@
       if (msg.event === 'message' && msg.data) {
         this._emit('profile_delta', msg.data);
       }
+      if (msg.event === 'remote_command' && msg.data) {
+        this._emit(msg.data.type, msg.data);
+      }
     };
 
     // ── Connection ────────────────────────────────
 
     GatewayClient.prototype.connect = function () {
       var self = this;
+      if (!self.hasCredentials()) {
+        return Promise.reject(new Error('Authorization required'));
+      }
+
+      // Already connected
+      if (self._connected && self._ws && self._ws.readyState === 1) {
+        return Promise.resolve();
+      }
+
+      // Connection in progress — return the same promise
       if (self._connecting) {
         return new Promise(function (resolve, reject) {
           var check = setInterval(function () {
@@ -1819,8 +1831,6 @@
           }, 200);
         });
       }
-      if (self._connected) return Promise.resolve();
-      if (!self.hasCredentials()) return Promise.reject(new Error('Authorization required'));
       self._connecting = true;
       self._emit('connection', {
         state: 'connecting'
@@ -1856,13 +1866,12 @@
             if (resp.event === 'connected') {
               self._connected = true;
               self._connecting = false;
-              self._reconnectAttempts = 0;
               self._emit('connection', {
                 state: 'connected'
               });
               var channelId = Lampa.Storage.get('gramlink_channel_id', '');
               var syncLogId = Lampa.Storage.get('gramlink_sync_log_topic', '');
-              if (channelId && syncLogId && self.isEnabled('gramlink_heartbeat')) {
+              if (channelId && syncLogId) {
                 self.startHeartbeat(channelId, syncLogId);
               }
               resolve();
@@ -1872,6 +1881,19 @@
             }
           }).catch(function (err) {
             self._connecting = false;
+            self._connected = false;
+            self._emit('connection', {
+              state: 'disconnected'
+            });
+            console.error('GramLink', 'Connection error:', err);
+            if (self.hasCredentials()) {
+              var errMsg = err && (err.message || err.errorMessage || '');
+              if (errMsg.indexOf('AUTH_KEY_INVALID') >= 0 || errMsg.indexOf('AUTH_KEY_PERM_EMPTY') >= 0 || errMsg.indexOf('SESSION_PASSWORD_NEEDED') >= 0) {
+                self.clearCredentials();
+                Lampa.Noty.show(Lampa.Lang.translate('gramlink_error_session_invalid'));
+                return reject(err);
+              }
+            }
             reject(err);
           });
         };
@@ -1884,7 +1906,6 @@
           self._emit('connection', {
             state: 'disconnected'
           });
-          self._scheduleReconnect();
         };
         ws.onerror = function () {
           self._connecting = false;
@@ -1892,23 +1913,8 @@
         };
       });
     };
-    GatewayClient.prototype._scheduleReconnect = function () {
-      var self = this;
-      if (self._reconnectTimer) return;
-      if (!self.hasCredentials()) return;
-      var delay = Math.min(1000 * Math.pow(2, self._reconnectAttempts), 30000);
-      self._reconnectAttempts++;
-      self._reconnectTimer = setTimeout(function () {
-        self._reconnectTimer = null;
-        self.connect().catch(function () {});
-      }, delay);
-    };
     GatewayClient.prototype.disconnect = function () {
       this.stopHeartbeat();
-      if (this._reconnectTimer) {
-        clearTimeout(this._reconnectTimer);
-        this._reconnectTimer = null;
-      }
       if (this._ws) {
         try {
           this._ws.onclose = null;
@@ -1927,12 +1933,27 @@
       this.clearCredentials();
     };
     GatewayClient.prototype.reconnect = function () {
-      var self = this;
-      return Promise.resolve().then(function () {
-        self.disconnect();
-      }).then(function () {
-        return self.connect();
-      });
+      if (this.isConnected() && this._ws) {
+        var self = this;
+        var connectPromise = Promise.resolve().then(function () {
+          self.disconnect();
+        }).then(function () {
+          return self.connect();
+        });
+        if (self.isEnabled('gramlink_proxy_enabled')) {
+          var timeoutPromise = new Promise(function (_, reject) {
+            setTimeout(function () {
+              reject(new Error('GramLink: Proxy connection timeout'));
+            }, 10000);
+          });
+          return Promise.race([connectPromise, timeoutPromise]).catch(function (err) {
+            Lampa.Noty.show(Lampa.Lang.translate('gramlink_error_proxy_failed'));
+            throw err;
+          });
+        }
+        return connectPromise;
+      }
+      return Promise.resolve();
     };
 
     // ── Status ────────────────────────────────────
@@ -1958,7 +1979,14 @@
       };
       if (threadId) params.replyTo = parseInt(threadId, 10);
       return this._sendApi('getMessages', params).then(function (r) {
-        return r || [];
+        if (!r) return [];
+        return r.map(function (m) {
+          if (m.text === undefined && m.message !== undefined) {
+            m.text = m.message;
+          }
+          if (m.text === undefined) m.text = '';
+          return m;
+        });
       }).catch(function () {
         return [];
       });
@@ -1991,11 +2019,23 @@
     };
     GatewayClient.prototype.editMessage = function (chatId, messageId, newText, threadId) {
       if (!this._connected) return Promise.resolve(false);
-      return this._sendApi('editMessage', {
+      var params = {
         entity: chatId,
         messageId: messageId,
         text: newText
-      }).then(function () {
+      };
+      if (threadId) params.replyTo = parseInt(threadId, 10);
+      // Add formattingEntities for JSON syntax highlighting (same as publish)
+      try {
+        JSON.parse(newText);
+        params.formattingEntities = [{
+          className: 'MessageEntityPre',
+          offset: 0,
+          length: newText.length,
+          language: 'json'
+        }];
+      } catch (e) {}
+      return this._sendApi('editMessage', params).then(function () {
         return true;
       }).catch(function () {
         return false;
@@ -2008,11 +2048,23 @@
       if (!this._connected) return Promise.resolve(false);
       var chatId = parseInt(Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, ''), 10);
       if (!chatId) return Promise.resolve(false);
-      return this._sendApi('sendMessage', {
+      var params = {
         entity: chatId,
         message: text,
         replyTo: threadId || 0
-      }).then(function (r) {
+      };
+      if (silent) params.silent = true;
+      // Use formattingEntities for JSON code block with syntax highlighting (no markdown wrapping)
+      try {
+        JSON.parse(text);
+        params.formattingEntities = [{
+          className: 'MessageEntityPre',
+          offset: 0,
+          length: text.length,
+          language: 'json'
+        }];
+      } catch (e) {}
+      return this._sendApi('sendMessage', params).then(function (r) {
         return r && r.id ? r.id : false;
       }).catch(function () {
         return false;
@@ -2037,25 +2089,55 @@
         meta: {
           type: type,
           device_id: getDeviceId(),
+          device_name: getDeviceName(),
           target_device_id: targetDeviceId || 'all',
-          timestamp: Math.floor(Date.now() / 1000)
+          timestamp: Math.floor(Date.now() / 1000),
+          schema_version: 1
         },
         payload: payload || {}
+      }, null, 2);
+      return this._sendApi('sendMessage', {
+        entity: parseInt(Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, ''), 10),
+        message: msg,
+        replyTo: parseInt(threadId, 10) || 0,
+        silent: true,
+        formattingEntities: [{
+          className: 'MessageEntityPre',
+          offset: 0,
+          length: msg.length,
+          language: 'json'
+        }]
+      }).then(function (r) {
+        return r && r.id ? r.id : false;
+      }).catch(function () {
+        return false;
       });
-      return this.publishRaw(threadId, msg, true);
     };
 
     // ── Files ───────────────────────────────────────
 
     GatewayClient.prototype.sendFile = function (chatId, threadId, dataStr, fileName, caption) {
       if (!this._connected) return Promise.resolve(null);
-      return this._sendApi('sendFile', {
+      var params = {
         entity: chatId,
         fileName: fileName,
         caption: caption || '',
-        data: window.btoa(dataStr),
+        data: btoa(unescape(encodeURIComponent(dataStr))),
         replyTo: threadId || 0
-      }).then(function (r) {
+      };
+      // Add formatting for caption if it's valid JSON (syntax highlighting)
+      if (caption) {
+        try {
+          JSON.parse(caption);
+          params.formatting = [{
+            offset: 0,
+            length: caption.length,
+            entity: 'pre',
+            language: 'json'
+          }];
+        } catch (e) {}
+      }
+      return this._sendApi('sendFile', params).then(function (r) {
         return r && r.id ? r.id : null;
       }).catch(function () {
         return null;
@@ -2069,7 +2151,26 @@
         entity: chatId,
         messageId: message.id
       }).then(function (r) {
-        return r && r.data ? r.data : null;
+        if (!r || !r.data) return null;
+        try {
+          var binary = atob(r.data);
+          var bytes = new Uint8Array(binary.length);
+          for (var i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          if (typeof TextDecoder !== 'undefined') {
+            return new TextDecoder('utf-8', {
+              fatal: false
+            }).decode(bytes);
+          }
+          var percent = '';
+          for (var i = 0; i < binary.length; i++) {
+            percent += '%' + ('0' + binary.charCodeAt(i).toString(16)).slice(-2);
+          }
+          return decodeURIComponent(percent);
+        } catch (e) {
+          return null;
+        }
       }).catch(function () {
         return null;
       });
@@ -2078,11 +2179,16 @@
       return this.downloadFile(message);
     };
     GatewayClient.prototype.getBackupFiles = function (chatId, threadId, limit) {
-      return this.getMessages(chatId, threadId, limit || 50).then(function (msgs) {
-        if (!msgs || !Array.isArray(msgs)) return [];
-        return msgs.filter(function (m) {
-          return m.text && m.text.indexOf('.json') !== -1;
-        });
+      if (!this._connected) return Promise.resolve([]);
+      var params = {
+        entity: chatId,
+        limit: limit || 20
+      };
+      if (threadId) params.replyTo = parseInt(threadId, 10);
+      return this._sendApi('getBackupFiles', params).then(function (r) {
+        return r || [];
+      }).catch(function () {
+        return [];
       });
     };
 
@@ -2139,8 +2245,9 @@
       if (!this._connected || !this.isEnabled('gramlink_heartbeat')) return;
       var self = this;
       var myId = getDeviceId();
-      function doBeat() {
-        if (!self._connected || !self.isEnabled('gramlink_heartbeat')) {
+      var doBeat = function doBeat() {
+        if (!self._connected) return;
+        if (!self.isEnabled('gramlink_heartbeat')) {
           self.stopHeartbeat();
           return;
         }
@@ -2153,22 +2260,23 @@
             schema_version: 1
           },
           payload: {}
-        });
+        }, null, 2);
+
+        // ponytail: use cached heartbeat message ID
         if (self._heartbeatMsgId) {
-          self.editMessage(chatId, self._heartbeatMsgId, payload, threadId);
-        } else {
-          self._findHeartbeatMessage(chatId, threadId, myId).then(function (result) {
-            if (result && result.id) {
-              self._heartbeatMsgId = result.id;
-              self.editMessage(chatId, result.id, payload, threadId);
-            } else {
-              self.publishRaw(threadId, payload, true).then(function (msgId) {
-                if (msgId) self._heartbeatMsgId = msgId;
-              });
-            }
-          });
+          return self.editMessage(chatId, self._heartbeatMsgId, payload, threadId);
         }
-      }
+        self._findHeartbeatMessage(chatId, threadId, myId).then(function (result) {
+          if (result.id) {
+            self._heartbeatMsgId = result.id; // ponytail: cache it
+            return self.editMessage(chatId, result.id, payload, threadId);
+          } else {
+            return self.publish(chatId, threadId, 'heartbeat', {}).then(function (msgId) {
+              if (msgId) self._heartbeatMsgId = msgId; // ponytail: cache new message
+            });
+          }
+        });
+      };
       doBeat();
       this._heartbeatTimer = setInterval(doBeat, 60000);
     };
@@ -2176,13 +2284,9 @@
       var self = this;
       return this.getMessages(chatId, threadId, 50).then(function (messages) {
         var mine = [];
-        function stripCodeFence(t) {
-          if (!t) return t;
-          return t.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-        }
         (messages || []).forEach(function (m) {
           try {
-            var d = JSON.parse(stripCodeFence(m.text || ''));
+            var d = JSON.parse(stripCodeFence$1(m.message || m.text || ''));
             var meta = d && d.meta;
             if (!meta || meta.type !== 'heartbeat') return;
             if (meta.device_id === myDeviceId) mine.push({
@@ -2191,7 +2295,9 @@
             });
           } catch (e) {}
         });
-        if (mine.length === 0) return null;
+        if (mine.length === 0) return {
+          id: null
+        };
         mine.sort(function (a, b) {
           return b.ts - a.ts;
         });
@@ -2205,9 +2311,13 @@
             revoke: true
           }).catch(function () {});
         }
-        return mine[0];
+        return {
+          id: mine[0].id
+        };
       }).catch(function () {
-        return null;
+        return {
+          id: null
+        };
       });
     };
     GatewayClient.prototype.stopHeartbeat = function () {
@@ -2223,13 +2333,9 @@
       return this.getMessages(chatId, threadId, 50).then(function (messages) {
         var now = Math.floor(Date.now() / 1000);
         var seen = {};
-        function stripCodeFence(t) {
-          if (!t) return t;
-          return t.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-        }
         (messages || []).forEach(function (m) {
           try {
-            var d = JSON.parse(stripCodeFence(m.text || ''));
+            var d = JSON.parse(stripCodeFence$1(m.message || m.text || ''));
             var meta = d && d.meta;
             if (!meta || meta.type !== 'heartbeat') return;
             if (now - meta.timestamp < 90) {
@@ -2562,7 +2668,7 @@
       var statusId = 'gramlink-gateway-qr-status';
       var html = $('<div class="gramlink-auth" style="padding:1em;text-align:center">' + '<div class="gramlink-auth__qr-placeholder" style="width:16em;height:16em;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:1em;margin:0 auto">' + '<svg viewBox="0 0 64 64" width="48" height="48" fill="rgba(255,255,255,0.3)">' + '<rect x="4" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="36" y="4" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="4" y="36" width="24" height="24" rx="2" fill="currentColor"/>' + '<rect x="44" y="44" width="8" height="8" rx="1" fill="currentColor"/>' + '<rect x="36" y="44" width="4" height="8" rx="1" fill="currentColor"/>' + '<rect x="44" y="36" width="8" height="4" rx="1" fill="currentColor"/>' + '</svg>' + '</div>' + '<div class="gramlink-auth__qr-code" style="display:none;width:16em;height:16em;margin:0 auto"></div>' + '<div style="margin:1em 0 0.5em;font-size:1.1em;color:rgba(255,255,255,0.6)" id="' + statusId + '"></div>' + (showPhoneButton ? '<div class="gramlink-auth__phone-wrap" style="margin-top:1.2em;padding-top:1em;border-top:1px solid rgba(255,255,255,0.1)">' + '<div class="simple-button selector gramlink-auth__phone-gw-btn">Log in by phone number (Gateway)</div>' + '</div>' : '') + '</div>');
       Lampa.Modal.open({
-        title: 'Telegram Authorization (Gateway)',
+        title: 'Telegram Authorization',
         html: html,
         size: 'medium',
         onBack: function onBack() {
@@ -2655,7 +2761,7 @@
         } else if (resp.event === 'qr_poll' && resp.token) {
           // Got token, render QR
           renderQrCode(resp.token, qrPlaceholder, qrEl, statusEl);
-          qrPollTimer = setTimeout(pollOnce, 3000);
+          qrPollTimer = setTimeout(pollOnce, 5000);
         } else {
           // Fallback: poll
           qrPollTimer = setTimeout(pollOnce, 1000);
@@ -2692,17 +2798,17 @@
               qrEl.find('svg').data('token', resp.token);
               renderQrCode(resp.token, qrPlaceholder, qrEl, statusEl);
             }
-            qrPollTimer = setTimeout(pollOnce, 3000);
+            qrPollTimer = setTimeout(pollOnce, 5000);
           } else if (resp.event === 'qr_starting') {
             // Still starting
             qrPollTimer = setTimeout(pollOnce, 800);
           } else {
             // Unknown — keep polling
-            qrPollTimer = setTimeout(pollOnce, 3000);
+            qrPollTimer = setTimeout(pollOnce, 5000);
           }
         }).catch(function (err) {
           if (qrCancelFlag) return;
-          qrPollTimer = setTimeout(pollOnce, 3000);
+          qrPollTimer = setTimeout(pollOnce, 5000);
         });
       }
     }
@@ -2719,7 +2825,7 @@
           // ponytail: open single "Verifying" modal IMMEDIATELY (not after delay)
           // so user has feedback, and we don't end up with stacked modals.
           Lampa.Modal.open({
-            title: 'Telegram Authorization (Gateway)',
+            title: 'Telegram Authorization',
             html: $('<div class="gramlink-auth" style="padding:1em;text-align:center"><div style="margin:1em 0;font-size:1.1em;color:rgba(255,255,255,0.6)">Verifying password (this may take up to 30s)...</div></div>'),
             size: 'medium',
             onBack: function onBack() {
@@ -2809,114 +2915,32 @@
       }
     }
 
-    // Note: for old_release build, 'utils/client' is replaced with 'utils/gateway-client'
-
-    function onConnected(dcId, authKeyHex) {
-      GatewayClient.getInstance().connect().then(function () {
-        Lampa.Noty.show('GramLink: Connected!');
-        Lampa.Settings.update();
-      }).catch(function (err) {
-        console.error('GramLink', 'Post-auth connect failed:', err);
-        Lampa.Noty.show('GramLink: Connection failed — ' + (err.message || 'unknown'));
-      });
-    }
-    function startLogin() {
-      // Immediately start Gateway QR auth (shows its own modal with QR + phone button)
-      startQrAuthViaGateway(onConnected, true);
-    }
-
     /**
-     * sdk/avatars.js — Avatar generation and initials
+     * sdk/topic-config.js — Channel and topic configuration
      *
      * Eliminates:
-     *   D-04 — extractNameFromUrl now in one place
-     *   D-05a,b — DICE_BEAR_BASE, DICE_BEAR_STYLES in one place
-     *   D-05c — avatarLetters (auth.js:193) = getInitials (profiles.js:184) now unified
-     *   D-15 — renderAvatar() — 4 copies of avatar HTML builder
-     *   D-16 — avatarColor now called from here, not from profiles.js
+     *   D-02 — CHANNEL_TITLE and TOPIC_NAMES now in one place.
+     *          auth.js had its own TOPICS array (4 items, no remote-cmd);
+     *          hub.js had TOPIC_NAMES (5 items, with remote-cmd).
+     *          Now one source of truth: 5 topics.
      *
      * Usage:
-     *   import { getAvatar, avatarColor, renderAvatar, getInitials } from '../sdk/avatars'
+     *   import { CHANNEL_TITLE, TOPIC_NAMES, TOPIC_STORAGE_KEYS } from '../sdk/topic-config'
      */
-    var DICE_BEAR_BASE = 'https://api.dicebear.com/10.x/';
-    var DICE_BEAR_STYLES = ['adventurer', 'adventurer-neutral', 'avataaars', 'avataaars-neutral', 'big-ears', 'big-ears-neutral', 'big-smile', 'bottts', 'bottts-neutral', 'croodles', 'croodles-neutral', 'disco', 'dylan', 'fun-emoji', 'glass', 'glyphs', 'icons', 'identicon', 'initial-face', 'initials', 'lorelei', 'lorelei-neutral', 'micah', 'miniavs', 'notionists', 'notionists-neutral', 'open-peeps', 'personas', 'pixel-art', 'pixel-art-neutral', 'rings', 'shape-grid', 'shapes', 'stripes', 'thumbs', 'toon-head', 'triangles'];
-    var COLORS = ['#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ff9800', '#ff5722', '#795548'];
+
+    var CHANNEL_TITLE = "\uD83D\uDD04 Lampa Sync [DO NOT DELETE]";
+    var TOPIC_NAMES = ['sync-log', 'remote-cmd', 'backup', 'profiles', 'profiles-sync'];
 
     /**
-     * Generates avatar URL via DiceBear or initials if style is disabled.
+     * Map topic name → storage key.
      */
-    function getAvatar(name) {
-      var style = Lampa.Storage.get(STORAGE_KEYS.AVATAR_STYLE, 'fun-emoji');
-      if (!style) return getInitials(name);
-      return DICE_BEAR_BASE + style + '/svg?seed=' + encodeURIComponent(name) + '&borderRadius=50';
-    }
-
-    /**
-     * Returns initials of a name:
-     *   1 word → first 2 letters
-     *   2+ words → first letter of each word
-     */
-    function getInitials(name) {
-      if (!name) return '??';
-      var parts = name.trim().split(/\s+/);
-      if (parts.length >= 2) {
-        return (parts[0][0] || '') + (parts[1][0] || '');
-      }
-      return name.slice(0, 2);
-    }
-
-    /**
-     * Deterministic color based on name.
-     */
-    function avatarColor(name) {
-      if (!name) return '#0088cc';
-      var hash = 0;
-      for (var i = 0; i < name.length; i++) {
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      return COLORS[Math.abs(hash) % COLORS.length];
-    }
-
-    /**
-     * Check if avatar is a DiceBear URL (not initials).
-     */
-    function isAvatarUrl(avatar) {
-      return avatar && avatar.indexOf(DICE_BEAR_BASE) === 0;
-    }
-
-    /**
-     * Returns ready HTML for avatar.
-     * @param {string} name
-     * @param {Object} [options]
-     * @param {string} [options.className='gramlink-avatar']
-     * @param {string} [options.style] — additional CSS
-     * @returns {string} HTML string
-     */
-    function renderAvatar(name, options) {
-      if (!options) options = {};
-      var url = getAvatar(name);
-      var color = avatarColor(name);
-      var isUrl = isAvatarUrl(url);
-      var clsName = options.className || 'gramlink-avatar';
-      var extraStyle = options.style || '';
-      if (isUrl) {
-        return '<img src="' + url + '" alt="" class="' + clsName + '"' + (extraStyle ? ' style="' + extraStyle + '"' : '') + '>';
-      }
-      return '<div class="' + clsName + '" style="background:' + color + ';border-radius:50%;' + 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;' + 'color:#fff;font-weight:700;' + extraStyle + '">' + url + '</div>';
-    }
-
-    /**
-     * Extracts plugin name from URL.
-     */
-    function extractNameFromUrl(url) {
-      try {
-        var parts = url.split('/');
-        var fname = parts[parts.length - 1] || parts[parts.length - 2] || 'Plugin';
-        return fname.replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' ');
-      } catch (e) {
-        return 'Plugin';
-      }
-    }
+    var TOPIC_STORAGE_KEYS = {
+      'sync-log': 'gramlink_sync_log_topic',
+      'remote-cmd': 'gramlink_remote_cmd_topic',
+      'backup': 'gramlink_backup_topic',
+      'profiles': 'gramlink_profiles_topic',
+      'profiles-sync': 'gramlink_profiles_sync_topic'
+    };
 
     function _defineProperty(e, r, t) {
       return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
@@ -3140,6 +3164,314 @@
     }
     function setLastDeltaSeen(timestamp) {
       Lampa.Storage.set(STORAGE_LAST_DELTA_SEEN, String(timestamp));
+    }
+
+    /**
+     * sdk/avatars.js — Avatar generation and initials
+     *
+     * Eliminates:
+     *   D-04 — extractNameFromUrl now in one place
+     *   D-05a,b — DICE_BEAR_BASE, DICE_BEAR_STYLES in one place
+     *   D-05c — avatarLetters (auth.js:193) = getInitials (profiles.js:184) now unified
+     *   D-15 — renderAvatar() — 4 copies of avatar HTML builder
+     *   D-16 — avatarColor now called from here, not from profiles.js
+     *
+     * Usage:
+     *   import { getAvatar, avatarColor, renderAvatar, getInitials } from '../sdk/avatars'
+     */
+    var DICE_BEAR_BASE = 'https://api.dicebear.com/10.x/';
+    var DICE_BEAR_STYLES = ['adventurer', 'adventurer-neutral', 'avataaars', 'avataaars-neutral', 'big-ears', 'big-ears-neutral', 'big-smile', 'bottts', 'bottts-neutral', 'croodles', 'croodles-neutral', 'disco', 'dylan', 'fun-emoji', 'glass', 'glyphs', 'icons', 'identicon', 'initial-face', 'initials', 'lorelei', 'lorelei-neutral', 'micah', 'miniavs', 'notionists', 'notionists-neutral', 'open-peeps', 'personas', 'pixel-art', 'pixel-art-neutral', 'rings', 'shape-grid', 'shapes', 'stripes', 'thumbs', 'toon-head', 'triangles'];
+    var COLORS = ['#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ff9800', '#ff5722', '#795548'];
+
+    /**
+     * Generates avatar URL via DiceBear or initials if style is disabled.
+     */
+    function getAvatar(name) {
+      var style = Lampa.Storage.get(STORAGE_KEYS.AVATAR_STYLE, 'fun-emoji');
+      if (!style) return getInitials(name);
+      return DICE_BEAR_BASE + style + '/svg?seed=' + encodeURIComponent(name) + '&borderRadius=50';
+    }
+
+    /**
+     * Returns initials of a name:
+     *   1 word → first 2 letters
+     *   2+ words → first letter of each word
+     */
+    function getInitials(name) {
+      if (!name) return '??';
+      var parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] || '') + (parts[1][0] || '');
+      }
+      return name.slice(0, 2);
+    }
+
+    /**
+     * Deterministic color based on name.
+     */
+    function avatarColor(name) {
+      if (!name) return '#0088cc';
+      var hash = 0;
+      for (var i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return COLORS[Math.abs(hash) % COLORS.length];
+    }
+
+    /**
+     * Check if avatar is a DiceBear URL (not initials).
+     */
+    function isAvatarUrl(avatar) {
+      return avatar && avatar.indexOf(DICE_BEAR_BASE) === 0;
+    }
+
+    /**
+     * Returns ready HTML for avatar.
+     * @param {string} name
+     * @param {Object} [options]
+     * @param {string} [options.className='gramlink-avatar']
+     * @param {string} [options.style] — additional CSS
+     * @returns {string} HTML string
+     */
+    function renderAvatar(name, options) {
+      if (!options) options = {};
+      var url = getAvatar(name);
+      var color = avatarColor(name);
+      var isUrl = isAvatarUrl(url);
+      var clsName = options.className || 'gramlink-avatar';
+      var extraStyle = options.style || '';
+      if (isUrl) {
+        return '<img src="' + url + '" alt="" class="' + clsName + '"' + (extraStyle ? ' style="' + extraStyle + '"' : '') + '>';
+      }
+      return '<div class="' + clsName + '" style="background:' + color + ';border-radius:50%;' + 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;' + 'color:#fff;font-weight:700;' + extraStyle + '">' + url + '</div>';
+    }
+
+    /**
+     * Extracts plugin name from URL.
+     */
+    function extractNameFromUrl(url) {
+      try {
+        var parts = url.split('/');
+        var fname = parts[parts.length - 1] || parts[parts.length - 2] || 'Plugin';
+        return fname.replace(/\.js(\?.*)?$/i, '').replace(/[-_]/g, ' ');
+      } catch (e) {
+        return 'Plugin';
+      }
+    }
+
+    /**
+     * sdk/auth-setup.js — Channel + topic + profile auto-setup after auth
+     *
+     * Shared between auth.js (GramJS build) and gateway-auth-wrapper.js (Gateway build).
+     * Extracted so both builds auto-create sync channel + topics + default profile.
+     *
+     * Usage:
+     *   import { autoEnsureSyncChannel } from '../sdk/auth-setup'
+     */
+    var TOPICS = [{
+      name: 'sync-log',
+      key: TOPIC_STORAGE_KEYS['sync-log']
+    }, {
+      name: 'remote-cmd',
+      key: TOPIC_STORAGE_KEYS['remote-cmd']
+    }, {
+      name: 'profiles',
+      key: TOPIC_STORAGE_KEYS['profiles']
+    }, {
+      name: 'profiles-sync',
+      key: TOPIC_STORAGE_KEYS['profiles-sync']
+    }, {
+      name: 'backup',
+      key: TOPIC_STORAGE_KEYS['backup']
+    }];
+
+    // ponytail: background channel init — avoids "Sync channel not ready" error
+    function autoEnsureSyncChannel() {
+      var client = GatewayClient.getInstance();
+      if (Lampa.Storage.get(STORAGE_KEYS.CHANNEL_ID, '')) return;
+      Lampa.Bell.push({
+        text: 'GramLink: Setting up sync channel...'
+      });
+      client.findChannel(CHANNEL_TITLE).then(function (id) {
+        if (id) {
+          Lampa.Storage.set(STORAGE_KEYS.CHANNEL_ID, id);
+          return ensureAllTopics();
+        }
+        return client.createChannel(CHANNEL_TITLE).then(function (peerId) {
+          if (!peerId) return;
+          Lampa.Storage.set(STORAGE_KEYS.CHANNEL_ID, peerId);
+          return createAllTopics(peerId);
+        });
+      }).then(function () {
+        Lampa.Bell.push({
+          text: 'GramLink: Sync channel ready!'
+        });
+        autoCreateDefaultProfile();
+      }).catch(function (err) {
+        console.warn('GramLink', 'Background channel init failed:', err && err.message);
+      });
+    }
+    function ensureAllTopics() {
+      var client = GatewayClient.getInstance();
+      var channelId = getChannelId();
+      var seq = Promise.resolve();
+      TOPICS.forEach(function (t) {
+        if (Lampa.Storage.get(t.key, '')) return;
+        seq = seq.then(function () {
+          // try find first, create as fallback
+          return client.findTopic(channelId, t.name).then(function (id) {
+            if (id) {
+              Lampa.Storage.set(t.key, id);
+              return;
+            }
+            return client.createTopic(channelId, t.name).then(function (topicId) {
+              if (topicId) Lampa.Storage.set(t.key, topicId);
+            });
+          });
+        });
+      });
+      return seq;
+    }
+    function createAllTopics(peerId) {
+      var client = GatewayClient.getInstance();
+      var seq = Promise.resolve();
+      TOPICS.forEach(function (t) {
+        seq = seq.then(function () {
+          return client.createTopic(peerId, t.name).then(function (topicId) {
+            if (topicId) Lampa.Storage.set(t.key, topicId);
+          });
+        });
+      });
+      return seq;
+    }
+
+    // ponytail: auto-create default profile so user can use plugin immediately
+    function autoCreateDefaultProfile() {
+      var profilesTopicId = Lampa.Storage.get(STORAGE_KEYS.PROFILES_TOPIC, '');
+      if (!profilesTopicId) return;
+      var client = GatewayClient.getInstance();
+      if (!client.isConnected()) return;
+      var channelId = getChannelId();
+      if (!channelId) return;
+      client.getMessages(channelId, profilesTopicId, 10).then(function (msgs) {
+        var firstProfileMsg = null;
+        msgs.forEach(function (m) {
+          if (!m.text) return;
+          if (parseProfileMessage(m.text)) {
+            if (!firstProfileMsg) firstProfileMsg = m;
+          }
+        });
+        if (!firstProfileMsg) {
+          // No profiles — create default "General" profile
+          createGeneralProfile(channelId, profilesTopicId, client);
+        } else {
+          // Existing profiles — auto-select the first one
+          autoLoadProfile(firstProfileMsg, client);
+        }
+      }).catch(function () {});
+    }
+
+    // ponytail: auto-select first existing profile after auth (non-empty account)
+    function autoLoadProfile(profileMsg, client) {
+      var msgId = profileMsg.id;
+      client.downloadMessageFile(profileMsg).then(function (fileData) {
+        if (!fileData) return;
+        var captionProfile = parseCaption(profileMsg.text);
+        var profileName = captionProfile && captionProfile.name;
+        if (profileName) Lampa.Storage.set('gramlink_active_profile_name', profileName);
+        var data;
+        try {
+          data = JSON.parse(fileData);
+        } catch (e) {
+          return;
+        }
+
+        // ── Apply bookmarks ──
+        if (data.bookmarks && data.bookmarks.favorite) {
+          Lampa.Storage.set('favorite', data.bookmarks.favorite);
+          if (Lampa.Favorite && Lampa.Favorite.read) {
+            Lampa.Favorite.read();
+          }
+        }
+
+        // ── Apply timeline ──
+        if (data.timeline) {
+          Lampa.Storage.set('file_view', data.timeline);
+        }
+
+        // ── Apply plugins ──
+        if (data.plugins) {
+          Lampa.Storage.set('plugins', data.plugins);
+        }
+
+        // ── Apply settings ──
+        if (data.settings) {
+          if (data.settings.sync_enabled !== undefined) Lampa.Storage.set('gramlink_sync_enabled', data.settings.sync_enabled);
+          if (data.settings.heartbeat !== undefined) Lampa.Storage.set('gramlink_heartbeat', data.settings.heartbeat);
+          if (data.settings.broadcast !== undefined) Lampa.Storage.set('gramlink_broadcast', data.settings.broadcast);
+        }
+
+        // ── Mark active ──
+        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE, String(msgId));
+        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE_TS, String(Math.floor(Date.now() / 1000)));
+        Lampa.Noty.show('GramLink: Profile activated');
+        // Reload to apply cached/imported data
+        setTimeout(function () {
+          window.location.reload();
+        }, 1500);
+      }).catch(function (err) {
+        console.warn('GramLink', 'Auto-load first profile failed:', err);
+      });
+    }
+    function createGeneralProfile(channelId, profilesTopicId, client) {
+      var name = 'General';
+      var avatar = getInitials(name);
+      var now = Math.floor(Date.now() / 1000);
+      var caption = buildCaption({
+        name: name,
+        avatar: avatar,
+        updated: now
+      });
+      var fileData = buildFileData({
+        name: name,
+        avatar: avatar,
+        bookmarks: {
+          favorite: readJSON('favorite', {})
+        },
+        timeline: readJSON('file_view', {}),
+        plugins: readJSON('plugins', []),
+        settings: readJSON('gramlink_sync_settings', {})
+      });
+      client.sendFile(channelId, profilesTopicId, JSON.stringify(fileData, null, 2), 'profile_General_' + now + '.json', caption).then(function (msgId) {
+        if (!msgId) return;
+        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE, String(msgId));
+        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE_TS, String(now));
+        Lampa.Storage.set(STORAGE_KEYS.ACTIVE_PROFILE_NAME, name);
+        // Reload to apply cached/imported data
+        setTimeout(function () {
+          window.location.reload();
+        }, 1500);
+      }).catch(function (err) {
+        console.warn('GramLink', 'Auto-create profile failed:', err);
+      });
+    }
+
+    // Note: for old_release build, 'utils/client' is replaced with 'utils/gateway-client'
+
+    function onConnected(dcId, authKeyHex) {
+      GatewayClient.getInstance().connect().then(function () {
+        Lampa.Noty.show('GramLink: Connected!');
+        Lampa.Settings.update();
+        autoEnsureSyncChannel();
+        autoCreateDefaultProfile();
+      }).catch(function (err) {
+        console.error('GramLink', 'Post-auth connect failed:', err);
+        Lampa.Noty.show('GramLink: Connection failed — ' + (err.message || 'unknown'));
+      });
+    }
+    function startLogin() {
+      // Immediately start Gateway QR auth (shows its own modal with QR + phone button)
+      startQrAuthViaGateway(onConnected, true);
     }
 
     function startMigration(profilesTopicId) {
@@ -3843,7 +4175,7 @@
       var activeId = Lampa.Storage.get(STORAGE_ACTIVE_PROFILE, '');
       var cacheData = profileMessages.map(function (m) {
         try {
-          var d = parseProfileMessage(m.text);
+          var d = parseProfileMessage(m.message || m.text);
           if (!d) return null;
           var p = d.payload && d.payload.profile;
           if (!p) return null;
@@ -3908,8 +4240,8 @@
       if (!client.isConnected()) return;
       client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
         var profileMessages = msgs.filter(function (m) {
-          if (!m.text) return false;
-          return !!parseProfileMessage(m.text);
+          if (!(m.message || m.text)) return false;
+          return !!parseProfileMessage(m.message || m.text);
         });
         if (profileMessages.length > 0) {
           saveProfilesCache(profileMessages);
@@ -3926,8 +4258,8 @@
       client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
         container.empty();
         var profileMessages = msgs.filter(function (m) {
-          if (!m.text) return false;
-          return !!parseProfileMessage(m.text);
+          if (!(m.message || m.text)) return false;
+          return !!parseProfileMessage(m.message || m.text);
         });
         if (profileMessages.length === 0) {
           container.html('<div class="gramlink-devices__empty">No profiles</div>');
@@ -3945,7 +4277,7 @@
 
         // 2. Profile cards
         profileMessages.forEach(function (m) {
-          var d = parseProfileMessage(m.text);
+          var d = parseProfileMessage(m.message || m.text);
           if (!d) return;
           var p = d.payload && d.payload.profile;
           if (!p) return;
@@ -4004,7 +4336,7 @@
           }
 
           // Store profile name from caption for settings button
-          var captionProfile = parseCaption(target.text);
+          var captionProfile = parseCaption(target.message || target.text);
           var profileName = captionProfile && captionProfile.name;
           if (profileName) Lampa.Storage.set('gramlink_active_profile_name', profileName);
           var profileData;
@@ -4036,7 +4368,7 @@
         deltas.forEach(function (msg) {
           var d;
           try {
-            d = JSON.parse(stripCodeFence$1(msg.text));
+            d = JSON.parse(stripCodeFence$1(msg.message || msg.text));
           } catch (e) {
             return;
           }
@@ -4268,8 +4600,8 @@
         // First profile: inherit current data. Subsequent: start empty.
         client.getMessages(getChannelId(), profilesTopicId, 50).then(function (msgs) {
           var hasProfiles = msgs.some(function (m) {
-            if (!m.text) return false;
-            return !!parseProfileMessage(m.text);
+            if (!(m.message || m.text)) return false;
+            return !!parseProfileMessage(m.message || m.text);
           });
           var fileData = buildFileData({
             name: profileName,
@@ -4320,12 +4652,12 @@
           Lampa.Noty.show('Profile not found');
           return;
         }
-        var p = parseCaption(target.text) || {};
+        var p = parseCaption(target.message || target.text) || {};
         var profileName = p.name || 'Unnamed';
         var avatar = p.avatar || getAvatar(profileName);
 
         // Preserve source metadata (e.g. 'cub', source_id) from original caption
-        var fullMsg = parseProfileMessage(target.text);
+        var fullMsg = parseProfileMessage(target.message || target.text);
         var srcMeta = {};
         if (fullMsg && fullMsg.meta && fullMsg.meta.source) {
           srcMeta.source = fullMsg.meta.source;
@@ -4401,7 +4733,7 @@
           data.profile_meta.name = newName;
 
           // Preserve avatar from old data or caption
-          var oldCaption = parseCaption(target.text);
+          var oldCaption = parseCaption(target.message || target.text);
           var avatar = data.profile_meta && data.profile_meta.avatar || oldCaption && oldCaption.avatar || getAvatar(newName);
           var now = Math.floor(Date.now() / 1000);
           var caption = buildCaption({
@@ -4526,13 +4858,13 @@
       client.getMessages(channelId, profilesTopicId, 50).then(function (msgs) {
         var target = findMessageById(msgs, activeId);
         if (!target) return;
-        var captionProfile = parseCaption(target.text);
+        var captionProfile = parseCaption(target.message || target.text);
         var profileName = captionProfile && captionProfile.name || Lampa.Storage.get(STORAGE_KEYS.ACTIVE_PROFILE_NAME, '') || 'Unnamed';
         var profileAvatar = captionProfile && captionProfile.avatar || getAvatar(profileName);
         var ts = Math.floor(now / 1000);
 
         // Save source metadata (e.g. cub, source_id)
-        var fullMsg = parseProfileMessage(target.text);
+        var fullMsg = parseProfileMessage(target.message || target.text);
         var srcMeta = {};
         if (fullMsg && fullMsg.meta && fullMsg.meta.source) {
           srcMeta.source = fullMsg.meta.source;
@@ -4731,7 +5063,7 @@
           }
 
           // ── Profile name from caption ──
-          var captionProfile = parseCaption(target.text);
+          var captionProfile = parseCaption(target.message || target.text);
           var captionName = captionProfile && captionProfile.name;
           if (captionName) Lampa.Storage.set('gramlink_active_profile_name', captionName);
         });
@@ -4807,7 +5139,7 @@
         msgs.forEach(function (m) {
           if (m.date > newest) newest = m.date;
           try {
-            var d = JSON.parse(stripCodeFence$1(m.text));
+            var d = JSON.parse(stripCodeFence$1(m.message || m.text));
             if (d && d.meta && d.meta.type === 'profile_delta') {
               applyDelta(d);
             }
@@ -4903,7 +5235,7 @@
             Lampa.Noty.show('Invalid data');
             return;
           }
-          var captionProfile = parseCaption(target.text);
+          var captionProfile = parseCaption(target.message || target.text);
           var profileName = captionProfile && captionProfile.name;
           if (profileName) Lampa.Storage.set('gramlink_active_profile_name', profileName);
           return replayDeltas(profilesSyncTopicId, msgId, fileTimestamp, profileData).then(function (mergedData) {
@@ -6637,22 +6969,6 @@
     };
 
     /**
-     * sdk/topic-config.js — Channel and topic configuration
-     *
-     * Eliminates:
-     *   D-02 — CHANNEL_TITLE and TOPIC_NAMES now in one place.
-     *          auth.js had its own TOPICS array (4 items, no remote-cmd);
-     *          hub.js had TOPIC_NAMES (5 items, with remote-cmd).
-     *          Now one source of truth: 5 topics.
-     *
-     * Usage:
-     *   import { CHANNEL_TITLE, TOPIC_NAMES, TOPIC_STORAGE_KEYS } from '../sdk/topic-config'
-     */
-
-    var CHANNEL_TITLE = "\uD83D\uDD04 Lampa Sync [DO NOT DELETE]";
-    var TOPIC_NAMES = ['sync-log', 'remote-cmd', 'backup', 'profiles', 'profiles-sync'];
-
-    /**
      * sdk/manifest_schema.js — Backup manifest schema and key categorization
      *
      * Eliminates:
@@ -7295,9 +7611,10 @@
             el.remove();
           });
           var pms = msgs.filter(function (m) {
-            if (!m.text) return false;
+            var text = m.message || m.text;
+            if (!text) return false;
             try {
-              var d = JSON.parse(stripCodeFence$1(m.text));
+              var d = JSON.parse(stripCodeFence$1(text));
               return d && d.meta && d.meta.type === 'profile';
             } catch (e) {
               return false;
@@ -7318,7 +7635,7 @@
           // ── Profile items (2-column grid) ──
           pms.forEach(function (m) {
             try {
-              var d = JSON.parse(stripCodeFence$1(m.text));
+              var d = JSON.parse(stripCodeFence$1(m.message || m.text));
             } catch (e) {
               return;
             }
@@ -7390,9 +7707,10 @@
           });
           client.getMessages(getChannelId(), currentProfilesTopicId, 50).then(function (msgs) {
             var hasProfiles = msgs.some(function (m) {
-              if (!m.text) return false;
+              var text = m.message || m.text;
+              if (!text) return false;
               try {
-                var d = JSON.parse(stripCodeFence$1(m.text));
+                var d = JSON.parse(stripCodeFence$1(text));
                 return d && d.meta && d.meta.type === 'profile';
               } catch (e) {
                 return false;
@@ -8570,14 +8888,15 @@
         items: items,
         onSelect: function onSelect(item) {
           if (item._add) {
-            Lampa.Controller.toggle(enabledCtrl);
             Profiles.createProfile(Lampa.Storage.get('gramlink_profiles_topic', ''), Lampa.Storage.get('gramlink_profiles_sync_topic', ''), $());
           } else if (item._msgId) {
             Profiles.quickSwitchProfile(item._msgId);
           }
         },
         onBack: function onBack() {
-          Lampa.Controller.toggle(enabledCtrl); // ponytail: restore controller on back
+          setTimeout(function () {
+            Lampa.Controller.toggle(enabledCtrl);
+          }, 100); // ponytail: restore controller on back
         },
         onFullDraw: function onFullDraw(container) {
           container.append($('<div class="selectbox-item selectbox-item--icon selector">' + '<div class="selectbox-item__icon">' + '<svg width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' + '</div>' + '<div>' + '<div class="selectbox-item__title">' + (Lampa.Lang.translate('gramlink_hub_title') || 'GramLink HUB') + '</div>' + '</div>' + '</div>').on('hover:enter', function () {
