@@ -277,22 +277,6 @@
       };
 
       /**
-       * Поиск через прокси
-       * @param {string} query
-       * @param {function} oncomplite
-       * @param {function} onerror
-       */
-      this.search = function (query, oncomplite, onerror) {
-        var url = getProxyBase() + '/api/search?query=' + encodeURIComponent(query);
-        network.native(url, function (json) {
-          var data = Api.unwrap(json);
-          if (data) oncomplite(data);else if (onerror) onerror();
-        }, function (a, c) {
-          if (onerror) onerror(a, c);
-        });
-      };
-
-      /**
        * Пошук пісень через проксі
        * @param {string} query
        * @param {number} page
@@ -3540,11 +3524,11 @@
       }
 
       /**
-       * Perform a single search request via /api/search?query=X
-       * Returns sections grouped by type (songs, albums, artists, playlists),
-       * up to 3 items per type. The unified endpoint returns all types in one response.
+       * Perform search via 4 parallel per-type API requests (songs, albums, artists, playlists).
+       * Each endpoint has its own cache key, supports pagination, and returns total count.
+       * Results are delivered progressively — sections appear as each request completes.
        * @param {string} query
-       * @param {function} onResults - callback(results)
+       * @param {function} onResults - callback(results), may be called multiple times
        */
       this.search = function (query, onResults) {
         if (!query || query.length < 2) {
@@ -3609,73 +3593,85 @@
             vinyl_data: artist
           };
         }
-        api.search(query, function (data) {
-          var sections = [];
 
-          // The unified /api/search?query=X returns {songs, albums, artists, playlists}
-          // each being an array. Show up to 3 per type.
-          if (data.songs && data.songs.results && Array.isArray(data.songs.results) && data.songs.results.length) {
-            var all = data.songs.results;
-            var items = all.slice(0, 3).map(mapSong);
-            sections.push({
-              priority: 1,
-              section: {
-                title: Lampa.Lang.translate('vinyl_songs') + ' (' + all.length + ')',
-                results: items,
-                total_pages: all.length >= 3 ? 2 : 1,
-                vinyl_section_type: 'songs'
-              }
-            });
-          }
-          if (data.albums && data.albums.results && Array.isArray(data.albums.results) && data.albums.results.length) {
-            var _all = data.albums.results;
-            var _items = _all.slice(0, 3).map(mapAlbum);
-            sections.push({
-              priority: 2,
-              section: {
-                title: Lampa.Lang.translate('vinyl_albums') + ' (' + _all.length + ')',
-                results: _items,
-                total_pages: _all.length >= 3 ? 2 : 1,
-                vinyl_section_type: 'albums'
-              }
-            });
-          }
-          if (data.artists && data.artists.results && Array.isArray(data.artists.results) && data.artists.results.length) {
-            var _all2 = data.artists.results;
-            var _items2 = _all2.slice(0, 3).map(mapArtist);
-            sections.push({
-              priority: 3,
-              section: {
-                title: Lampa.Lang.translate('vinyl_artists') + ' (' + _all2.length + ')',
-                results: _items2,
-                total_pages: _all2.length >= 3 ? 2 : 1,
-                vinyl_section_type: 'artists'
-              }
-            });
-          }
-          if (data.playlists && data.playlists.results && Array.isArray(data.playlists.results) && data.playlists.results.length) {
-            var _all3 = data.playlists.results;
-            var _items3 = _all3.slice(0, 3).map(mapPlaylist);
-            sections.push({
-              priority: 4,
-              section: {
-                title: Lampa.Lang.translate('vinyl_playlists') + ' (' + _all3.length + ')',
-                results: _items3,
-                total_pages: _all3.length >= 3 ? 2 : 1,
-                vinyl_section_type: 'playlists'
-              }
-            });
-          }
-          if (onResults) {
-            onResults(sections.sort(function (a, b) {
-              return b.priority - a.priority;
-            }).map(function (s) {
-              return s.section;
-            }));
-          }
-        }, function () {
-          if (onResults) onResults([]);
-        });
+        // Per-type search configs — each hits a separate endpoint with its own cache key
+        var typeConfigs = [{
+          name: 'songs',
+          priority: 1,
+          method: 'searchSongs',
+          mapper: mapSong,
+          titleKey: 'vinyl_songs'
+        }, {
+          name: 'albums',
+          priority: 2,
+          method: 'searchAlbums',
+          mapper: mapAlbum,
+          titleKey: 'vinyl_albums'
+        }, {
+          name: 'artists',
+          priority: 3,
+          method: 'searchArtists',
+          mapper: mapArtist,
+          titleKey: 'vinyl_artists'
+        }, {
+          name: 'playlists',
+          priority: 4,
+          method: 'searchPlaylists',
+          mapper: mapPlaylist,
+          titleKey: 'vinyl_playlists'
+        }];
+        var accumulated = []; // accumulated sections across completed requests
+        var completed = 0; // requests finished (success or error)
+        var delivered = false; // onResults has been called at least once
+        var total = typeConfigs.length;
+        function tryDeliver() {
+          accumulated.sort(function (a, b) {
+            return a.priority - b.priority;
+          });
+          var sections = accumulated.map(function (s) {
+            return s.section;
+          });
+          delivered = true;
+          if (onResults) onResults(sections);
+        }
+        function handleType(config) {
+          var onsuccess = function onsuccess(data) {
+            completed++;
+            if (data && data.results && Array.isArray(data.results) && data.results.length) {
+              var items = data.results.slice(0, 12).map(config.mapper);
+              var totalCount = typeof data.total === 'number' ? data.total : items.length;
+              accumulated.push({
+                priority: config.priority,
+                section: {
+                  title: Lampa.Lang.translate(config.titleKey) + ' (' + totalCount + ')',
+                  results: items,
+                  total_pages: totalCount > 12 ? Math.ceil(totalCount / 12) : 1,
+                  vinyl_section_type: config.name
+                }
+              });
+
+              // Progressive delivery: deliver all accumulated sections sorted by priority
+              tryDeliver();
+            }
+
+            // All done, no results at all — deliver empty array
+            if (completed === total && !delivered && !accumulated.length) {
+              if (onResults) onResults([]);
+            }
+          };
+          var onerror = function onerror() {
+            completed++;
+            if (completed === total && !delivered) {
+              if (onResults) onResults([]);
+            }
+          };
+          api[config.method](query, 1, onsuccess, onerror);
+        }
+
+        // Fire all 4 parallel requests
+        for (var i = 0; i < typeConfigs.length; i++) {
+          handleType(typeConfigs[i]);
+        }
       };
       this.destroy = function () {
         // network is no longer used; API calls go through Api.get() which owns its own network
@@ -3853,7 +3849,7 @@
       // 1. Manifest
       Lampa.Manifest.plugins = {
         type: 'audio',
-        version: '1.0.1',
+        version: '1.1.0',
         name: Lampa.Lang.translate('vinyl_title'),
         component: 'vinyl',
         description: 'JioSaavn music — playlists, albums, radio'
