@@ -400,14 +400,14 @@
       pathMovieQbit: {
         "ru": "Категория/Метка для фильмов",
         "en": "Category/Label for movies",
-        "uk": "Категорія/Мітка pentru фільмів",
-        "ro": "Categorie/Etichetă pentru filme"
+        "uk": "Категорія/Мітка фільмів",
+        "ro": "Categorie/Etichetă filme"
       },
       pathTVQbit: {
         "ru": "Категория/Метка для сериалов",
         "en": "Category/Label for TV shows",
-        "uk": "Категорія/Мітка pentru серіалів",
-        "ro": "Categorie/Etichetă pentru seriale"
+        "uk": "Категорія/Мітка серіалів",
+        "ro": "Categorie/Etichetă seriale"
       },
       universalAction: {
         ru: "Действие",
@@ -767,12 +767,189 @@
         ru: "Выберите результат",
         uk: "Виберіть результат",
         ro: "Selectați rezultatul"
+      },
+      // Section titles for status-based grouping
+      torrentmanager_section_downloading: {
+        en: "Downloading",
+        ru: "Загрузка",
+        uk: "Завантаження",
+        zh: "下载中",
+        ro: "Se descarcă"
+      },
+      torrentmanager_section_seeding: {
+        en: "Seeding",
+        ru: "Раздача",
+        uk: "Роздача",
+        zh: "做种中",
+        ro: "Seedări"
+      },
+      torrentmanager_section_paused: {
+        en: "Paused",
+        ru: "Приостановлено",
+        uk: "Призупинено",
+        zh: "已暂停",
+        ro: "Pauză"
+      },
+      torrentmanager_section_checking: {
+        en: "Checking",
+        ru: "Проверка",
+        uk: "Перевірка",
+        zh: "检查中",
+        ro: "Verificare"
+      },
+      torrentmanager_section_errored: {
+        en: "Errors",
+        ru: "Ошибки",
+        uk: "Помилки",
+        zh: "错误",
+        ro: "Erori"
+      },
+      torrentmanager_section_completed: {
+        en: "Completed",
+        ru: "Завершено",
+        uk: "Завершено",
+        zh: "已完成",
+        ro: "Finalizat"
       }
     });
   }
 
-  var regexp2 = /(?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB-Rip|WEB-DL|WEB|TS|(?:PPV )?WEB-?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv/;
-  function getProgressClass(progress) {
+  /**
+   * Torrent state classification into section groups.
+   * Maps raw client state strings to unified section keys.
+   */
+
+  /**
+   * Classify a torrent state string into a section key.
+   * @param {string} state - Raw torrent state from client API
+   * @returns {'downloading'|'seeding'|'completed'|'paused'|'checking'|'errored'}
+   */
+  function classifyState$1(state) {
+    var normalized = (state || '').toLowerCase().trim();
+
+    // Downloading — actively downloading
+    // qB: Downloading, MetaDL, ForcedDL, StalledDL, ForcedMetaDL, Downloading metadata
+    // S:  Downloading
+    // T:  Downloading
+    if (/^(downloading|metadl|forceddl|stalleddl|forcedmetadl|downloading metadata)$/i.test(normalized)) {
+      return 'downloading';
+    }
+
+    // Seeding — actively uploading
+    // qB: Uploading, ForcedUP, StalledUP
+    // T:  Seeding
+    if (/^(uploading|forcedup|stalledup|seeding)$/i.test(normalized)) {
+      return 'seeding';
+    }
+
+    // Completed — finished but not actively seeding (Synology)
+    // S:  Finished (when completed >= 1, normalizeTaskState returns 'Finished')
+    if (/^(finished)$/i.test(normalized)) {
+      return 'completed';
+    }
+
+    // Paused / Stopped — manually stopped
+    // qB: PausedDL, PausedUP, StoppedDL, StoppedUP
+    // S:  Paused
+    // T:  Stopped, Paused
+    if (/^(pauseddl|pausedup|stoppeddl|stoppedup|stopped|paused)$/i.test(normalized)) {
+      return 'paused';
+    }
+
+    // Checking / Queued / Waiting — in verification or waiting
+    // qB: CheckingUP, CheckingDL, QueuedUP, QueuedDL, CheckingResumeData, Checking, Queued, Allocating, Moving
+    // S:  Queued, Waiting, Extracting
+    // T:  Queued to verify local data, Verifying local data, Queued to download, Queued to seed
+    if (/^(checkingup|checkingdl|queuedup|queueddl|checking|queued|allocating|moving|waiting|verifying|extracting)/i.test(normalized) || normalized.indexOf('queued to') >= 0 || normalized.indexOf('verify') >= 0) {
+      return 'checking';
+    }
+
+    // Errored — has errors
+    // qB: MissingFiles, Error, Unknown
+    // S:  Error, ErrorStatus
+    if (/^(missingfiles|error|unknown|errorstatus)$/i.test(normalized)) {
+      return 'errored';
+    }
+
+    // Fallback: unknown states
+    return 'errored';
+  }
+
+  /**
+   * Ordered section definitions with metadata.
+   * Order determines render and navigation priority.
+   */
+  var SECTION_DEFINITIONS = [{
+    key: 'downloading',
+    langKey: 'torrentmanager_section_downloading',
+    priority: 0
+  }, {
+    key: 'seeding',
+    langKey: 'torrentmanager_section_seeding',
+    priority: 1
+  }, {
+    key: 'completed',
+    langKey: 'torrentmanager_section_completed',
+    priority: 2
+  }, {
+    key: 'paused',
+    langKey: 'torrentmanager_section_paused',
+    priority: 3
+  }, {
+    key: 'checking',
+    langKey: 'torrentmanager_section_checking',
+    priority: 4
+  }, {
+    key: 'errored',
+    langKey: 'torrentmanager_section_errored',
+    priority: 5
+  }];
+
+  /**
+   * Get the standardized, translated display name for a raw torrent state.
+   * @param {string} state - Raw torrent state from client API
+   * @returns {string} Translated standardized state name
+   */
+  function getStandardizedStateName(state) {
+    var sectionKey = classifyState$1(state);
+    for (var i = 0; i < SECTION_DEFINITIONS.length; i++) {
+      if (SECTION_DEFINITIONS[i].key === sectionKey) {
+        return Lampa.Lang.translate(SECTION_DEFINITIONS[i].langKey);
+      }
+    }
+    return state || ''; // Fallback to raw state if section not found
+  }
+
+  /**
+   * Group an array of torrents by their classified status.
+   * @param {Array} torrents - Array of torrent objects with .state property
+   * @returns {Object} Grouped object with keys: downloading, seeding, completed, paused, checking, errored
+   */
+  function groupTorrentsByStatus(torrents) {
+    var groups = {
+      downloading: [],
+      seeding: [],
+      completed: [],
+      paused: [],
+      checking: [],
+      errored: []
+    };
+    if (!Array.isArray(torrents)) {
+      return groups;
+    }
+    torrents.forEach(function (torrent) {
+      var key = classifyState$1(torrent.state);
+      if (groups[key]) {
+        groups[key].push(torrent);
+      } else {
+        groups.errored.push(torrent);
+      }
+    });
+    return groups;
+  }
+
+  var regexp2$1 = /(?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB-Rip|WEB-DL|WEB|TS|(?:PPV )?WEB-?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv/;
+  function getProgressClass$1(progress) {
     if (progress >= 100) {
       return 'is-high';
     }
@@ -787,14 +964,14 @@
     var itemN = Lampa.Template.get('lmetorrent_item__card', {
       title: data.name,
       size: Lampa.Utils.bytesToSize(data.size, 0),
-      state: data.state,
+      state: getStandardizedStateName(data.state),
       "data-completed": initialProgress,
       completed: initialProgress + "%",
       image: data.image,
       image_src: '',
-      quality: data.name.match(regexp2) ? data.name.match(regexp2).toString().replace(/[ .()]/g, '') : ''
+      quality: data.name.match(regexp2$1) ? data.name.match(regexp2$1).toString().replace(/[ .()]/g, '') : ''
     });
-    itemN.find('.lmetorrent_card__completed').addClass(getProgressClass(initialProgress));
+    itemN.find('.lmetorrent_card__completed').addClass(getProgressClass$1(initialProgress));
     this.render = function () {
       return itemN;
     };
@@ -802,13 +979,341 @@
     // Метод для оновлення статусу та прогресу
     this.update = function (newData) {
       // Припускається, що відповідні елементи мають класи для статусу та прогресу
-      itemN.find('.lmetorrent_card__state').text(newData.state);
+      itemN.find('.lmetorrent_card__state').text(getStandardizedStateName(newData.state));
       var progress = Number((newData.completed * 100).toFixed(2));
       itemN.attr("data-completed", progress);
-      itemN.find('.lmetorrent_card__completed').removeClass('is-low is-mid is-high').addClass(getProgressClass(progress)).text(progress + "%");
+      itemN.find('.lmetorrent_card__completed').removeClass('is-low is-mid is-high').addClass(getProgressClass$1(progress)).text(progress + "%");
     };
     this.destroy = function () {
       itemN.remove();
+    };
+  }
+
+  /**
+   * A single section in the torrent panel.
+   * Wraps items_line template with horizontal scroll and PanelItem children.
+   * @param {Object} config
+   * @param {string} config.key - Section key (downloading/seeding/etc.)
+   * @param {string} config.title - Section display title
+   * @param {string} config.icon - Section icon character
+   * @param {Array} config.items - Array of torrent data objects
+   */
+  function PanelSection(config) {
+    var self = this;
+    this.key = config.key;
+    this.title = config.title;
+    this.icon = config.icon || '';
+    this.items = [];
+    this.last = null; // Last focused DOM element (vinyl pattern)
+    this.lastFocusedIndex = -1; // Last focused index for scroll tracking
+    this.torrentDataMap = {}; // id -> latest torrent data object
+
+    var sectionId = 'lmetorrent_section_' + config.key;
+    this.onDown = null;
+    this.onUp = null;
+    this.onBack = null;
+    this.onLeft = null;
+    this.onMore = null; // Callback for "more" button (section-level)
+    this.itemsLimit = 11; // Max items shown before "more" card
+
+    // Build DOM from items_line template
+    this.html = Lampa.Template.get('items_line', {
+      title: config.title
+    });
+    this.html.addClass('lmetorrent-section');
+    this.html.attr('data-section-key', config.key);
+    var titleEl = this.html.find('.items-line__title');
+
+    // Prepend icon and append count to title
+    if (this.icon) {
+      titleEl.prepend('<span class="lmetorrent-section__icon">' + this.icon + '</span>');
+    }
+    titleEl.append('<span class="lmetorrent-section__count">(' + config.items.length + ')</span>');
+    var bodyEl = this.html.find('.items-line__body');
+
+    // Create horizontal scroll
+    this.scroll = new Lampa.Scroll({
+      horizontal: true,
+      step: 300
+    });
+
+    /**
+     * Create the section: render items, append scroll to body.
+     * Limits visible items to itemsLimit and adds "more" card when count exceeds limit.
+     * Follows vinyl/lib/line.js pattern for pagination.
+     */
+    this.create = function () {
+      self.scroll.render().find('.scroll__body').addClass('items-cards');
+      self.scroll.render().find('.scroll__body').addClass('mapping--line');
+      var displayLimit = self.itemsLimit || 11;
+      var items = config.items || [];
+      var displayItems = items.slice(0, displayLimit);
+      var hasMore = items.length > displayLimit && typeof self.onMore === 'function';
+
+      // Add "more" button in section header when onMore is provided
+      if (hasMore) {
+        var headMore = $('<div class="items-line__more selector">' + Lampa.Lang.translate('more') + '</div>');
+        headMore.on('hover:enter', function () {
+          if (self.onMore) self.onMore();
+        });
+        self.html.find('.items-line__head').append(headMore);
+      }
+      displayItems.forEach(function (torrentData) {
+        self.appendItem(torrentData);
+      });
+
+      // Add native card-more at end of scroll
+      if (hasMore) {
+        var nativeMore = $('<div class="card-more selector">' + '<div class="card-more__box">' + '<div class="card-more__title">' + Lampa.Lang.translate('more') + '</div>' + '</div>' + '</div>');
+        nativeMore.on('hover:focus', function () {
+          self.last = nativeMore[0];
+          self.scroll.update(nativeMore, true);
+        }).on('hover:enter', function () {
+          if (self.onMore) self.onMore();
+        });
+        self.scroll.append(nativeMore);
+      }
+      bodyEl.append(self.scroll.render());
+      return this.render();
+    };
+
+    /**
+     * Create a PanelItem for torrentData and append to scroll.
+     * Stores torrent data in torrentDataMap for closure-safe retrieval on hover:enter.
+     * @param {Object} torrentData
+     */
+    this.appendItem = function (torrentData) {
+      var data = torrentData;
+      var id = String(data.id);
+      self.torrentDataMap[id] = data;
+      var item = new Item(data);
+      item.render().on('hover:focus', function () {
+        self.last = item.render()[0]; // Track DOM element (vinyl pattern)
+        self.lastFocusedIndex = self.items.indexOf(item);
+        if (self.lastFocusedIndex >= 0) {
+          self.scroll.update(self.items[self.lastFocusedIndex].render(), true);
+        }
+      });
+      item.render().on('hover:enter', function () {
+        if (self.onItemEnter) {
+          self.onItemEnter(self.torrentDataMap[id]);
+        }
+      });
+      self.scroll.append(item.render());
+      self.items.push(item);
+    };
+
+    /**
+     * Return the jQuery element representing this section.
+     */
+    this.render = function () {
+      return this.html;
+    };
+
+    /**
+     * Update section with new items. Uses diff approach — preserves existing
+     * DOM elements and updates them in place when possible, avoiding flicker
+     * from destroy-and-rebuild on every poll cycle.
+     * @param {Array} newItems - Array of new torrent data objects
+     */
+    this.update = function (newItems) {
+      var limit = self.itemsLimit || 11;
+      var items = Array.isArray(newItems) ? newItems : [];
+      var displayItems = items.slice(0, limit);
+      var hasMore = items.length > limit && typeof self.onMore === 'function';
+
+      // Build existing item map by id
+      var existingMap = {};
+      this.items.forEach(function (item) {
+        existingMap[String(item.id)] = item;
+      });
+      var newIds = {};
+      var remaining = [];
+
+      // Process items within display limit
+      displayItems.forEach(function (torrentData) {
+        var id = String(torrentData.id);
+        newIds[id] = true;
+        self.torrentDataMap[id] = torrentData;
+        if (existingMap[id]) {
+          // Update existing item in place — NO DOM removal
+          existingMap[id].update(torrentData);
+          remaining.push(existingMap[id]);
+        } else {
+          // Create new PanelItem inline (mirrors appendItem logic)
+          var item = new Item(torrentData);
+          item.render().on('hover:focus', function () {
+            self.last = item.render()[0];
+            var idx = remaining.indexOf(item);
+            if (idx >= 0) {
+              self.lastFocusedIndex = idx;
+              self.scroll.update(item.render(), true);
+            }
+          });
+          item.render().on('hover:enter', function () {
+            if (self.onItemEnter) {
+              self.onItemEnter(self.torrentDataMap[id]);
+            }
+          });
+          self.scroll.append(item.render());
+          remaining.push(item);
+        }
+      });
+
+      // Destroy items no longer in display set
+      this.items.forEach(function (item) {
+        var id = String(item.id);
+        if (!newIds[id]) {
+          delete self.torrentDataMap[id];
+          item.destroy();
+        }
+      });
+      this.items = remaining;
+
+      // Handle more button in header
+      var moreBtnEl = self.html.find('.items-line__more');
+      if (hasMore && !moreBtnEl.length) {
+        var headMore = $('<div class="items-line__more selector">' + Lampa.Lang.translate('more') + '</div>');
+        headMore.on('hover:enter', function () {
+          if (self.onMore) self.onMore();
+        });
+        self.html.find('.items-line__head').append(headMore);
+      } else if (!hasMore && moreBtnEl.length) {
+        moreBtnEl.remove();
+      }
+
+      // Handle native card-more in scroll
+      var cardMoreEl = self.scroll.render().find('.card-more');
+      if (hasMore && !cardMoreEl.length) {
+        var nativeMore = $('<div class="card-more selector">' + '<div class="card-more__box">' + '<div class="card-more__title">' + Lampa.Lang.translate('more') + '</div>' + '</div>' + '</div>');
+        nativeMore.on('hover:focus', function () {
+          self.last = nativeMore[0];
+          self.scroll.update(nativeMore, true);
+        }).on('hover:enter', function () {
+          if (self.onMore) self.onMore();
+        });
+        self.scroll.append(nativeMore);
+      } else if (!hasMore && cardMoreEl.length) {
+        cardMoreEl.remove();
+      }
+
+      // Reset last focused index if out of bounds
+      if (this.lastFocusedIndex >= this.items.length) {
+        this.lastFocusedIndex = this.items.length - 1;
+      }
+
+      // Update count badge
+      var countEl = self.html.find('.lmetorrent-section__count');
+      countEl.text('(' + items.length + ')');
+    };
+
+    /**
+     * Focus this section's first or last-focused card.
+     * Sets the Lampa.Controller collection to this section's scroll.
+     */
+    this.focus = function () {
+      if (this.items.length === 0) return;
+      var targetIndex = this.lastFocusedIndex >= 0 && this.lastFocusedIndex < this.items.length ? this.lastFocusedIndex : 0;
+      Lampa.Controller.collectionSet(this.scroll.render());
+      Lampa.Controller.collectionFocus(this.items[targetIndex].render()[0] || false, this.scroll.render());
+    };
+
+    /**
+     * Save current focused index for later restoration.
+     * Focus index is tracked automatically via hover:focus handler.
+     */
+    this.saveFocus = function () {
+      // lastFocusedIndex is updated on hover:focus, so already tracked
+    };
+
+    /**
+     * Get the last focused DOM element, or false if none.
+     * @returns {HTMLElement|false}
+     */
+    this.getLastFocused = function () {
+      return self.last || false;
+    };
+
+    /**
+     * Toggle this section's own controller.
+     * Registers a Lampa.Controller for this section and activates it.
+     * Uses Navigator.move for left/right within the section, following the exact
+     * vinyl pattern (line/Line module) for horizontal scroll navigation.
+     */
+    this.toggle = function () {
+      Lampa.Controller.add(sectionId, {
+        toggle: function toggle() {
+          Lampa.Controller.collectionSet(self.scroll.render());
+          Lampa.Controller.collectionFocus(self.last || false, self.scroll.render());
+        },
+        right: function right() {
+          Navigator.move('right');
+        },
+        left: function left() {
+          if (Navigator.canmove('left')) Navigator.move('left');else if (self.onLeft) self.onLeft();else Lampa.Controller.toggle('menu');
+        },
+        down: function down() {
+          if (self.onDown) self.onDown();
+        },
+        up: function up() {
+          if (self.onUp) self.onUp();
+        },
+        gone: function gone() {},
+        back: function back() {
+          if (self.onBack) self.onBack();
+        }
+      });
+      Lampa.Controller.toggle(sectionId);
+    };
+
+    /**
+     * Navigate left within the section.
+     */
+    this.scrollLeft = function () {
+      if (Navigator.canmove('left')) {
+        Navigator.move('left');
+      }
+    };
+
+    /**
+     * Navigate right within the section.
+     */
+    this.scrollRight = function () {
+      if (Navigator.canmove('right')) {
+        Navigator.move('right');
+      }
+    };
+
+    /**
+     * Check if section has no items.
+     * @returns {boolean}
+     */
+    this.isEmpty = function () {
+      return this.items.length === 0;
+    };
+
+    /**
+     * Get number of items in this section.
+     * @returns {number}
+     */
+    this.getItemCount = function () {
+      return this.items.length;
+    };
+
+    /**
+     * Destroy the section: scroll, items, DOM removal.
+     */
+    this.destroy = function () {
+      this.last = null;
+      Lampa.Arrays.destroy(this.items);
+      this.items = [];
+      this.torrentDataMap = {};
+      if (this.scroll && typeof this.scroll.destroy === 'function') {
+        this.scroll.destroy();
+      }
+      this.scroll = null;
+      this.html.remove();
+      this.html = null;
     };
   }
 
@@ -1498,7 +2003,7 @@
    * @param {Object|Array} torrentData - Torrent data to process
    * @returns {Promise<Array>} - Promise resolving to array of media info
    */
-  function processTorrents(_x2) {
+  function processTorrents$1(_x2) {
     return _processTorrents.apply(this, arguments);
   }
   function _processTorrents() {
@@ -1946,7 +2451,7 @@
               return _context7.a(2, false);
             case 1:
               _context7.n = 2;
-              return processTorrents(torrentData);
+              return processTorrents$1(torrentData);
             case 2:
               response = _context7.v;
               if (!(!response || response.length === 0)) {
@@ -2400,6 +2905,13 @@
   function getMetadata(_x5) {
     return _getMetadata.apply(this, arguments);
   }
+
+  /**
+   * Search metadata by TMDB ID across all stored records.
+   * Uses getData with no key to retrieve all entries, then filters by tmdb_id.
+   * @param {number|string} tmdbId - TMDB ID to search for
+   * @returns {Promise<Object|null>} - Found metadata record or null
+   */
   function _getMetadata() {
     _getMetadata = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(key) {
       var db, tableName, result, _t3;
@@ -2438,9 +2950,54 @@
     }));
     return _getMetadata.apply(this, arguments);
   }
+  function getMetadataByTmdbId(_x6) {
+    return _getMetadataByTmdbId.apply(this, arguments);
+  }
+
+  /**
+   * Check if cached metadata is still fresh (within TTL).
+   * @param {string} key - Cache key (torrent identifier)
+   * @param {number} ttlHours - Time to live in hours (default: 24)
+   * @returns {Promise<boolean>}
+   */
+  function _getMetadataByTmdbId() {
+    _getMetadataByTmdbId = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(tmdbId) {
+      var db, tableName, allRecords, _t4;
+      return _regenerator().w(function (_context4) {
+        while (1) switch (_context4.p = _context4.n) {
+          case 0:
+            _context4.p = 0;
+            _context4.n = 1;
+            return initDB();
+          case 1:
+            db = _context4.v;
+            tableName = getTableName();
+            _context4.n = 2;
+            return db.getData(tableName, null);
+          case 2:
+            allRecords = _context4.v;
+            if (!(!allRecords || !allRecords.length)) {
+              _context4.n = 3;
+              break;
+            }
+            return _context4.a(2, null);
+          case 3:
+            return _context4.a(2, allRecords.find(function (r) {
+              return r.tmdb_id === tmdbId;
+            }) || null);
+          case 4:
+            _context4.p = 4;
+            _t4 = _context4.v;
+            console.error('TDM', 'Error in getMetadataByTmdbId:', _t4);
+            return _context4.a(2, null);
+        }
+      }, _callee4, null, [[0, 4]]);
+    }));
+    return _getMetadataByTmdbId.apply(this, arguments);
+  }
 
   var SIMKL_SEARCH_URL = "".concat(LME_SIMKL_URL, "search/file");
-  function parseResponse$1(response) {
+  function parseResponse$2(response) {
     if (!response) {
       return null;
     }
@@ -2547,7 +3104,7 @@
             return requestSearchByFileName(normalizedFileName);
           case 2:
             response = _context2.v;
-            payload = parseResponse$1(response);
+            payload = parseResponse$2(response);
             if (payload) {
               _context2.n = 3;
               break;
@@ -2609,7 +3166,7 @@
     if (!query) return urlPath;
     return urlPath.includes('?') ? "".concat(urlPath, "&").concat(query) : "".concat(urlPath, "?").concat(query);
   }
-  function parseResponse(response) {
+  function parseResponse$1(response) {
     if (typeof response === 'string') {
       return JSON.parse(response);
     }
@@ -2721,7 +3278,7 @@
                     });
                   case 2:
                     response = _context.v;
-                    payload = parseResponse(response);
+                    payload = parseResponse$1(response);
                     code = getSynologyErrorCode(payload);
                     if (!(code !== null || !payload.data || !payload.data.sid)) {
                       _context.n = 3;
@@ -2825,7 +3382,7 @@
             });
           case 5:
             response = _context3.v;
-            payload = parseResponse(response);
+            payload = parseResponse$1(response);
             code = getSynologyErrorCode(payload);
             if (!(code !== null && AUTH_ERROR_CODES.includes(code) && requestOptions.requiresSid && requestOptions.retryOnAuthError)) {
               _context3.n = 7;
@@ -3918,7 +4475,7 @@
           case 0:
             _context3.p = 0;
             _context3.n = 1;
-            return processTorrents([torrent]);
+            return processTorrents$1([torrent]);
           case 1:
             results = _context3.v;
             return _context3.a(2, results || []);
@@ -4517,11 +5074,11 @@
     var network = new Lampa.Reguest();
     var updateTick = null;
     var updateInProgress = false;
-    var items = [];
+    var sections = []; // Array of PanelSection instances
     var headerItem = null;
-    var torrentItemsById = {};
-    var active;
-    var last;
+    var allTorrents = []; // Full list of all torrents (for context menu)
+    var activeSectionIndex = 0;
+    var isHeaderFocused = false;
     var scroll = new Lampa.Scroll({
       mask: true,
       over: true,
@@ -4529,7 +5086,7 @@
     });
     var html = $("<div class='lmetorrent-module'></div>");
     var head = $("<div class='lmetorrent-head'></div>");
-    var body = $('<div class="lmetorrent-catalog--list category-full"></div>');
+    var body = $('<div class="lmetorrent-sections"></div>');
     scroll.append(head);
     scroll.append(body);
     html.append(scroll.render());
@@ -4561,43 +5118,27 @@
     function resumeHeaderPolling() {
       TorrentStateManager$1.start();
     }
-    function destroyAllItems() {
-      Lampa.Arrays.destroy(items);
-      items = [];
-      headerItem = null;
-      torrentItemsById = {};
-      active = null;
-      last = null;
+    function focusHeader() {
+      if (!headerItem) return;
+      Lampa.Controller.collectionSet(scroll.render());
+      Lampa.Controller.collectionFocus(headerItem.render()[0] || false, scroll.render());
+      scroll.update(headerItem.render(), true);
     }
-    function destroyTorrentItems() {
-      Object.keys(torrentItemsById).forEach(function (torrentId) {
-        var item = torrentItemsById[torrentId];
-        if (item && typeof item.destroy === "function") {
-          item.destroy();
-        }
-      });
-      torrentItemsById = {};
-      items = headerItem ? [headerItem] : [];
-    }
-    function trackItemFocus(item) {
-      item.render().on("hover:focus", function () {
-        last = item.render()[0];
-        active = items.indexOf(item);
-        if (active >= 0) {
-          scroll.update(items[active].render(), true);
-        }
-      });
+    function destroyAllSections() {
+      Lampa.Arrays.destroy(sections);
+      sections = [];
+      activeSectionIndex = 0;
+      isHeaderFocused = false;
+      allTorrents = [];
     }
     function renderState(title, description) {
       var actions = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
       var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
       if (options.resetHeader) {
         head.empty();
-        destroyAllItems();
-      } else {
-        destroyTorrentItems();
+        destroyAllSections();
       }
-      body.empty().removeClass("category-full").addClass("lmetorrent-catalog--state");
+      body.empty().removeClass("lmetorrent-sections").addClass("lmetorrent-catalog--state");
       var container = $('<div class="lmetorrent-state"></div>');
       container.append("<div class=\"lmetorrent-state__title\">".concat(title, "</div>"));
       if (description) {
@@ -4609,7 +5150,6 @@
           var button = $("<div class=\"simple-button selector\">".concat(action.title, "</div>"));
           button.on("hover:enter", action.onEnter);
           button.on("hover:focus", function () {
-            last = button[0];
             scroll.update(button, true);
           });
           actionList.append(button);
@@ -4747,10 +5287,9 @@
     }));
     this.build = function (result) {
       scroll.minus();
-      body.removeClass("lmetorrent-catalog--state").addClass("category-full");
       head.empty();
-      body.empty();
-      destroyAllItems();
+      body.empty().removeClass("lmetorrent-catalog--state").addClass("lmetorrent-sections");
+      destroyAllSections();
       if (result && result.info) {
         self.renderHeader(result.info);
       }
@@ -4759,37 +5298,70 @@
         self.renderEmptyState();
         return;
       }
-      self.renderTorrentList(torrents);
+      allTorrents = torrents;
+
+      // Group into sections by status
+      var grouped = groupTorrentsByStatus(torrents);
+      self.buildSections(grouped);
+
+      // Initial focus on header, not first section
+      if (sections.length > 0) {
+        isHeaderFocused = true;
+      }
+    };
+    this.buildSections = function (grouped) {
+      var fragment = $(document.createDocumentFragment());
+      SECTION_DEFINITIONS.forEach(function (def) {
+        var groupItems = grouped[def.key];
+        if (!groupItems || groupItems.length === 0) return;
+        var section = new PanelSection({
+          key: def.key,
+          title: Lampa.Lang.translate(def.langKey),
+          icon: def.icon,
+          items: groupItems
+        });
+
+        // Wire up item enter handler with access to full torrent list
+        section.onItemEnter = function (torrentData) {
+          showTorrentMenu(torrentData, allTorrents);
+        };
+
+        // Wire up section navigation callbacks (vinyl pattern)
+        section.onDown = self.down.bind(self);
+        section.onUp = self.up.bind(self);
+        section.onBack = self.back.bind(self);
+        section.onMore = function (key) {
+          return function () {
+            Lampa.Activity.push({
+              url: '',
+              title: Lampa.Lang.translate('torrentmanager_section_' + key) + " \u2014 " + (Lampa.Storage.field("lmetorrentSelect") || '').toUpperCase() + ' Manager',
+              component: 'lmetorrentSectionView',
+              page: 1,
+              filterSection: key
+            });
+          };
+        }(def.key);
+        section.create();
+        fragment.append(section.render());
+        sections.push(section);
+      });
+      body.append(fragment);
     };
     this.renderHeader = function (data) {
-      var item = new Header(data);
-      item.render().on("hover:enter", reloadPanel);
-      trackItemFocus(item);
-      head.append(item.render());
-      headerItem = item;
-      items = [item];
-    };
-    this.renderTorrentList = function (torrents) {
-      body.removeClass("lmetorrent-catalog--state").addClass("category-full");
-      body.empty();
-      destroyTorrentItems();
-      torrents.forEach(function (torrentData) {
-        var item = new Item(torrentData);
-        trackItemFocus(item);
-        item.render().on("hover:enter", function () {
-          showTorrentMenu(torrentData, torrents);
-        });
-        body.append(item.render());
-        items.push(item);
-        torrentItemsById[String(torrentData.id)] = item;
+      headerItem = new Header(data);
+      headerItem.render().on("hover:enter", reloadPanel);
+      headerItem.render().on("hover:focus", function () {
+        isHeaderFocused = true;
+        scroll.update(headerItem.render(), true);
       });
+      head.append(headerItem.render());
     };
     function refreshTorrents() {
       return _refreshTorrents.apply(this, arguments);
     }
     function _refreshTorrents() {
       _refreshTorrents = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-        var torrents, knownIds, nextIds, needRebuild, _t2;
+        var torrents, grouped, newSections, existingSectionElements, existingKeys, bodyFragment, _t2;
         return _regenerator().w(function (_context3) {
           while (1) switch (_context3.p = _context3.n) {
             case 0:
@@ -4818,47 +5390,119 @@
                 _context3.n = 5;
                 break;
               }
-              if (!body.hasClass("lmetorrent-catalog--state") || Object.keys(torrentItemsById).length) {
+              if (!body.hasClass("lmetorrent-catalog--state") || sections.length > 0) {
                 self.renderEmptyState();
               }
               return _context3.a(2);
             case 5:
-              knownIds = Object.keys(torrentItemsById);
-              nextIds = torrents.map(function (torrent) {
-                return String(torrent.id);
-              });
-              needRebuild = body.hasClass("lmetorrent-catalog--state") || knownIds.length !== nextIds.length || nextIds.some(function (torrentId) {
-                return !torrentItemsById[torrentId];
-              });
-              if (!needRebuild) {
-                _context3.n = 6;
-                break;
-              }
-              self.renderTorrentList(torrents);
-              return _context3.a(2);
-            case 6:
-              torrents.forEach(function (torrent) {
-                var item = torrentItemsById[String(torrent.id)];
-                if (item && typeof item.update === "function") {
-                  item.update(torrent);
+              allTorrents = torrents;
+
+              // Classify and diff sections
+              grouped = groupTorrentsByStatus(torrents);
+              newSections = [];
+              SECTION_DEFINITIONS.forEach(function (def) {
+                var groupItems = grouped[def.key];
+                var existing = null;
+
+                // Find existing section by key
+                for (var i = 0; i < sections.length; i++) {
+                  if (sections[i].key === def.key) {
+                    existing = sections[i];
+                    break;
+                  }
+                }
+                if (groupItems && groupItems.length > 0) {
+                  if (existing) {
+                    // Update existing section
+                    existing.update(groupItems);
+                    newSections.push(existing);
+                  } else {
+                    // Create new section
+                    var section = new PanelSection({
+                      key: def.key,
+                      title: Lampa.Lang.translate(def.langKey),
+                      icon: def.icon,
+                      items: groupItems
+                    });
+                    section.onItemEnter = function (torrentData) {
+                      showTorrentMenu(torrentData, allTorrents);
+                    };
+
+                    // Wire up section navigation callbacks (vinyl pattern)
+                    section.onDown = self.down.bind(self);
+                    section.onUp = self.up.bind(self);
+                    section.onBack = self.back.bind(self);
+                    section.onMore = function (key) {
+                      return function () {
+                        Lampa.Activity.push({
+                          url: '',
+                          title: Lampa.Lang.translate('torrentmanager_section_' + key) + " \u2014 " + (Lampa.Storage.field("lmetorrentSelect") || '').toUpperCase() + ' Manager',
+                          component: 'lmetorrentSectionView',
+                          page: 1,
+                          filterSection: key
+                        });
+                      };
+                    }(def.key);
+                    section.create();
+                    newSections.push(section);
+                  }
+                } else {
+                  // Section has no items — destroy if exists
+                  if (existing) {
+                    existing.destroy();
+                  }
                 }
               });
-              _context3.n = 8;
+
+              // Diff body DOM — preserve existing section elements, remove
+              // stale, add new, reorder. Avoids flicker from body.empty().
+              existingSectionElements = body.children('.lmetorrent-section');
+              existingKeys = {};
+              existingSectionElements.each(function () {
+                existingKeys[$(this).attr('data-section-key')] = $(this);
+              });
+              bodyFragment = $(document.createDocumentFragment());
+              newSections.forEach(function (section) {
+                var key = section.key;
+                if (existingKeys[key]) {
+                  // Section exists — reuse DOM element (avoids flicker)
+                  bodyFragment.append(existingKeys[key]);
+                  delete existingKeys[key];
+                } else {
+                  // New section — append fresh
+                  bodyFragment.append(section.render());
+                }
+              });
+
+              // Remove sections that are no longer present
+              Object.keys(existingKeys).forEach(function (key) {
+                existingKeys[key].remove();
+              });
+
+              // Replace body content atomically
+              body.empty().append(bodyFragment);
+              sections = newSections;
+
+              // Adjust active index if needed
+              if (activeSectionIndex >= sections.length) {
+                activeSectionIndex = sections.length - 1;
+              }
+              _context3.n = 7;
               break;
-            case 7:
-              _context3.p = 7;
+            case 6:
+              _context3.p = 6;
               _t2 = _context3.v;
               if (!_t2 || !_t2.isBackoffError) {
                 console.error("TDM", "Auto update error:", _t2);
               }
-            case 8:
-              _context3.p = 8;
+            case 7:
+              _context3.p = 7;
               updateInProgress = false;
-              return _context3.f(8);
-            case 9:
+              return _context3.f(7);
+            case 8:
               return _context3.a(2);
           }
-        }, _callee3, null, [[2, 7, 8, 9]]);
+        }, _callee3, null, [[2, 6, 7, 8]]);
       }));
       return _refreshTorrents.apply(this, arguments);
     }
@@ -4869,6 +5513,35 @@
       updateTick = refreshTorrents;
       Lampa.Timer.add(UPDATE_INTERVAL_MS, updateTick);
     }
+    this.down = function () {
+      if (isHeaderFocused) {
+        // From header, go to first section
+        isHeaderFocused = false;
+        if (sections.length > 0) {
+          activeSectionIndex = 0;
+          sections[0].toggle();
+          scroll.update(sections[0].render());
+        }
+      } else if (activeSectionIndex < sections.length - 1) {
+        activeSectionIndex++;
+        sections[activeSectionIndex].toggle();
+        scroll.update(sections[activeSectionIndex].render());
+      }
+    };
+    this.up = function () {
+      if (isHeaderFocused) {
+        // At header, go to system head
+        Lampa.Controller.toggle('head');
+      } else if (activeSectionIndex <= 0) {
+        // At first section, go to header
+        isHeaderFocused = true;
+        focusHeader();
+      } else {
+        activeSectionIndex--;
+        sections[activeSectionIndex].toggle();
+        scroll.update(sections[activeSectionIndex].render());
+      }
+    };
     this.back = function () {
       Lampa.Activity.backward();
     };
@@ -4880,22 +5553,22 @@
       this.background();
       Lampa.Controller.add("content", {
         toggle: function toggle() {
-          Lampa.Controller.collectionSet(scroll.render());
-          Lampa.Controller.collectionFocus(last || false, scroll.render());
-        },
-        left: function left() {
-          if (Navigator.canmove("left")) Navigator.move("left");else Lampa.Controller.toggle("menu");
-        },
-        right: function right() {
-          Navigator.move("right");
+          if (isHeaderFocused && headerItem) {
+            focusHeader();
+          } else if (sections.length) {
+            sections[activeSectionIndex].toggle();
+          }
         },
         up: function up() {
-          if (Navigator.canmove("up")) Navigator.move("up");else Lampa.Controller.toggle("head");
+          self.up();
         },
         down: function down() {
-          if (Navigator.canmove("down")) Navigator.move("down");
+          self.down();
         },
-        back: this.back
+        left: function left() {
+          Lampa.Controller.toggle('menu');
+        },
+        back: self.back
       });
       Lampa.Controller.toggle("content");
     };
@@ -4914,10 +5587,155 @@
       stopAutoUpdate();
       resumeHeaderPolling();
       network.clear();
-      destroyAllItems();
+      destroyAllSections();
+      if (headerItem && typeof headerItem.destroy === 'function') {
+        headerItem.destroy();
+        headerItem = null;
+      }
       scroll.destroy();
       html.remove();
+      sections = null;
+      allTorrents = null;
+      network = null;
+    };
+  }
+
+  // plugins/torrentmanager/utils/panel/sectionView.js — Standalone grid component
+  function SectionView(object) {
+    var network = new Lampa.Reguest();
+    var scroll = new Lampa.Scroll({
+      mask: true,
+      over: true
+    });
+    var html = $('<div class="lmetorrent-section-view"></div>');
+    var grid = $('<div class="lmetorrent-section-view__grid"></div>');
+    var items = [];
+    var last = null;
+
+    // Lifecycle
+    this.create = function () {
+      this.activity.loader(true);
+      var filterSection = object.filterSection;
+      if (!filterSection) {
+        this.empty();
+        return this.render();
+      }
+
+      // Find section definition for title
+      var sectionDef = null;
+      for (var i = 0; i < SECTION_DEFINITIONS.length; i++) {
+        if (SECTION_DEFINITIONS[i].key === filterSection) {
+          sectionDef = SECTION_DEFINITIONS[i];
+          break;
+        }
+      }
+      var title = sectionDef ? Lampa.Lang.translate(sectionDef.langKey) : filterSection;
+
+      // Update activity title
+      var client = Lampa.Storage.field("lmetorrentSelect") || '';
+      this.activity.title = title + " \u2014 " + client.toUpperCase() + ' Manager';
+      scroll.minus();
+      scroll.append(grid);
+      html.append(scroll.render());
+      this.load();
+      return this.render();
+    };
+    this.load = function () {
+      var filterSection = object.filterSection;
+      var client = Lampa.Storage.field("lmetorrentSelect");
+      if (!hasClient(client)) {
+        this.empty();
+        return;
+      }
+      var self = this;
+      executeClientMethod(client, "GetData", [], {
+        silentAuth: true
+      }).then(function (torrents) {
+        if (!Array.isArray(torrents) || !torrents.length) {
+          self.activity.loader(false);
+          self.empty();
+          return;
+        }
+
+        // Filter by section
+        var filtered = torrents.filter(function (t) {
+          return classifyState$1(t.state) === filterSection;
+        });
+        if (!filtered.length) {
+          self.activity.loader(false);
+          self.empty();
+          return;
+        }
+
+        // Render cards
+        filtered.forEach(function (torrentData) {
+          var item = new Item(torrentData);
+          item.render().on('hover:focus', function () {
+            last = item.render()[0];
+            scroll.update(item.render(), true);
+          });
+          item.render().on('hover:enter', function () {
+            showTorrentMenu(torrentData, filtered);
+          });
+          grid.append(item.render());
+          items.push(item);
+        });
+        self.activity.loader(false);
+        self.activity.toggle();
+      }).catch(function (error) {
+        console.error("TDM", "Section view load error:", error);
+        self.activity.loader(false);
+        self.empty();
+      });
+    };
+    this.empty = function () {
+      var emptyEl = $('<div class="lmetorrent-state"><div class="lmetorrent-state__title">' + Lampa.Lang.translate("torrentmanager_state_empty_title") + '</div></div>');
+      grid.append(emptyEl);
+      this.activity.loader(false);
+      this.activity.toggle();
+    };
+    this.start = function () {
+      if (Lampa.Activity.active() && Lampa.Activity.active().activity !== this.activity) return;
+      Lampa.Controller.add("content", {
+        toggle: function toggle() {
+          Lampa.Controller.collectionSet(scroll.render());
+          Lampa.Controller.collectionFocus(last || false, scroll.render());
+        },
+        right: function right() {
+          Navigator.move('right');
+        },
+        left: function left() {
+          if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+        },
+        down: function down() {
+          Navigator.move('down');
+        },
+        up: function up() {
+          if (Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
+        },
+        back: function back() {
+          Lampa.Activity.backward();
+        }
+      });
+      Lampa.Controller.toggle("content");
+    };
+    this.pause = function () {};
+    this.stop = function () {};
+    this.render = function () {
+      return html;
+    };
+    this.destroy = function () {
+      network.clear();
+      if (items) {
+        items.forEach(function (item) {
+          item.destroy();
+        });
+      }
+      if (scroll) scroll.destroy();
+      html.remove();
       items = null;
+      grid = null;
+      scroll = null;
       network = null;
     };
   }
@@ -6204,6 +7022,201 @@
     });
   }
 
+  /**
+   * Normalize response data — Lampa.Network.silent may return a string or a parsed object.
+   * @param {*} response - Raw response from Lampa.Network.silent
+   * @returns {Object|Array|null} Parsed data or null
+   */
+  function parseResponse(response) {
+    if (!response) return null;
+    if (typeof response === 'string') {
+      try {
+        return JSON.parse(response);
+      } catch (e) {
+        return null;
+      }
+    }
+    if (_typeof(response) !== 'object') return null;
+    return response;
+  }
+
+  /**
+   * Build a cache key from query string to avoid special character collisions.
+   * @param {string} prefix - 'sonarr' or 'radarr'
+   * @param {string} query - Raw search query
+   * @returns {string} Sanitized cache key
+   */
+  function buildCacheKey(prefix, query) {
+    return prefix + '_' + String(query).replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  }
+
+  /**
+   * Check if cached result is still within TTL.
+   * @param {Object} cached - Cached metadata object
+   * @param {number} ttlMs - TTL in milliseconds
+   * @returns {boolean}
+   */
+  function isCacheValid(cached, ttlMs) {
+    return cached && cached.tmdb_id && Date.now() - (cached.updated_at || 0) < ttlMs;
+  }
+
+  /**
+   * Search Sonarr Skyhook for TV series by title or IMDB ID.
+   * Uses GET https://skyhook.sonarr.tv/v1/tvdb/search/en/?term={query}
+   * For IMDB search, use term=imdb:{id} for exact match.
+   *
+   * @param {string} titleOrImdb - Series title or "imdb:{id}"
+   * @returns {Promise<{tmdb_id: number|null, imdb_id: string|null, title: string|null, year: string|null, matched_via: string}|null>}
+   */
+  function searchSonarr(_x) {
+    return _searchSonarr.apply(this, arguments);
+  }
+
+  /**
+   * Search Radarr Video API for movies by title.
+   * Uses GET https://api.radarr.video/v1/search?q={query}
+   *
+   * @param {string} title - Movie title
+   * @returns {Promise<{tmdb_id: number|null, imdb_id: string|null, title: string|null, year: string|null, matched_via: string}|null>}
+   */
+  function _searchSonarr() {
+    _searchSonarr = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(titleOrImdb) {
+      var cacheKey, cached, url, data, result, normalized, _t;
+      return _regenerator().w(function (_context) {
+        while (1) switch (_context.p = _context.n) {
+          case 0:
+            if (titleOrImdb) {
+              _context.n = 1;
+              break;
+            }
+            return _context.a(2, null);
+          case 1:
+            cacheKey = buildCacheKey('sonarr', titleOrImdb);
+            _context.n = 2;
+            return getMetadata(cacheKey);
+          case 2:
+            cached = _context.v;
+            if (!isCacheValid(cached, 24 * 3600 * 1000)) {
+              _context.n = 3;
+              break;
+            }
+            return _context.a(2, cached);
+          case 3:
+            url = 'https://skyhook.sonarr.tv/v1/tvdb/search/en/?term=' + encodeURIComponent(titleOrImdb);
+            _context.p = 4;
+            _context.n = 5;
+            return new Promise(function (resolve, reject) {
+              Lampa.Network.silent(url, resolve, reject, null, {
+                timeout: 10000
+              });
+            });
+          case 5:
+            data = _context.v;
+            data = parseResponse(data);
+            if (!(!data || !data.length)) {
+              _context.n = 6;
+              break;
+            }
+            return _context.a(2, null);
+          case 6:
+            result = data[0];
+            normalized = {
+              tmdb_id: result.tmdbId || null,
+              imdb_id: result.imdbId || null,
+              title: result.title || null,
+              year: result.firstAired ? result.firstAired.slice(0, 4) : null,
+              matched_via: 'sonarr',
+              updated_at: Date.now()
+            };
+            if (!normalized.tmdb_id) {
+              _context.n = 7;
+              break;
+            }
+            _context.n = 7;
+            return saveMetadata(cacheKey, normalized);
+          case 7:
+            return _context.a(2, normalized);
+          case 8:
+            _context.p = 8;
+            _t = _context.v;
+            console.warn('TDM', 'Sonarr search failed:', _t.message);
+            return _context.a(2, null);
+        }
+      }, _callee, null, [[4, 8]]);
+    }));
+    return _searchSonarr.apply(this, arguments);
+  }
+  function searchRadarr(_x2) {
+    return _searchRadarr.apply(this, arguments);
+  }
+  function _searchRadarr() {
+    _searchRadarr = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(title) {
+      var cacheKey, cached, url, data, result, normalized, _t2;
+      return _regenerator().w(function (_context2) {
+        while (1) switch (_context2.p = _context2.n) {
+          case 0:
+            if (title) {
+              _context2.n = 1;
+              break;
+            }
+            return _context2.a(2, null);
+          case 1:
+            cacheKey = buildCacheKey('radarr', title);
+            _context2.n = 2;
+            return getMetadata(cacheKey);
+          case 2:
+            cached = _context2.v;
+            if (!isCacheValid(cached, 24 * 3600 * 1000)) {
+              _context2.n = 3;
+              break;
+            }
+            return _context2.a(2, cached);
+          case 3:
+            url = 'https://api.radarr.video/v1/search?q=' + encodeURIComponent(title);
+            _context2.p = 4;
+            _context2.n = 5;
+            return new Promise(function (resolve, reject) {
+              Lampa.Network.silent(url, resolve, reject, null, {
+                timeout: 10000
+              });
+            });
+          case 5:
+            data = _context2.v;
+            data = parseResponse(data);
+            if (!(!data || !data.length)) {
+              _context2.n = 6;
+              break;
+            }
+            return _context2.a(2, null);
+          case 6:
+            result = data[0];
+            normalized = {
+              tmdb_id: result.TmdbId || null,
+              imdb_id: result.ImdbId || null,
+              title: result.Title || null,
+              year: result.Year ? String(result.Year) : null,
+              matched_via: 'radarr',
+              updated_at: Date.now()
+            };
+            if (!normalized.tmdb_id) {
+              _context2.n = 7;
+              break;
+            }
+            _context2.n = 7;
+            return saveMetadata(cacheKey, normalized);
+          case 7:
+            return _context2.a(2, normalized);
+          case 8:
+            _context2.p = 8;
+            _t2 = _context2.v;
+            console.warn('TDM', 'Radarr search failed:', _t2.message);
+            return _context2.a(2, null);
+        }
+      }, _callee2, null, [[4, 8]]);
+    }));
+    return _searchRadarr.apply(this, arguments);
+  }
+
   function startClient(_x) {
     return _startClient.apply(this, arguments);
   }
@@ -6341,6 +7354,9 @@
 
                 // Append button to container
                 e.object.activity.render().find('.full-start-new__buttons').append($button);
+              } else {
+                // Fallback: try Sonarr/Radarr for clients without labels (Synology, etc.)
+                performFallbackLookup(e.object, r.data);
               }
             } else {
               console.error('TDM', 'Failed to get torrent client data');
@@ -6348,6 +7364,63 @@
           });
         }, 100);
       }
+    });
+  }
+
+  /**
+   * Fallback lookup when label-based matching fails.
+   * Attempts to resolve the TMDB ID via Sonarr/Radarr external API,
+   * then re-checks the torrent list. Results are cached in IndexedDB.
+   * Non-blocking — always resolves silently on errors.
+   *
+   * @param {Object} movieData - Movie data from the 'full' event (e.object)
+   * @param {Array} torrentData - Array of torrent objects from GetData
+   * @param {string} activeClient - Active torrent client name
+   */
+  function performFallbackLookup(movieData, torrentData, activeClient) {
+    // Extract movie info from event object
+    var movie = movieData.data && movieData.data.movie ? movieData.data.movie : movieData;
+    var method = movieData.method || (movie.first_air_date ? 'tv' : 'movie');
+    var id = movieData.id || movie.id;
+    var title = movie.title || movie.original_title || movie.name || '';
+    var imdbId = movie.imdb_id || movieData.imdb_id;
+    if (!id || !title) return;
+
+    // Determine search strategy
+    var searchPromise = null;
+    if (method === 'tv' && imdbId) {
+      searchPromise = searchSonarr('imdb:' + imdbId);
+    } else if (method === 'tv') {
+      searchPromise = searchSonarr(title);
+    } else {
+      searchPromise = searchRadarr(title);
+    }
+    if (!searchPromise) return;
+    searchPromise.then(function (meta) {
+      if (!meta || !meta.tmdb_id) return;
+
+      // Re-check torrents with resolved TMDB ID
+      var resolvedLabel = method + '/' + meta.tmdb_id;
+      var resolvedTorrent = null;
+      for (var i = 0; i < torrentData.length; i++) {
+        var labels = torrentData[i].labels || [];
+        if (labels.indexOf(resolvedLabel) !== -1) {
+          resolvedTorrent = torrentData[i];
+          break;
+        }
+      }
+      if (resolvedTorrent) {
+        // Cache the result so subsequent visits use IndexedDB directly
+        saveMetadata(String(resolvedTorrent.id), {
+          tmdb_id: meta.tmdb_id,
+          media_type: method,
+          torrent_id: resolvedTorrent.id,
+          matched_via: meta.matched_via || 'external',
+          updated_at: Date.now()
+        }).catch(function () {});
+      }
+    }).catch(function () {
+      // Silent fallback — never block UI on network errors
     });
   }
 
@@ -6474,6 +7547,425 @@
   }();
   var DomInjector$1 = new DomInjector();
 
+  /**
+   * Home Row integration for Torrent Manager.
+   * Registers a Lampa.ContentRows line on the main screen showing
+   * active torrents (downloading + seeding) with a "More" button
+   * that navigates to the full lmetorrentPanel component.
+   */
+
+  // Quality detection regex matching panelItem.js for lmetorrent_item__card template
+  var regexp2 = /(?:PPV.)?[HP]DTV|(?:HD)?TC|[cC]am|(?:HD)?CAM|B[rR]Rip|WEBRip|WEB-Rip|WEB-DL|WEB|TS|(?:PPV )?WEB-?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|HDRIP|[Bb]lu[Rr]ay|DvDScr|hdtv/;
+
+  /**
+   * Build a CSS class string based on completion progress.
+   * Copies getProgressClass from panelItem.js.
+   * @param {number} progress - 0–100
+   * @returns {string} CSS class name
+   */
+  function getProgressClass(progress) {
+    if (progress >= 100) return 'is-high';
+    if (progress >= 50) return 'is-mid';
+    return 'is-low';
+  }
+
+  /**
+   * Card class for rendering a single torrent item on the home screen row.
+   * Implements the cardClass interface required by Lampa.ContentRows.
+   * Adapts the lmetorrent_item__card template following main_channel.js pattern.
+   */
+  function HomeTorrentCard(torrentData, playlist) {
+    var self = this;
+    this.data = torrentData;
+    this.playlist = playlist;
+    this.card = null;
+    this.create = function () {
+      var progress = Number((self.data.completed * 100).toFixed(2));
+      self.card = Lampa.Template.get('lmetorrent_item__card', {
+        title: self.data.name,
+        size: Lampa.Utils.bytesToSize(self.data.size, 0),
+        state: getStandardizedStateName(self.data.state),
+        'data-completed': progress,
+        completed: progress + '%',
+        image: self.data.image || '',
+        image_src: '',
+        quality: self.data.name && self.data.name.match(regexp2) ? self.data.name.match(regexp2).toString().replace(/[ .()]/g, '') : ''
+      });
+      self.card.find('.lmetorrent_card__completed').addClass(getProgressClass(progress));
+      self.card.on('hover:enter', function () {
+        showTorrentMenu(self.data, self.playlist);
+      });
+      self.card.on('hover:focus', function () {
+        // Scroll tracking handled by the Lampa row system
+      });
+    };
+    this.render = function (js) {
+      return js ? self.card[0] : self.card;
+    };
+    this.destroy = function () {
+      if (self.card) {
+        self.card.remove();
+        self.card = null;
+      }
+      self.data = null;
+      self.playlist = null;
+    };
+    this.emit = function () {};
+    this.use = function () {};
+  }
+
+  /**
+   * Card class for the "More" button rendered as the last item in the home row.
+   * Renders immediately with other cards (no IntersectionObserver delay).
+   * Navigates to lmetorrentPanel on hover:enter.
+   */
+  function HomeMoreCard() {
+    var self = this;
+    this.card = null;
+    this.create = function () {
+      self.card = $('<div class="card-more selector">' + '<div class="card-more__box">' + '<div class="card-more__title">' + Lampa.Lang.translate('more') + '</div>' + '</div>' + '</div>');
+      self.card.on('hover:enter', function () {
+        Lampa.Activity.push({
+          url: '',
+          title: 'Torrent Manager',
+          component: 'lmetorrentPanel',
+          page: 1
+        });
+      });
+    };
+    this.render = function (js) {
+      return js ? self.card[0] : self.card;
+    };
+    this.destroy = function () {
+      if (self.card) {
+        self.card.remove();
+        self.card = null;
+      }
+    };
+    this.emit = function () {};
+    this.use = function () {};
+  }
+
+  /**
+   * Process torrent list, filter to active ones, prepare callback data.
+   * @param {Array} torrents - Array of torrent data objects
+   * @param {Function} callback - ContentRows callback
+   */
+  function processTorrents(torrents, callback) {
+    // Filter: only downloading and seeding torrents
+    var activeTorrents = [];
+    for (var i = 0; i < torrents.length; i++) {
+      var state = classifyState$1(torrents[i].state);
+      if (state === 'downloading' || state === 'seeding') {
+        activeTorrents.push(torrents[i]);
+      }
+    }
+    if (!activeTorrents.length) {
+      callback(null);
+      return;
+    }
+
+    // Limit to 6 cards max
+    var displayItems = activeTorrents.slice(0, 6);
+
+    // Set createInstance on each item for the cardClass interface
+    Lampa.Utils.extendItemsParams(displayItems, {
+      createInstance: function createInstance(item) {
+        return new HomeTorrentCard(item, activeTorrents);
+      }
+    });
+
+    // Add "More" card as the last item — rendered immediately with other cards
+    // instead of relying on total_pages onVisible (IntersectionObserver delay).
+    var moreItem = {
+      params: {
+        createInstance: function createInstance() {
+          return new HomeMoreCard();
+        }
+      }
+    };
+    displayItems.push(moreItem);
+    callback({
+      title: 'Torrents',
+      results: displayItems
+    });
+  }
+
+  /**
+   * Register the home screen content row for Torrent Manager.
+   * Only shows on screen: ['main'], index 0 (first position).
+   * Displays max 6 active torrents (downloading + seeding).
+   * Navigates to lmetorrentPanel on "More" button.
+   */
+  function init$1() {
+    if (!Lampa || !Lampa.ContentRows || typeof Lampa.ContentRows.add !== 'function') return;
+    Lampa.ContentRows.add({
+      name: 'lmetorrent_home',
+      title: 'Torrents',
+      index: 0,
+      screen: ['main'],
+      call: function call(params, screen) {
+        return function (callback) {
+          // Primary data source: TorrentStateManager.torrents (updated every 15s)
+          var torrents = TorrentStateManager$1.torrents;
+
+          // If state manager has no data yet, try direct API call
+          if (!torrents || !torrents.length) {
+            var client = Lampa.Storage.field('lmetorrentSelect');
+            if (hasClient(client)) {
+              executeClientMethod(client, 'GetData', [], {
+                silentAuth: true
+              }).then(function (data) {
+                if (Array.isArray(data) && data.length) {
+                  processTorrents(data, callback);
+                } else {
+                  callback(null);
+                }
+              }).catch(function () {
+                callback(null);
+              });
+              return;
+            }
+            callback(null);
+            return;
+          }
+          processTorrents(torrents, callback);
+        };
+      }
+    });
+  }
+  var HomeRow = {
+    init: init$1
+  };
+
+  /**
+   * Card Integration Module for Torrent Manager
+   *
+   * Adds torrent status indicators to catalog card icons.
+   * Follows the exact pattern from MovieEnhancer/utils/wm_quality.js:
+   *   - Hooks into Lampa.Maker.map('Card').Card.onVisible
+   *   - Preserves original method via apply(self)
+   *   - Uses inflight map to avoid duplicate API requests
+   *   - Silent fallback on errors — never blocks UI
+   *
+   * Lookup chain:
+   *   A. Direct label match in TorrentStateManager.torrents
+   *   B. IndexedDB cache via db.getMetadataByTmdbId()
+   *   C. External API (Sonarr/Radarr) for clients without labels
+   */
+
+  // Inflight map to prevent duplicate concurrent API requests for the same card
+  var inflight = {};
+
+  /**
+   * Map raw torrent state string to a CSS-friendly status category.
+   * Mirrors classifyState from panel/statusClassifier.js for consistency.
+   *
+   * @param {string} state - Raw torrent state string
+   * @returns {string} Normalized status: downloading|seeding|completed|paused|checking|errored
+   */
+  function classifyState(state) {
+    var n = (state || '').toLowerCase().trim();
+    if (/^(downloading|metadl|forceddl|stalleddl|forcedmetadl|downloading metadata)$/.test(n)) return 'downloading';
+    if (/^(uploading|forcedup|stalledup|seeding)$/.test(n)) return 'seeding';
+    if (/^(finished)$/.test(n)) return 'completed';
+    if (/^(pauseddl|pausedup|stoppeddl|stoppedup|stopped|paused)$/.test(n)) return 'paused';
+    if (/^(checkingup|checkingdl|queuedup|queueddl|checking|queued|allocating|moving|waiting|verifying|extracting)/.test(n) || n.indexOf('queued to') >= 0 || n.indexOf('verify') >= 0) return 'checking';
+    if (/^(missingfiles|error|unknown|errorstatus)$/.test(n)) return 'errored';
+    return 'errored';
+  }
+
+  /**
+   * Build SVG icon HTML for a given torrent status.
+   * Icons are inline SVGs placed inside .card__icons-inner.
+   *
+   * @param {string} state - Normalized torrent status
+   * @returns {string} SVG HTML string or empty string
+   */
+  function iconHtml(state) {
+    var svgs = {
+      downloading: '<svg class="card__torrent-icon card__torrent-icon--downloading" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13 5v8h3l-4 5-4-5h3V5h2zm-9 12v2h16v-2H4z"/></svg>',
+      seeding: '<svg class="card__torrent-icon card__torrent-icon--seeding" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13 5v5h3l-4 5-4-5h3V5h2zm-9 10v4h16v-4H4z"/></svg>',
+      completed: '<svg class="card__torrent-icon card__torrent-icon--complete" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>',
+      paused: '<svg class="card__torrent-icon card__torrent-icon--paused" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>',
+      checking: '<svg class="card__torrent-icon card__torrent-icon--checking" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
+      errored: '<svg class="card__torrent-icon card__torrent-icon--errored" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
+    };
+    return svgs[state] || '';
+  }
+
+  /**
+   * Find a torrent by label matching (mediaType/id) in the TorrentStateManager data.
+   *
+   * @param {Array} torrents - Array of torrent objects from TorrentStateManager
+   * @param {string} mediaType - 'movie' or 'tv'
+   * @param {number|string} id - TMDB ID
+   * @returns {Object|null} Matching torrent or null
+   */
+  function findTorrentByLabels(torrents, mediaType, id) {
+    var label = mediaType + '/' + id;
+    for (var i = 0; i < torrents.length; i++) {
+      var labels = torrents[i].labels || [];
+      if (labels.indexOf(label) !== -1) return torrents[i];
+    }
+    return null;
+  }
+
+  /**
+   * Render torrent status indicator on a card element.
+   * Adds CSS classes and an SVG icon inside .card__icons-inner.
+   *
+   * @param {jQuery} $card - Card jQuery element (self.html from onVisible)
+   * @param {Object} torrent - Matched torrent object
+   */
+  function renderStatus($card, torrent) {
+    if (!$card || !$card.length) return;
+    var state = classifyState(torrent.state);
+
+    // Update CSS classes on the card
+    $card.removeClass('card--torrent-active card--torrent-downloading card--torrent-seeding ' + 'card--torrent-complete card--torrent-paused');
+    $card.addClass('card--torrent-active card--torrent-' + state);
+
+    // Inject SVG icon into the icons container
+    var $icons = $card.find('.card__icons-inner');
+    if ($icons.length) {
+      $icons.find('.card__torrent-icon').remove();
+      $icons.append(iconHtml(state));
+    }
+  }
+
+  /**
+   * Initialize card integration.
+   * Must be called once after Lampa is ready (from initializePlugin).
+   * Hooks Card.onVisible to add torrent status icons on card render.
+   */
+  function init() {
+    // Reference pattern from MovieEnhancer/utils/wm_quality.js (lines 156-185)
+    var card = Lampa.Maker.map('Card');
+    var onVisible = card.Card.onVisible;
+    card.Card.onVisible = function () {
+      var self = this;
+      onVisible.apply(self); // Call original method first
+
+      // Guard: card must have data
+      if (!self.data) return;
+
+      // Access movie info — data may be nested under .movie or at root
+      var movie = self.data.movie || self.data;
+      if (!movie || !movie.id) return;
+      var id = movie.id;
+      var mediaType = movie.first_air_date ? 'tv' : 'movie';
+      var title = movie.title || movie.original_title || movie.name || '';
+      var imdbId = movie.imdb_id;
+
+      // Step A: Direct label match in TorrentStateManager (fastest path)
+      var torrents = TorrentStateManager$1.torrents;
+      var torrent = null;
+      if (torrents && torrents.length) {
+        torrent = findTorrentByLabels(torrents, mediaType, id);
+      }
+      if (torrent) {
+        // Store card data for live update lookup via torrents:updated
+        self.html.data('torrentCardData', {
+          id: id,
+          mediaType: mediaType
+        });
+        renderStatus(self.html, torrent);
+        return;
+      }
+
+      // Prevent duplicate async lookups for the same card
+      var inflightKey = String(id) + '_' + mediaType;
+      if (inflight[inflightKey]) return;
+      inflight[inflightKey] = true;
+
+      // Step B: Check IndexedDB cache for previously resolved metadata
+      getMetadataByTmdbId(id).then(function (cachedMeta) {
+        if (cachedMeta && cachedMeta.torrent_id && torrents && torrents.length) {
+          // Found cached match — verify torrent still exists in state manager
+          for (var i = 0; i < torrents.length; i++) {
+            if (torrents[i].id === cachedMeta.torrent_id) {
+              self.html.data('torrentCardData', {
+                id: id,
+                mediaType: mediaType
+              });
+              renderStatus(self.html, torrents[i]);
+              delete inflight[inflightKey];
+              return;
+            }
+          }
+        }
+
+        // Step C: External API search (Sonarr/Radarr) — only for visible cards
+        var searchPromise = null;
+        if (mediaType === 'tv' && imdbId) {
+          // Prefer IMDB ID search for precise match
+          searchPromise = searchSonarr('imdb:' + imdbId);
+        } else if (mediaType === 'tv' && title) {
+          searchPromise = searchSonarr(title);
+        } else if (mediaType === 'movie' && title) {
+          searchPromise = searchRadarr(title);
+        }
+        if (searchPromise) {
+          searchPromise.then(function (meta) {
+            if (meta && meta.tmdb_id) {
+              // Check if a torrent exists for the resolved TMDB ID
+              var resolvedTorrent = findTorrentByLabels(torrents, mediaType, meta.tmdb_id);
+              if (resolvedTorrent) {
+                self.html.data('torrentCardData', {
+                  id: id,
+                  mediaType: mediaType
+                });
+                renderStatus(self.html, resolvedTorrent);
+
+                // Cache the resolved mapping for future lookups
+                saveMetadata(String(resolvedTorrent.id), {
+                  tmdb_id: meta.tmdb_id,
+                  media_type: mediaType,
+                  torrent_id: resolvedTorrent.id,
+                  matched_via: meta.matched_via || 'external',
+                  updated_at: Date.now()
+                });
+              }
+            }
+          }).catch(function () {
+            // Silent fallback — never block UI on network errors
+          }).then(function () {
+            delete inflight[inflightKey];
+          });
+        } else {
+          delete inflight[inflightKey];
+        }
+      }).catch(function () {
+        delete inflight[inflightKey];
+      });
+    };
+
+    // Subscribe to live torrent updates to refresh visible card icons
+    Lampa.Listener.follow('torrents:updated', function () {
+      var torrents = TorrentStateManager$1.torrents;
+      if (!torrents || !torrents.length) return;
+
+      // Only update cards that already have torrent indicators
+      $('.card--torrent-active').each(function () {
+        var $card = $(this);
+        var cardData = $card.data('torrentCardData');
+        if (!cardData) return;
+        var updatedTorrent = findTorrentByLabels(torrents, cardData.mediaType, cardData.id);
+        if (updatedTorrent) {
+          renderStatus($card, updatedTorrent);
+        } else {
+          // Torrent no longer exists — remove indicators
+          $card.removeClass('card--torrent-active card--torrent-downloading card--torrent-seeding ' + 'card--torrent-complete card--torrent-paused');
+          $card.find('.card__torrent-icon').remove();
+        }
+      });
+    });
+  }
+  var CardIntegration = {
+    init: init
+  };
+
   /** 
    * Plugin manifest information
    */
@@ -6494,7 +7986,7 @@
    */
   function registerTemplates() {
     // CSS styles
-    Lampa.Template.add('lmemStyle', "\n        <style>\n            @charset 'UTF-8';.btnTDdownload{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}svg.btnTDdownload{width:36px;height:36px;margin-right:5%}.lmetorrent-error_body{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center}.lmetorrent-error_body .lmetorrent-error_result{margin-top:2em}.lmetorrent-head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;padding:0 2% 0 2%;margin:0 2% 2% 2%}.lmetorrent-header__update{white-space:nowrap}.lmetorrent-header__space{margin-left:auto}.lmetorrent-catalog--list.category-full{margin-left:0;padding:0 2.5%}.lmetorrent-catalog--state{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;min-height:45vh;padding:0 2%}.lmetorrent-state{max-width:46em;width:100%;text-align:center}.lmetorrent-state__title{font-size:1.35em;font-weight:600}.lmetorrent-state__description{margin-top:.8em;opacity:.85;line-height:1.4}.lmetorrent-state__actions{margin-top:1.3em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;gap:.7em}.lmetorrent-catalog--list.category-full .card.card--category .card__view{margin-bottom:.72em}.lmetorrent_card__completed{position:absolute;right:0;bottom:0;font-size:.8em;-webkit-border-radius:.3em;-moz-border-radius:.3em;padding:.4em .4em;border-radius:.3em;text-align:center;font-weight:bold;background-color:var(--background-color);color:var(--text-color)}.lmetorrent_card__completed.is-low{--background-color:#fcc;--text-color:#900}.lmetorrent_card__completed.is-mid{--background-color:#ffc;--text-color:#990}.lmetorrent_card__completed.is-high{--background-color:#cfc;--text-color:#090}.lmetorrent_card__state{left:0;top:0}.lmetorrent_card__size{left:0;bottom:0}.lmetorrent_card__size,.lmetorrent_card__state{position:absolute;padding:.4em .4em;background:#fff;color:#000;font-size:.8em;-webkit-border-radius:.3em;border-radius:.3em}@media screen and (max-width:900px){.lmetorrent-head{margin:0 2% 3% 2%;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;row-gap:.6em}.lmetorrent-header__space{margin-left:0;width:100%;font-size:.95em;opacity:.85}.lmetorrent-catalog--list.category-full{margin-left:0;padding:0 1%}}@media screen and (max-width:767px){.lmetorrent-head{margin:0 2% 2.4% 2%;-webkit-flex-wrap:nowrap;-ms-flex-wrap:nowrap;flex-wrap:nowrap;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.8em}.lmetorrent-header__update{font-size:1.12em}.lmetorrent-header__space{margin-left:auto;width:auto;font-size:1.08em;opacity:.98;white-space:nowrap}.lmetorrent-catalog--list.category-full{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;padding:0}.lmetorrent-catalog--list.category-full .card.card--category{width:33.3333% !important;min-width:0;padding-left:.22em;padding-right:.22em}}@media screen and (max-width:560px){.lmetorrent-head{-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.lmetorrent-catalog--list.category-full{padding:0}.lmetorrent-catalog--list.category-full .card.card--category .card__view{margin-bottom:.5em}.lmetorrent_card__size,.lmetorrent_card__state,.lmetorrent_card__completed{font-size:.68em}}@media screen and (max-width:420px){.lmetorrent-head{-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;row-gap:.55em}.lmetorrent-header__space{width:100%;margin-left:0}}.lmetorrent-item{margin-left:.5em;margin-right:.5em;margin-bottom:1em;width:-webkit-calc(14.2857142857% - 1em);width:calc(14.2857142857% - 1em);-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;border:solid .01em #fff;-webkit-border-radius:.8em;border-radius:.8em}.lmetorrent-item.focus{border:solid .26em #fff}.lmetorrent-item__data{margin-bottom:.4em}.lmetorrent-item__state{top:.5em;left:.5em;padding:.1em .3em;font-weight:bold;-webkit-border-radius:.25em;border-radius:.25em;color:#292d32;background-color:#eee}.lmetorrent-item__badge>svg{width:1em;height:1em;vertical-align:bottom}.lmetorrent-item__name{font-size:1.1em;margin-top:.8em;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}@media screen and (max-width:580px){.lmetorrent-item{width:21%}}@media screen and (max-width:385px){.lmetorrent-item__name{display:none}}.torrent-manager-icon{--icon-status-color:limegreen;color:var(--icon-status-color)}.torrent-manager-sidebar{position:fixed;top:0;right:-350px;width:350px;height:100%;background-color:rgba(0,0,0,0.85);z-index:1000;-webkit-transition:right .3s;-o-transition:right .3s;transition:right .3s;color:white;padding:20px;-webkit-box-sizing:border-box;box-sizing:border-box;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column}.torrent-manager-sidebar.visible{right:0}.torrent-manager-sidebar__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;margin-bottom:20px;font-weight:bold;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.torrent-manager-sidebar__list{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:10px;overflow-y:auto;-webkit-box-flex:1;-webkit-flex-grow:1;-ms-flex-positive:1;flex-grow:1}.torrent-manager-sidebar__item{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;padding:10px;background-color:rgba(255,255,255,0.1);-webkit-border-radius:5px;border-radius:5px;cursor:pointer;gap:10px}.torrent-manager-sidebar__item:hover{background-color:rgba(255,255,255,0.2)}.torrent-manager-sidebar__item-name{white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;-webkit-box-flex:1;-webkit-flex-grow:1;-ms-flex-positive:1;flex-grow:1}.torrent-manager-sidebar__item-percent{-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}\n        </style>\n    ");
+    Lampa.Template.add('lmemStyle', "\n        <style>\n            @charset 'UTF-8';.btnTDdownload{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}svg.btnTDdownload{width:36px;height:36px;margin-right:5%}.lmetorrent-error_body{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center}.lmetorrent-error_body .lmetorrent-error_result{margin-top:2em}.lmetorrent-head{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;padding:0 2% 0 2%;margin:0 2% 2% 2%}.lmetorrent-header__update{white-space:nowrap}.lmetorrent-header__space{margin-left:auto}.lmetorrent-catalog--list.category-full{margin-left:0;padding:0 2.5%}.lmetorrent-catalog--state{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;min-height:45vh;padding:0 2%}.lmetorrent-state{max-width:46em;width:100%;text-align:center}.lmetorrent-state__title{font-size:1.35em;font-weight:600}.lmetorrent-state__description{margin-top:.8em;opacity:.85;line-height:1.4}.lmetorrent-state__actions{margin-top:1.3em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;gap:.7em}.lmetorrent-catalog--list.category-full .card.card--category .card__view{margin-bottom:.72em}.lmetorrent_card__completed{position:absolute;right:0;bottom:0;font-size:.8em;-webkit-border-radius:.3em;-moz-border-radius:.3em;padding:.4em .4em;border-radius:.3em;text-align:center;font-weight:bold;background-color:var(--background-color);color:var(--text-color)}.lmetorrent_card__completed.is-low{--background-color:#fcc;--text-color:#900}.lmetorrent_card__completed.is-mid{--background-color:#ffc;--text-color:#990}.lmetorrent_card__completed.is-high{--background-color:#cfc;--text-color:#090}.lmetorrent_card__state{left:0;top:0}.lmetorrent_card__size{left:0;bottom:0}.lmetorrent_card__size,.lmetorrent_card__state{position:absolute;padding:.4em .4em;background:#fff;color:#000;font-size:.8em;-webkit-border-radius:.3em;border-radius:.3em}@media screen and (max-width:900px){.lmetorrent-head{margin:0 2% 3% 2%;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;row-gap:.6em}.lmetorrent-header__space{margin-left:0;width:100%;font-size:.95em;opacity:.85}.lmetorrent-catalog--list.category-full{margin-left:0;padding:0 1%}}@media screen and (max-width:767px){.lmetorrent-head{margin:0 2% 2.4% 2%;-webkit-flex-wrap:nowrap;-ms-flex-wrap:nowrap;flex-wrap:nowrap;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.8em}.lmetorrent-header__update{font-size:1.12em}.lmetorrent-header__space{margin-left:auto;width:auto;font-size:1.08em;opacity:.98;white-space:nowrap}.lmetorrent-catalog--list.category-full{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;padding:0}.lmetorrent-catalog--list.category-full .card.card--category{width:33.3333% !important;min-width:0;padding-left:.22em;padding-right:.22em}}@media screen and (max-width:560px){.lmetorrent-head{-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.lmetorrent-catalog--list.category-full{padding:0}.lmetorrent-catalog--list.category-full .card.card--category .card__view{margin-bottom:.5em}.lmetorrent_card__size,.lmetorrent_card__state,.lmetorrent_card__completed{font-size:.68em}}@media screen and (max-width:420px){.lmetorrent-head{-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;row-gap:.55em}.lmetorrent-header__space{width:100%;margin-left:0}}.lmetorrent-item{margin-left:.5em;margin-right:.5em;margin-bottom:1em;width:-webkit-calc(14.2857142857% - 1em);width:calc(14.2857142857% - 1em);-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;border:solid .01em #fff;-webkit-border-radius:.8em;border-radius:.8em}.lmetorrent-item.focus{border:solid .26em #fff}.lmetorrent-item__data{margin-bottom:.4em}.lmetorrent-item__state{top:.5em;left:.5em;padding:.1em .3em;font-weight:bold;-webkit-border-radius:.25em;border-radius:.25em;color:#292d32;background-color:#eee}.lmetorrent-item__badge>svg{width:1em;height:1em;vertical-align:bottom}.lmetorrent-item__name{font-size:1.1em;margin-top:.8em;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}@media screen and (max-width:580px){.lmetorrent-item{width:21%}}@media screen and (max-width:385px){.lmetorrent-item__name{display:none}}.torrent-manager-icon{--icon-status-color:limegreen;color:var(--icon-status-color)}.torrent-manager-sidebar{position:fixed;top:0;right:-350px;width:350px;height:100%;background-color:rgba(0,0,0,0.85);z-index:1000;-webkit-transition:right .3s;-o-transition:right .3s;transition:right .3s;color:white;padding:20px;-webkit-box-sizing:border-box;box-sizing:border-box;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column}.torrent-manager-sidebar.visible{right:0}.torrent-manager-sidebar__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;margin-bottom:20px;font-weight:bold;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.torrent-manager-sidebar__list{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:10px;overflow-y:auto;-webkit-box-flex:1;-webkit-flex-grow:1;-ms-flex-positive:1;flex-grow:1}.torrent-manager-sidebar__item{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;padding:10px;background-color:rgba(255,255,255,0.1);-webkit-border-radius:5px;border-radius:5px;cursor:pointer;gap:10px}.torrent-manager-sidebar__item:hover{background-color:rgba(255,255,255,0.2)}.torrent-manager-sidebar__item-name{white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;-webkit-box-flex:1;-webkit-flex-grow:1;-ms-flex-positive:1;flex-grow:1}.torrent-manager-sidebar__item-percent{-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lmetorrent-section{padding-bottom:1.5em}.lmetorrent-section__icon{margin-right:.4em}.lmetorrent-section__count{margin-left:.5em;opacity:.6;font-size:.85em}.lmetorrent-section .mapping--line .card--category{width:12em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.lmetorrent-section-view{width:100%;min-height:45vh}.lmetorrent-section-view__grid{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;padding:0 2%}.lmetorrent-section-view .card--category{width:14.5%;margin:0 .5% 1em}@media screen and (max-width:767px){.lmetorrent-section-view .card--category{width:30%}}.lmetorrent-section .card-more{-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;width:12.75em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;height:18em}.lmetorrent-section .card-more .card-more__box{-webkit-transition:border-color .2s,-webkit-transform .3s;transition:border-color .2s,-webkit-transform .3s;-o-transition:transform .3s,border-color .2s;transition:transform .3s,border-color .2s;transition:transform .3s,border-color .2s,-webkit-transform .3s;background:rgba(0,0,0,0.3);-webkit-border-radius:1em;border-radius:1em;-webkit-box-flex:1;-webkit-flex-grow:1;-ms-flex-positive:1;flex-grow:1;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;position:relative}.lmetorrent-section .card-more .card-more__title{position:absolute;top:50%;left:0;right:0;text-align:center;font-size:1.8em;font-weight:300;margin-top:-0.7em}.lmetorrent-section .card-more.focus .card-more__box::after{content:'';position:absolute;top:-0.5em;left:-0.5em;right:-0.5em;bottom:-0.5em;border:.3em solid #fff;-webkit-border-radius:1.4em;border-radius:1.4em;z-index:-1}.lmetorrent-section .card-more--fixed-size{display:block}@media screen and (min-width:64em){body.size--bigger .lmetorrent-section .card-more{font-size:1.14em}}\n        </style>\n    ");
 
     // Header template
     Lampa.Template.add('lmetorrent_header', "<div class=\"lmetorrent-header__data lmetorrent-header__update simple-button selector\">Update</div>\n          <div class=\"lmetorrent-header__data lmetorrent-header__space\">Free space: {space}</div>\n        ");
@@ -6575,6 +8067,9 @@
       // Register panel component
       Lampa.Component.add('lmetorrentPanel', Component);
 
+      // Register section view component for "more" navigation
+      Lampa.Component.add('lmetorrentSectionView', SectionView);
+
       // Register plugin in manifest
       Lampa.Manifest.plugins = MANIFEST;
 
@@ -6603,6 +8098,14 @@
       // Initialize new header feature
       DomInjector$1.inject();
       TorrentStateManager$1.start();
+      HomeRow.init();
+
+      // Initialize card integration for torrent status indicators
+      try {
+        CardIntegration.init();
+      } catch (error) {
+        console.error('TDM', 'Error initializing CardIntegration:', error);
+      }
     } catch (error) {
       console.error('TDM', 'Error initializing Torrent Manager plugin:', error);
     }

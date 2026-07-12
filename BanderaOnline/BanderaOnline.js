@@ -883,13 +883,19 @@
       function shouldUseStreamProxy(url) {
         var player = Lampa.Storage.get('player');
         if (player && player !== 'inner') return false;
-        return isAshdiUrl(url) || isZetvideoUrl(url);
+        return isAshdiUrl(url) || isZetvideoUrl(url) || isSniplyoUrl(url) || isCreavioUrl(url);
       }
       function isAshdiUrl(url) {
         return /(^|\/\/)([^\/]*\.)?ashdi\.vip(\/|$)/i.test(url || '');
       }
       function isZetvideoUrl(url) {
         return /(^|\/\/)([^\/]*\.)?zetvideo\.[^\/]+(\/|$)/i.test(url || '');
+      }
+      function isSniplyoUrl(url) {
+        return /(^|\/\/)([^\/]*\.)?sniplyo\.online(\/|$)/i.test(url || '');
+      }
+      function isCreavioUrl(url) {
+        return /(^|\/\/)([^\/]*\.)?creavio\.online(\/|$)/i.test(url || '');
       }
       function wrapStreamProxy(url) {
         var base = 'https://proxy.m7-club.com/?url=';
