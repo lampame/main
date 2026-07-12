@@ -3852,7 +3852,7 @@
         version: '1.1.0',
         name: Lampa.Lang.translate('vinyl_title'),
         component: 'vinyl',
-        description: 'JioSaavn music — playlists, albums, radio'
+        description: 'Vinyl — playlists, albums, radio'
       };
 
       // 2. Templates
@@ -3949,7 +3949,7 @@
         vinyl_featured_albums: {
           ru: 'Альбомы',
           uk: 'Альбоми',
-          en: 'JioSaavn',
+          en: 'Albums',
           be: 'Альбомы'
         },
         vinyl_quality: {
