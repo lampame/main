@@ -1330,7 +1330,7 @@ var plugin = (function () {
      * Keep this file simple — no imports, no side effects.
      */
 
-    var VERSION = '0.2.2';
+    var VERSION = '0.2.3';
 
     /**
      * crypto-lite.js — Pure-JS cryptographic primitives (zero dependencies)
@@ -3598,18 +3598,28 @@ var plugin = (function () {
         if (!b.type || b.card_id == null) return;
         if (!fav[b.type]) fav[b.type] = [];
 
-        // Avoid duplicate card_ids in the same category
-        if (fav[b.type].indexOf(b.card_id) < 0) {
-          fav[b.type].unshift(b.card_id);
+        // Parse card data first to get the canonical id
+        var card = null;
+        if (b.data) {
+          try {
+            card = typeof b.data === 'string' ? JSON.parse(b.data) : b.data;
+          } catch (e) {}
         }
 
-        // Parse card data once per unique card_id
-        if (!seenCards[b.card_id] && b.data) {
-          seenCards[b.card_id] = true;
-          try {
-            var card = typeof b.data === 'string' ? JSON.parse(b.data) : b.data;
-            fav.card.push(card);
-          } catch (e) {}
+        // Use card.id (from parsed data) as canonical id — it matches
+        // Lampa.Favorite internal type (number). Fall back to b.card_id
+        // if card data parsing failed or card.id is missing.
+        var canonicalId = card && card.id != null ? card.id : b.card_id;
+
+        // Avoid duplicate ids in the same category
+        if (fav[b.type].indexOf(canonicalId) < 0) {
+          fav[b.type].unshift(canonicalId);
+        }
+
+        // Push card data once per unique canonical id
+        if (card && !seenCards[canonicalId]) {
+          seenCards[canonicalId] = true;
+          fav.card.push(card);
         }
       });
       return fav;
@@ -4431,6 +4441,43 @@ var plugin = (function () {
       });
     }
 
+    // ─── Normalize favorite category IDs to match card.id types ──
+    // Old Cub imports stored b.card_id (possibly string) in category arrays
+    // while card.id (from parsed b.data) could be a different JS type.
+    // Lampa.Favorite.remove() uses Arrays.remove() → indexOf() → ===,
+    // so type mismatch causes silent removal failure.
+    // This normalizes category arrays to use card.id (same type as card objects).
+
+    var FAV_CAT_KEYS = ['like', 'wath', 'book', 'history', 'look', 'viewed', 'scheduled', 'continued', 'thrown'];
+    function normalizeFavoriteIds(favorite) {
+      if (!favorite || !favorite.card) return favorite;
+
+      // Build card.id → card lookup
+      var cardMap = {};
+      for (var i = 0; i < favorite.card.length; i++) {
+        var c = favorite.card[i];
+        if (c && c.id != null) cardMap[c.id] = c;
+      }
+
+      // Replace each category array's IDs with card.id (canonical type)
+      for (var k = 0; k < FAV_CAT_KEYS.length; k++) {
+        var cat = FAV_CAT_KEYS[k];
+        if (!favorite[cat]) continue;
+        for (var j = 0; j < favorite[cat].length; j++) {
+          var id = favorite[cat][j];
+          // Find matching card using == (loose) like Lampa.Favorite.check does
+          for (var cid in cardMap) {
+            if (cid == id && id !== cardMap[cid].id) {
+              // Type mismatch found — replace with canonical card.id
+              favorite[cat][j] = cardMap[cid].id;
+              break;
+            }
+          }
+        }
+      }
+      return favorite;
+    }
+
     // ─── Apply profile data ─────────────────────────────────
 
     function applyProfileData(data, msgId) {
@@ -4440,6 +4487,7 @@ var plugin = (function () {
       // ── Bookmarks (always user-layer) ──
       if (data.bookmarks && data.bookmarks.favorite) {
         suppressPublish();
+        normalizeFavoriteIds(data.bookmarks.favorite);
         Lampa.Storage.set('favorite', data.bookmarks.favorite);
         if (Lampa.Favorite && Lampa.Favorite.read) {
           Lampa.Favorite.read();
@@ -5056,6 +5104,7 @@ var plugin = (function () {
           // ── Bookmarks & Timeline (never applied before) ──
           if (data.bookmarks && data.bookmarks.favorite) {
             suppressPublish();
+            normalizeFavoriteIds(data.bookmarks.favorite);
             Lampa.Storage.set('favorite', data.bookmarks.favorite);
             if (Lampa.Favorite && Lampa.Favorite.read) {
               Lampa.Favorite.read();
@@ -8589,6 +8638,7 @@ var plugin = (function () {
       autoActivateProfile();
       setupProfileDeltaListeners();
       setupDeviceSettingsListener();
+      setupFavoriteStateListener();
       startDeltaPolling();
     }
 
@@ -8690,6 +8740,22 @@ var plugin = (function () {
           key: e.key,
           value: value
         }, 'all');
+      });
+    }
+
+    // ─── Favorite state change listener ─────────────────────
+    // ponytail: refresh the current activity UI whenever the favorite
+    // state changes (add/remove) so card icons reflect the current
+    // bookmark state without requiring a manual page reload.
+
+    function setupFavoriteStateListener() {
+      Lampa.Listener.follow('state:changed', function (e) {
+        if (e.target !== 'favorite' || e.reason !== 'update') return;
+
+        // After favorite change — refresh current activity
+        // so card icons reflect the current bookmark state
+        var activity = Lampa.Activity.active();
+        if (activity) Lampa.Activity.replace(activity);
       });
     }
 

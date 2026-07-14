@@ -4971,6 +4971,9 @@
         if (this.timer) {
           return;
         }
+
+        // Call update immediately on start to populate torrents right away
+        this.update();
         this.timer = this.update.bind(this);
         Lampa.Timer.add(15000, this.timer, true);
       }
@@ -4986,24 +4989,28 @@
       key: "update",
       value: function () {
         var _update = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-          var client_name, isUniversal, new_torrents, has_active_downloads_before, has_active_downloads_after;
+          var client_name, isUniversal, new_torrents, has_active_downloads_before, has_active_downloads_after, _t;
           return _regenerator().w(function (_context) {
             while (1) switch (_context.p = _context.n) {
               case 0:
+                console.log('TDM', 'TorrentStateManager.update() called');
                 if (!this.updateInProgress) {
                   _context.n = 1;
                   break;
                 }
+                console.log('TDM', 'TorrentStateManager: update already in progress');
                 return _context.a(2);
               case 1:
                 this.updateInProgress = true;
                 _context.p = 2;
                 client_name = Lampa.Storage.get('lmetorrentSelect');
+                console.log('TDM', 'TorrentStateManager: client_name =', client_name);
                 isUniversal = client_name === 'universal' || client_name === 'universalClient';
                 if (!(isUniversal || !hasClient(client_name))) {
                   _context.n = 3;
                   break;
                 }
+                console.log('TDM', 'TorrentStateManager: no client selected or universal');
                 return _context.a(2);
               case 3:
                 _context.n = 4;
@@ -5013,6 +5020,7 @@
                 });
               case 4:
                 new_torrents = _context.v;
+                console.log('TDM', 'TorrentStateManager: got', new_torrents ? new_torrents.length : 'null', 'torrents');
                 if (new_torrents) {
                   has_active_downloads_before = this.hasActiveDownloads();
                   this.torrents = new_torrents;
@@ -5030,6 +5038,8 @@
                 break;
               case 5:
                 _context.p = 5;
+                _t = _context.v;
+                console.error('TDM', 'TorrentStateManager.update error:', _t);
               case 6:
                 _context.p = 6;
                 this.updateInProgress = false;
@@ -7023,12 +7033,103 @@
   }
 
   /**
-   * Normalize response data — Lampa.Network.silent may return a string or a parsed object.
+   * Sonarr/Radarr API Module for Torrent Manager
+   *
+   * Provides external API search as a fallback when label-based matching fails.
+   * Results are cached in-memory with a 12-hour TTL and persisted to Lampa.Storage.
+   * Pattern from MovieEnhancer/utils/wm_quality.js.
+   * Used by cardIntegration.js and full.js to resolve TMDB IDs for clients
+   * that do not support labels (e.g. Synology).
+   */
+
+  /*
+   * In-memory cache with LRU eviction — persisted to Lampa.Storage.
+   */
+  var CACHE_STORAGE_KEY = 'lme_torrentmanager_api_cache';
+  var CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
+  var CACHE_SIZE = 500;
+  var memoryCache = {};
+  var cacheInitialized = false;
+  function initCache() {
+    if (cacheInitialized) return;
+    memoryCache = Lampa.Storage.get(CACHE_STORAGE_KEY, {});
+    cacheInitialized = true;
+  }
+  function getCached(key) {
+    initCache();
+    var entry = memoryCache[key];
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > CACHE_TTL) {
+      delete memoryCache[key];
+      return null;
+    }
+    return entry.value;
+  }
+  function setCached(key, value) {
+    initCache();
+    // LRU eviction if cache is full
+    var size = Object.keys(memoryCache).length;
+    if (size >= CACHE_SIZE) {
+      var oldest = null;
+      var oldestTime = Infinity;
+      for (var k in memoryCache) {
+        if (memoryCache[k].timestamp < oldestTime) {
+          oldestTime = memoryCache[k].timestamp;
+          oldest = k;
+        }
+      }
+      if (oldest) delete memoryCache[oldest];
+    }
+    memoryCache[key] = {
+      timestamp: Date.now(),
+      value: value
+    };
+    saveCache();
+  }
+  var saveTimeout = null;
+  function saveCache() {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(function () {
+      Lampa.Storage.set(CACHE_STORAGE_KEY, memoryCache);
+    }, 500);
+  }
+
+  /*
+   * Inflight map — prevents duplicate concurrent requests for the same key.
+   * Pattern from MovieEnhancer/utils/wm_quality.js (inflight = {}).
+   */
+  var inflight$1 = {};
+
+  /*
+   * CORS proxy helper — wraps a URL through cors.io to avoid browser CORS blocks.
+   * cors.io returns { url, status, headers, body: "..." } — parseResponse handles this.
+   */
+  var CORS_PROXY = 'https://cors.io/?url=';
+  function proxyUrl(url) {
+    return CORS_PROXY + encodeURIComponent(url);
+  }
+
+  /**
+   * Normalize response data — handles cors.io wrapped format and raw responses.
+   * cors.io returns: { url, status, headers, body: "<json string>" }
+   * Lampa.Network.silent may also return a string or a pre-parsed object.
+   *
    * @param {*} response - Raw response from Lampa.Network.silent
    * @returns {Object|Array|null} Parsed data or null
    */
   function parseResponse(response) {
     if (!response) return null;
+
+    // cors.io wraps response: { url, status, headers, body: "..." }
+    if (response.url && response.body) {
+      try {
+        return JSON.parse(response.body);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Direct JSON string
     if (typeof response === 'string') {
       try {
         return JSON.parse(response);
@@ -7036,6 +7137,8 @@
         return null;
       }
     }
+
+    // Already-parsed object
     if (_typeof(response) !== 'object') return null;
     return response;
   }
@@ -7048,16 +7151,6 @@
    */
   function buildCacheKey(prefix, query) {
     return prefix + '_' + String(query).replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-  }
-
-  /**
-   * Check if cached result is still within TTL.
-   * @param {Object} cached - Cached metadata object
-   * @param {number} ttlMs - TTL in milliseconds
-   * @returns {boolean}
-   */
-  function isCacheValid(cached, ttlMs) {
-    return cached && cached.tmdb_id && Date.now() - (cached.updated_at || 0) < ttlMs;
   }
 
   /**
@@ -7081,42 +7174,52 @@
    */
   function _searchSonarr() {
     _searchSonarr = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(titleOrImdb) {
-      var cacheKey, cached, url, data, result, normalized, _t;
+      var cacheKey, cached, url, data, result, normalized, status, _t;
       return _regenerator().w(function (_context) {
         while (1) switch (_context.p = _context.n) {
           case 0:
+            console.log('TDM', 'searchSonarr called with:', titleOrImdb);
             if (titleOrImdb) {
               _context.n = 1;
               break;
             }
             return _context.a(2, null);
           case 1:
-            cacheKey = buildCacheKey('sonarr', titleOrImdb);
-            _context.n = 2;
-            return getMetadata(cacheKey);
-          case 2:
-            cached = _context.v;
-            if (!isCacheValid(cached, 24 * 3600 * 1000)) {
-              _context.n = 3;
+            cacheKey = buildCacheKey('sonarr', titleOrImdb); // Check in-memory cache FIRST
+            cached = getCached(cacheKey);
+            if (!cached) {
+              _context.n = 2;
               break;
             }
             return _context.a(2, cached);
+          case 2:
+            if (!inflight$1[cacheKey]) {
+              _context.n = 3;
+              break;
+            }
+            return _context.a(2, null);
           case 3:
-            url = 'https://skyhook.sonarr.tv/v1/tvdb/search/en/?term=' + encodeURIComponent(titleOrImdb);
+            inflight$1[cacheKey] = true;
+            url = proxyUrl('https://skyhook.sonarr.tv/v1/tvdb/search/en/?term=' + encodeURIComponent(titleOrImdb));
             _context.p = 4;
             _context.n = 5;
             return new Promise(function (resolve, reject) {
-              Lampa.Network.silent(url, resolve, reject, null, {
+              Lampa.Network.silent(url, resolve, function (jqXHR) {
+                reject(jqXHR);
+              }, null, {
                 timeout: 10000
               });
             });
           case 5:
             data = _context.v;
+            console.log('TDM', 'searchSonarr raw response:', _typeof(data), data ? 'length=' + (Array.isArray(data) ? data.length : 'N/A') : 'null/undefined');
             data = parseResponse(data);
+            console.log('TDM', 'searchSonarr after parseResponse:', data ? 'length=' + (Array.isArray(data) ? data.length : 'N/A') : 'null');
             if (!(!data || !data.length)) {
               _context.n = 6;
               break;
             }
+            console.log('TDM', 'searchSonarr: no data or empty array');
             return _context.a(2, null);
           case 6:
             result = data[0];
@@ -7128,21 +7231,26 @@
               matched_via: 'sonarr',
               updated_at: Date.now()
             };
-            if (!normalized.tmdb_id) {
-              _context.n = 7;
-              break;
+            if (normalized.tmdb_id) {
+              setCached(cacheKey, normalized);
             }
-            _context.n = 7;
-            return saveMetadata(cacheKey, normalized);
-          case 7:
+            console.log('TDM', 'searchSonarr result: FOUND tmdb_id=' + normalized.tmdb_id);
             return _context.a(2, normalized);
+          case 7:
+            _context.p = 7;
+            _t = _context.v;
+            status = _t && _t.status ? _t.status : 'unknown';
+            console.warn('TDM', 'Sonarr search failed (HTTP ' + status + ')');
+            console.error('TDM', 'Sonarr error details:', _t);
+            return _context.a(2, null);
           case 8:
             _context.p = 8;
-            _t = _context.v;
-            console.warn('TDM', 'Sonarr search failed:', _t.message);
-            return _context.a(2, null);
+            delete inflight$1[cacheKey];
+            return _context.f(8);
+          case 9:
+            return _context.a(2);
         }
-      }, _callee, null, [[4, 8]]);
+      }, _callee, null, [[4, 7, 8, 9]]);
     }));
     return _searchSonarr.apply(this, arguments);
   }
@@ -7151,42 +7259,52 @@
   }
   function _searchRadarr() {
     _searchRadarr = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(title) {
-      var cacheKey, cached, url, data, result, normalized, _t2;
+      var cacheKey, cached, url, data, result, normalized, status, _t2;
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.p = _context2.n) {
           case 0:
+            console.log('TDM', 'searchRadarr called with:', title);
             if (title) {
               _context2.n = 1;
               break;
             }
             return _context2.a(2, null);
           case 1:
-            cacheKey = buildCacheKey('radarr', title);
-            _context2.n = 2;
-            return getMetadata(cacheKey);
-          case 2:
-            cached = _context2.v;
-            if (!isCacheValid(cached, 24 * 3600 * 1000)) {
-              _context2.n = 3;
+            cacheKey = buildCacheKey('radarr', title); // Check in-memory cache FIRST
+            cached = getCached(cacheKey);
+            if (!cached) {
+              _context2.n = 2;
               break;
             }
             return _context2.a(2, cached);
+          case 2:
+            if (!inflight$1[cacheKey]) {
+              _context2.n = 3;
+              break;
+            }
+            return _context2.a(2, null);
           case 3:
-            url = 'https://api.radarr.video/v1/search?q=' + encodeURIComponent(title);
+            inflight$1[cacheKey] = true;
+            url = proxyUrl('https://api.radarr.video/v1/search?q=' + encodeURIComponent(title));
             _context2.p = 4;
             _context2.n = 5;
             return new Promise(function (resolve, reject) {
-              Lampa.Network.silent(url, resolve, reject, null, {
+              Lampa.Network.silent(url, resolve, function (jqXHR) {
+                reject(jqXHR);
+              }, null, {
                 timeout: 10000
               });
             });
           case 5:
             data = _context2.v;
+            console.log('TDM', 'searchRadarr raw response:', _typeof(data), data ? 'length=' + (Array.isArray(data) ? data.length : 'N/A') : 'null/undefined');
             data = parseResponse(data);
+            console.log('TDM', 'searchRadarr after parseResponse:', data ? 'length=' + (Array.isArray(data) ? data.length : 'N/A') : 'null');
             if (!(!data || !data.length)) {
               _context2.n = 6;
               break;
             }
+            console.log('TDM', 'searchRadarr: no data or empty array');
             return _context2.a(2, null);
           case 6:
             result = data[0];
@@ -7198,21 +7316,26 @@
               matched_via: 'radarr',
               updated_at: Date.now()
             };
-            if (!normalized.tmdb_id) {
-              _context2.n = 7;
-              break;
+            if (normalized.tmdb_id) {
+              setCached(cacheKey, normalized);
             }
-            _context2.n = 7;
-            return saveMetadata(cacheKey, normalized);
-          case 7:
+            console.log('TDM', 'searchRadarr result: FOUND tmdb_id=' + normalized.tmdb_id);
             return _context2.a(2, normalized);
+          case 7:
+            _context2.p = 7;
+            _t2 = _context2.v;
+            status = _t2 && _t2.status ? _t2.status : 'unknown';
+            console.warn('TDM', 'Radarr search failed (HTTP ' + status + ')');
+            console.error('TDM', 'Radarr error details:', _t2);
+            return _context2.a(2, null);
           case 8:
             _context2.p = 8;
-            _t2 = _context2.v;
-            console.warn('TDM', 'Radarr search failed:', _t2.message);
-            return _context2.a(2, null);
+            delete inflight$1[cacheKey];
+            return _context2.f(8);
+          case 9:
+            return _context2.a(2);
         }
-      }, _callee2, null, [[4, 8]]);
+      }, _callee2, null, [[4, 7, 8, 9]]);
     }));
     return _searchRadarr.apply(this, arguments);
   }
@@ -7290,7 +7413,7 @@
               var torrent = findTorrent(r.data, e.object.method, e.object.id);
               if (torrent) {
                 // Create button element
-                var $button = $("<div class=\"full-start__button selector button--lme_torrent\">\n                                <svg fill=\"currentColor\" version=\"1.1\" id=\"Capa_1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 588.601 588.6\" xml:space=\"preserve\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <g> <path d=\"M168.405,288.048c-3.019,0.084-4.936,0.419-5.864,0.728v20.174l5.632-0.059c6.463-0.078,10.558-4.35,10.558-10.768 C178.73,291.017,174.636,287.869,168.405,288.048z\"></path> <path d=\"M82.324,290.445c-8.177,0.227-12.49,10.278-12.49,22.491c0,12.045,4.588,21.674,12.49,21.737 c8.089,0.079,12.701-9.761,12.701-22.412C95.018,300.86,90.688,290.213,82.324,290.445z\"></path> <path d=\"M125.722,289.235c-2.813,0.082-4.617,0.396-5.484,0.696v19.515l5.276-0.059c6.03-0.074,9.858-4.203,9.858-10.404 C135.372,292.117,131.544,289.074,125.722,289.235z\"></path> <path d=\"M539.568,49.201h-178.2c-0.786,0-1.561,0.074-2.347,0.124V0L11.228,46.419v494.562L359.032,588.6v-50.814 c0.78,0.053,1.55,0.115,2.341,0.115h178.2c20.852,0,37.8-16.959,37.8-37.8v-413.1C577.368,66.161,560.425,49.201,539.568,49.201z M361.368,70.801h178.2c8.928,0,16.2,7.267,16.2,16.2v271.329c-23.272-58.704-70.2-90.393-132.864-99.347 c-18.879-2.705-21.79,0.886-19.687,19.517c1.482,13.252,11.786,9.158,18.747,10.022c56.574,7.085,103.982,49.642,115.288,104.147 c7.267,34.974-1.266,71.872-21.305,101.05h-14.08c36.64-49.116,38.834-102.389,2.964-149.575 c-33.307-43.802-99.62-61.505-145.8-42.604V71.043C359.797,70.93,360.572,70.801,361.368,70.801z M359.032,333.687 c2.226-0.891,4.25-1.703,6.265-2.479c45.752-17.649,97.817-0.606,122.096,39.946c23.757,39.726,14.223,90.034-22.892,122.565 h-14.122c3.912-2.942,7.73-6.181,11.411-9.734c26.314-25.376,35.374-56.162,24.01-90.925 c-11.527-35.258-37.446-55.244-74.007-60.592c-18.114-2.647-36.956,1.244-52.761,9.661V333.687z M359.032,378.891 c0.169-0.163,0.327-0.354,0.506-0.517c22.939-22.17,62.259-21.479,84.555,1.397c22.687,23.277,22.887,60.307-2.479,81.949 c-13.11,11.175-29.995,20.408-46.659,24.49c-11.935,2.921-23.905,4.777-35.923,6.021V378.891z M296.331,275.25l49.401-1.7v11.156 l-19.232,0.514v61.077l-11.938-0.19v-60.57l-18.236,0.493V275.25H296.331z M60.247,292.37l-12.49,0.332v49.265l-7.771-0.11v-48.953 l-11.929,0.321V284.5l32.189-1.113V292.37z M81.857,343.459c-12.677-0.211-20.545-12.983-20.545-30.26 c0-18.077,8.521-31.118,21.209-31.572c13.458-0.466,21.526,12.714,21.526,30.085C104.048,332.153,94.521,343.67,81.857,343.459z M136.836,343.343c-0.738-1.867-1.917-6.982-3.31-14.776c-1.395-8.147-3.73-10.721-8.819-10.895l-4.47,0.025v25.393l-8.701-0.138 v-60.515c3.267-0.828,8.208-1.55,13.324-1.73c7.056-0.242,11.907,1.071,15.238,4.504c2.745,2.797,4.316,7.148,4.316,12.469 c0,8.137-4.398,13.685-9.042,15.868v0.284c3.533,1.641,5.688,6.012,6.951,12.056c1.572,7.857,2.911,15.161,3.963,17.607 L136.836,343.343z M180.312,344.023c-0.788-1.935-2.059-7.229-3.554-15.298c-1.484-8.427-3.995-11.096-9.429-11.264l-4.788,0.021 v26.262l-9.305-0.143v-62.574c3.488-0.865,8.754-1.608,14.241-1.798c7.549-0.274,12.738,1.086,16.313,4.627 c2.942,2.896,4.617,7.394,4.617,12.906c0,8.412-4.704,14.16-9.682,16.428v0.295c3.783,1.688,6.096,6.207,7.446,12.477 c1.68,8.127,3.119,15.684,4.237,18.22L180.312,344.023z M231.742,344.82l-33.874-0.533v-65.646l32.598-1.118v10.083l-22.539,0.609 v17.075l21.266-0.306v9.978l-21.266,0.137v19.438l23.815,0.189V344.82z M241.052,277.151l12.234-0.422l15.515,29.141 c4.061,7.668,7.604,15.688,10.434,23.235h0.19c-0.73-9.313-1.004-18.299-1.004-28.94v-24.301l10.491-0.366v70.208l-11.675-0.18 l-15.881-30.47c-3.828-7.515-7.791-15.884-10.702-23.535l-0.264,0.105c0.43,8.812,0.517,17.819,0.517,29.072v24.421l-9.848-0.152 v-67.816H241.052z M539.568,516.301h-4.915c8.644-11.56,15.746-23.467,21.115-35.743v19.543 C555.769,509.035,548.507,516.301,539.568,516.301z\"></path> </g> </g></svg>\n                                <span>".concat(torrent.completed > 0 ? "".concat(torrent.state, " - ").concat(Number((torrent.completed * 100).toFixed(2)), "%") : torrent.state, "</span>\n                            </div>"));
+                var $button = $("<div class=\"full-start__button selector button--lme_torrent\">\n                                <svg fill=\"currentColor\" version=\"1.1\" id=\"Capa_1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 588.601 588.6\" xml:space=\"preserve\"><g id=\"SVGRepo_bgCarrier\" stroke-width=\"0\"></g><g id=\"SVGRepo_tracerCarrier\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></g><g id=\"SVGRepo_iconCarrier\"> <g> <path d=\"M168.405,288.048c-3.019,0.084-4.936,0.419-5.864,0.728v20.174l5.632-0.059c6.463-0.078,10.558-4.35,10.558-10.768 C178.73,291.017,174.636,287.869,168.405,288.048z\"></path> <path d=\"M82.324,290.445c-8.177,0.227-12.49,10.278-12.49,22.491c0,12.045,4.588,21.674,12.49,21.737 c8.089,0.079,12.701-9.761,12.701-22.412C95.018,300.86,90.688,290.213,82.324,290.445z\"></path> <path d=\"M125.722,289.235c-2.813,0.082-4.617,0.396-5.484,0.696v19.515l5.276-0.059c6.03-0.074,9.858-4.203,9.858-10.404 C135.372,292.117,131.544,289.074,125.722,289.235z\"></path> <path d=\"M539.568,49.201h-178.2c-0.786,0-1.561,0.074-2.347,0.124V0L11.228,46.419v494.562L359.032,588.6v-50.814 c0.78,0.053,1.55,0.115,2.341,0.115h178.2c20.852,0,37.8-16.959,37.8-37.8v-413.1C577.368,66.161,560.425,49.201,539.568,49.201z M361.368,70.801h178.2c8.928,0,16.2,7.267,16.2,16.2v271.329c-23.272-58.704-70.2-90.393-132.864-99.347 c-18.879-2.705-21.79,0.886-19.687,19.517c1.482,13.252,11.786,9.158,18.747,10.022c56.574,7.085,103.982,49.642,115.288,104.147 c7.267,34.974-1.266,71.872-21.305,101.05h-14.08c36.64-49.116,38.834-102.389,2.964-149.575 c-33.307-43.802-99.62-61.505-145.8-42.604V71.043C359.797,70.93,360.572,70.801,361.368,70.801z M359.032,333.687 c2.226-0.891,4.25-1.703,6.265-2.479c45.752-17.649,97.817-0.606,122.096,39.946c23.757,39.726,14.223,90.034-22.892,122.565 h-14.122c3.912-2.942,7.73-6.181,11.411-9.734c26.314-25.376,35.374-56.162,24.01-90.925 c-11.527-35.258-37.446-55.244-74.007-60.592c-18.114-2.647-36.956,1.244-52.761,9.661V333.687z M359.032,378.891 c0.169-0.163,0.327-0.354,0.506-0.517c22.939-22.17,62.259-21.479,84.555,1.397c22.687,23.277,22.887,60.307-2.479,81.949 c-13.11,11.175-29.995,20.408-46.659,24.49c-11.935,2.921-23.905,4.777-35.923,6.021V378.891z M296.331,275.25l49.401-1.7v11.156 l-19.232,0.514v61.077l-11.938-0.19v-60.57l-18.236,0.493V275.25H296.331z M60.247,292.37l-12.49,0.332v49.265l-7.771-0.11v-48.953 l-11.929,0.321V284.5l32.189-1.113V292.37z M81.857,343.459c-12.677-0.211-20.545-12.983-20.545-30.26 c0-18.077,8.521-31.118,21.209-31.572c13.458-0.466,21.526,12.714,21.526,30.085C104.048,332.153,94.521,343.67,81.857,343.459z M136.836,343.343c-0.738-1.867-1.917-6.982-3.31-14.776c-1.395-8.147-3.73-10.721-8.819-10.895l-4.47,0.025v25.393l-8.701-0.138 v-60.515c3.267-0.828,8.208-1.55,13.324-1.73c7.056-0.242,11.907,1.071,15.238,4.504c2.745,2.797,4.316,7.148,4.316,12.469 c0,8.137-4.398,13.685-9.042,15.868v0.284c3.533,1.641,5.688,6.012,6.951,12.056c1.572,7.857,2.911,15.161,3.963,17.607 L136.836,343.343z M180.312,344.023c-0.788-1.935-2.059-7.229-3.554-15.298c-1.484-8.427-3.995-11.096-9.429-11.264l-4.788,0.021 v26.262l-9.305-0.143v-62.574c3.488-0.865,8.754-1.608,14.241-1.798c7.549-0.274,12.738,1.086,16.313,4.627 c2.942,2.896,4.617,7.394,4.617,12.906c0,8.412-4.704,14.16-9.682,16.428v0.295c3.783,1.688,6.096,6.207,7.446,12.477 c1.68,8.127,3.119,15.684,4.237,18.22L180.312,344.023z M231.742,344.82l-33.874-0.533v-65.646l32.598-1.118v10.083l-22.539,0.609 v17.075l21.266-0.306v9.978l-21.266,0.137v19.438l23.815,0.189V344.82z M241.052,277.151l12.234-0.422l15.515,29.141 c4.061,7.668,7.604,15.688,10.434,23.235h0.19c-0.73-9.313-1.004-18.299-1.004-28.94v-24.301l10.491-0.366v70.208l-11.675-0.18 l-15.881-30.47c-3.828-7.515-7.791-15.884-10.702-23.535l-0.264,0.105c0.43,8.812,0.517,17.819,0.517,29.072v24.421l-9.848-0.152 v-67.816H241.052z M539.568,516.301h-4.915c8.644-11.56,15.746-23.467,21.115-35.743v19.543 C555.769,509.035,548.507,516.301,539.568,516.301z\"></path> </g> </g></svg>\n                                <span>".concat(torrent.completed > 0 ? "".concat(getStandardizedStateName(torrent.state), " - ").concat(Number((torrent.completed * 100).toFixed(2)), "%") : getStandardizedStateName(torrent.state), "</span>\n                            </div>"));
 
                 // Attach event handlers
                 $button.on("hover:enter", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
@@ -7328,7 +7451,7 @@
 
                         // Set menu
                         Lampa.Select.show({
-                          title: torrent.completed > 0 ? "".concat(torrent.state, " - ").concat(Number((torrent.completed * 100).toFixed(2)), "%") : torrent.state,
+                          title: torrent.completed > 0 ? "".concat(getStandardizedStateName(torrent.state), " - ").concat(Number((torrent.completed * 100).toFixed(2)), "%") : getStandardizedStateName(torrent.state),
                           items: menu,
                           onBack: function onBack() {
                             // Повертаємось до попереднього контролера, якщо він існує
@@ -7352,8 +7475,25 @@
                   }, _callee);
                 })));
 
-                // Append button to container
+                // Remove existing torrent button before adding new one
+                e.object.activity.render().find('.full-start-new__buttons').find('.button--lme_torrent').remove();
+
+                // Append new button to container
                 e.object.activity.render().find('.full-start-new__buttons').append($button);
+
+                // Manually bind hover events that Lampa normally binds via .selector in full/start.js
+                $button.on('hover:focus', function () {
+                  $(this).addClass('focus');
+                }).on('hover:blur', function () {
+                  $(this).removeClass('focus');
+                }).on('hover:hover', function () {
+                  // hover state is handled by CSS class .selector
+                }).on('hover:touch', function () {
+                  // touch state
+                });
+
+                // Add button to Controller collection for spatial navigation
+                Lampa.Controller.collectionAppend($button);
               } else {
                 // Fallback: try Sonarr/Radarr for clients without labels (Synology, etc.)
                 performFallbackLookup(e.object, r.data);
@@ -7738,22 +7878,6 @@
     init: init$1
   };
 
-  /**
-   * Card Integration Module for Torrent Manager
-   *
-   * Adds torrent status indicators to catalog card icons.
-   * Follows the exact pattern from MovieEnhancer/utils/wm_quality.js:
-   *   - Hooks into Lampa.Maker.map('Card').Card.onVisible
-   *   - Preserves original method via apply(self)
-   *   - Uses inflight map to avoid duplicate API requests
-   *   - Silent fallback on errors — never blocks UI
-   *
-   * Lookup chain:
-   *   A. Direct label match in TorrentStateManager.torrents
-   *   B. IndexedDB cache via db.getMetadataByTmdbId()
-   *   C. External API (Sonarr/Radarr) for clients without labels
-   */
-
   // Inflight map to prevent duplicate concurrent API requests for the same card
   var inflight = {};
 
@@ -7784,12 +7908,12 @@
    */
   function iconHtml(state) {
     var svgs = {
-      downloading: '<svg class="card__torrent-icon card__torrent-icon--downloading" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13 5v8h3l-4 5-4-5h3V5h2zm-9 12v2h16v-2H4z"/></svg>',
-      seeding: '<svg class="card__torrent-icon card__torrent-icon--seeding" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13 5v5h3l-4 5-4-5h3V5h2zm-9 10v4h16v-4H4z"/></svg>',
-      completed: '<svg class="card__torrent-icon card__torrent-icon--complete" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>',
-      paused: '<svg class="card__torrent-icon card__torrent-icon--paused" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>',
-      checking: '<svg class="card__torrent-icon card__torrent-icon--checking" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
-      errored: '<svg class="card__torrent-icon card__torrent-icon--errored" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
+      downloading: '<svg class="card__torrent-icon card__torrent-icon--downloading" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M13 5v8h3l-4 5-4-5h3V5h2zm-9 12v2h16v-2H4z"/></svg>',
+      seeding: '<svg class="card__torrent-icon card__torrent-icon--seeding" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M13 5v5h3l-4 5-4-5h3V5h2zm-9 10v4h16v-4H4z"/></svg>',
+      completed: '<svg class="card__torrent-icon card__torrent-icon--complete" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>',
+      paused: '<svg class="card__torrent-icon card__torrent-icon--paused" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>',
+      checking: '<svg class="card__torrent-icon card__torrent-icon--checking" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
+      errored: '<svg class="card__torrent-icon card__torrent-icon--errored" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
     };
     return svgs[state] || '';
   }
@@ -7840,11 +7964,24 @@
    * Hooks Card.onVisible to add torrent status icons on card render.
    */
   function init() {
+    console.log('TDM', 'CardIntegration.init() called');
+    if (!Lampa.Maker) {
+      console.error('TDM', 'Lampa.Maker is not defined!');
+      return;
+    }
+
     // Reference pattern from MovieEnhancer/utils/wm_quality.js (lines 156-185)
     var card = Lampa.Maker.map('Card');
+    console.log('TDM', 'Lampa.Maker.map(Card) returned:', card);
+    if (!card || !card.Card) {
+      console.error('TDM', 'card.Card is not defined!');
+      return;
+    }
     var onVisible = card.Card.onVisible;
+    console.log('TDM', 'Original onVisible:', _typeof(onVisible));
     card.Card.onVisible = function () {
       var self = this;
+      console.log('TDM', 'Card.onVisible called, self.data:', self.data);
       onVisible.apply(self); // Call original method first
 
       // Guard: card must have data
@@ -7854,23 +7991,36 @@
       var movie = self.data.movie || self.data;
       if (!movie || !movie.id) return;
       var id = movie.id;
+
+      // Guard: skip non-numeric IDs (music cards, etc.)
+      if (typeof id !== 'number' && !/^\d+$/.test(id)) {
+        console.log('TDM', 'Skipping non-numeric ID:', id);
+        return;
+      }
       var mediaType = movie.first_air_date ? 'tv' : 'movie';
       var title = movie.title || movie.original_title || movie.name || '';
       var imdbId = movie.imdb_id;
 
+      // Wrap self.html in jQuery once for use in renderStatus calls
+      var $card = $(self.html);
+
       // Step A: Direct label match in TorrentStateManager (fastest path)
       var torrents = TorrentStateManager$1.torrents;
+      console.log('TDM', 'TorrentStateManager.torrents:', torrents ? torrents.length : 'null/undefined');
       var torrent = null;
       if (torrents && torrents.length) {
         torrent = findTorrentByLabels(torrents, mediaType, id);
+        console.log('TDM', 'findTorrentByLabels result:', torrent ? 'FOUND' : 'not found', 'for', mediaType + '/' + id);
+      } else {
+        console.log('TDM', 'No torrents in TorrentStateManager');
       }
       if (torrent) {
         // Store card data for live update lookup via torrents:updated
-        self.html.data('torrentCardData', {
+        self.html.dataset.torrentCardData = JSON.stringify({
           id: id,
           mediaType: mediaType
         });
-        renderStatus(self.html, torrent);
+        renderStatus($card, torrent);
         return;
       }
 
@@ -7881,15 +8031,16 @@
 
       // Step B: Check IndexedDB cache for previously resolved metadata
       getMetadataByTmdbId(id).then(function (cachedMeta) {
+        console.log('TDM', 'db.getMetadataByTmdbId result:', cachedMeta ? 'FOUND' : 'not found');
         if (cachedMeta && cachedMeta.torrent_id && torrents && torrents.length) {
           // Found cached match — verify torrent still exists in state manager
           for (var i = 0; i < torrents.length; i++) {
             if (torrents[i].id === cachedMeta.torrent_id) {
-              self.html.data('torrentCardData', {
+              self.html.dataset.torrentCardData = JSON.stringify({
                 id: id,
                 mediaType: mediaType
               });
-              renderStatus(self.html, torrents[i]);
+              renderStatus($card, torrents[i]);
               delete inflight[inflightKey];
               return;
             }
@@ -7912,11 +8063,11 @@
               // Check if a torrent exists for the resolved TMDB ID
               var resolvedTorrent = findTorrentByLabels(torrents, mediaType, meta.tmdb_id);
               if (resolvedTorrent) {
-                self.html.data('torrentCardData', {
+                self.html.dataset.torrentCardData = JSON.stringify({
                   id: id,
                   mediaType: mediaType
                 });
-                renderStatus(self.html, resolvedTorrent);
+                renderStatus($card, resolvedTorrent);
 
                 // Cache the resolved mapping for future lookups
                 saveMetadata(String(resolvedTorrent.id), {
@@ -7940,6 +8091,7 @@
         delete inflight[inflightKey];
       });
     };
+    console.log('TDM', 'Card.onVisible overridden successfully');
 
     // Subscribe to live torrent updates to refresh visible card icons
     Lampa.Listener.follow('torrents:updated', function () {
@@ -7949,8 +8101,14 @@
       // Only update cards that already have torrent indicators
       $('.card--torrent-active').each(function () {
         var $card = $(this);
-        var cardData = $card.data('torrentCardData');
-        if (!cardData) return;
+        var cardDataStr = this.dataset.torrentCardData;
+        if (!cardDataStr) return;
+        var cardData;
+        try {
+          cardData = JSON.parse(cardDataStr);
+        } catch (e) {
+          return;
+        }
         var updatedTorrent = findTorrentByLabels(torrents, cardData.mediaType, cardData.id);
         if (updatedTorrent) {
           renderStatus($card, updatedTorrent);
@@ -7971,7 +8129,7 @@
    */
   var MANIFEST = {
     type: 'other',
-    version: '3.3',
+    version: '3.4',
     author: '@lme_chat',
     name: 'Torrent Manager',
     description: 'Manager and Runner query',
