@@ -3747,6 +3747,43 @@
   };
 
   /**
+   * Safely patch a property on an object, handling getter/setter descriptors.
+   * Returns a restore function.
+   * 
+   * @param {object} obj - The target object
+   * @param {string} property - The property name to patch
+   * @param {function} wrapFn - The wrapper function receiving (originalVal, context, args)
+   * @returns {function} restore - A function that restores the original descriptor or value
+   */
+  function safePatch(obj, property, wrapFn) {
+    if (!obj) return function () {};
+    var desc = Object.getOwnPropertyDescriptor(obj, property);
+    var originalVal = obj[property];
+    if (desc && (desc.get || desc.set)) {
+      Object.defineProperty(obj, property, {
+        get: function get() {
+          return function () {
+            return wrapFn(originalVal, this, arguments);
+          };
+        },
+        configurable: true,
+        enumerable: true
+      });
+    } else {
+      obj[property] = function () {
+        return wrapFn(originalVal, this, arguments);
+      };
+    }
+    return function restore() {
+      if (desc) {
+        Object.defineProperty(obj, property, desc);
+      } else {
+        delete obj[property];
+      }
+    };
+  }
+
+  /**
    * Lines Initialization Module
    * Цей файл гарантує що всі line-генератори будуть включені в збірку
    * 
@@ -6543,6 +6580,7 @@
    */
   var TYPE = 'persons';
   var STORAGE_KEY = 'kinobaza_persons';
+  var activePatches$1 = [];
   var cachedData = null;
 
   /**
@@ -6720,10 +6758,9 @@
    */
   function patchAll() {
     try {
-      var origAll = Lampa.Favorite.all;
-      if (!origAll) return;
-      Lampa.Favorite.all = function () {
-        var result = origAll.apply(this, arguments);
+      if (!Lampa.Favorite || !Lampa.Favorite.all) return;
+      activePatches$1.push(safePatch(Lampa.Favorite, 'all', function (origAll, context, args) {
+        var result = origAll.apply(context, args) || {};
         try {
           var persons = getAll();
           if (persons && persons.length) {
@@ -6735,7 +6772,7 @@
           // мовчки
         }
         return result;
-      };
+      }));
     } catch (e) {
       console.error('Kinobaza', 'patchAll error', e);
     }
@@ -6748,14 +6785,14 @@
    */
   function patchGet() {
     try {
-      var origGet = Lampa.Favorite.get;
-      if (!origGet) return;
-      Lampa.Favorite.get = function (params) {
+      if (!Lampa.Favorite || !Lampa.Favorite.get) return;
+      activePatches$1.push(safePatch(Lampa.Favorite, 'get', function (origGet, context, args) {
+        var params = args[0];
         if (params && params.type === TYPE) {
           return getAll();
         }
-        return origGet.apply(this, arguments);
-      };
+        return origGet.apply(context, args);
+      }));
     } catch (e) {
       console.error('Kinobaza', 'patchGet error', e);
     }
@@ -6767,16 +6804,16 @@
    */
   function patchCheck() {
     try {
-      var origCheck = Lampa.Favorite.check;
-      if (!origCheck) return;
-      Lampa.Favorite.check = function (card) {
-        var result = origCheck.apply(this, arguments);
+      if (!Lampa.Favorite || !Lampa.Favorite.check) return;
+      activePatches$1.push(safePatch(Lampa.Favorite, 'check', function (origCheck, context, args) {
+        var card = args[0];
+        var result = origCheck.apply(context, args) || {};
         if (card && (card.media_type === 'person' || card.type === 'person')) {
           result[TYPE] = isSubscribed(card.id);
           if (result[TYPE]) result.any = true;
         }
         return result;
-      };
+      }));
     } catch (e) {
       console.error('Kinobaza', 'patchCheck error', e);
     }
@@ -6899,6 +6936,13 @@
           if (e.type === 'ready') _init();
         });
       }
+    },
+    destroy: function destroy() {
+      activePatches$1.forEach(function (restore) {
+        restore();
+      });
+      activePatches$1 = [];
+      window.kinobaza_persons_fav_ready = false;
     },
     subscribe: subscribe,
     unsubscribe: unsubscribe,
@@ -7321,6 +7365,10 @@
   if (!window.plugin_kinobaza_myperson_ready) {
     startPlugin$1();
   }
+  window.plugin_kinobaza_myperson_destroy = function () {
+    favorite.destroy();
+    window.plugin_kinobaza_myperson_ready = false;
+  };
 
   /**
    * Перевірка конфлікту з синхронізацією CUB (Куб)
@@ -9821,6 +9869,8 @@
     logout: logout
   };
 
+  var activePatches = [];
+
   /**
    * Додає 'kinobaza' в селектор джерела (source)
    */
@@ -9904,46 +9954,50 @@
   function overrideFavoriteApi() {
     try {
       if (!Lampa.Favorite) return;
-      var originalCheck = Lampa.Favorite.check;
-      Lampa.Favorite.check = function (card) {
+      activePatches.push(safePatch(Lampa.Favorite, 'check', function (originalCheck, context, args) {
+        var card = args[0];
         if (card && card.source === 'kinobaza') {
           var dbCard = findDbCard(card);
-          if (dbCard) return originalCheck(dbCard);
+          if (dbCard) return originalCheck.call(context, dbCard);
           var anyCard = findAnyCard(card);
-          if (anyCard) return originalCheck(anyCard);
+          if (anyCard) return originalCheck.call(context, anyCard);
         }
-        return originalCheck(card);
-      };
-      var originalAdd = Lampa.Favorite.add;
-      Lampa.Favorite.add = function (where, card, limit) {
+        return originalCheck.apply(context, args);
+      }));
+      activePatches.push(safePatch(Lampa.Favorite, 'add', function (originalAdd, context, args) {
+        var where = args[0];
+        var card = args[1];
+        var limit = args[2];
         if (card && card.source === 'kinobaza') {
           var dbCard = findDbCard(card);
-          if (dbCard) return originalAdd(where, dbCard, limit);
+          if (dbCard) return originalAdd.call(context, where, dbCard, limit);
           var anyCard = findAnyCard(card);
-          if (anyCard) return originalAdd(where, anyCard, limit);
+          if (anyCard) return originalAdd.call(context, where, anyCard, limit);
         }
-        return originalAdd(where, card, limit);
-      };
-      var originalRemove = Lampa.Favorite.remove;
-      Lampa.Favorite.remove = function (where, card) {
+        return originalAdd.apply(context, args);
+      }));
+      activePatches.push(safePatch(Lampa.Favorite, 'remove', function (originalRemove, context, args) {
+        var where = args[0];
+        var card = args[1];
         if (card && card.source === 'kinobaza') {
           var dbCard = findDbCard(card);
-          if (dbCard) return originalRemove(where, dbCard);
+          if (dbCard) return originalRemove.call(context, where, dbCard);
           var anyCard = findAnyCard(card);
-          if (anyCard) return originalRemove(where, anyCard);
+          if (anyCard) return originalRemove.call(context, where, anyCard);
         }
-        return originalRemove(where, card);
-      };
-      var originalToggle = Lampa.Favorite.toggle;
-      Lampa.Favorite.toggle = function (where, card) {
+        return originalRemove.apply(context, args);
+      }));
+      activePatches.push(safePatch(Lampa.Favorite, 'toggle', function (originalToggle, context, args) {
+        var where = args[0];
+        var card = args[1];
         if (card && card.source === 'kinobaza') {
           var dbCard = findDbCard(card);
-          if (dbCard) return originalToggle(where, dbCard);
+          if (dbCard) return originalToggle.call(context, where, dbCard);
           var anyCard = findAnyCard(card);
-          if (anyCard) return originalToggle(where, anyCard);
+          if (anyCard) return originalToggle.call(context, where, anyCard);
         }
-        return originalToggle(where, card);
-      };
+        return originalToggle.apply(context, args);
+      }));
     } catch (e) {
       console.error('Kinobaza', 'failed to override Favorite API', e);
     }
@@ -10027,7 +10081,8 @@
     // Перехоплюємо Select.show для контексту YouTube, видаляємо дату.
     var origSelectShow = Lampa.Select && Lampa.Select.show;
     if (origSelectShow) {
-      Lampa.Select.show = function (params) {
+      activePatches.push(safePatch(Lampa.Select, 'show', function (origSelectShow, context, args) {
+        var params = args[0];
         if (params && params.title && params.title.indexOf('YouTube') === 0 && params.items) {
           for (var i = 0; i < params.items.length; i++) {
             var item = params.items[i];
@@ -10036,8 +10091,8 @@
             }
           }
         }
-        return origSelectShow.call(this, params);
-      };
+        return origSelectShow.apply(context, args);
+      }));
     }
 
     // 12. Завантаження стилів
@@ -10058,6 +10113,15 @@
       // 2. Destroy sub-modules
       if (settings && typeof settings.destroy === 'function') settings.destroy();
       if (syncModule && typeof syncModule.destroy === 'function') syncModule.destroy();
+      if (typeof window.plugin_kinobaza_myperson_destroy === 'function') {
+        window.plugin_kinobaza_myperson_destroy();
+      }
+
+      // Unpatch all monkey-patched APIs
+      activePatches.forEach(function (restore) {
+        restore();
+      });
+      activePatches = [];
 
       // 3. Clean up DOM elements (stylesheets and menu buttons)
       $('#kinobaza_style').remove();
