@@ -1,4 +1,4 @@
-var plugin = (function () {
+(function () {
     'use strict';
 
     function lang () {
@@ -5830,11 +5830,46 @@ var plugin = (function () {
           var payload = d.payload;
           if (sub === 'bookmark_add') {
             if (!data.bookmarks) data.bookmarks = {};
-            if (!data.bookmarks.favorite) data.bookmarks.favorite = {};
-            data.bookmarks.favorite[payload.card_id] = payload.card;
+            if (!data.bookmarks.favorite) data.bookmarks.favorite = {
+              card: []
+            };
+            var fav = data.bookmarks.favorite;
+            if (!fav.card) fav.card = [];
+            var existing = fav.card.filter(function (c) {
+              return c && c.id == payload.card_id;
+            });
+            if (existing.length === 0) {
+              fav.card.push(payload.card);
+            }
+            var catType = payload.type || 'like';
+            if (!fav[catType]) fav[catType] = [];
+            if (fav[catType].indexOf(payload.card_id) === -1) {
+              fav[catType].push(payload.card_id);
+            }
           } else if (sub === 'bookmark_remove') {
             if (data.bookmarks && data.bookmarks.favorite) {
-              delete data.bookmarks.favorite[payload.card_id];
+              var fav = data.bookmarks.favorite;
+              var catType = payload.type || 'like';
+              if (fav[catType]) {
+                fav[catType] = fav[catType].filter(function (id) {
+                  return String(id) !== String(payload.card_id);
+                });
+              }
+              var stillReferenced = false;
+              for (var _ck in fav) {
+                if (_ck === 'card') continue;
+                if (Array.isArray(fav[_ck]) && fav[_ck].some(function (id) {
+                  return String(id) === String(payload.card_id);
+                })) {
+                  stillReferenced = true;
+                  break;
+                }
+              }
+              if (!stillReferenced && fav.card) {
+                fav.card = fav.card.filter(function (c) {
+                  return c && String(c.id) !== String(payload.card_id);
+                });
+              }
             }
           } else if (sub === 'timecode_update') {
             if (!data.timeline) data.timeline = {};
@@ -5886,7 +5921,19 @@ var plugin = (function () {
     // so type mismatch causes silent removal failure.
     // This normalizes category arrays to use card.id (same type as card objects).
 
-    var FAV_CAT_KEYS = ['like', 'wath', 'book', 'history', 'look', 'viewed', 'scheduled', 'continued', 'thrown'];
+    // Dynamic category detection - reads from Lampa.Favorite.full() at runtime
+    // so new types (persons, etc.) are automatically included
+    function getFavoriteCategoryKeys() {
+      try {
+        var full = Lampa.Favorite.full();
+        return Object.keys(full).filter(function (k) {
+          return k !== 'card' && Array.isArray(full[k]);
+        });
+      } catch (e) {
+        // Fallback for when Favorite module is not available
+        return ['like', 'wath', 'book', 'history', 'look', 'viewed', 'scheduled', 'continued', 'thrown'];
+      }
+    }
     function normalizeFavoriteIds(favorite) {
       if (!favorite || !favorite.card) return favorite;
 
@@ -5898,8 +5945,9 @@ var plugin = (function () {
       }
 
       // Replace each category array's IDs with card.id (canonical type)
-      for (var k = 0; k < FAV_CAT_KEYS.length; k++) {
-        var cat = FAV_CAT_KEYS[k];
+      var categories = getFavoriteCategoryKeys();
+      for (var k = 0; k < categories.length; k++) {
+        var cat = categories[k];
         if (!favorite[cat]) continue;
         for (var j = 0; j < favorite[cat].length; j++) {
           var id = favorite[cat][j];
@@ -6576,19 +6624,68 @@ var plugin = (function () {
       var payload = data.payload;
       var sub = data.meta.subtype;
       if (sub === 'bookmark_add' && payload.card_id && payload.card) {
-        if (Lampa.Favorite && Lampa.Favorite.add) {
-          suppressPublish();
-          Lampa.Favorite.add(payload.type, payload.card);
-          unsuppressPublish();
-        }
-      } else if (sub === 'bookmark_remove' && payload.card_id) {
-        if (Lampa.Favorite && Lampa.Favorite.remove) {
-          suppressPublish();
-          Lampa.Favorite.remove(payload.type, {
-            id: payload.card_id
+        suppressPublish();
+        try {
+          if (Lampa.Favorite && Lampa.Favorite.add) {
+            Lampa.Favorite.add(payload.type, payload.card);
+          }
+        } catch (e) {
+          var _fav = Lampa.Storage.get('favorite', {
+            card: []
           });
-          unsuppressPublish();
+          if (!_fav.card) _fav.card = [];
+          var _existing = _fav.card.filter(function (c) {
+            return c && c.id == payload.card_id;
+          });
+          if (_existing.length === 0) {
+            _fav.card.push(payload.card);
+          }
+          var _catType = payload.type || 'like';
+          if (!_fav[_catType]) _fav[_catType] = [];
+          if (_fav[_catType].indexOf(payload.card_id) === -1) {
+            _fav[_catType].push(payload.card_id);
+          }
+          Lampa.Storage.set('favorite', _fav);
+          if (Lampa.Favorite && Lampa.Favorite.read) Lampa.Favorite.read();
         }
+        unsuppressPublish();
+      } else if (sub === 'bookmark_remove' && payload.card_id) {
+        suppressPublish();
+        try {
+          if (Lampa.Favorite && Lampa.Favorite.remove) {
+            Lampa.Favorite.remove(payload.type, {
+              id: payload.card_id
+            });
+          }
+        } catch (e) {
+          var _fav = Lampa.Storage.get('favorite', {});
+          var _catType = payload.type || 'like';
+          if (_fav[_catType]) {
+            _fav[_catType] = _fav[_catType].filter(function (id) {
+              return String(id) !== String(payload.card_id);
+            });
+          }
+          if (_fav.card) {
+            var _stillRef = false;
+            for (var _ck in _fav) {
+              if (_ck === 'card') continue;
+              if (Array.isArray(_fav[_ck]) && _fav[_ck].some(function (id) {
+                return String(id) === String(payload.card_id);
+              })) {
+                _stillRef = true;
+                break;
+              }
+            }
+            if (!_stillRef) {
+              _fav.card = _fav.card.filter(function (c) {
+                return c && String(c.id) !== String(payload.card_id);
+              });
+            }
+          }
+          Lampa.Storage.set('favorite', _fav);
+          if (Lampa.Favorite && Lampa.Favorite.read) Lampa.Favorite.read();
+        }
+        unsuppressPublish();
       } else if (sub === 'timecode_update' && payload.hash) {
         var tl = Lampa.Storage.get('file_view', {});
         tl[payload.hash] = {
