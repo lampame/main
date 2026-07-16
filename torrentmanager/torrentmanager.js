@@ -779,7 +779,7 @@
         ru: "Раздача",
         uk: "Роздача",
         zh: "做种中",
-        ro: "Seedări"
+        ro: "Seederi"
       },
       torrentmanager_section_paused: {
         en: "Paused",
