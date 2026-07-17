@@ -1,4 +1,4 @@
-(function () {
+var plugin = (function () {
     'use strict';
 
     function lang () {
@@ -7256,6 +7256,12 @@
                   return p.url !== plugin.url;
                 });
                 Lampa.Storage.set('plugins', live);
+                // Sync Lampa core's in-memory plugin list with Storage
+                if (window.Lampa && Lampa.Plugins) {
+                  try {
+                    Lampa.Plugins.init();
+                  } catch (e) {}
+                }
                 publishDelta('remove', {
                   url: plugin.url,
                   name: plugin.name,
@@ -9443,6 +9449,12 @@
         if (!plugins[idx]) return;
         plugins[idx].status = plugins[idx].status === 1 ? 0 : 1;
         savePlugins(plugins);
+        // Sync Lampa core's in-memory plugin list with Storage
+        if (window.Lampa && Lampa.Plugins) {
+          try {
+            Lampa.Plugins.init();
+          } catch (e) {}
+        }
         var st = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
         if (st) Profiles.publishDeviceDelta(st, 'device_plugin_status', {
           device_id: getDeviceId(),
@@ -9462,6 +9474,12 @@
         var url = plugins[idx] ? plugins[idx].url : '';
         plugins.splice(idx, 1);
         savePlugins(plugins);
+        // Sync Lampa core's in-memory plugin list with Storage
+        if (window.Lampa && Lampa.Plugins) {
+          try {
+            Lampa.Plugins.init();
+          } catch (e) {}
+        }
         var st = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
         if (st) Profiles.publishLocalDelta(st, 'plugin_change', {
           action: 'remove',
@@ -9506,6 +9524,12 @@
                 Profiles.addToPluginRegistry(url, np.name);
                 plugins.push(np);
                 savePlugins(plugins);
+                // Sync Lampa core's in-memory plugin list with Storage
+                if (window.Lampa && Lampa.Plugins) {
+                  try {
+                    Lampa.Plugins.init();
+                  } catch (e) {}
+                }
                 var st = Lampa.Storage.get('gramlink_profiles_sync_topic', '');
                 if (st) Profiles.publishLocalDelta(st, 'plugin_change', {
                   action: 'add',
@@ -10006,7 +10030,6 @@
       autoActivateProfile();
       setupProfileDeltaListeners();
       setupDeviceSettingsListener();
-      setupFavoriteStateListener();
       startDeltaPolling();
     }
 
@@ -10108,22 +10131,6 @@
           key: e.key,
           value: value
         }, 'all');
-      });
-    }
-
-    // ─── Favorite state change listener ─────────────────────
-    // ponytail: refresh the current activity UI whenever the favorite
-    // state changes (add/remove) so card icons reflect the current
-    // bookmark state without requiring a manual page reload.
-
-    function setupFavoriteStateListener() {
-      Lampa.Listener.follow('state:changed', function (e) {
-        if (e.target !== 'favorite' || e.reason !== 'update') return;
-
-        // After favorite change — refresh current activity
-        // so card icons reflect the current bookmark state
-        var activity = Lampa.Activity.active();
-        if (activity) Lampa.Activity.replace(activity);
       });
     }
 
