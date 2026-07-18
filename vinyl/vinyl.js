@@ -679,7 +679,7 @@
   var containerEl = null;
   var canvasEl = null;
   var animFrameId = null;
-  var isActive = false;
+  var isActive$1 = false;
   var isLoaded = false;
   var isLoading = false;
   var loadedCallbacks = [];
@@ -845,7 +845,7 @@
   function startRenderLoop() {
     if (animFrameId) return;
     function render() {
-      if (!visualizer || !isActive) {
+      if (!visualizer || !isActive$1) {
         animFrameId = null;
         return;
       }
@@ -881,7 +881,7 @@
   function startAutoSwitch() {
     stopAutoSwitch();
     autoSwitchTimer = setInterval(function () {
-      if (isActive && visualizer && presets) {
+      if (isActive$1 && visualizer && presets) {
         loadPreset('random');
       }
     }, 30000);
@@ -897,10 +897,10 @@
     containerEl.style.display = visible ? 'block' : 'none';
   }
   function handleVideoPlaying() {
-    if (isActive) return;
+    if (isActive$1) return;
     var enabled = Lampa.Storage.get('vinyl_visualizer', false);
     if (enabled) {
-      isActive = true;
+      isActive$1 = true;
       startRenderLoop();
       startAutoSwitch();
     }
@@ -911,7 +911,7 @@
 
   // --- Public API ---
 
-  function init() {
+  function init$1() {
     if (!isSupported()) return;
     // Container is created lazily on first start() call when player DOM exists.
   }
@@ -928,7 +928,7 @@
     if (!_visibilityHandlerAdded) {
       _visibilityHandlerAdded = true;
       _handleVisibilityChangeFn = function handleVisibilityChange() {
-        if (!document.hidden && isActive) {
+        if (!document.hidden && isActive$1) {
           ensureContainer();
           updateCanvasSize();
           if (containerEl && containerEl.parentNode && !animFrameId) {
@@ -939,7 +939,7 @@
       document.addEventListener('visibilitychange', _handleVisibilityChangeFn);
     }
     handleVisibility(true);
-    isActive = true;
+    isActive$1 = true;
 
     // Listen for play/pause on the video element
     var videoEl = Lampa.PlayerVideo && Lampa.PlayerVideo.video();
@@ -984,7 +984,7 @@
     }
   }
   function pause() {
-    isActive = false;
+    isActive$1 = false;
     stopRenderLoop();
     stopAutoSwitch();
   }
@@ -993,13 +993,13 @@
     if (!enabled || !isSupported()) return;
     if (!visualizer) return;
     ensureContainer();
-    isActive = true;
+    isActive$1 = true;
     startRenderLoop();
     startAutoSwitch();
     handleVisibility(true);
   }
   function stop() {
-    isActive = false;
+    isActive$1 = false;
     stopRenderLoop();
     stopAutoSwitch();
     handleVisibility(false);
@@ -1039,7 +1039,7 @@
     }
     isLoaded = false;
     isLoading = false;
-    isActive = false;
+    isActive$1 = false;
     butterchurn = null;
     presets = null;
     presetNames = [];
@@ -1054,7 +1054,7 @@
   }
   var ButterchurnViz = {
     isSupported: isSupported,
-    init: init,
+    init: init$1,
     start: start,
     stop: stop,
     pause: pause,
@@ -1797,6 +1797,129 @@
     };
   }
 
+  // plugins/vinyl/lib/track-list.js — Vertical track list component
+  // Replaces horizontal Line for playlists and album track listings
+  // Follows section pattern: create/toggle/render/destroy with onDown/onUp/onBack
+
+  function MusicTrackList(data) {
+    var scroll = new Lampa.Scroll({
+      mask: true,
+      over: true
+    });
+    var html = $('<div class="vinyl-track-list"></div>');
+    var rows = [];
+    var last = null;
+    var _controllerId = 'vinyl_tracklist_' + Math.random().toString(36).slice(2, 10);
+    this.onDown = null;
+    this.onUp = null;
+    this.onBack = null;
+
+    // Format seconds into M:SS display string
+    function formatDuration(seconds) {
+      if (!seconds) return '';
+      var s = parseInt(seconds, 10);
+      if (isNaN(s)) return '';
+      var m = Math.floor(s / 60);
+      var sec = s % 60;
+      return m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+
+    // Build a single track row DOM element
+    function buildRow(track, index) {
+      var row = $('<div class="vinyl-track-row selector" data-track-id="' + (track.id || '') + '"></div>');
+      var numHtml = '<div class="vinyl-track-row__num">' + '<span class="vinyl-track-row__num-text">' + (index + 1) + '</span>' + "<span class=\"vinyl-track-row__num-play\">\u25B6</span>" + '</div>';
+      var title = track.title || track.name || 'Unknown';
+      var meta = track.artist || track.subtitle || '';
+      var duration = formatDuration(track.duration);
+      var infoHtml = '<div class="vinyl-track-row__info">' + '<div class="vinyl-track-row__name">' + title + '</div>' + (meta ? '<div class="vinyl-track-row__meta">' + meta + '</div>' : '') + '</div>';
+      var timeHtml = '<div class="vinyl-track-row__time">' + duration + '</div>';
+      row.html(numHtml + infoHtml + timeHtml);
+
+      // Highlight current track
+      if (data.currentTrackId && track.id === data.currentTrackId) {
+        row.addClass('vinyl-track-row--current');
+      }
+
+      // Hover focus — track last focused element
+      row.on('hover:focus', function () {
+        last = row[0];
+      });
+
+      // Enter — select track
+      row.on('hover:enter', function () {
+        if (data.onSelect) data.onSelect(track, index);
+      });
+
+      // Long press — context menu if provided
+      if (data.onLong) {
+        row.on('hover:long', function () {
+          data.onLong(track, index);
+        });
+      }
+      return row;
+    }
+    this.create = function () {
+      // Title row
+      if (data.title) {
+        html.append('<div class="vinyl-track-list__title">' + data.title + '</div>');
+      }
+
+      // Scrollable track container
+      var listContainer = $('<div class="vinyl-track-list__body"></div>');
+      var tracks = data.tracks || [];
+      tracks.forEach(function (track, index) {
+        var row = buildRow(track, index);
+        listContainer.append(row);
+        rows.push(row);
+      });
+      scroll.render().find('.scroll__body').append(listContainer);
+      html.append(scroll.render());
+
+      // Set initial last focus if there are tracks
+      if (rows.length) {
+        last = rows[0][0];
+      }
+    };
+    this.toggle = function () {
+      var self = this;
+      Lampa.Controller.add(_controllerId, {
+        toggle: function toggle() {
+          Lampa.Controller.collectionSet(html);
+          Lampa.Controller.collectionFocus(last || false, html);
+        },
+        right: function right() {
+          // Do nothing — vertical list, no horizontal navigation
+        },
+        left: function left() {
+          if (Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+        },
+        down: function down() {
+          if (Navigator.canmove('down')) Navigator.move('down');else if (self.onDown) self.onDown();
+        },
+        up: function up() {
+          if (Navigator.canmove('up')) Navigator.move('up');else if (self.onUp) self.onUp();
+        },
+        back: function back() {
+          if (self.onBack) self.onBack();
+        }
+      });
+      Lampa.Controller.toggle(_controllerId);
+    };
+    this.render = function () {
+      return html;
+    };
+    this.destroy = function () {
+      Lampa.Controller.add(_controllerId, null);
+      scroll.destroy();
+      html.remove();
+      rows = null;
+      last = null;
+      this.onDown = null;
+      this.onUp = null;
+      this.onBack = null;
+    };
+  }
+
   // plugins/vinyl/pages/sections/music_start.js — Start section for music detail pages
   // Follows full/start.js pattern from Lampa source, adapted for music content
 
@@ -2180,25 +2303,13 @@
         tags: []
       }]);
 
-      // 3. Tracks section (now using native horizontal Line)
+      // 3. Tracks section (vertical track list)
       if (songs.length) {
-        var normalizedSongs = songs.map(function (song, index) {
-          return {
-            id: song.id,
-            title: song.title || 'Unknown',
-            subtitle: song.artist || song.subtitle || '',
-            image: song.image || '',
-            _idx: index
-          };
-        });
-        rows.push(['line', {
+        rows.push(['tracklist', {
           title: Lampa.Lang.translate('vinyl_songs') + ' (' + songs.length + ')',
-          results: normalizedSongs,
-          onSelect: function onSelect(item) {
-            var idx = item._idx;
-            if (idx >= 0 && idx < songs.length) {
-              Player.get().playPlaylist(songs, idx);
-            }
+          tracks: songs,
+          onSelect: function onSelect(track, index) {
+            Player.get().playPlaylist(songs, index);
           }
         }]);
       }
@@ -2219,7 +2330,7 @@
         var name = row[0];
         var data = row[1];
         var section = null;
-        if (name === 'music_start') section = new MusicStart(data);else if (name === 'music_descr') section = new MusicDescr(data);else if (name === 'line') section = new Line(data);
+        if (name === 'music_start') section = new MusicStart(data);else if (name === 'music_descr') section = new MusicDescr(data);else if (name === 'line') section = new Line(data);else if (name === 'tracklist') section = new MusicTrackList(data);
         if (!section) return;
         section.onDown = self.down.bind(self);
         section.onUp = self.up.bind(self);
@@ -2429,25 +2540,13 @@
         tags: []
       }]);
 
-      // 3. Tracks section (now using native horizontal Line)
+      // 3. Tracks section (vertical track list)
       if (songs.length) {
-        var normalizedSongs = songs.map(function (song, index) {
-          return {
-            id: song.id,
-            title: song.title || 'Unknown',
-            subtitle: song.artist || song.subtitle || '',
-            image: song.image || '',
-            _idx: index
-          };
-        });
-        rows.push(['line', {
+        rows.push(['tracklist', {
           title: Lampa.Lang.translate('vinyl_songs') + ' (' + songs.length + ')',
-          results: normalizedSongs,
-          onSelect: function onSelect(item) {
-            var idx = item._idx;
-            if (idx >= 0 && idx < songs.length) {
-              Player.get().playPlaylist(songs, idx);
-            }
+          tracks: songs,
+          onSelect: function onSelect(track, index) {
+            Player.get().playPlaylist(songs, index);
           }
         }]);
       }
@@ -2468,7 +2567,7 @@
         var name = row[0];
         var data = row[1];
         var section = null;
-        if (name === 'music_start') section = new MusicStart(data);else if (name === 'music_descr') section = new MusicDescr(data);else if (name === 'line') section = new Line(data);
+        if (name === 'music_start') section = new MusicStart(data);else if (name === 'music_descr') section = new MusicDescr(data);else if (name === 'line') section = new Line(data);else if (name === 'tracklist') section = new MusicTrackList(data);
         if (!section) return;
         section.onDown = self.down.bind(self);
         section.onUp = self.up.bind(self);
@@ -3862,6 +3961,108 @@
     }
   };
 
+  // plugins/vinyl/lib/swipe.js — Horizontal swipe gesture layer for Vinyl player
+  // Listens on document level, triggers PlayerPlaylist.next()/prev() on horizontal swipe.
+
+  var startX = 0;
+  var startY = 0;
+  var startTime = 0;
+  var isHorizontalSwipe = false;
+  var gestureDecided = false;
+  var wheelThrottle = 0;
+  var isActive = false;
+  var _onTouchStart = null;
+  var _onTouchMove = null;
+  var _onTouchEnd = null;
+  var _onWheel = null;
+  function init() {
+    _onTouchStart = function _onTouchStart(e) {
+      if (!isActive) return;
+      var touch = e.touches[0] || e.changedTouches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      startTime = Date.now();
+      isHorizontalSwipe = false;
+      gestureDecided = false;
+    };
+    _onTouchMove = function _onTouchMove(e) {
+      if (!isActive) return;
+      var touch = e.touches[0] || e.changedTouches[0];
+      var deltaX = touch.clientX - startX;
+      var deltaY = touch.clientY - startY;
+
+      // Decide direction after 20px of movement
+      if (!gestureDecided && (Math.abs(deltaX) > 20 || Math.abs(deltaY) > 20)) {
+        gestureDecided = true;
+        isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
+      }
+      if (!isHorizontalSwipe) return;
+
+      // Prevent default only for significant horizontal swipes
+      if (Math.abs(deltaX) > 30) {
+        e.preventDefault();
+      }
+    };
+    _onTouchEnd = function _onTouchEnd(e) {
+      if (!isActive) return;
+      var touch = e.changedTouches[0];
+      var deltaX = touch.clientX - startX;
+      var swipeDuration = Date.now() - startTime;
+      if (isHorizontalSwipe && Math.abs(deltaX) > 30) {
+        var threshold = window.innerWidth / 3;
+        if (swipeDuration < 150) {
+          threshold = threshold / 3;
+        }
+        if (deltaX < -threshold) {
+          Lampa.PlayerPlaylist.next();
+        } else if (deltaX > threshold) {
+          Lampa.PlayerPlaylist.prev();
+        }
+      }
+      isHorizontalSwipe = false;
+      gestureDecided = false;
+    };
+    _onWheel = function _onWheel(e) {
+      if (!isActive) return;
+      var now = Date.now();
+      if (now - wheelThrottle < 300) return;
+      if (e.wheelDelta / 120 > 0) {
+        Lampa.PlayerPlaylist.prev();
+      } else {
+        Lampa.PlayerPlaylist.next();
+      }
+      wheelThrottle = now;
+    };
+
+    // Attach to document — always listening
+    document.addEventListener('touchstart', _onTouchStart, {
+      passive: true
+    });
+    document.addEventListener('touchmove', _onTouchMove, {
+      passive: false
+    });
+    document.addEventListener('touchend', _onTouchEnd, {
+      passive: true
+    });
+    document.addEventListener('wheel', _onWheel, {
+      passive: true
+    });
+
+    // Listen for player events
+    Lampa.Player.listener.follow('start', function () {
+      isActive = true;
+    });
+    Lampa.Player.listener.follow('destroy', function () {
+      isActive = false;
+    });
+    Lampa.Player.listener.follow('close', function () {
+      isActive = false;
+    });
+  }
+  var Swipe = {
+    init: init
+  };
+
   // plugins/vinyl/vinyl.js — Entry point
 
   // Create a Card instance with custom hover:long behavior for vinyl items on the home screen
@@ -3928,7 +4129,7 @@
     Lampa.Template.add('vinyl_track_new', "<div class=\"vinyl-track selector\" tabindex=\"0\">\n        <div class=\"vinyl-track__thumb\">\n            <img src=\"./img/img_load.svg\" onerror=\"this.src='./img/img_broken.svg'\" />\n        </div>\n        <div class=\"vinyl-track__num\">{num}</div>\n        <div class=\"vinyl-track__info\">\n            <div class=\"vinyl-track__title\">{title}</div>\n            <div class=\"vinyl-track__sub\">{subtitle}</div>\n        </div>\n        <div class=\"vinyl-track__duration\">{duration}</div>\n        <div class=\"vinyl-track__playing hide\">\n            <div class=\"vinyl-track__bar\"></div>\n            <div class=\"vinyl-track__bar\"></div>\n            <div class=\"vinyl-track__bar\"></div>\n        </div>\n    </div>");
 
     // 3. CSS injection via Template pattern
-    Lampa.Template.add('vinyl_style', "\n        <style>\n        @charset 'UTF-8';\n        /* Space out the lines and cards to prevent sticking and blank gaps */\n        .vinyl-line {\n            padding-bottom: 0.8em !important;\n        }\n        .vinyl-line .scroll__body {\n            display: flex;\n        }\n        .vinyl-line .card {\n            width: 12em;\n            margin-right: 1.2em !important;\n        }\n        .vinyl-line .card + .card {\n            margin-left: 0 !important;\n        }\n\n        /* Make all vinyl-specific cards and detail page posters square */\n        .card--vinyl .card__view{padding-bottom:100% !important;}\n        .card--vinyl .card__img{-webkit-border-radius:6px;border-radius:6px;-o-object-fit:cover;object-fit:cover;}\n        .card--vinyl .card__title{font-size:1.15em;margin-top:0.6em;max-height:2.6em;line-height:1.2;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;}\n        .card--vinyl .card__age{font-size:0.9em;margin-top:0.3em;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;}\n        \n        /* === Vinyl \"Show All\" paginated grid (6 columns) === */\n        .vinyl-all-grid {\n            display: grid !important;\n            grid-template-columns: repeat(6, 1fr) !important;\n            gap: 24px 20px !important;\n            padding: 20px 40px 80px !important;\n            width: 100% !important;\n            box-sizing: border-box !important;\n        }\n        /* Force ALL direct-card-children to equal grid-column width */\n        .vinyl-all-grid > .card {\n            width: auto !important;\n            min-width: 0 !important;\n            max-width: 100% !important;\n            margin: 0 !important;\n            flex-shrink: 0 !important;\n        }\n        /* Square aspect-ratio for the card view port */\n        .vinyl-all-grid > .card .card__view {\n            position: relative !important;\n            padding-bottom: 100% !important;\n            margin-bottom: 0 !important;\n        }\n        /* Image fills the square completely */\n        .vinyl-all-grid > .card .card__img {\n            position: absolute !important;\n            top: 0 !important;\n            left: 0 !important;\n            width: 100% !important;\n            height: 100% !important;\n            -webkit-border-radius: 6px !important;\n            border-radius: 6px !important;\n            -o-object-fit: cover !important;\n            object-fit: cover !important;\n        }\n        /* Typography with overflow protection */\n        .vinyl-all-grid > .card .card__title {\n            font-size: 1.15em !important;\n            margin-top: 0.6em !important;\n            max-height: 2.6em !important;\n            line-height: 1.2 !important;\n            overflow: hidden !important;\n            -o-text-overflow: ellipsis !important;\n            text-overflow: ellipsis !important;\n        }\n        .vinyl-all-grid > .card .card__age {\n            font-size: 0.9em !important;\n            margin-top: 0.3em !important;\n            color: rgba(255,255,255,0.45) !important;\n            white-space: nowrap !important;\n            overflow: hidden !important;\n            -o-text-overflow: ellipsis !important;\n            text-overflow: ellipsis !important;\n        }\n\n        .items-line--type-vinyl .card__view {\n            padding-bottom: 100% !important;\n        }\n        .items-line--type-vinyl .card__img {\n            -webkit-border-radius: 6px;\n            border-radius: 6px;\n            -o-object-fit: cover;\n            object-fit: cover;\n        }\n\n        .vinyl-start .full-start-new__poster{padding-bottom:100% !important;}\n\n        /* Search result cards \u2014 square aspect ratio.\n           Lampa renders them inside .main-search (not .vinyl-main),\n           so we scope via the class injected by onRender. */\n        .main-search .vinyl-search-line .card__view{padding-bottom:100%;}\n        .main-search .vinyl-search-line .card__img{-webkit-border-radius:6px;border-radius:6px;-o-object-fit:cover;object-fit:cover;}\n\n        /* Tracks styling with thumb image */\n        .vinyl-detail{padding:20px;}.vinyl-detail__header{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:baseline;-webkit-align-items:baseline;-ms-flex-align:baseline; align-items:baseline; gap:12px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1);}.vinyl-detail__title{font-size:26px; font-weight:700; color:#fff;}.vinyl-detail__count{font-size:14px; color:rgba(255,255,255,0.5);}.vinyl-detail__list{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column; flex-direction:column; gap:2px;}\n        \n        .vinyl-track{display:grid;grid-template-columns:48px 28px 1fr auto 40px;align-items:center;gap:12px;padding:8px 16px;border-radius:8px;transition:background 0.15s;outline:none;cursor:pointer;}\n        .vinyl-track:hover,.vinyl-track:focus,.vinyl-track.active{background:rgba(255,255,255,0.08);}\n        .vinyl-track__thumb{width:48px;height:48px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);}\n        .vinyl-track__thumb img{width:100%;height:100%;object-fit:cover;}\n        .vinyl-track__num{width:28px;text-align:center;font-size:13px;color:rgba(255,255,255,0.35);flex-shrink:0;}\n        .vinyl-track__info{min-width:0;display:flex;flex-direction:column;gap:3px;}\n        .vinyl-track__title{font-size:15px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n        .vinyl-track__sub{font-size:12px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n        .vinyl-track__duration{font-size:12px;color:rgba(255,255,255,0.3);white-space:nowrap;flex-shrink:0;}\n\n        .vinyl-artist__image{width:200px; height:200px;-webkit-border-radius:50%; border-radius:50%; overflow:hidden; margin:0 auto 20px; border:3px solid rgba(255,255,255,0.15);}.vinyl-artist__image img{width:100%; height:100%;-o-object-fit:cover; object-fit:cover;}.vinyl-artist__bio{font-size:13px; color:rgba(255,255,255,0.7); line-height:1.6; margin-bottom:24px; padding:0 4px; max-height:120px; overflow:hidden;}.vinyl-artist__section-title{font-size:18px; font-weight:600; color:#fff; margin:24px 0 12px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.08);}.vinyl-artist__radio{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center; align-items:center; gap:12px; padding:14px 20px; margin-top:28px;-webkit-border-radius:10px; border-radius:10px; background:rgba(255,255,255,0.06); cursor:pointer;-webkit-transition:background 0.2s;-o-transition:background 0.2s; transition:background 0.2s; border:1px solid rgba(255,255,255,0.1);}.vinyl-artist__radio:hover,.vinyl-artist__radio:focus,.vinyl-artist__radio.active{background:rgba(255,255,255,0.14);}.vinyl-artist__radio-icon{width:36px; height:36px;-webkit-border-radius:50%; border-radius:50%; background:rgba(76,175,80,0.25); display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center; align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center; justify-content:center; font-size:16px; color:#4CAF50;-webkit-flex-shrink:0;-ms-flex-negative:0; flex-shrink:0;}.vinyl-artist__radio-text{font-size:15px; color:#fff; font-weight:500;}\n\n        /* More card inside vinyl component lines \u2014 matches ContentRows style */\n        .vinyl-line .card-more {\n            flex-shrink: 0;\n            width: 12em;\n            cursor: pointer;\n        }\n        .vinyl-line .card-more .card-more__box {\n            width: 100%;\n            aspect-ratio: 1;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            border: 2px solid rgba(255,255,255,0.15);\n            border-radius: 8px;\n            background: rgba(255,255,255,0.05);\n            transition: all 0.15s;\n            box-sizing: border-box;\n        }\n        .vinyl-line .card-more:hover .card-more__box,\n        .vinyl-line .card-more:focus .card-more__box,\n        .vinyl-line .card-more.focus .card-more__box {\n            background: rgba(255,255,255,0.12);\n            border-color: rgba(255,255,255,0.4);\n        }\n        .vinyl-line .card-more .card-more__title {\n            font-size: 1em;\n            color: rgba(255,255,255,0.6);\n            font-weight: 400;\n            text-align: center;\n        }\n        .vinyl-line .card-more:hover .card-more__title,\n        .vinyl-line .card-more:focus .card-more__title,\n        .vinyl-line .card-more.focus .card-more__title {\n            color: #fff;\n        }\n\n        /* Butterchurn visualizer overlay canvas */\n        .vinyl-visualizer {\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            z-index: 1;\n            pointer-events: none;\n            overflow: hidden;\n        }\n        .vinyl-visualizer canvas {\n            width: 100%;\n            height: 100%;\n            display: block;\n        }\n        </style>\n    ");
+    Lampa.Template.add('vinyl_style', "\n        <style>\n        @charset 'UTF-8';\n        /* Space out the lines and cards to prevent sticking and blank gaps */\n        .vinyl-line {\n            padding-bottom: 0.8em !important;\n        }\n        .vinyl-line .scroll__body {\n            display: flex;\n        }\n        .vinyl-line .card {\n            width: 12em;\n            margin-right: 1.2em !important;\n        }\n        .vinyl-line .card + .card {\n            margin-left: 0 !important;\n        }\n\n        /* Make all vinyl-specific cards and detail page posters square */\n        .card--vinyl .card__view{padding-bottom:100% !important;}\n        .card--vinyl .card__img{-webkit-border-radius:6px;border-radius:6px;-o-object-fit:cover;object-fit:cover;}\n        .card--vinyl .card__title{font-size:1.15em;margin-top:0.6em;max-height:2.6em;line-height:1.2;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;}\n        .card--vinyl .card__age{font-size:0.9em;margin-top:0.3em;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;}\n        \n        /* === Vinyl \"Show All\" paginated grid (6 columns) === */\n        .vinyl-all-grid {\n            display: grid !important;\n            grid-template-columns: repeat(6, 1fr) !important;\n            gap: 24px 20px !important;\n            padding: 20px 40px 80px !important;\n            width: 100% !important;\n            box-sizing: border-box !important;\n        }\n        /* Force ALL direct-card-children to equal grid-column width */\n        .vinyl-all-grid > .card {\n            width: auto !important;\n            min-width: 0 !important;\n            max-width: 100% !important;\n            margin: 0 !important;\n            flex-shrink: 0 !important;\n        }\n        /* Square aspect-ratio for the card view port */\n        .vinyl-all-grid > .card .card__view {\n            position: relative !important;\n            padding-bottom: 100% !important;\n            margin-bottom: 0 !important;\n        }\n        /* Image fills the square completely */\n        .vinyl-all-grid > .card .card__img {\n            position: absolute !important;\n            top: 0 !important;\n            left: 0 !important;\n            width: 100% !important;\n            height: 100% !important;\n            -webkit-border-radius: 6px !important;\n            border-radius: 6px !important;\n            -o-object-fit: cover !important;\n            object-fit: cover !important;\n        }\n        /* Typography with overflow protection */\n        .vinyl-all-grid > .card .card__title {\n            font-size: 1.15em !important;\n            margin-top: 0.6em !important;\n            max-height: 2.6em !important;\n            line-height: 1.2 !important;\n            overflow: hidden !important;\n            -o-text-overflow: ellipsis !important;\n            text-overflow: ellipsis !important;\n        }\n        .vinyl-all-grid > .card .card__age {\n            font-size: 0.9em !important;\n            margin-top: 0.3em !important;\n            color: rgba(255,255,255,0.45) !important;\n            white-space: nowrap !important;\n            overflow: hidden !important;\n            -o-text-overflow: ellipsis !important;\n            text-overflow: ellipsis !important;\n        }\n\n        .items-line--type-vinyl .card__view {\n            padding-bottom: 100% !important;\n        }\n        .items-line--type-vinyl .card__img {\n            -webkit-border-radius: 6px;\n            border-radius: 6px;\n            -o-object-fit: cover;\n            object-fit: cover;\n        }\n\n        .vinyl-start .full-start-new__poster{padding-bottom:100% !important;}\n\n        /* Search result cards \u2014 square aspect ratio.\n           Lampa renders them inside .main-search (not .vinyl-main),\n           so we scope via the class injected by onRender. */\n        .main-search .vinyl-search-line .card__view{padding-bottom:100%;}\n        .main-search .vinyl-search-line .card__img{-webkit-border-radius:6px;border-radius:6px;-o-object-fit:cover;object-fit:cover;}\n\n        /* Tracks styling with thumb image */\n        .vinyl-detail{padding:20px;}.vinyl-detail__header{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:baseline;-webkit-align-items:baseline;-ms-flex-align:baseline; align-items:baseline; gap:12px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1);}.vinyl-detail__title{font-size:26px; font-weight:700; color:#fff;}.vinyl-detail__count{font-size:14px; color:rgba(255,255,255,0.5);}.vinyl-detail__list{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column; flex-direction:column; gap:2px;}\n        \n        .vinyl-track{display:grid;grid-template-columns:48px 28px 1fr auto 40px;align-items:center;gap:12px;padding:8px 16px;border-radius:8px;transition:background 0.15s;outline:none;cursor:pointer;}\n        .vinyl-track:hover,.vinyl-track:focus,.vinyl-track.active{background:rgba(255,255,255,0.08);}\n        .vinyl-track__thumb{width:48px;height:48px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);}\n        .vinyl-track__thumb img{width:100%;height:100%;object-fit:cover;}\n        .vinyl-track__num{width:28px;text-align:center;font-size:13px;color:rgba(255,255,255,0.35);flex-shrink:0;}\n        .vinyl-track__info{min-width:0;display:flex;flex-direction:column;gap:3px;}\n        .vinyl-track__title{font-size:15px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n        .vinyl-track__sub{font-size:12px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n        .vinyl-track__duration{font-size:12px;color:rgba(255,255,255,0.3);white-space:nowrap;flex-shrink:0;}\n\n        .vinyl-artist__image{width:200px; height:200px;-webkit-border-radius:50%; border-radius:50%; overflow:hidden; margin:0 auto 20px; border:3px solid rgba(255,255,255,0.15);}.vinyl-artist__image img{width:100%; height:100%;-o-object-fit:cover; object-fit:cover;}.vinyl-artist__bio{font-size:13px; color:rgba(255,255,255,0.7); line-height:1.6; margin-bottom:24px; padding:0 4px; max-height:120px; overflow:hidden;}.vinyl-artist__section-title{font-size:18px; font-weight:600; color:#fff; margin:24px 0 12px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.08);}.vinyl-artist__radio{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center; align-items:center; gap:12px; padding:14px 20px; margin-top:28px;-webkit-border-radius:10px; border-radius:10px; background:rgba(255,255,255,0.06); cursor:pointer;-webkit-transition:background 0.2s;-o-transition:background 0.2s; transition:background 0.2s; border:1px solid rgba(255,255,255,0.1);}.vinyl-artist__radio:hover,.vinyl-artist__radio:focus,.vinyl-artist__radio.active{background:rgba(255,255,255,0.14);}.vinyl-artist__radio-icon{width:36px; height:36px;-webkit-border-radius:50%; border-radius:50%; background:rgba(76,175,80,0.25); display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center; align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center; justify-content:center; font-size:16px; color:#4CAF50;-webkit-flex-shrink:0;-ms-flex-negative:0; flex-shrink:0;}.vinyl-artist__radio-text{font-size:15px; color:#fff; font-weight:500;}\n\n        /* More card inside vinyl component lines \u2014 matches ContentRows style */\n        .vinyl-line .card-more {\n            flex-shrink: 0;\n            width: 12em;\n            cursor: pointer;\n        }\n        .vinyl-line .card-more .card-more__box {\n            width: 100%;\n            aspect-ratio: 1;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            border: 2px solid rgba(255,255,255,0.15);\n            border-radius: 8px;\n            background: rgba(255,255,255,0.05);\n            transition: all 0.15s;\n            box-sizing: border-box;\n        }\n        .vinyl-line .card-more:hover .card-more__box,\n        .vinyl-line .card-more:focus .card-more__box,\n        .vinyl-line .card-more.focus .card-more__box {\n            background: rgba(255,255,255,0.12);\n            border-color: rgba(255,255,255,0.4);\n        }\n        .vinyl-line .card-more .card-more__title {\n            font-size: 1em;\n            color: rgba(255,255,255,0.6);\n            font-weight: 400;\n            text-align: center;\n        }\n        .vinyl-line .card-more:hover .card-more__title,\n        .vinyl-line .card-more:focus .card-more__title,\n        .vinyl-line .card-more.focus .card-more__title {\n            color: #fff;\n        }\n\n        /* Butterchurn visualizer overlay canvas */\n        .vinyl-visualizer {\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            z-index: 1;\n            pointer-events: none;\n            overflow: hidden;\n        }\n        .vinyl-visualizer canvas {\n            width: 100%;\n            height: 100%;\n            display: block;\n        }\n\n        /* Vertical track list */\n        .vinyl-track-list {\n            padding: 0 1em;\n        }\n        .vinyl-track-list__title {\n            font-size: 1.2em;\n            font-weight: 600;\n            color: #fff;\n            margin-bottom: 0.8em;\n            padding: 0 0.5em;\n        }\n        .vinyl-track-list__body {\n            display: -webkit-box;\n            display: -webkit-flex;\n            display: -ms-flexbox;\n            display: flex;\n            -webkit-box-orient: vertical;\n            -webkit-box-direction: normal;\n            -webkit-flex-direction: column;\n            -ms-flex-direction: column;\n            flex-direction: column;\n            gap: 2px;\n        }\n        .vinyl-track-row {\n            display: -webkit-box;\n            display: -webkit-flex;\n            display: -ms-flexbox;\n            display: flex;\n            -webkit-box-align: center;\n            -webkit-align-items: center;\n            -ms-flex-align: center;\n            align-items: center;\n            gap: 1em;\n            padding: 0.7em 0.8em;\n            -webkit-border-radius: 8px;\n            border-radius: 8px;\n            -webkit-transition: background 0.15s;\n            -o-transition: background 0.15s;\n            transition: background 0.15s;\n            cursor: pointer;\n        }\n        .vinyl-track-row:hover,\n        .vinyl-track-row:focus,\n        .vinyl-track-row.active {\n            background: rgba(255,255,255,0.08);\n        }\n        .vinyl-track-row--current {\n            background: rgba(255,255,255,0.06);\n        }\n        .vinyl-track-row--current .vinyl-track-row__name {\n            color: #4CAF50;\n        }\n        .vinyl-track-row__num {\n            width: 2em;\n            text-align: right;\n            color: rgba(255,255,255,0.4);\n            font-size: 14px;\n            -webkit-flex-shrink: 0;\n            -ms-flex-negative: 0;\n            flex-shrink: 0;\n        }\n        .vinyl-track-row__num-play {\n            display: none;\n        }\n        .vinyl-track-row:hover .vinyl-track-row__num-text,\n        .vinyl-track-row:focus .vinyl-track-row__num-text,\n        .vinyl-track-row.active .vinyl-track-row__num-text {\n            display: none;\n        }\n        .vinyl-track-row:hover .vinyl-track-row__num-play,\n        .vinyl-track-row:focus .vinyl-track-row__num-play,\n        .vinyl-track-row.active .vinyl-track-row__num-play {\n            display: inline;\n        }\n        .vinyl-track-row__info {\n            -webkit-box-flex: 1;\n            -webkit-flex: 1;\n            -ms-flex: 1;\n            flex: 1;\n            min-width: 0;\n        }\n        .vinyl-track-row__name {\n            font-size: 15px;\n            font-weight: 500;\n            color: #fff;\n            white-space: nowrap;\n            overflow: hidden;\n            -o-text-overflow: ellipsis;\n            text-overflow: ellipsis;\n        }\n        .vinyl-track-row__meta {\n            font-size: 12px;\n            color: rgba(255,255,255,0.45);\n            white-space: nowrap;\n            overflow: hidden;\n            -o-text-overflow: ellipsis;\n            text-overflow: ellipsis;\n            margin-top: 2px;\n        }\n        .vinyl-track-row__time {\n            font-size: 13px;\n            color: rgba(255,255,255,0.35);\n            -webkit-flex-shrink: 0;\n            -ms-flex-negative: 0;\n            flex-shrink: 0;\n        }\n        </style>\n    ");
     if (window.plugin_vinyl_css_injected) return;
     window.plugin_vinyl_css_injected = true;
     $('body').append(Lampa.Template.get('vinyl_style', {}, true));
@@ -4219,6 +4420,9 @@
     Api.init();
     Player.init();
     Search.init();
+
+    // 6a1. Init horizontal swipe gesture for track switching
+    Swipe.init();
 
     // Pause/resume visualizer on video play/pause events
     Lampa.Player.listener.follow('start', function (data) {
