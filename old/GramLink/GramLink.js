@@ -5030,143 +5030,147 @@ var plugin = (function () {
             return;
           }
 
-          // ── Start auto-activation with device overlays ──
-          if (data.plugins) {
-            var deviceId = getDeviceId();
-            var override = data.device_overrides && data.device_overrides[deviceId];
+          // ── Replay deltas on top of snapshot (same pattern as doSwitch) ──
+          var fileTimestamp = target.date || 0;
+          return replayDeltas(profilesSyncTopicId, activeId, fileTimestamp, data).then(function (mergedData) {
+            // ── Start auto-activation with device overlays ──
+            if (mergedData.plugins) {
+              var deviceId = getDeviceId();
+              var override = mergedData.device_overrides && mergedData.device_overrides[deviceId];
 
-            // Build profile plugin URL list from current profile data
-            var profileUrls = [];
-            for (var pi = 0; pi < data.plugins.length; pi++) {
-              var pu = data.plugins[pi].url;
-              if (pu) profileUrls.push(pu);
-            }
+              // Build profile plugin URL list from current profile data
+              var profileUrls = [];
+              for (var pi = 0; pi < mergedData.plugins.length; pi++) {
+                var pu = mergedData.plugins[pi].url;
+                if (pu) profileUrls.push(pu);
+              }
 
-            // Read previously-saved profile plugin URLs
-            var knownProfileUrls;
-            try {
-              knownProfileUrls = JSON.parse(Lampa.Storage.get(STORAGE_PROFILE_PLUGIN_URLS, '[]')) || [];
-            } catch (e) {
-              knownProfileUrls = [];
-            }
-            var knownMap = {};
-            for (var ki = 0; ki < knownProfileUrls.length; ki++) {
-              knownMap[knownProfileUrls[ki]] = true;
-            }
+              // Read previously-saved profile plugin URLs
+              var knownProfileUrls;
+              try {
+                knownProfileUrls = JSON.parse(Lampa.Storage.get(STORAGE_PROFILE_PLUGIN_URLS, '[]')) || [];
+              } catch (e) {
+                knownProfileUrls = [];
+              }
+              var knownMap = {};
+              for (var ki = 0; ki < knownProfileUrls.length; ki++) {
+                knownMap[knownProfileUrls[ki]] = true;
+              }
 
-            // Save current profile URLs for next activation
-            Lampa.Storage.set(STORAGE_PROFILE_PLUGIN_URLS, JSON.stringify(profileUrls));
+              // Save current profile URLs for next activation
+              Lampa.Storage.set(STORAGE_PROFILE_PLUGIN_URLS, JSON.stringify(profileUrls));
 
-            // Start with local plugins
-            var localPlugins = collectPlugins();
-            var localByUrl = {};
-            for (var li = 0; li < localPlugins.length; li++) {
-              localByUrl[localPlugins[li].url] = localPlugins[li];
-            }
+              // Start with local plugins
+              var localPlugins = collectPlugins();
+              var localByUrl = {};
+              for (var li = 0; li < localPlugins.length; li++) {
+                localByUrl[localPlugins[li].url] = localPlugins[li];
+              }
 
-            // Profile URL → plugin map
-            var profileByUrl = {};
-            for (var pi2 = 0; pi2 < data.plugins.length; pi2++) {
-              profileByUrl[data.plugins[pi2].url] = data.plugins[pi2];
-            }
-            var merged = [];
-            var mergedUrls = {};
+              // Profile URL → plugin map
+              var profileByUrl = {};
+              for (var pi2 = 0; pi2 < mergedData.plugins.length; pi2++) {
+                profileByUrl[mergedData.plugins[pi2].url] = mergedData.plugins[pi2];
+              }
+              var merged = [];
+              var mergedUrls = {};
 
-            // 1. Existing local plugins — apply profile overrides
-            for (var li2 = 0; li2 < localPlugins.length; li2++) {
-              var lp = localPlugins[li2];
-              var profileMatch = profileByUrl[lp.url];
-              if (profileMatch) {
-                var ds = override && override.plugins_status && override.plugins_status[lp.url];
-                var dc = override && override.plugins_custom && override.plugins_custom[lp.url];
+              // 1. Existing local plugins — apply profile overrides
+              for (var li2 = 0; li2 < localPlugins.length; li2++) {
+                var lp = localPlugins[li2];
+                var profileMatch = profileByUrl[lp.url];
+                if (profileMatch) {
+                  var ds = override && override.plugins_status && override.plugins_status[lp.url];
+                  var dc = override && override.plugins_custom && override.plugins_custom[lp.url];
+                  merged.push({
+                    url: lp.url,
+                    name: profileMatch.name || lp.name,
+                    status: ds !== undefined ? ds : lp.status !== undefined ? lp.status : profileMatch.status,
+                    custom: dc !== undefined ? dc : profileMatch.custom || lp.custom
+                  });
+                } else {
+                  merged.push({
+                    url: lp.url,
+                    name: lp.name,
+                    status: lp.status !== undefined ? lp.status : 1,
+                    custom: lp.custom
+                  });
+                }
+                mergedUrls[lp.url] = true;
+              }
+
+              // 2. NEW profile plugins (cross-device additions)
+              for (var pi3 = 0; pi3 < mergedData.plugins.length; pi3++) {
+                var pp = mergedData.plugins[pi3];
+                if (!pp.url) continue;
+                if (mergedUrls[pp.url]) continue;
+                // Known but user removed locally → skip
+                if (knownMap[pp.url] && !localByUrl[pp.url]) continue;
+                var ds2 = override && override.plugins_status && override.plugins_status[pp.url];
+                var dc2 = override && override.plugins_custom && override.plugins_custom[pp.url];
                 merged.push({
-                  url: lp.url,
-                  name: profileMatch.name || lp.name,
-                  status: ds !== undefined ? ds : profileMatch.status,
-                  custom: dc !== undefined ? dc : profileMatch.custom || lp.custom
+                  url: pp.url,
+                  name: pp.name,
+                  status: ds2 !== undefined ? ds2 : pp.status !== undefined ? pp.status : 1,
+                  custom: dc2 !== undefined ? dc2 : pp.custom
                 });
-              } else {
+                mergedUrls[pp.url] = true;
+              }
+
+              // 3. Safeguard: GramLink must always be present
+              // Use auto-detected URL (release or dev), check by URL pattern
+              var glTargetUrl = window.__gramlink_self_url || './plugins/GramLink.js';
+              var glPresent = false;
+              for (var _glu in mergedUrls) {
+                if (_glu.indexOf('GramLink.js') >= 0 || _glu.indexOf('gramlink') >= 0) {
+                  glPresent = true;
+                  break;
+                }
+              }
+              if (!glPresent) {
                 merged.push({
-                  url: lp.url,
-                  name: lp.name,
-                  status: lp.status !== undefined ? lp.status : 1,
-                  custom: lp.custom
+                  url: glTargetUrl,
+                  name: 'GramLink',
+                  status: 1,
+                  custom: {}
                 });
               }
-              mergedUrls[lp.url] = true;
+              Lampa.Storage.set('plugins', merged);
             }
+            if (mergedData.settings) {
+              var deviceId2 = getDeviceId();
+              var override2 = mergedData.device_overrides && mergedData.device_overrides[deviceId2];
+              var devSettings = override2 && override2.settings || {};
+              if (mergedData.settings.sync_enabled !== undefined) Lampa.Storage.set('gramlink_sync_enabled', devSettings.gramlink_sync_enabled !== undefined ? devSettings.gramlink_sync_enabled : mergedData.settings.sync_enabled);
+              if (mergedData.settings.heartbeat !== undefined) Lampa.Storage.set('gramlink_heartbeat', devSettings.gramlink_heartbeat !== undefined ? devSettings.gramlink_heartbeat : mergedData.settings.heartbeat);
+              if (mergedData.settings.broadcast !== undefined) Lampa.Storage.set('gramlink_broadcast', devSettings.broadcast !== undefined ? devSettings.broadcast : mergedData.settings.broadcast);
 
-            // 2. NEW profile plugins (cross-device additions)
-            for (var pi3 = 0; pi3 < data.plugins.length; pi3++) {
-              var pp = data.plugins[pi3];
-              if (!pp.url) continue;
-              if (mergedUrls[pp.url]) continue;
-              // Known but user removed locally → skip
-              if (knownMap[pp.url] && !localByUrl[pp.url]) continue;
-              var ds2 = override && override.plugins_status && override.plugins_status[pp.url];
-              var dc2 = override && override.plugins_custom && override.plugins_custom[pp.url];
-              merged.push({
-                url: pp.url,
-                name: pp.name,
-                status: ds2 !== undefined ? ds2 : pp.status,
-                custom: dc2 !== undefined ? dc2 : pp.custom
+              // Generic device-scoped keys from device_overrides.settings
+              Object.keys(devSettings).forEach(function (key) {
+                if (key === 'gramlink_sync_enabled' || key === 'gramlink_heartbeat' || key === 'gramlink_broadcast') return;
+                Lampa.Storage.set(key, devSettings[key]);
               });
-              mergedUrls[pp.url] = true;
             }
 
-            // 3. Safeguard: GramLink must always be present
-            // Use auto-detected URL (release or dev), check by URL pattern
-            var glTargetUrl = window.__gramlink_self_url || './plugins/GramLink.js';
-            var glPresent = false;
-            for (var _glu in mergedUrls) {
-              if (_glu.indexOf('GramLink.js') >= 0 || _glu.indexOf('gramlink') >= 0) {
-                glPresent = true;
-                break;
+            // ── Bookmarks & Timeline (never applied before) ──
+            if (mergedData.bookmarks && mergedData.bookmarks.favorite) {
+              suppressPublish();
+              normalizeFavoriteIds(mergedData.bookmarks.favorite);
+              Lampa.Storage.set('favorite', mergedData.bookmarks.favorite);
+              if (Lampa.Favorite && Lampa.Favorite.read) {
+                Lampa.Favorite.read();
               }
+              unsuppressPublish();
             }
-            if (!glPresent) {
-              merged.push({
-                url: glTargetUrl,
-                name: 'GramLink',
-                status: 1,
-                custom: {}
-              });
+            if (mergedData.timeline) {
+              Lampa.Storage.set('file_view', mergedData.timeline);
             }
-            Lampa.Storage.set('plugins', merged);
-          }
-          if (data.settings) {
-            var deviceId2 = getDeviceId();
-            var override2 = data.device_overrides && data.device_overrides[deviceId2];
-            var devSettings = override2 && override2.settings || {};
-            if (data.settings.sync_enabled !== undefined) Lampa.Storage.set('gramlink_sync_enabled', devSettings.gramlink_sync_enabled !== undefined ? devSettings.gramlink_sync_enabled : data.settings.sync_enabled);
-            if (data.settings.heartbeat !== undefined) Lampa.Storage.set('gramlink_heartbeat', devSettings.gramlink_heartbeat !== undefined ? devSettings.gramlink_heartbeat : data.settings.heartbeat);
-            if (data.settings.broadcast !== undefined) Lampa.Storage.set('gramlink_broadcast', devSettings.broadcast !== undefined ? devSettings.broadcast : data.settings.broadcast);
 
-            // Generic device-scoped keys from device_overrides.settings
-            Object.keys(devSettings).forEach(function (key) {
-              if (key === 'gramlink_sync_enabled' || key === 'gramlink_heartbeat' || key === 'gramlink_broadcast') return;
-              Lampa.Storage.set(key, devSettings[key]);
-            });
-          }
-
-          // ── Bookmarks & Timeline (never applied before) ──
-          if (data.bookmarks && data.bookmarks.favorite) {
-            suppressPublish();
-            normalizeFavoriteIds(data.bookmarks.favorite);
-            Lampa.Storage.set('favorite', data.bookmarks.favorite);
-            if (Lampa.Favorite && Lampa.Favorite.read) {
-              Lampa.Favorite.read();
-            }
-            unsuppressPublish();
-          }
-          if (data.timeline) {
-            Lampa.Storage.set('file_view', data.timeline);
-          }
-
-          // ── Profile name from caption ──
-          var captionProfile = parseCaption(target.message || target.text);
-          var captionName = captionProfile && captionProfile.name;
-          if (captionName) Lampa.Storage.set('gramlink_active_profile_name', captionName);
+            // ── Profile name from caption ──
+            var captionProfile = parseCaption(target.message || target.text);
+            var captionName = captionProfile && captionProfile.name;
+            if (captionName) Lampa.Storage.set('gramlink_active_profile_name', captionName);
+          });
         });
       }).catch(function () {});
     }
