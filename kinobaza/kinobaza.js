@@ -6950,9 +6950,13 @@
     } catch (e) {
       // мовчки
     }
-    patchAll();
-    patchGet();
-    patchCheck();
+
+    // Apply monkey-patches only when user is logged into Kinobaza
+    if (storage.hasToken()) {
+      patchAll();
+      patchGet();
+      patchCheck();
+    }
     registerContentRows();
   }
   var favorite = {
@@ -7404,6 +7408,8 @@
    * @returns {boolean} - true якщо CUB синхронізація активна
    */
   function isCubActive() {
+    // Guard: no Kinobaza session — no conflict possible
+    if (!storage.hasToken()) return false;
     try {
       var cubUse = window.lampa_settings && window.lampa_settings.account_use;
       var cubSync = Lampa.Account && Lampa.Account.Permit && Lampa.Account.Permit.sync;
@@ -10038,8 +10044,10 @@
   function startPlugin() {
     window.plugin_kinobaza_ready = true;
 
-    // Декорування API обраного
-    overrideFavoriteApi();
+    // Декорування API обраного — тільки якщо користувач авторизований
+    if (storage.hasToken()) {
+      overrideFavoriteApi();
+    }
 
     // 1. Реєстрація source провайдера
     if (Lampa.Api) {
