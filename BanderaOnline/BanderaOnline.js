@@ -15,6 +15,35 @@
       writable: !1
     }), e;
   }
+  function _defineProperty(e, r, t) {
+    return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+      value: t,
+      enumerable: !0,
+      configurable: !0,
+      writable: !0
+    }) : e[r] = t, e;
+  }
+  function ownKeys(e, r) {
+    var t = Object.keys(e);
+    if (Object.getOwnPropertySymbols) {
+      var o = Object.getOwnPropertySymbols(e);
+      r && (o = o.filter(function (r) {
+        return Object.getOwnPropertyDescriptor(e, r).enumerable;
+      })), t.push.apply(t, o);
+    }
+    return t;
+  }
+  function _objectSpread2(e) {
+    for (var r = 1; r < arguments.length; r++) {
+      var t = null != arguments[r] ? arguments[r] : {};
+      r % 2 ? ownKeys(Object(t), !0).forEach(function (r) {
+        _defineProperty(e, r, t[r]);
+      }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) {
+        Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
+      });
+    }
+    return e;
+  }
   function _toPrimitive(t, r) {
     if ("object" != typeof t || !t) return t;
     var e = t[Symbol.toPrimitive];
@@ -612,17 +641,34 @@
                 component.pushError(Lampa.Lang.translate('online_nolink'));
                 return;
               }
-              Lampa.Player.play({
-                url: play_url,
-                timeline: item.timeline,
-                quality: qualitys,
-                title: item.title,
-                subtitles: mergeSubtitles(first.subtitles, item.subtitles)
-              });
+
+              // Determine player type
+              var playerSetting = Lampa.Storage.get('player');
+              var isExternalPlayer = playerSetting && playerSetting !== 'inner';
+              var isLazy = isLazySeriesMode();
               var playlist = [];
               items.forEach(function (elem) {
                 var cell = {
-                  url: function url(call) {
+                  title: elem.title,
+                  timeline: elem.timeline,
+                  quality: {},
+                  subtitles: elem.subtitles || [],
+                  mark: elem.mark,
+                  season: elem.season || elem.ref && elem.ref.season,
+                  episode: elem.episode || elem.ref && elem.ref.episode,
+                  voice_name: elem.voice_name,
+                  voice_id: elem.voice_id
+                };
+                if (elem === item) {
+                  cell.url = play_url;
+                  cell.quality = qualitys;
+                } else if (isExternalPlayer && isLazy) {
+                  // External player + lazy source: pre-fetch needed (placeholder until resolved)
+                  cell.url = '';
+                  cell._prefetch = true;
+                } else {
+                  // Internal player or non-lazy: lazy callback (current behavior)
+                  cell.url = function (call) {
                     getStream(elem.ref, function (next_streams) {
                       var prepared_next = prepareStreams(next_streams);
                       var next_first = prepared_next.first;
@@ -635,20 +681,66 @@
                       cell.url = '';
                       call();
                     });
-                  },
-                  title: elem.title,
-                  timeline: elem.timeline,
-                  quality: {},
-                  subtitles: elem.subtitles || [],
-                  mark: elem.mark
-                };
-                if (elem === item) {
-                  cell.url = play_url;
-                  cell.quality = qualitys;
+                  };
                 }
                 playlist.push(cell);
               });
-              Lampa.Player.playlist(playlist);
+
+              // Start playback with unified call
+              function startPlayback() {
+                Lampa.Player.play({
+                  url: play_url,
+                  timeline: item.timeline,
+                  quality: qualitys,
+                  title: item.title,
+                  subtitles: mergeSubtitles(first.subtitles, item.subtitles),
+                  season: item.season,
+                  episode: item.episode,
+                  voice_name: item.voice_name,
+                  playlist: playlist,
+                  isonline: true
+                });
+              }
+
+              // External player + lazy: pre-fetch all URLs before playback
+              if (isExternalPlayer && isLazy) {
+                var toPrefetch = playlist.filter(function (c) {
+                  return c._prefetch;
+                });
+                var total = toPrefetch.length;
+                var completed = 0;
+                if (total === 0) {
+                  startPlayback();
+                } else {
+                  toPrefetch.forEach(function (cell) {
+                    var idx = playlist.indexOf(cell);
+                    var elem = items[idx];
+                    if (!elem || !elem.ref) {
+                      cell.url = '';
+                      completed++;
+                      if (completed >= total) startPlayback();
+                      return;
+                    }
+                    getStream(elem.ref, function (next_streams) {
+                      var prepared_next = prepareStreams(next_streams);
+                      var next_first = prepared_next.first;
+                      cell.url = next_first ? normalizeStreamUrl(next_first.url) : '';
+                      cell.quality = next_first ? applyProxyToQualitys(prepared_next.qualitys) : {};
+                      cell.subtitles = mergeSubtitles(next_first && next_first.subtitles, elem.subtitles);
+                      delete cell._prefetch;
+                      completed++;
+                      if (completed >= total) startPlayback();
+                    }, function () {
+                      cell.url = '';
+                      delete cell._prefetch;
+                      completed++;
+                      if (completed >= total) startPlayback();
+                    });
+                  });
+                }
+              } else {
+                startPlayback();
+              }
             }, function (errorText) {
               component.pushError(errorText || Lampa.Lang.translate('online_nolink'));
             });
@@ -663,10 +755,14 @@
                 component.pushError(Lampa.Lang.translate('online_nolink'));
                 return;
               }
-              call({
+              call(_objectSpread2(_objectSpread2({
                 file: play_url,
                 quality: qualitys
-              });
+              }, item.season != null ? {
+                season: item.season
+              } : {}), item.episode != null ? {
+                episode: item.episode
+              } : {}));
             }, function (errorText) {
               component.pushError(errorText || Lampa.Lang.translate('online_nolink'));
             });
@@ -2954,7 +3050,7 @@
     }
     var manifest = {
       type: 'video',
-      version: '2.8.5',
+      version: '2.9',
       name: '[Free] Bandera Online',
       //description: 'Плагин для просмотра онлайн сериалов и фильмов',
       component: 'bandera_online',
