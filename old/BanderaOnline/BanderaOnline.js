@@ -647,7 +647,6 @@
               // Determine player type
               var playerSetting = Lampa.Storage.get('player');
               var isExternalPlayer = playerSetting && playerSetting !== 'inner';
-              var isLazy = isLazySeriesMode();
               var playlist = [];
               items.forEach(function (elem) {
                 var cell = {
@@ -664,8 +663,8 @@
                 if (elem === item) {
                   cell.url = play_url;
                   cell.quality = qualitys;
-                } else if (isExternalPlayer && isLazy) {
-                  // External player + lazy source: pre-fetch needed (placeholder until resolved)
+                } else if (isExternalPlayer) {
+                  // External player: pre-fetch needed (placeholder until resolved)
                   cell.url = '';
                   cell._prefetch = true;
                 } else {
@@ -704,8 +703,8 @@
                 });
               }
 
-              // External player + lazy: pre-fetch all URLs before playback
-              if (isExternalPlayer && isLazy) {
+              // External player: pre-fetch all URLs before playback
+              if (isExternalPlayer) {
                 var toPrefetch = playlist.filter(function (c) {
                   return c._prefetch;
                 });
