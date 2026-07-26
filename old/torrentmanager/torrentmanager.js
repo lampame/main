@@ -2012,8 +2012,6 @@
       return _regenerator().w(function (_context3) {
         while (1) switch (_context3.p = _context3.n) {
           case 0:
-            console.log('TDM', 'Processing torrents:', _typeof(torrentData), torrentData);
-
             // Ensure we're working with an array
             torrents = Array.isArray(torrentData) ? torrentData : [torrentData];
             _context3.p = 1;
@@ -2043,7 +2041,6 @@
                         _context2.n = 3;
                         break;
                       }
-                      console.log('TDM', 'No results found for ', cleanedNameInfo.query);
                       return _context2.a(2, null);
                     case 3:
                       if (!(response.results.length === 1)) {
@@ -2835,7 +2832,6 @@
               _context.n = 3;
               return db.openDatabase();
             case 3:
-              console.log("TDM", "Database '".concat(DB_NAME, "' successfully opened/updated to version ").concat(DB_VERSION, "."));
               resolve(db);
               _context.n = 5;
               break;
@@ -2887,7 +2883,6 @@
             _context2.n = 2;
             return db.rewriteData(tableName, key, value);
           case 2:
-            console.log("TDM", "Metadata for key '".concat(key, "' successfully saved in table '").concat(tableName, "'."));
             _context2.n = 4;
             break;
           case 3:
@@ -4993,24 +4988,20 @@
           return _regenerator().w(function (_context) {
             while (1) switch (_context.p = _context.n) {
               case 0:
-                console.log('TDM', 'TorrentStateManager.update() called');
                 if (!this.updateInProgress) {
                   _context.n = 1;
                   break;
                 }
-                console.log('TDM', 'TorrentStateManager: update already in progress');
                 return _context.a(2);
               case 1:
                 this.updateInProgress = true;
                 _context.p = 2;
                 client_name = Lampa.Storage.get('lmetorrentSelect');
-                console.log('TDM', 'TorrentStateManager: client_name =', client_name);
                 isUniversal = client_name === 'universal' || client_name === 'universalClient';
                 if (!(isUniversal || !hasClient(client_name))) {
                   _context.n = 3;
                   break;
                 }
-                console.log('TDM', 'TorrentStateManager: no client selected or universal');
                 return _context.a(2);
               case 3:
                 _context.n = 4;
@@ -5020,7 +5011,6 @@
                 });
               case 4:
                 new_torrents = _context.v;
-                console.log('TDM', 'TorrentStateManager: got', new_torrents ? new_torrents.length : 'null', 'torrents');
                 if (new_torrents) {
                   has_active_downloads_before = this.hasActiveDownloads();
                   this.torrents = new_torrents;
@@ -7178,7 +7168,6 @@
       return _regenerator().w(function (_context) {
         while (1) switch (_context.p = _context.n) {
           case 0:
-            console.log('TDM', 'searchSonarr called with:', titleOrImdb);
             if (titleOrImdb) {
               _context.n = 1;
               break;
@@ -7212,14 +7201,11 @@
             });
           case 5:
             data = _context.v;
-            console.log('TDM', 'searchSonarr raw response:', _typeof(data), data ? 'length=' + (Array.isArray(data) ? data.length : 'N/A') : 'null/undefined');
             data = parseResponse(data);
-            console.log('TDM', 'searchSonarr after parseResponse:', data ? 'length=' + (Array.isArray(data) ? data.length : 'N/A') : 'null');
             if (!(!data || !data.length)) {
               _context.n = 6;
               break;
             }
-            console.log('TDM', 'searchSonarr: no data or empty array');
             return _context.a(2, null);
           case 6:
             result = data[0];
@@ -7234,7 +7220,6 @@
             if (normalized.tmdb_id) {
               setCached(cacheKey, normalized);
             }
-            console.log('TDM', 'searchSonarr result: FOUND tmdb_id=' + normalized.tmdb_id);
             return _context.a(2, normalized);
           case 7:
             _context.p = 7;
@@ -7263,7 +7248,6 @@
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.p = _context2.n) {
           case 0:
-            console.log('TDM', 'searchRadarr called with:', title);
             if (title) {
               _context2.n = 1;
               break;
@@ -7297,14 +7281,11 @@
             });
           case 5:
             data = _context2.v;
-            console.log('TDM', 'searchRadarr raw response:', _typeof(data), data ? 'length=' + (Array.isArray(data) ? data.length : 'N/A') : 'null/undefined');
             data = parseResponse(data);
-            console.log('TDM', 'searchRadarr after parseResponse:', data ? 'length=' + (Array.isArray(data) ? data.length : 'N/A') : 'null');
             if (!(!data || !data.length)) {
               _context2.n = 6;
               break;
             }
-            console.log('TDM', 'searchRadarr: no data or empty array');
             return _context2.a(2, null);
           case 6:
             result = data[0];
@@ -7319,7 +7300,6 @@
             if (normalized.tmdb_id) {
               setCached(cacheKey, normalized);
             }
-            console.log('TDM', 'searchRadarr result: FOUND tmdb_id=' + normalized.tmdb_id);
             return _context2.a(2, normalized);
           case 7:
             _context2.p = 7;
@@ -7380,7 +7360,6 @@
               data: data,
               info: info
             };
-            console.log('TDM', 'result:', result);
             return _context2.a(2, result);
           case 7:
             _context2.p = 7;
@@ -7878,6 +7857,22 @@
     init: init$1
   };
 
+  /**
+   * Card Integration Module for Torrent Manager
+   *
+   * Adds torrent status indicators to catalog card icons.
+   * Follows the exact pattern from MovieEnhancer/utils/wm_quality.js:
+   *   - Hooks into Lampa.Maker.map('Card').Card.onVisible
+   *   - Preserves original method via apply(self)
+   *   - Uses inflight map to avoid duplicate API requests
+   *   - Silent fallback on errors — never blocks UI
+   *
+   * Lookup chain:
+   *   A. Direct label match in TorrentStateManager.torrents
+   *   B. IndexedDB cache via db.getMetadataByTmdbId()
+   *   C. External API (Sonarr/Radarr) for clients without labels
+   */
+
   // Inflight map to prevent duplicate concurrent API requests for the same card
   var inflight = {};
 
@@ -7964,24 +7959,18 @@
    * Hooks Card.onVisible to add torrent status icons on card render.
    */
   function init() {
-    console.log('TDM', 'CardIntegration.init() called');
     if (!Lampa.Maker) {
       console.error('TDM', 'Lampa.Maker is not defined!');
       return;
     }
-
-    // Reference pattern from MovieEnhancer/utils/wm_quality.js (lines 156-185)
     var card = Lampa.Maker.map('Card');
-    console.log('TDM', 'Lampa.Maker.map(Card) returned:', card);
     if (!card || !card.Card) {
       console.error('TDM', 'card.Card is not defined!');
       return;
     }
     var onVisible = card.Card.onVisible;
-    console.log('TDM', 'Original onVisible:', _typeof(onVisible));
     card.Card.onVisible = function () {
       var self = this;
-      console.log('TDM', 'Card.onVisible called, self.data:', self.data);
       onVisible.apply(self); // Call original method first
 
       // Guard: card must have data
@@ -7994,7 +7983,6 @@
 
       // Guard: skip non-numeric IDs (music cards, etc.)
       if (typeof id !== 'number' && !/^\d+$/.test(id)) {
-        console.log('TDM', 'Skipping non-numeric ID:', id);
         return;
       }
       var mediaType = movie.first_air_date ? 'tv' : 'movie';
@@ -8006,13 +7994,9 @@
 
       // Step A: Direct label match in TorrentStateManager (fastest path)
       var torrents = TorrentStateManager$1.torrents;
-      console.log('TDM', 'TorrentStateManager.torrents:', torrents ? torrents.length : 'null/undefined');
       var torrent = null;
       if (torrents && torrents.length) {
         torrent = findTorrentByLabels(torrents, mediaType, id);
-        console.log('TDM', 'findTorrentByLabels result:', torrent ? 'FOUND' : 'not found', 'for', mediaType + '/' + id);
-      } else {
-        console.log('TDM', 'No torrents in TorrentStateManager');
       }
       if (torrent) {
         // Store card data for live update lookup via torrents:updated
@@ -8031,7 +8015,6 @@
 
       // Step B: Check IndexedDB cache for previously resolved metadata
       getMetadataByTmdbId(id).then(function (cachedMeta) {
-        console.log('TDM', 'db.getMetadataByTmdbId result:', cachedMeta ? 'FOUND' : 'not found');
         if (cachedMeta && cachedMeta.torrent_id && torrents && torrents.length) {
           // Found cached match — verify torrent still exists in state manager
           for (var i = 0; i < torrents.length; i++) {
@@ -8091,7 +8074,6 @@
         delete inflight[inflightKey];
       });
     };
-    console.log('TDM', 'Card.onVisible overridden successfully');
 
     // Subscribe to live torrent updates to refresh visible card icons
     Lampa.Listener.follow('torrents:updated', function () {
