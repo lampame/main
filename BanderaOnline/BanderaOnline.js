@@ -965,6 +965,7 @@
       }
       function normalizeStreamUrl(url) {
         if (!url) return url;
+        if (shouldUseSirkoProxy()) return wrapSirkoProxy(url);
         if (!shouldUseStreamProxy(url)) return url;
         return wrapStreamProxy(url);
       }
@@ -974,6 +975,16 @@
           result[key] = normalizeStreamUrl(qualitys[key]);
         });
         return result;
+      }
+      function shouldUseSirkoProxy() {
+        if (sourceKey !== 'sirko') return false;
+        var player = Lampa.Storage.get('player');
+        return !player || player === 'inner';
+      }
+      function wrapSirkoProxy(url) {
+        var base = 'https://stream.ernax.pro/proxy-hls?url=';
+        if (url.indexOf(base) === 0) return url;
+        return base + encodeURIComponent(url);
       }
       function shouldUseStreamProxy(url) {
         var player = Lampa.Storage.get('player');
