@@ -1,4 +1,4 @@
-var plugin = (function () {
+(function () {
     'use strict';
 
     function lang () {
@@ -1036,6 +1036,37 @@ var plugin = (function () {
           en: 'Initials (default)',
           uk: 'Ініціали (за замовчуванням)',
           ru: 'Инициалы (по умолчанию)'
+        },
+        // Import-Only Mode
+        gramlink_import_mode_title: {
+          en: 'GramLink — Important Notice',
+          uk: 'GramLink — Важливе повідомлення',
+          ru: 'GramLink — Важное сообщение'
+        },
+        gramlink_import_mode_body: {
+          en: 'Starting August 4, 2026, GramLink will switch to import-only mode. Synchronization, profiles, and other features will stop working. Only authorization and backup import will remain available.\n\nPlease save your data before this date.',
+          uk: 'З 4 серпня 2026 року GramLink перейде в режим імпорту. Синхронізація, профілі та інші функції припинять роботу. Доступними залишаться лише авторизація та імпорт бекапа.\n\nБудь ласка, збережіть свої дані до цієї дати.',
+          ru: 'С 4 августа 2026 года GramLink перейдет в режим импорта. Синхронизация, профили и другие функции прекратят работу. Доступными останутся только авторизация и импорт бекапа.\n\nПожалуйста, сохраните свои данные до этой даты.'
+        },
+        gramlink_import_mode_ok: {
+          en: 'OK',
+          uk: 'OK',
+          ru: 'OK'
+        },
+        gramlink_import_mode_blocked_title: {
+          en: 'GramLink — Import Mode',
+          uk: 'GramLink — Режим імпорту',
+          ru: 'GramLink — Режим импорта'
+        },
+        gramlink_import_mode_blocked_body: {
+          en: 'GramLink is now in import-only mode. Only authorization and backup import are available. Synchronization, profiles, and other features have been disabled.',
+          uk: 'GramLink зараз працює в режимі імпорту. Доступні лише авторизація та імпорт бекапа. Синхронізацію, профілі та інші функції вимкнено.',
+          ru: 'GramLink сейчас работает в режиме импорта. Доступны только авторизация и импорт бекапа. Синхронизация, профили и другие функции отключены.'
+        },
+        gramlink_import_mode_goto_import: {
+          en: 'Go to Import',
+          uk: 'Перейти до імпорту',
+          ru: 'Перейти к импорту'
         }
       });
     }
@@ -7456,6 +7487,8 @@ var plugin = (function () {
       Lampa.Template.add('settings_gramlink_connection', '<div></div>');
       Lampa.Template.add('settings_gramlink_sync_page', '<div></div>');
       Lampa.Template.add('settings_gramlink_tools', '<div></div>');
+      var isImportMode = window.__gramlink_import_mode === true;
+
       // ── Main component (before Interface) ─────────────────
       SettingsApi.addComponent({
         component: 'gramlink',
@@ -7527,23 +7560,25 @@ var plugin = (function () {
       });
 
       // ── 2. Synchronization ────────────────────────────────
-      SettingsApi.addParam({
-        component: 'gramlink',
-        param: {
-          name: 'gramlink_open_sync',
-          type: 'button'
-        },
-        field: {
-          name: Lampa.Lang.translate('gramlink_settings_section_sync')
-        },
-        onChange: function onChange() {
-          Lampa.Settings.create('gramlink_sync_page', {
-            onBack: function onBack() {
-              Lampa.Settings.create('gramlink');
-            }
-          });
-        }
-      });
+      if (!isImportMode) {
+        SettingsApi.addParam({
+          component: 'gramlink',
+          param: {
+            name: 'gramlink_open_sync',
+            type: 'button'
+          },
+          field: {
+            name: Lampa.Lang.translate('gramlink_settings_section_sync')
+          },
+          onChange: function onChange() {
+            Lampa.Settings.create('gramlink_sync_page', {
+              onBack: function onBack() {
+                Lampa.Settings.create('gramlink');
+              }
+            });
+          }
+        });
+      }
 
       // ── 3. Tools ──────────────────────────────────────────
       SettingsApi.addParam({
@@ -7594,23 +7629,25 @@ var plugin = (function () {
       });
 
       // ── 5. Connection ─────────────────────────────────────
-      SettingsApi.addParam({
-        component: 'gramlink',
-        param: {
-          name: 'gramlink_open_connection',
-          type: 'button'
-        },
-        field: {
-          name: Lampa.Lang.translate('gramlink_settings_section_connection')
-        },
-        onChange: function onChange() {
-          Lampa.Settings.create('gramlink_connection', {
-            onBack: function onBack() {
-              Lampa.Settings.create('gramlink');
-            }
-          });
-        }
-      });
+      if (!isImportMode) {
+        SettingsApi.addParam({
+          component: 'gramlink',
+          param: {
+            name: 'gramlink_open_connection',
+            type: 'button'
+          },
+          field: {
+            name: Lampa.Lang.translate('gramlink_settings_section_connection')
+          },
+          onChange: function onChange() {
+            Lampa.Settings.create('gramlink_connection', {
+              onBack: function onBack() {
+                Lampa.Settings.create('gramlink');
+              }
+            });
+          }
+        });
+      }
 
       // ── 6. (moved to Tools) ─────────────────────────────
       // ══════════════════════════════════════════════════════
@@ -7788,52 +7825,56 @@ var plugin = (function () {
       });
 
       // ponytail: avatar style moved here from main page
-      SettingsApi.addParam({
-        component: 'gramlink_tools',
-        param: {
-          name: 'gramlink_avatar_style',
-          type: 'button'
-        },
-        field: {
-          name: Lampa.Lang.translate('gramlink_settings_avatar_style'),
-          description: Lampa.Lang.translate('gramlink_settings_avatar_style_desc')
-        },
-        onRender: function onRender(item) {
-          var style = Lampa.Storage.get('gramlink_avatar_style', 'fun-emoji');
-          var label = style ? style.charAt(0).toUpperCase() + style.slice(1) : Lampa.Lang.translate('gramlink_avatar_none');
-          item.find('.settings-param__name').text(Lampa.Lang.translate('gramlink_settings_avatar_style'));
-          if (!item.find('.gramlink-avatar-preview').length) {
-            item.find('.settings-param__name').after('<span class="gramlink-avatar-preview" style="margin-left:0.5em;opacity:0.6"></span>');
+      if (!isImportMode) {
+        SettingsApi.addParam({
+          component: 'gramlink_tools',
+          param: {
+            name: 'gramlink_avatar_style',
+            type: 'button'
+          },
+          field: {
+            name: Lampa.Lang.translate('gramlink_settings_avatar_style'),
+            description: Lampa.Lang.translate('gramlink_settings_avatar_style_desc')
+          },
+          onRender: function onRender(item) {
+            var style = Lampa.Storage.get('gramlink_avatar_style', 'fun-emoji');
+            var label = style ? style.charAt(0).toUpperCase() + style.slice(1) : Lampa.Lang.translate('gramlink_avatar_none');
+            item.find('.settings-param__name').text(Lampa.Lang.translate('gramlink_settings_avatar_style'));
+            if (!item.find('.gramlink-avatar-preview').length) {
+              item.find('.settings-param__name').after('<span class="gramlink-avatar-preview" style="margin-left:0.5em;opacity:0.6"></span>');
+            }
+            item.find('.gramlink-avatar-preview').text(label);
+          },
+          onChange: function onChange() {
+            openAvatarStyleSelect();
           }
-          item.find('.gramlink-avatar-preview').text(label);
-        },
-        onChange: function onChange() {
-          openAvatarStyleSelect();
-        }
-      });
-      SettingsApi.addParam({
-        component: 'gramlink_tools',
-        param: {
-          name: 'gramlink_manage_plugins',
-          type: 'button'
-        },
-        field: {
-          name: Lampa.Lang.translate('gramlink_plugins_manage')
-        },
-        onRender: function onRender(item) {
-          var activeId = Lampa.Storage.get('gramlink_active_profile', '');
-          if (!activeId) item.addClass('hide');
-        },
-        onChange: function onChange() {
-          var activeId = Lampa.Storage.get('gramlink_active_profile', '');
-          var activeName = Lampa.Storage.get('gramlink_active_profile_name', '');
-          if (!activeId) {
-            Lampa.Noty.show('No active profile');
-            return;
+        });
+      }
+      if (!isImportMode) {
+        SettingsApi.addParam({
+          component: 'gramlink_tools',
+          param: {
+            name: 'gramlink_manage_plugins',
+            type: 'button'
+          },
+          field: {
+            name: Lampa.Lang.translate('gramlink_plugins_manage')
+          },
+          onRender: function onRender(item) {
+            var activeId = Lampa.Storage.get('gramlink_active_profile', '');
+            if (!activeId) item.addClass('hide');
+          },
+          onChange: function onChange() {
+            var activeId = Lampa.Storage.get('gramlink_active_profile', '');
+            var activeName = Lampa.Storage.get('gramlink_active_profile_name', '');
+            if (!activeId) {
+              Lampa.Noty.show('No active profile');
+              return;
+            }
+            PluginManager.open(activeId, activeName || 'Active', true);
           }
-          PluginManager.open(activeId, activeName || 'Active', true);
-        }
-      });
+        });
+      }
 
       // ═══════════════════════════════════════════════════════
       //  NESTED PAGE: Server Settings
@@ -8870,10 +8911,10 @@ var plugin = (function () {
           },
           left: function left() {
             var $cur = $(last);
-            if ($cur.hasClass('gramlink-tab') && tabIdx > 0) {
+            if (!window.__gramlink_import_mode && $cur.hasClass('gramlink-tab') && tabIdx > 0) {
               tabIdx--;
               focusTab(TABS[tabIdx]);
-            } else if ($cur.hasClass('gramlink-tab') && tabIdx === 0) {
+            } else if (!window.__gramlink_import_mode && $cur.hasClass('gramlink-tab') && tabIdx === 0) {
               Lampa.Controller.toggle('menu');
             } else if (Navigator.canmove('left')) {
               Navigator.move('left');
@@ -8883,7 +8924,7 @@ var plugin = (function () {
           },
           right: function right() {
             var $cur = $(last);
-            if ($cur.hasClass('gramlink-tab') && tabIdx < TABS.length - 1) {
+            if (!window.__gramlink_import_mode && $cur.hasClass('gramlink-tab') && tabIdx < TABS.length - 1) {
               tabIdx++;
               focusTab(TABS[tabIdx]);
             } else if (Navigator.canmove('right')) {
@@ -9858,20 +9899,24 @@ var plugin = (function () {
           _initializing = false;
           var ch = Lampa.Storage.get(STORAGE_CHANNEL_ID, ''),
             sl = Lampa.Storage.get(STORAGE_SYNC_LOG_TOPIC, '');
-          if (ch && sl) client.startHeartbeat(ch, sl);
-          self._deltaHandler = function (data) {
-            Profiles.applyDelta(data);
-          };
-          client.on('profile_delta', self._deltaHandler);
-          renderProfiles();
-          if (refreshTimer) clearInterval(refreshTimer);
-          refreshTimer = setInterval(function () {
-            if (activeTab === 'profiles') renderProfiles();
-          }, 15000);
+          if (!window.__gramlink_import_mode) {
+            if (ch && sl) client.startHeartbeat(ch, sl);
+            self._deltaHandler = function (data) {
+              Profiles.applyDelta(data);
+            };
+            client.on('profile_delta', self._deltaHandler);
+            renderProfiles();
+            if (refreshTimer) clearInterval(refreshTimer);
+            refreshTimer = setInterval(function () {
+              if (activeTab === 'profiles') renderProfiles();
+            }, 15000);
+          } else {
+            renderImportOnlyView();
+          }
         })["catch"](function (err) {
           if (self.__destroyed) return;
           _initializing = false;
-          renderProfiles(); // Shows "No profiles" or loaded data based on what Storage has
+          if (window.__gramlink_import_mode) renderImportOnlyView();else renderProfiles(); // Shows "No profiles" or loaded data based on what Storage has
           console.warn('GramLink', 'Hub init error:', err);
         });
       }
@@ -9963,8 +10008,186 @@ var plugin = (function () {
 
       // getChannelId — imported from sdk/keys (safe version with NaN guard)
       // ─── Misc helpers ───────────────────────────────────
+
+      // ═══════════════════════════════════════════════════════
+      //  IMPORT-ONLY VIEW (режим імпорту)
+      // ═══════════════════════════════════════════════════════
+      // Використовує ті ж паттерни що renderProfiles/renderDevices:
+      // scroll.body, bodyPrep, createItem, hover:focus через this, focusFirst.
+
+      function renderImportOnlyView() {
+        var body = scroll.body(true);
+        body.innerHTML = '';
+        bodyPrep(body);
+        var client = GramLinkClient.getInstance();
+        var isConnected = client.isConnected();
+        var hasCreds = client.hasCredentials();
+        var bt = Lampa.Storage.get(STORAGE_BACKUP_TOPIC, '');
+
+        // ── Header ──
+        var headerEl = createItem('gs-import-header', '', Lampa.Lang.translate('gramlink_title') || 'GramLink', Lampa.Lang.translate('gramlink_import_mode_blocked_body') || 'Import-only mode', null, null);
+        headerEl.style.gridColumn = '1 / -1';
+        headerEl.style.background = 'none';
+        body.appendChild(headerEl);
+
+        // ── Connection status (manual DOM, як renderDevices) ──
+        var dotColor = isConnected ? '#4caf50' : hasCreds ? '#DD7337' : '#888';
+        var statusText = isConnected ? Lampa.Lang.translate('gramlink_status_connected') || 'Connected' : hasCreds ? Lampa.Lang.translate('gramlink_status_disconnected') || 'Disconnected' : Lampa.Lang.translate('gramlink_status_auth_needed') || 'Auth required';
+        var statusEl = document.createElement('div');
+        statusEl.className = 'gramlink-item selector gs-import-status';
+        statusEl.style.gridColumn = '1 / -1';
+        statusEl.innerHTML = '<div style="border-radius:50%;width:1.2em;height:1.2em;font-size:0.9em;margin-right:0.8em;background:' + dotColor + ';flex-shrink:0"></div>' + '<div class="gs-content">' + '<div class="gs-title">' + statusText + '</div>' + '<div class="gs-sub">' + escHtml(hasCreds ? getDeviceName() : '-') + '</div>' + '</div>';
+        body.appendChild(statusEl);
+
+        // ── Auth / Connect button ──
+        var authLabel = !hasCreds ? Lampa.Lang.translate('gramlink_settings_section_auth') || 'Authorization' : !isConnected ? Lampa.Lang.translate('gramlink_connect') || 'Connect' : (Lampa.Lang.translate('gramlink_status_connected') || 'Connected') + ' ✓';
+        var authEl = createItem('gs-import-auth-btn', '', authLabel, '', null, null);
+        authEl.style.gridColumn = '1 / -1';
+        body.appendChild(authEl);
+
+        // ── Init channel button (only if no backup topic yet) ──
+        if (isConnected && !bt) {
+          var initEl = createItem('gs-import-init-btn', '🔧', Lampa.Lang.translate('gramlink_sync_channel_creating') || 'Initialize sync channel', '', null, null);
+          initEl.style.gridColumn = '1 / -1';
+          body.appendChild(initEl);
+        }
+
+        // ── Import Backup ──
+        var backupEl = createItem('gs-import-backup-btn', '📦', Lampa.Lang.translate('gramlink_backup_import') || 'Import Backup', '', null, null);
+        backupEl.style.gridColumn = '1 / -1';
+        body.appendChild(backupEl);
+
+        // ── Import from Cub ──
+        var cubEl = createItem('gs-import-cub-btn', '📋', Lampa.Lang.translate('gramlink_import_cub') || 'Import from Cub', '', null, null);
+        cubEl.style.gridColumn = '1 / -1';
+        body.appendChild(cubEl);
+
+        // ── Bind events (native pattern: this = DOM element) ──
+        $(body).find('.gs-import-status').on('hover:focus', function () {
+          last = this;
+          scroll.update($(this), true);
+        });
+        $(body).find('.gs-import-auth-btn').on('hover:focus', function () {
+          last = this;
+          scroll.update($(this), true);
+        }).on('hover:enter', function () {
+          if (!hasCreds) {
+            Lampa.Settings.create('gramlink', {
+              onBack: function onBack() {
+                Lampa.Settings.create('interface');
+              }
+            });
+          } else if (!isConnected) {
+            client.connect().then(function () {
+              renderImportOnlyView();
+            })["catch"](function () {});
+          }
+        });
+        $(body).find('.gs-import-init-btn').on('hover:focus', function () {
+          last = this;
+          scroll.update($(this), true);
+        }).on('hover:enter', function () {
+          Lampa.Noty.show(Lampa.Lang.translate('gramlink_sync_channel_creating') || 'Setting up sync channel...');
+          // init() → ensureSyncChannel() already created the channel,
+          // but if we got here without bt, re-invoke ensureSyncChannel
+          var client = GramLinkClient.getInstance();
+          client.connect().then(function () {
+            return ensureSyncChannel();
+          }).then(function () {
+            Lampa.Noty.show(Lampa.Lang.translate('gramlink_sync_channel_ready') || 'Sync channel ready');
+            renderImportOnlyView();
+          })["catch"](function (err) {
+            Lampa.Noty.show(Lampa.Lang.translate('gramlink_sync_channel_error') || 'Channel setup failed');
+            console.warn('GramLink', 'Manual channel init error:', err);
+          });
+        });
+        $(body).find('.gs-import-backup-btn').on('hover:focus', function () {
+          last = this;
+          scroll.update($(this), true);
+        }).on('hover:enter', function () {
+          var backupTopic = Lampa.Storage.get(STORAGE_BACKUP_TOPIC, '');
+          if (!backupTopic) {
+            Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_topic_not_ready') || 'Backup topic not ready');
+            return;
+          }
+          importBackup();
+        });
+        $(body).find('.gs-import-cub-btn').on('hover:focus', function () {
+          last = this;
+          scroll.update($(this), true);
+        }).on('hover:enter', function () {
+          var profilesTopic = Lampa.Storage.get(STORAGE_PROFILES_TOPIC, '');
+          if (!profilesTopic) {
+            Lampa.Noty.show('Sync channel not ready');
+            return;
+          }
+          startMigration(profilesTopic);
+        });
+
+        // ── Focus first element (native pattern) ──
+        var firstFocusable = $(body).find('.selector').first();
+        if (firstFocusable.length) {
+          last = firstFocusable[0];
+          Lampa.Controller.collectionSet(scroll.render());
+          Lampa.Controller.collectionFocus(firstFocusable[0], scroll.render());
+          scroll.immediate(firstFocusable[0], true);
+        }
+      }
     }
 
+    // ─── Import-Only Mode ──────────────────────────────────
+    // Керування режимом, в якому доступні лише авторизація та імпорт бекапа.
+    //
+    // Тестові прапорці (встановити в консолі ДО завантаження плагіна):
+    //   window.__gramlink_import_only = true          — примусово ввімкнути режим імпорту
+    //   window.__gramlink_disable_date_check = true   — вимкнути перевірку дати
+    //   window.__gramlink_test_date = '2026-08-04'    — імітувати конкретну дату (ISO)
+    // Для скидання денної нотифікації в консолі:
+    //   Lampa.Storage.set('gramlink_import_last_notified', '') & location.reload()
+
+    var GRAMLINK_IMPORT_DEADLINE = new Date(2026, 7, 4); // 4 серпня 2026
+
+    function isImportModeActive() {
+      // Тестове примусове ввімкнення
+      if (window.__gramlink_import_only === true) return true;
+      // Вимкнення перевірки дати для розробки
+      if (window.__gramlink_disable_date_check === true) return false;
+      var now = new Date();
+      if (window.__gramlink_test_date) {
+        now = new Date(window.__gramlink_test_date);
+        if (isNaN(now.getTime())) now = new Date();
+      }
+      return now >= GRAMLINK_IMPORT_DEADLINE;
+    }
+    function showImportCountdownNotification() {
+      if (window.__gramlink_disable_date_check) return;
+      var now = new Date();
+      if (window.__gramlink_test_date) {
+        now = new Date(window.__gramlink_test_date);
+        if (isNaN(now.getTime())) now = new Date();
+      }
+
+      // Якщо вже дедлайн — не показуємо нотифікацію
+      if (now >= GRAMLINK_IMPORT_DEADLINE) return;
+      var today = now.toISOString().split('T')[0];
+      var lastNotified = Lampa.Storage.get('gramlink_import_last_notified', '');
+      if (lastNotified === today) return;
+
+      // Відкладаємо показ модалки — під час ініціалізації UI ще не готовий
+      setTimeout(function () {
+        Lampa.Modal.open({
+          title: Lampa.Lang.translate('gramlink_import_mode_title'),
+          html: $('<div style="padding:1em">' + Lampa.Lang.translate('gramlink_import_mode_body') + '</div>'),
+          buttons: [{
+            name: Lampa.Lang.translate('gramlink_import_mode_ok') || 'OK',
+            onSelect: function onSelect() {
+              Lampa.Modal.close();
+            }
+          }]
+        });
+        Lampa.Storage.set('gramlink_import_last_notified', today);
+      }, 1000);
+    }
     function startPlugin() {
       window.plugin_gramlink_ready = true;
       Profiles.callbacks.onOpenPluginManager = PluginManager.open;
@@ -10015,26 +10238,48 @@ var plugin = (function () {
       Lampa.Manifest.plugins = manifest;
       Lampa.Component.add('gramlink_hub', Hub);
       Lampa.Component.add('gramlink_plugin_manager', PluginManagerComponent);
+
+      // ── Визначаємо режим імпорту ДО налаштувань ──────────
+      window.__gramlink_import_mode = isImportModeActive();
       lang();
       initSettings();
       Lampa.Template.add('gramlink_style', '<style>.gramlink-activity{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.gramlink-activity .head__title{font-size:1.4em}.gramlink-hub{padding:1em 2em;max-width:50em;margin:0 auto}.gramlink-hub__header{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;margin-bottom:2em;padding-bottom:1em;border-bottom:1px solid rgba(255,255,255,0.1)}.gramlink-hub__title{font-size:1.6em;font-weight:700;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.gramlink-hub__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.5em}.gramlink-hub__section{margin-bottom:2em}.gramlink-hub__section-title{font-size:1.2em;font-weight:600;margin-bottom:1em;color:rgba(255,255,255,0.7)}.gramlink-status{background:rgba(255,255,255,0.05);-webkit-border-radius:.8em;border-radius:.8em;padding:1.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em}.gramlink-status__indicator{width:1em;height:1em;-webkit-border-radius:50%;border-radius:50%;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gramlink-status__indicator--connected{background:#4caf50;-webkit-box-shadow:0 0 .6em rgba(76,175,80,0.5);box-shadow:0 0 .6em rgba(76,175,80,0.5)}.gramlink-status__indicator--disconnected{background:#f44336}.gramlink-status__indicator--connecting{background:#ffc107;-webkit-animation:gramlink-pulse 1.5s ease-in-out infinite;animation:gramlink-pulse 1.5s ease-in-out infinite}.gramlink-status__indicator--auth_needed{background:#ff9800}.gramlink-status__indicator--error{background:#f44336}.gramlink-status__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-status__label{font-size:1.1em;font-weight:600;margin-bottom:.2em}.gramlink-status__detail{font-size:.9em;color:rgba(255,255,255,0.5)}@-webkit-keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes gramlink-pulse{0%,100%{opacity:1}50%{opacity:.4}}.gramlink-devices__empty{text-align:center;padding:2em;color:rgba(255,255,255,0.4);font-size:1.1em}.gramlink-device{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:1em;padding:1em 1.2em;background:rgba(255,255,255,0.03);-webkit-border-radius:.6em;border-radius:.6em;margin-bottom:.5em;cursor:pointer;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-device.focus,.gramlink-device.hover{background:rgba(255,255,255,0.1);outline:.2em solid #fff;outline-offset:.3em}.gramlink-device__icon{width:2.5em;height:2.5em;-webkit-border-radius:.5em;border-radius:.5em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;font-size:.9em;color:white}.gramlink-device__info{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gramlink-device__name{font-size:1.1em;font-weight:600}.gramlink-device__meta{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-device__status{font-size:.8em;padding:.3em .6em;-webkit-border-radius:.3em;border-radius:.3em;background:rgba(76,175,80,0.15);color:#4caf50}.gramlink-device--this{opacity:.6;cursor:default}.gramlink-auth{padding:1em;text-align:center}.gramlink-auth__qr-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;margin-bottom:1.5em;min-height:18em}.gramlink-auth__qr-placeholder{width:16em;height:16em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;background:rgba(255,255,255,0.05);-webkit-border-radius:1em;border-radius:1em}.gramlink-auth__qr-img{width:16em;height:16em;-webkit-border-radius:1em;border-radius:1em;background:white;padding:.5em}.gramlink-auth__status{font-size:1.1em;color:rgba(255,255,255,0.6);line-height:1.5}.gramlink-auth__scan-hint{margin-bottom:.5em;color:rgba(255,255,255,0.8)}.gramlink-auth__confirm-hint{font-size:.85em;color:rgba(255,255,255,0.4)}.gramlink-btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;padding:.6em 1.2em;-webkit-border-radius:.5em;border-radius:.5em;font-size:.9em;font-weight:600;cursor:pointer;border:0;-webkit-transition:background .2s,opacity .2s;-o-transition:background .2s,opacity .2s;transition:background .2s,opacity .2s}.gramlink-btn.focus,.gramlink-btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-btn--primary{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-btn--ghost{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-btn--ghost.focus{background:rgba(255,255,255,0.15)}.gramlink-btn--small{padding:.4em .8em;font-size:.8em}@media screen and (max-width:1024px){.gramlink-hub{padding:.8em 1em}.gramlink-tabs{padding-left:1em;padding-right:1em}.gramlink-status{padding:1em}.gramlink-auth__qr-placeholder,.gramlink-auth__qr-img{width:12em;height:12em}.gramlink-auth__qr-container{min-height:14em}}@media screen and (max-width:480px){.gramlink-hub__header{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.8em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}}.gramlink-2fa{padding:1em;text-align:center}.gramlink-2fa__desc{font-size:1.1em;color:rgba(255,255,255,0.8);margin-bottom:.5em;line-height:1.4}.gramlink-2fa__hint{font-size:.9em;color:rgba(255,255,255,0.5);margin-bottom:1.5em}.gramlink-2fa__input-wrap{margin-bottom:1.5em}.gramlink-2fa__input{width:100%;max-width:20em;padding:.8em 1em;border:.15em solid rgba(255,255,255,0.2);-webkit-border-radius:.5em;border-radius:.5em;background:rgba(255,255,255,0.08);color:#fff;font-size:1.1em;text-align:center;outline:0;-webkit-box-sizing:border-box;box-sizing:border-box}.gramlink-2fa__input:focus{border-color:#08c}.gramlink-2fa__actions{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.gramlink-2fa__btn{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:.7em 1.5em;-webkit-border-radius:.5em;border-radius:.5em;font-size:1em;font-weight:600;cursor:pointer;min-width:8em;-webkit-transition:background .2s;-o-transition:background .2s;transition:background .2s}.gramlink-2fa__btn_ok{background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);color:white}.gramlink-2fa__btn_cancel{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}.gramlink-2fa__btn.focus,.gramlink-2fa__btn.hover{outline:.2em solid #fff;outline-offset:.3em}.gramlink-tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:.8em;padding:0 2em;margin-bottom:1em}.gramlink-tab.active{background:rgba(255,255,255,0.15) !important;border-color:rgba(255,255,255,0.3) !important;color:#fff !important}.gramlink-body--grid>.gramlink-tabs,.gramlink-tabs{grid-column:1/-1}.gramlink-device-avatar{width:2em;height:2em;-webkit-border-radius:.4em;border-radius:.4em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em}.gramlink-avatar{-webkit-border-radius:50%;border-radius:50%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:700;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;overflow:hidden}.gramlink-avatar--head{width:24px;height:24px;font-size:11px}.gramlink-avatar--list{width:2em;height:2em;font-size:.9em}.gramlink-profile-avatar{width:2.2em;height:2.2em;-webkit-border-radius:50%;border-radius:50%;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#fff;font-weight:600;font-size:.9em;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}.gs-plugin-toggle{width:1.2em;height:1.2em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:1.2em}.gs-plugin-toggle.on{color:#4caf50}.gs-plugin-toggle.off{color:rgba(255,255,255,0.3)}.gs-status-item .gramlink-status__indicator{margin:auto}.gs-profile-item .gs-avatar{background:rgba(255,255,255,0.06) !important}.gs-profile-item .gs-avatar img{width:100%;height:100%;-o-object-fit:cover;object-fit:cover;-webkit-border-radius:.5em;border-radius:.5em}.gs-profile-add-item{border:2px dashed rgba(255,215,0,0.3);background:transparent !important;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;text-align:center;color:rgba(255,255,255,0.5)}.gs-profile-add-item.focus,.gs-profile-add-item.hover{border-color:rgba(255,215,0,0.7);color:rgba(255,255,255,0.8)}.gs-profile-add-item .gs-avatar{background:-webkit-linear-gradient(315deg,#d4a017 0,#ffd700 100%) !important;background:-o-linear-gradient(315deg,#d4a017 0,#ffd700 100%) !important;background:linear-gradient(135deg,#d4a017 0,#ffd700 100%) !important}.gramlink-item{background:#404040;-webkit-border-radius:1em;border-radius:1em;padding:1.2em 1.4em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;cursor:pointer;position:relative;-webkit-box-sizing:border-box;box-sizing:border-box}.gramlink-item.focus{outline:.3em solid #fff;outline-offset:.3em;-webkit-border-radius:1.2em;border-radius:1.2em}.gramlink-body--grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1em;padding:1em 2em}@media(max-width:1024px){.gramlink-body--grid{grid-template-columns:1fr;padding-bottom:80px}}@media(max-width:480px){.gramlink-body--grid{padding-left:1em;padding-right:1em}}.gramlink-body--grid>.gramlink-item{margin:0;min-height:0}.gramlink-body--grid>.gramlink-item+.gramlink-item{margin:0}.gramlink-body--content{padding:1em 2em}.gs-avatar{width:2.5em;height:2.5em;-webkit-border-radius:.5em;border-radius:.5em;background:-webkit-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:-o-linear-gradient(315deg,#08c 0,#00a2e8 100%);background:linear-gradient(135deg,#08c 0,#00a2e8 100%);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:#fff;font-weight:700;font-size:.9em;margin-right:1em}.gs-content{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0}.gs-title{font-size:1.1em;line-height:normal;margin-bottom:.2em;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap}.gs-sub{font-size:.84em;color:#8d8d8d;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap}.gs-badge{font-size:.78em;padding:.3em .5em;-webkit-border-radius:.3em;border-radius:.3em;background:rgba(0,0,0,0.18);-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;margin-left:auto}.gs-badge.badge--active{color:#6dce4b}.gs-badge.badge--inactive{color:#dd7337}.gs-badge.badge--info{color:#8d8d8d}.gramlink-body--grid>.gramlink-tabs,.gramlink-tabs{grid-column:1/-1}</style>');
       $('body').append(Lampa.Template.get('gramlink_style', {}, true));
-      setupBroadcastListener();
-      setupBackupRestoredListener();
-      addMenu();
-      // ponytail: defer head button — DOM not ready during plugin init
-      Lampa.Listener.follow('app', function __glHeadBtn(e) {
-        if (e.type === 'ready') {
-          addProfileHeadButton();
-        }
-      });
-      Broadcast.setupPlayerPanel();
-      Broadcast.addBroadcastButton();
-      autoConnect();
-      autoActivateProfile();
-      setupProfileDeltaListeners();
-      setupDeviceSettingsListener();
-      startDeltaPolling();
+
+      // ── Щоденна нотифікація про майбутній дедлайн ──────────
+      if (window.appready) showImportCountdownNotification();else {
+        Lampa.Listener.follow('app', function __glCountdown(e) {
+          if (e.type === 'ready') showImportCountdownNotification();
+        });
+      }
+      if (window.__gramlink_import_mode) {
+        // ═══ РЕЖИМ ІМПОРТУ ═══
+        // Доступно: авторизація + імпорт бекапа.
+        // Все інше (синхронізація, профілі, пристрої, плагіни) — заблоковано.
+
+        setupBackupRestoredListener();
+        autoConnect();
+        addImportOnlyMenu();
+        // Broadcast, head button, delta sync, auto-activation — пропускаємо
+      } else {
+        // ═══ ПОВНИЙ РЕЖИМ ═══
+        setupBroadcastListener();
+        setupBackupRestoredListener();
+        addMenu();
+        // ponytail: defer head button — DOM not ready during plugin init
+        Lampa.Listener.follow('app', function __glHeadBtn(e) {
+          if (e.type === 'ready') {
+            addProfileHeadButton();
+          }
+        });
+        Broadcast.setupPlayerPanel();
+        Broadcast.addBroadcastButton();
+        autoConnect();
+        autoActivateProfile();
+        setupProfileDeltaListeners();
+        setupDeviceSettingsListener();
+        startDeltaPolling();
+      }
     }
 
     // ─── Real-time delta sync listeners ─────────────────────
@@ -10367,6 +10612,30 @@ var plugin = (function () {
     function addMenu() {
       function insert() {
         var button = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\">\n                <svg viewBox=\"0 0 24 24\" fill=\"#0088cc\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.587.192l-8.533 7.77h-.001l.003.003-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.22c.309-1.239-.473-1.8-1.282-1.434z\"/>\n                </svg>\n            </div>\n            <div class=\"menu__text\">".concat(Lampa.Lang.translate('gramlink_menu_title'), "</div>\n        </li>"));
+        button.on('hover:enter', function () {
+          Lampa.Activity.push({
+            url: '',
+            title: Lampa.Lang.translate('gramlink_hub_title'),
+            component: 'gramlink_hub',
+            page: 1
+          });
+        });
+        $('.menu .menu__list').eq(0).append(button);
+      }
+      if (window.appready) insert();else {
+        Lampa.Listener.follow('app', function (e) {
+          if (e.type === 'ready') insert();
+        });
+      }
+    }
+
+    // ─── Import-Only Menu Button ────────────────────────────
+    // В режимі імпорту — єдиний пункт меню, який відкриває хаб
+    // з обмеженим функціоналом (авторизація + імпорт бекапа).
+
+    function addImportOnlyMenu() {
+      function insert() {
+        var button = $("<li class=\"menu__item selector\">\n            <div class=\"menu__ico\">\n                <svg viewBox=\"0 0 24 24\" fill=\"#0088cc\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.587.192l-8.533 7.77h-.001l.003.003-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.22c.309-1.239-.473-1.8-1.282-1.434z\"/>\n                </svg>\n            </div>\n            <div class=\"menu__text\">".concat(Lampa.Lang.translate('gramlink_menu_title'), " (Import)</div>\n        </li>"));
         button.on('hover:enter', function () {
           Lampa.Activity.push({
             url: '',
