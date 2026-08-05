@@ -379,6 +379,7 @@
         var initial_seasons = buildInitialLazySeasonNumbers(ref);
         ensureLazySeasonNumbers(initial_seasons);
         ensureLazySeasonNumbers(loaded_seasons);
+        if (series && Array.isArray(series.seasons)) ensureLazySeasonNumbers(series.seasons);
         markLazySeasonLoaded(loaded_seasons);
         if (!lazy_state.season_numbers.length) {
           var fallback = getRefSeasonNumber(ref);
@@ -534,7 +535,8 @@
           };
         });
         return {
-          voices: voices
+          voices: voices,
+          seasons: json.seasons
         };
       }
       function getCurrentVoice() {

@@ -381,6 +381,7 @@
         var initial_seasons = buildInitialLazySeasonNumbers(ref);
         ensureLazySeasonNumbers(initial_seasons);
         ensureLazySeasonNumbers(loaded_seasons);
+        if (series && Array.isArray(series.seasons)) ensureLazySeasonNumbers(series.seasons);
         markLazySeasonLoaded(loaded_seasons);
         if (!lazy_state.season_numbers.length) {
           var fallback = getRefSeasonNumber(ref);
@@ -536,7 +537,8 @@
           };
         });
         return {
-          voices: voices
+          voices: voices,
+          seasons: json.seasons
         };
       }
       function getCurrentVoice() {
@@ -967,6 +969,7 @@
       }
       function normalizeStreamUrl(url) {
         if (!url) return url;
+        if (shouldUseSirkoProxy()) return wrapSirkoProxy(url);
         if (!shouldUseStreamProxy(url)) return url;
         return wrapStreamProxy(url);
       }
@@ -976,6 +979,16 @@
           result[key] = normalizeStreamUrl(qualitys[key]);
         });
         return result;
+      }
+      function shouldUseSirkoProxy() {
+        if (sourceKey !== 'sirko') return false;
+        var player = Lampa.Storage.get('player');
+        return !player || player === 'inner';
+      }
+      function wrapSirkoProxy(url) {
+        var base = 'https://stream.ernax.pro/proxy-hls?url=';
+        if (url.indexOf(base) === 0) return url;
+        return base + encodeURIComponent(url);
       }
       function shouldUseStreamProxy(url) {
         var player = Lampa.Storage.get('player');
