@@ -1,4 +1,4 @@
-(function () {
+var plugin = (function () {
     'use strict';
 
     function lang () {

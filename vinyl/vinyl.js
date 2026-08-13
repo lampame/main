@@ -1347,7 +1347,7 @@
         var videoEl = Lampa.PlayerVideo && Lampa.PlayerVideo.video();
         var imgUrl = data && (data.image || data.vinyl && currentPlaylist[currentIndex] && normalizeImage(currentPlaylist[currentIndex]));
         if (imgUrl && typeof imgUrl === 'string') {
-          if (videoEl) videoEl.style.background = 'url(' + imgUrl + ') center/cover no-repeat rgb(20,20,20)';
+          if (videoEl) videoEl.style.background = 'url(' + imgUrl + ') center/contain no-repeat rgb(20,20,20)';
           var footerImg = document.querySelector('.player-footer-card__poster-img');
           if (footerImg) footerImg.src = imgUrl;
         }
@@ -1380,17 +1380,233 @@
     return PlayerInst;
   };
 
+  // plugins/vinyl/lib/vinyl-playlist-manager.js — Custom playlist manager
+  // Stores user-created playlists in Lampa.Storage under 'vinyl_playlists' key.
+  // downloadUrl is NOT stored — JioSaavn CDN URLs are temporary.
+  // Tracks are resolved via api.getSongsByIds() at playback time.
+
+  function generateUid() {
+    return 'vp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  }
+  var VinylPlaylistManager = {
+    /**
+     * Read raw storage data
+     */
+    _read: function _read() {
+      return Lampa.Storage.get('vinyl_playlists', {});
+    },
+    /**
+     * Write raw storage data and trigger change
+     */
+    _write: function _write(data) {
+      Lampa.Storage.set('vinyl_playlists', data);
+    },
+    /**
+     * Create a new empty playlist.
+     * @param {string} name
+     * @returns {{uid: string, name: string}}
+     */
+    create: function create(name) {
+      var data = this._read();
+      var uid = generateUid();
+      if (!data.lists) data.lists = {};
+      data.lists[uid] = {
+        uid: uid,
+        created: Date.now()
+      };
+      data[uid] = {
+        name: name,
+        tracks: []
+      };
+      this._write(data);
+      return {
+        uid: uid,
+        name: name
+      };
+    },
+    /**
+     * Rename a playlist.
+     * @param {string} uid
+     * @param {string} newName
+     */
+    rename: function rename(uid, newName) {
+      var data = this._read();
+      if (data[uid]) {
+        data[uid].name = newName;
+        this._write(data);
+      }
+    },
+    /**
+     * Remove a playlist and its metadata.
+     * @param {string} uid
+     */
+    remove: function remove(uid) {
+      var data = this._read();
+      if (data.lists) delete data.lists[uid];
+      delete data[uid];
+      this._write(data);
+    },
+    /**
+     * Get all playlists as an array of {uid, name, trackCount, created}.
+     * @returns {Array}
+     */
+    getAll: function getAll() {
+      var data = this._read();
+      if (!data.lists) return [];
+      return Object.keys(data.lists).map(function (uid) {
+        var meta = data.lists[uid];
+        var pl = data[uid] || {
+          name: 'Untitled',
+          tracks: []
+        };
+        return {
+          uid: uid,
+          name: pl.name,
+          trackCount: pl.tracks && pl.tracks.length || 0,
+          created: meta.created || 0
+        };
+      }).sort(function (a, b) {
+        return b.created - a.created;
+      });
+    },
+    /**
+     * Add a track to a playlist.
+     * @param {string} uid
+     * @param {{id: string, title: string, subtitle: string, artist: string, image: string, duration: number}} trackData
+     */
+    addTrack: function addTrack(uid, trackData) {
+      var data = this._read();
+      if (!data[uid]) return;
+      if (!data[uid].tracks) data[uid].tracks = [];
+      // Avoid duplicates by id
+      var exists = data[uid].tracks.some(function (t) {
+        return t.id === trackData.id;
+      });
+      if (!exists) {
+        data[uid].tracks.push({
+          id: trackData.id,
+          title: trackData.title || '',
+          subtitle: trackData.subtitle || '',
+          artist: trackData.artist || '',
+          image: trackData.image || '',
+          duration: trackData.duration || 0
+        });
+        this._write(data);
+      }
+    },
+    /**
+     * Remove a track from a playlist by track id.
+     * @param {string} uid
+     * @param {string} trackId
+     */
+    removeTrack: function removeTrack(uid, trackId) {
+      var data = this._read();
+      if (!data[uid] || !data[uid].tracks) return;
+      data[uid].tracks = data[uid].tracks.filter(function (t) {
+        return t.id !== trackId;
+      });
+      this._write(data);
+    },
+    /**
+     * Get all tracks in a playlist.
+     * @param {string} uid
+     * @returns {Array}
+     */
+    getTracks: function getTracks(uid) {
+      var data = this._read();
+      if (!data[uid]) return [];
+      return data[uid].tracks || [];
+    },
+    /**
+     * Check if a track exists in a specific playlist.
+     * @param {string} uid
+     * @param {string} trackId
+     * @returns {boolean}
+     */
+    hasTrack: function hasTrack(uid, trackId) {
+      var data = this._read();
+      if (!data[uid] || !data[uid].tracks) return false;
+      return data[uid].tracks.some(function (t) {
+        return t.id === trackId;
+      });
+    },
+    /**
+     * Check if a track is in any playlist.
+     * @param {string} trackId
+     * @returns {boolean}
+     */
+    isTrackInAnyPlaylist: function isTrackInAnyPlaylist(trackId) {
+      var data = this._read();
+      if (!data.lists) return false;
+      var uids = Object.keys(data.lists);
+      for (var i = 0; i < uids.length; i++) {
+        var pl = data[uids[i]];
+        if (pl && pl.tracks && pl.tracks.some(function (t) {
+          return t.id === trackId;
+        })) {
+          return true;
+        }
+      }
+      return false;
+    },
+    /**
+     * Get all playlists that contain a specific track.
+     * @param {string} trackId
+     * @returns {Array} Array of {uid, name}
+     */
+    getPlaylistsContainingTrack: function getPlaylistsContainingTrack(trackId) {
+      var data = this._read();
+      var result = [];
+      if (!data.lists) return result;
+      var uids = Object.keys(data.lists);
+      for (var i = 0; i < uids.length; i++) {
+        var pl = data[uids[i]];
+        if (pl && pl.tracks && pl.tracks.some(function (t) {
+          return t.id === trackId;
+        })) {
+          result.push({
+            uid: uids[i],
+            name: pl.name
+          });
+        }
+      }
+      return result;
+    }
+  };
+
   // plugins/vinyl/lib/music-actions.js — Shared helpers for play/shuffle/detail actions
 
   // Normalize JioSaavn song data for the Player (JioSaavn uses .name/.primaryArtists vs .title/.subtitle)
+  function resolveImageForStorage(raw) {
+    if (!raw) return '';
+    if (Array.isArray(raw)) {
+      var hi = raw.find(function (i) {
+        return i.quality === '500x500';
+      }) || raw.find(function (i) {
+        return i.quality === '150x150';
+      }) || raw[raw.length - 1] || raw[0];
+      return hi && hi.url ? hi.url : '';
+    }
+    return typeof raw === 'string' ? raw : '';
+  }
   function normalizeSong(song) {
+    // Resolve image array to string URL
+    var img = song.image || song.picture || '';
+    if (Array.isArray(img)) {
+      var best = img.find(function (i) {
+        return i.quality === '500x500';
+      }) || img.find(function (i) {
+        return i.quality === '150x150';
+      }) || img[img.length - 1] || img[0] || '';
+      img = best && best.url || best || '';
+    }
     return {
       id: song.id,
       name: Api.decodeHtml(song.name || song.title || 'Unknown'),
       title: Api.decodeHtml(song.name || song.title || 'Unknown'),
       subtitle: Api.decodeHtml(song.subtitle || song.primaryArtists || song.artist || ''),
       artist: Api.decodeHtml(song.artist || song.primaryArtists || ''),
-      image: song.image || song.picture || '',
+      image: typeof img === 'string' ? img : '',
       duration: song.duration,
       downloadUrl: song.downloadUrl || []
     };
@@ -1472,6 +1688,40 @@
           }
         });
       }
+    }, {
+      title: Lampa.Lang.translate('vinyl_add_to_playlist'),
+      onSelect: function onSelect() {
+        Lampa.Controller.toggle('content');
+
+        // If this is a playlist or album card, resolve all tracks first
+        if (type === 'playlist' || type === 'album') {
+          var resolveFn = type === 'playlist' ? function (cb, eb) {
+            api.getPlaylistDetail(item.id, 0, function (data) {
+              var songs = (data && data.songs ? data.songs : Array.isArray(data) ? data : []).map(normalizeSong);
+              cb(songs);
+            }, eb);
+          } : function (cb, eb) {
+            api.getAlbumDetail(item.id, 0, function (data) {
+              var songs = (data && data.songs ? data.songs : Array.isArray(data) ? data : []).map(normalizeSong);
+              cb(songs);
+            }, eb);
+          };
+          Lampa.Noty.show('Loading tracks...');
+          resolveFn(function (tracks) {
+            if (!tracks || !tracks.length) {
+              Lampa.Noty.show('No tracks found');
+              return;
+            }
+            // Now show playlist picker with resolved tracks
+            showAddTracksToPlaylist(tracks);
+          }, function () {
+            Lampa.Noty.show('Failed to load tracks');
+          });
+        } else {
+          // For radio or direct track items, use normalizeSong directly
+          showAddTracksToPlaylist([normalizeSong(item)]);
+        }
+      }
     }];
     Lampa.Select.show({
       title: title || '',
@@ -1522,6 +1772,155 @@
       });
     }, function () {
       Lampa.Noty.show('Failed to load playlist');
+    });
+  }
+
+  /**
+   * Show context menu for a track in the detail page track list.
+   * @param {object} track - track data object
+   * @param {number} index - track index in the playlist
+   * @param {Array} songs - full songs array for context
+   */
+  function showTrackMenu(track, index, songs) {
+    var items = [{
+      title: Lampa.Lang.translate('vinyl_play'),
+      onSelect: function onSelect() {
+        Player.get().playPlaylist(songs, index);
+        Lampa.Controller.toggle('content');
+      }
+    }, {
+      title: Lampa.Lang.translate('vinyl_add_to_playlist'),
+      onSelect: function onSelect() {
+        Lampa.Controller.toggle('content');
+        showPlaylistPicker(track);
+      }
+    }];
+    Lampa.Select.show({
+      title: track.title || '',
+      items: items
+    });
+  }
+
+  /**
+   * Show playlist picker for adding/removing a track.
+   * @param {object} track - track data object
+   */
+  function showPlaylistPicker(track) {
+    var playlists = VinylPlaylistManager.getAll();
+    if (!playlists.length) {
+      var inputOptions = {
+        title: Lampa.Lang.translate('vinyl_create_playlist'),
+        value: '',
+        free: true,
+        nosave: true
+      };
+      Lampa.Input.edit(inputOptions, function (value) {
+        if (value === '') return;
+        var pl = VinylPlaylistManager.create(value);
+        var normalized = normalizeSong(track);
+        VinylPlaylistManager.addTrack(pl.uid, normalized);
+        Lampa.Noty.show('Added to "' + pl.name + '"');
+      });
+      return;
+    }
+    var menuItems = playlists.map(function (pl) {
+      var isAdded = VinylPlaylistManager.hasTrack(pl.uid, track.id);
+      return {
+        title: pl.name + (isAdded ? " \u2713" : ''),
+        onSelect: function onSelect() {
+          if (isAdded) {
+            VinylPlaylistManager.removeTrack(pl.uid, track.id);
+            Lampa.Noty.show('Removed from "' + pl.name + '"');
+          } else {
+            var normalized = normalizeSong(track);
+            VinylPlaylistManager.addTrack(pl.uid, normalized);
+            Lampa.Noty.show('Added to "' + pl.name + '"');
+          }
+        }
+      };
+    });
+    menuItems.push({
+      title: '+ ' + Lampa.Lang.translate('vinyl_create_playlist'),
+      onSelect: function onSelect() {
+        var inputOptions = {
+          title: Lampa.Lang.translate('vinyl_create_playlist'),
+          value: '',
+          free: true,
+          nosave: true
+        };
+        Lampa.Input.edit(inputOptions, function (value) {
+          if (value === '') return;
+          var pl = VinylPlaylistManager.create(value);
+          var normalized = normalizeSong(track);
+          VinylPlaylistManager.addTrack(pl.uid, normalized);
+          Lampa.Noty.show('Added to "' + pl.name + '"');
+        });
+      }
+    });
+    Lampa.Select.show({
+      title: Lampa.Lang.translate('vinyl_add_to_playlist'),
+      items: menuItems
+    });
+  }
+
+  /**
+   * Show playlist picker for adding/removing multiple resolved tracks.
+   * Used when resolving a playlist/album card to its individual tracks.
+   * @param {Array} tracks - array of normalized track objects
+   */
+  function showAddTracksToPlaylist(tracks) {
+    if (!tracks || !tracks.length) return;
+    var playlists = VinylPlaylistManager.getAll();
+    if (!playlists.length) {
+      var inputOptions = {
+        title: Lampa.Lang.translate('vinyl_create_playlist'),
+        value: '',
+        free: true,
+        nosave: true
+      };
+      Lampa.Input.edit(inputOptions, function (value) {
+        if (value === '') return;
+        var pl = VinylPlaylistManager.create(value);
+        tracks.forEach(function (t) {
+          VinylPlaylistManager.addTrack(pl.uid, t);
+        });
+        Lampa.Noty.show('Added ' + tracks.length + ' tracks to "' + pl.name + '"');
+      });
+      return;
+    }
+    var menuItems = playlists.map(function (pl) {
+      return {
+        title: pl.name,
+        onSelect: function onSelect() {
+          tracks.forEach(function (t) {
+            VinylPlaylistManager.addTrack(pl.uid, t);
+          });
+          Lampa.Noty.show('Added ' + tracks.length + ' tracks to "' + pl.name + '"');
+        }
+      };
+    });
+    menuItems.push({
+      title: '+ ' + Lampa.Lang.translate('vinyl_create_playlist'),
+      onSelect: function onSelect() {
+        var inputOptions = {
+          title: Lampa.Lang.translate('vinyl_create_playlist'),
+          value: '',
+          free: true,
+          nosave: true
+        };
+        Lampa.Input.edit(inputOptions, function (value) {
+          if (value === '') return;
+          var pl = VinylPlaylistManager.create(value);
+          tracks.forEach(function (t) {
+            VinylPlaylistManager.addTrack(pl.uid, t);
+          });
+          Lampa.Noty.show('Added ' + tracks.length + ' tracks to "' + pl.name + '"');
+        });
+      }
+    });
+    Lampa.Select.show({
+      title: Lampa.Lang.translate('vinyl_add_to_playlist'),
+      items: menuItems
     });
   }
 
@@ -1593,6 +1992,75 @@
     this.build = function (data) {
       scroll.minus();
       html.append(scroll.render());
+
+      // Custom playlists section
+      var customPlaylists = VinylPlaylistManager.getAll();
+      if (customPlaylists && customPlaylists.length) {
+        var plItems = customPlaylists.map(function (pl) {
+          var firstTrack = pl.trackCount > 0 ? VinylPlaylistManager.getTracks(pl.uid)[0] : null;
+          var firstImage = firstTrack ? firstTrack.image || '' : '';
+          return {
+            id: pl.uid,
+            title: pl.name,
+            subtitle: pl.trackCount + ' tracks',
+            type: 'vinyl_custom_playlist',
+            media: 'vinyl_custom_playlist',
+            vinyl: true,
+            vinyl_playlist_uid: pl.uid,
+            image: firstImage
+          };
+        });
+        this.append({
+          title: Lampa.Lang.translate('vinyl_my_playlists'),
+          results: plItems,
+          type: 'my_playlists',
+          onSelect: function onSelect(item) {
+            Lampa.Activity.push({
+              url: '',
+              title: item.title || '',
+              component: 'vinyl_my_playlist',
+              id: item.vinyl_playlist_uid || item.id || '',
+              page: 1,
+              movie: {
+                id: item.vinyl_playlist_uid || item.id || '',
+                title: item.title || '',
+                image: item.image || ''
+              }
+            });
+          },
+          onLong: function onLong(item) {
+            var plUid = item.vinyl_playlist_uid || item.id || '';
+            Lampa.Select.show({
+              title: item.title || '',
+              items: [{
+                title: Lampa.Lang.translate('vinyl_play'),
+                onSelect: function onSelect() {
+                  var tracks = VinylPlaylistManager.getTracks(plUid);
+                  if (!tracks || !tracks.length) return;
+                  var ids = tracks.map(function (t) {
+                    return t.id;
+                  }).filter(Boolean);
+                  if (!ids.length) return;
+                  Lampa.Noty.show('Loading ' + ids.length + ' tracks...');
+                  Api.get().getSongsByIds(ids, function (songs) {
+                    if (Array.isArray(songs) && songs.length) {
+                      Player.get().playPlaylist(songs, 0);
+                    }
+                  });
+                  Lampa.Controller.toggle('content');
+                }
+              }, {
+                title: Lampa.Lang.translate('settings_remove'),
+                onSelect: function onSelect() {
+                  VinylPlaylistManager.remove(plUid);
+                  Lampa.Noty.show('Removed "' + item.title + '"');
+                  Lampa.Controller.toggle('content');
+                }
+              }]
+            });
+          }
+        });
+      }
       if (data.playlists.length) {
         this.append({
           title: Lampa.Lang.translate('vinyl_playlists'),
@@ -1620,7 +2088,18 @@
             });
           },
           onSelect: function onSelect(item) {
-            playPlaylist(api, item.id, false);
+            Lampa.Activity.push({
+              url: '',
+              title: item.title || '',
+              component: 'vinyl_playlist',
+              id: item.id,
+              page: 1,
+              movie: {
+                id: item.id,
+                title: item.title,
+                image: item.image || ''
+              }
+            });
           },
           onLong: function onLong(item) {
             showItemMenu(api, item, 'playlist', item.title || '', item.image || '');
@@ -1653,7 +2132,18 @@
             });
           },
           onSelect: function onSelect(item) {
-            playAlbum(api, item.id, false);
+            Lampa.Activity.push({
+              url: '',
+              title: item.title || '',
+              component: 'vinyl_album',
+              id: item.id,
+              page: 1,
+              movie: {
+                id: item.id,
+                title: item.title,
+                image: item.image || ''
+              }
+            });
           },
           onLong: function onLong(item) {
             showItemMenu(api, item, 'album', item.title || '', item.image || '');
@@ -1677,7 +2167,19 @@
           }),
           type: 'radio',
           onSelect: function onSelect(item) {
-            playRadio(api, item.name || item.title || '', item.id, item.type || 'genre', false);
+            Lampa.Activity.push({
+              url: '',
+              title: item.title || item.name || '',
+              component: 'vinyl_radio',
+              page: 1,
+              movie: {
+                id: item.id,
+                title: item.name || item.title,
+                image: item.image || '',
+                name: item.name || item.title,
+                type: item.type || 'genre'
+              }
+            });
           },
           onLong: function onLong(item) {
             showItemMenu(api, item, 'radio', item.title || '', item.image || '');
@@ -1843,6 +2345,7 @@
       // Hover focus — track last focused element
       row.on('hover:focus', function () {
         last = row[0];
+        row.addClass('focus');
       });
 
       // Enter — select track
@@ -2290,7 +2793,83 @@
             action: null
           },
           options: {
-            action: function action() {}
+            label: Lampa.Lang.translate('vinyl_add_to_playlist'),
+            action: function action() {
+              if (!songs || !songs.length) return;
+              var playlists = VinylPlaylistManager.getAll();
+              if (!playlists.length) {
+                var inputOptions = {
+                  title: Lampa.Lang.translate('vinyl_create_playlist'),
+                  value: '',
+                  free: true,
+                  nosave: true
+                };
+                Lampa.Input.edit(inputOptions, function (value) {
+                  if (value === '') return;
+                  var pl = VinylPlaylistManager.create(value);
+                  songs.forEach(function (t) {
+                    VinylPlaylistManager.addTrack(pl.uid, {
+                      id: t.id,
+                      title: t.title || t.name || '',
+                      subtitle: t.subtitle || t.artist || '',
+                      artist: t.artist || '',
+                      image: resolveImageForStorage(t.image),
+                      duration: t.duration || 0
+                    });
+                  });
+                  Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                });
+                return;
+              }
+              var menuItems = playlists.map(function (pl) {
+                return {
+                  title: pl.name,
+                  onSelect: function onSelect() {
+                    songs.forEach(function (t) {
+                      VinylPlaylistManager.addTrack(pl.uid, {
+                        id: t.id,
+                        title: t.title || t.name || '',
+                        subtitle: t.subtitle || t.artist || '',
+                        artist: t.artist || '',
+                        image: resolveImageForStorage(t.image),
+                        duration: t.duration || 0
+                      });
+                    });
+                    Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                  }
+                };
+              });
+              menuItems.push({
+                title: '+ ' + Lampa.Lang.translate('vinyl_create_playlist'),
+                onSelect: function onSelect() {
+                  var inputOptions = {
+                    title: Lampa.Lang.translate('vinyl_create_playlist'),
+                    value: '',
+                    free: true,
+                    nosave: true
+                  };
+                  Lampa.Input.edit(inputOptions, function (value) {
+                    if (value === '') return;
+                    var pl = VinylPlaylistManager.create(value);
+                    songs.forEach(function (t) {
+                      VinylPlaylistManager.addTrack(pl.uid, {
+                        id: t.id,
+                        title: t.title || t.name || '',
+                        subtitle: t.subtitle || t.artist || '',
+                        artist: t.artist || '',
+                        image: resolveImageForStorage(t.image),
+                        duration: t.duration || 0
+                      });
+                    });
+                    Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                  });
+                }
+              });
+              Lampa.Select.show({
+                title: Lampa.Lang.translate('vinyl_add_to_playlist'),
+                items: menuItems
+              });
+            }
           }
         }
       }]);
@@ -2310,6 +2889,9 @@
           tracks: songs,
           onSelect: function onSelect(track, index) {
             Player.get().playPlaylist(songs, index);
+          },
+          onLong: function onLong(track, index) {
+            showTrackMenu(track, index, songs);
           }
         }]);
       }
@@ -2527,7 +3109,83 @@
             action: null
           },
           options: {
-            action: function action() {}
+            label: Lampa.Lang.translate('vinyl_add_to_playlist'),
+            action: function action() {
+              if (!songs || !songs.length) return;
+              var playlists = VinylPlaylistManager.getAll();
+              if (!playlists.length) {
+                var inputOptions = {
+                  title: Lampa.Lang.translate('vinyl_create_playlist'),
+                  value: '',
+                  free: true,
+                  nosave: true
+                };
+                Lampa.Input.edit(inputOptions, function (value) {
+                  if (value === '') return;
+                  var pl = VinylPlaylistManager.create(value);
+                  songs.forEach(function (t) {
+                    VinylPlaylistManager.addTrack(pl.uid, {
+                      id: t.id,
+                      title: t.title || t.name || '',
+                      subtitle: t.subtitle || t.artist || '',
+                      artist: t.artist || '',
+                      image: resolveImageForStorage(t.image),
+                      duration: t.duration || 0
+                    });
+                  });
+                  Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                });
+                return;
+              }
+              var menuItems = playlists.map(function (pl) {
+                return {
+                  title: pl.name,
+                  onSelect: function onSelect() {
+                    songs.forEach(function (t) {
+                      VinylPlaylistManager.addTrack(pl.uid, {
+                        id: t.id,
+                        title: t.title || t.name || '',
+                        subtitle: t.subtitle || t.artist || '',
+                        artist: t.artist || '',
+                        image: resolveImageForStorage(t.image),
+                        duration: t.duration || 0
+                      });
+                    });
+                    Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                  }
+                };
+              });
+              menuItems.push({
+                title: '+ ' + Lampa.Lang.translate('vinyl_create_playlist'),
+                onSelect: function onSelect() {
+                  var inputOptions = {
+                    title: Lampa.Lang.translate('vinyl_create_playlist'),
+                    value: '',
+                    free: true,
+                    nosave: true
+                  };
+                  Lampa.Input.edit(inputOptions, function (value) {
+                    if (value === '') return;
+                    var pl = VinylPlaylistManager.create(value);
+                    songs.forEach(function (t) {
+                      VinylPlaylistManager.addTrack(pl.uid, {
+                        id: t.id,
+                        title: t.title || t.name || '',
+                        subtitle: t.subtitle || t.artist || '',
+                        artist: t.artist || '',
+                        image: resolveImageForStorage(t.image),
+                        duration: t.duration || 0
+                      });
+                    });
+                    Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                  });
+                }
+              });
+              Lampa.Select.show({
+                title: Lampa.Lang.translate('vinyl_add_to_playlist'),
+                items: menuItems
+              });
+            }
           }
         }
       }]);
@@ -2547,6 +3205,9 @@
           tracks: songs,
           onSelect: function onSelect(track, index) {
             Player.get().playPlaylist(songs, index);
+          },
+          onLong: function onLong(track, index) {
+            showTrackMenu(track, index, songs);
           }
         }]);
       }
@@ -2747,7 +3408,83 @@
               }
             },
             options: {
-              action: function action() {}
+              label: Lampa.Lang.translate('vinyl_add_to_playlist'),
+              action: function action() {
+                if (!songs || !songs.length) return;
+                var playlists = VinylPlaylistManager.getAll();
+                if (!playlists.length) {
+                  var inputOptions = {
+                    title: Lampa.Lang.translate('vinyl_create_playlist'),
+                    value: '',
+                    free: true,
+                    nosave: true
+                  };
+                  Lampa.Input.edit(inputOptions, function (value) {
+                    if (value === '') return;
+                    var pl = VinylPlaylistManager.create(value);
+                    songs.forEach(function (t) {
+                      VinylPlaylistManager.addTrack(pl.uid, {
+                        id: t.id,
+                        title: t.title || t.name || '',
+                        subtitle: t.subtitle || t.artist || '',
+                        artist: t.artist || '',
+                        image: resolveImageForStorage(t.image),
+                        duration: t.duration || 0
+                      });
+                    });
+                    Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                  });
+                  return;
+                }
+                var menuItems = playlists.map(function (pl) {
+                  return {
+                    title: pl.name,
+                    onSelect: function onSelect() {
+                      songs.forEach(function (t) {
+                        VinylPlaylistManager.addTrack(pl.uid, {
+                          id: t.id,
+                          title: t.title || t.name || '',
+                          subtitle: t.subtitle || t.artist || '',
+                          artist: t.artist || '',
+                          image: resolveImageForStorage(t.image),
+                          duration: t.duration || 0
+                        });
+                      });
+                      Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                    }
+                  };
+                });
+                menuItems.push({
+                  title: '+ ' + Lampa.Lang.translate('vinyl_create_playlist'),
+                  onSelect: function onSelect() {
+                    var inputOptions = {
+                      title: Lampa.Lang.translate('vinyl_create_playlist'),
+                      value: '',
+                      free: true,
+                      nosave: true
+                    };
+                    Lampa.Input.edit(inputOptions, function (value) {
+                      if (value === '') return;
+                      var pl = VinylPlaylistManager.create(value);
+                      songs.forEach(function (t) {
+                        VinylPlaylistManager.addTrack(pl.uid, {
+                          id: t.id,
+                          title: t.title || t.name || '',
+                          subtitle: t.subtitle || t.artist || '',
+                          artist: t.artist || '',
+                          image: resolveImageForStorage(t.image),
+                          duration: t.duration || 0
+                        });
+                      });
+                      Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                    });
+                  }
+                });
+                Lampa.Select.show({
+                  title: Lampa.Lang.translate('vinyl_add_to_playlist'),
+                  items: menuItems
+                });
+              }
             }
           }
         }]);
@@ -2802,6 +3539,10 @@
               if (idx >= 0 && idx < songs.length) {
                 Player.get().playPlaylist(songs, idx);
               }
+            },
+            onLong: function onLong(item) {
+              var track = songs[item._idx];
+              if (track) showTrackMenu(track, item._idx, songs);
             }
           }]);
         }
@@ -3085,7 +3826,83 @@
             action: null
           },
           options: {
-            action: function action() {}
+            label: Lampa.Lang.translate('vinyl_add_to_playlist'),
+            action: function action() {
+              if (!songs || !songs.length) return;
+              var playlists = VinylPlaylistManager.getAll();
+              if (!playlists.length) {
+                var inputOptions = {
+                  title: Lampa.Lang.translate('vinyl_create_playlist'),
+                  value: '',
+                  free: true,
+                  nosave: true
+                };
+                Lampa.Input.edit(inputOptions, function (value) {
+                  if (value === '') return;
+                  var pl = VinylPlaylistManager.create(value);
+                  songs.forEach(function (t) {
+                    VinylPlaylistManager.addTrack(pl.uid, {
+                      id: t.id,
+                      title: t.title || t.name || '',
+                      subtitle: t.subtitle || t.artist || '',
+                      artist: t.artist || '',
+                      image: resolveImageForStorage(t.image),
+                      duration: t.duration || 0
+                    });
+                  });
+                  Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                });
+                return;
+              }
+              var menuItems = playlists.map(function (pl) {
+                return {
+                  title: pl.name,
+                  onSelect: function onSelect() {
+                    songs.forEach(function (t) {
+                      VinylPlaylistManager.addTrack(pl.uid, {
+                        id: t.id,
+                        title: t.title || t.name || '',
+                        subtitle: t.subtitle || t.artist || '',
+                        artist: t.artist || '',
+                        image: resolveImageForStorage(t.image),
+                        duration: t.duration || 0
+                      });
+                    });
+                    Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                  }
+                };
+              });
+              menuItems.push({
+                title: '+ ' + Lampa.Lang.translate('vinyl_create_playlist'),
+                onSelect: function onSelect() {
+                  var inputOptions = {
+                    title: Lampa.Lang.translate('vinyl_create_playlist'),
+                    value: '',
+                    free: true,
+                    nosave: true
+                  };
+                  Lampa.Input.edit(inputOptions, function (value) {
+                    if (value === '') return;
+                    var pl = VinylPlaylistManager.create(value);
+                    songs.forEach(function (t) {
+                      VinylPlaylistManager.addTrack(pl.uid, {
+                        id: t.id,
+                        title: t.title || t.name || '',
+                        subtitle: t.subtitle || t.artist || '',
+                        artist: t.artist || '',
+                        image: resolveImageForStorage(t.image),
+                        duration: t.duration || 0
+                      });
+                    });
+                    Lampa.Noty.show('Added ' + songs.length + ' tracks to "' + pl.name + '"');
+                  });
+                }
+              });
+              Lampa.Select.show({
+                title: Lampa.Lang.translate('vinyl_add_to_playlist'),
+                items: menuItems
+              });
+            }
           }
         }
       }]);
@@ -3109,6 +3926,10 @@
             if (idx >= 0 && idx < songs.length) {
               Player.get().playPlaylist(songs, idx);
             }
+          },
+          onLong: function onLong(item) {
+            var track = songs[item._idx];
+            if (track) showTrackMenu(track, item._idx, songs);
           }
         }]);
       }
@@ -3523,9 +4344,31 @@
                 Player.get().playPlaylist(allSongs, idx >= 0 ? idx : 0);
               }
             } else if (type === 'playlists') {
-              playPlaylist(api, cardData.id, false);
+              Lampa.Activity.push({
+                url: '',
+                title: cardData.title,
+                component: 'vinyl_playlist',
+                id: cardData.id,
+                page: 1,
+                movie: {
+                  id: cardData.id,
+                  title: cardData.title,
+                  image: cardData.image
+                }
+              });
             } else if (type === 'albums') {
-              playAlbum(api, cardData.id, false);
+              Lampa.Activity.push({
+                url: '',
+                title: cardData.title,
+                component: 'vinyl_album',
+                id: cardData.id,
+                page: 1,
+                movie: {
+                  id: cardData.id,
+                  title: cardData.title,
+                  image: cardData.image
+                }
+              });
             } else if (type === 'genres') {
               Lampa.Activity.push({
                 url: '',
@@ -3536,7 +4379,18 @@
                 page: 1
               });
             } else if (type === 'section') {
-              playJammifyPlaylist(api, cardData.id);
+              Lampa.Activity.push({
+                url: '',
+                title: cardData.title,
+                component: 'vinyl_playlist',
+                id: cardData.id,
+                page: 1,
+                movie: {
+                  id: cardData.id,
+                  title: cardData.title,
+                  image: cardData.image
+                }
+              });
             } else {
               // artists — navigate to detail
               Lampa.Activity.push({
@@ -3653,6 +4507,169 @@
       grid = null;
       scroll = null;
       network = null;
+    };
+  }
+
+  // plugins/vinyl/pages/my_playlist.js — Custom playlist detail page
+  function MyPlaylistComponent(object) {
+    var playlistUid = object.id || object.movie && object.movie.id || '';
+    var playlistName = object.title || object.movie && object.movie.title || '';
+    var tracks = [];
+    var scroll = new Lampa.Scroll({
+      mask: true,
+      over: true
+    });
+    var html = $('<div class="vinyl-full layer--wheight"></div>');
+    var rows = [];
+    var items = [];
+    var active = 0;
+    this.create = function () {
+      this.activity.loader(true);
+      if (!playlistUid) {
+        this.empty();
+        return this.render();
+      }
+      tracks = VinylPlaylistManager.getTracks(playlistUid);
+      if (!tracks || !tracks.length) {
+        this.empty();
+        return this.render();
+      }
+      this.build();
+      this.activity.loader(false);
+      this.activity.toggle();
+      return this.render();
+    };
+    this.build = function () {
+      scroll.minus();
+      html.append(scroll.render());
+
+      // 1. Simple header section
+      var header = $('<div class="vinyl-start vinyl-start__header" style="padding: 1em"></div>');
+      header.html('<div class="full-start-new__left" style="margin-bottom:1em">' + '<div class="full-start-new__poster vinyl-start__poster" style="padding-bottom:100%;max-width:200px">' + '<img class="full-start-new__img full--poster" src="' + (tracks[0] && tracks[0].image || './img/img_load.svg') + '" onload="this.parentNode.classList.add(\'loaded\')" onerror="this.src=\'./img/img_broken.svg\'; this.parentNode.classList.add(\'loaded\')" />' + '</div>' + '</div>' + '<div class="full-start-new__right">' + '<div class="full-start-new__title">' + playlistName + '</div>' + '<div class="full-start-new__tagline">' + tracks.length + ' tracks</div>' + '<div class="full-start-new__buttons" style="margin-top:1em">' + '<div class="full-start__button selector button--play">' + '<svg><use xlink:href="#sprite-play"></use></svg>' + '<span>' + Lampa.Lang.translate('vinyl_play') + '</span>' + '</div>' + '</div>' + '</div>');
+
+      // Play all button
+      header.find('.button--play').on('hover:enter', function () {
+        var ids = tracks.map(function (t) {
+          return t.id;
+        }).filter(Boolean);
+        if (!ids.length) return;
+        Lampa.Noty.show('Loading ' + ids.length + ' tracks...');
+        Api.get().getSongsByIds(ids, function (songs) {
+          if (Array.isArray(songs) && songs.length) {
+            Player.get().playPlaylist(songs, 0);
+          }
+        }, function () {
+          Lampa.Noty.show('Failed to load playlist');
+        });
+      });
+      rows.push(header);
+
+      // 2. Track list using MusicTrackList
+      if (tracks.length) {
+        rows.push(new MusicTrackList({
+          title: Lampa.Lang.translate('vinyl_songs') + ' (' + tracks.length + ')',
+          tracks: tracks,
+          onSelect: function onSelect(track, index) {
+            var ids = tracks.map(function (t) {
+              return t.id;
+            }).filter(Boolean);
+            if (!ids.length) return;
+            // Fetch all tracks with downloadUrl, then play from index
+            Api.get().getSongsByIds(ids, function (songs) {
+              if (Array.isArray(songs) && songs.length) {
+                Player.get().playPlaylist(songs, index);
+              }
+            });
+          },
+          onLong: function onLong(track, index) {
+            var ids = tracks.map(function (t) {
+              return t.id;
+            }).filter(Boolean);
+            Api.get().getSongsByIds(ids, function (songs) {
+              if (Array.isArray(songs) && songs.length) {
+                showTrackMenu(track, index, songs);
+              }
+            });
+          }
+        }));
+      }
+
+      // Build rows
+      var self = this;
+      rows.forEach(function (row) {
+        if (row instanceof MusicTrackList) {
+          row.onDown = self.down.bind(self);
+          row.onUp = self.up.bind(self);
+          row.onBack = self.back.bind(self);
+          row.create();
+          scroll.append(row.render());
+          items.push(row);
+        } else {
+          scroll.append(row);
+        }
+      });
+    };
+    this.empty = function () {
+      var emptyEl = new Lampa.Empty();
+      html.append(emptyEl.render());
+      this.activity.loader(false);
+      this.activity.toggle();
+    };
+    this.back = function () {
+      Lampa.Activity.backward();
+    };
+    this.down = function () {
+      active++;
+      active = Math.min(active, items.length - 1);
+      items[active].toggle();
+      scroll.update(items[active].render());
+    };
+    this.up = function () {
+      active--;
+      if (active < 0) {
+        active = 0;
+        Lampa.Controller.toggle('head');
+      } else {
+        items[active].toggle();
+      }
+      scroll.update(items[active].render());
+    };
+    this.start = function () {
+      if (!Lampa.Activity.active()) return;
+      if (Lampa.Activity.active().activity !== this.activity) return;
+      Lampa.Controller.add('content', {
+        toggle: function toggle() {
+          if (items.length) items[active].toggle();
+        },
+        up: function up() {
+          if (active <= 0) Lampa.Controller.toggle('head');else {
+            active--;
+            items[active].toggle();
+            scroll.update(items[active].render());
+          }
+        },
+        down: function down() {
+          if (active < items.length - 1) {
+            active++;
+            items[active].toggle();
+            scroll.update(items[active].render());
+          }
+        },
+        left: function left() {
+          Lampa.Controller.toggle('menu');
+        },
+        back: self.back
+      });
+      Lampa.Controller.toggle('content');
+    };
+    this.render = function () {
+      return html;
+    };
+    this.destroy = function () {
+      Lampa.Arrays.destroy(items);
+      scroll.destroy();
+      html.remove();
+      items = null;
     };
   }
 
@@ -4073,8 +5090,32 @@
     // in onCreate. We need to intercept create() to replace that handler.
     var origCreate = Object.getPrototypeOf(card).create;
     card.create = function () {
+      // Store type before Maker processing (Maker may corrupt it)
+      var originalType = this.data.type;
+
       // Run the original create (creates this.html, fires module onCreate handlers)
       origCreate.call(this);
+
+      // Override hover:enter for vinyl_custom_playlist — Maker module can corrupt
+      // media/type fields, making the Router.call patch unreliable.
+      if (originalType === 'vinyl_custom_playlist') {
+        $(this.html).off('hover:enter');
+        $(this.html).on('hover:enter', function (e) {
+          e.stopPropagation();
+          Lampa.Activity.push({
+            url: '',
+            title: card.data.title || '',
+            component: 'vinyl_my_playlist',
+            id: card.data.vinyl_playlist_uid || card.data.id || '',
+            page: 1,
+            movie: {
+              id: card.data.vinyl_playlist_uid || card.data.id || '',
+              title: card.data.title || '',
+              image: card.data.image || card.data.img || ''
+            }
+          });
+        });
+      }
 
       // Remove the default hover:long handler added by the Menu module
       $(this.html).off('hover:long');
@@ -4087,6 +5128,56 @@
           showItemMenu(Api.get(), data, 'playlist', data.title || data.name || '', data.image || data.img || '');
         } else if (type === 'album') {
           showItemMenu(Api.get(), data, 'album', data.title || data.name || '', data.image || data.img || '');
+        } else if (type === 'vinyl_custom_playlist') {
+          var plUid = data.vinyl_playlist_uid || data.id || '';
+          var pl = {
+            uid: plUid,
+            name: data.title || data.name || ''
+          };
+          Lampa.Select.show({
+            title: pl.name,
+            items: [{
+              title: Lampa.Lang.translate('vinyl_play'),
+              onSelect: function onSelect() {
+                var tracks = VinylPlaylistManager.getTracks(plUid);
+                if (!tracks || !tracks.length) return;
+                var ids = tracks.map(function (t) {
+                  return t.id;
+                }).filter(Boolean);
+                if (!ids.length) return;
+                Lampa.Noty.show('Loading ' + ids.length + ' tracks...');
+                Api.get().getSongsByIds(ids, function (songs) {
+                  if (Array.isArray(songs) && songs.length) {
+                    Player.get().playPlaylist(songs, 0);
+                  }
+                });
+                Lampa.Controller.toggle('content');
+              }
+            }, {
+              title: Lampa.Lang.translate('vinyl_details'),
+              onSelect: function onSelect() {
+                Lampa.Activity.push({
+                  url: '',
+                  title: pl.name,
+                  component: 'vinyl_my_playlist',
+                  id: plUid,
+                  page: 1
+                });
+              }
+            }, {
+              title: Lampa.Lang.translate('settings_remove'),
+              onSelect: function onSelect() {
+                VinylPlaylistManager.remove(plUid);
+                Lampa.Noty.show('Removed "' + pl.name + '"');
+                Lampa.Controller.toggle('content');
+                // Reload current activity to refresh the view
+                var active = Lampa.Activity.active();
+                if (active && active.activity) {
+                  active.activity.reload && active.activity.reload();
+                }
+              }
+            }]
+          });
         }
       });
 
@@ -4129,7 +5220,7 @@
     Lampa.Template.add('vinyl_track_new', "<div class=\"vinyl-track selector\" tabindex=\"0\">\n        <div class=\"vinyl-track__thumb\">\n            <img src=\"./img/img_load.svg\" onerror=\"this.src='./img/img_broken.svg'\" />\n        </div>\n        <div class=\"vinyl-track__num\">{num}</div>\n        <div class=\"vinyl-track__info\">\n            <div class=\"vinyl-track__title\">{title}</div>\n            <div class=\"vinyl-track__sub\">{subtitle}</div>\n        </div>\n        <div class=\"vinyl-track__duration\">{duration}</div>\n        <div class=\"vinyl-track__playing hide\">\n            <div class=\"vinyl-track__bar\"></div>\n            <div class=\"vinyl-track__bar\"></div>\n            <div class=\"vinyl-track__bar\"></div>\n        </div>\n    </div>");
 
     // 3. CSS injection via Template pattern
-    Lampa.Template.add('vinyl_style', "\n        <style>\n        @charset 'UTF-8';\n        /* Space out the lines and cards to prevent sticking and blank gaps */\n        .vinyl-line {\n            padding-bottom: 0.8em !important;\n        }\n        .vinyl-line .scroll__body {\n            display: flex;\n        }\n        .vinyl-line .card {\n            width: 12em;\n            margin-right: 1.2em !important;\n        }\n        .vinyl-line .card + .card {\n            margin-left: 0 !important;\n        }\n\n        /* Make all vinyl-specific cards and detail page posters square */\n        .card--vinyl .card__view{padding-bottom:100% !important;}\n        .card--vinyl .card__img{-webkit-border-radius:6px;border-radius:6px;-o-object-fit:cover;object-fit:cover;}\n        .card--vinyl .card__title{font-size:1.15em;margin-top:0.6em;max-height:2.6em;line-height:1.2;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;}\n        .card--vinyl .card__age{font-size:0.9em;margin-top:0.3em;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;}\n        \n        /* === Vinyl \"Show All\" paginated grid (6 columns) === */\n        .vinyl-all-grid {\n            display: grid !important;\n            grid-template-columns: repeat(6, 1fr) !important;\n            gap: 24px 20px !important;\n            padding: 20px 40px 80px !important;\n            width: 100% !important;\n            box-sizing: border-box !important;\n        }\n        /* Force ALL direct-card-children to equal grid-column width */\n        .vinyl-all-grid > .card {\n            width: auto !important;\n            min-width: 0 !important;\n            max-width: 100% !important;\n            margin: 0 !important;\n            flex-shrink: 0 !important;\n        }\n        /* Square aspect-ratio for the card view port */\n        .vinyl-all-grid > .card .card__view {\n            position: relative !important;\n            padding-bottom: 100% !important;\n            margin-bottom: 0 !important;\n        }\n        /* Image fills the square completely */\n        .vinyl-all-grid > .card .card__img {\n            position: absolute !important;\n            top: 0 !important;\n            left: 0 !important;\n            width: 100% !important;\n            height: 100% !important;\n            -webkit-border-radius: 6px !important;\n            border-radius: 6px !important;\n            -o-object-fit: cover !important;\n            object-fit: cover !important;\n        }\n        /* Typography with overflow protection */\n        .vinyl-all-grid > .card .card__title {\n            font-size: 1.15em !important;\n            margin-top: 0.6em !important;\n            max-height: 2.6em !important;\n            line-height: 1.2 !important;\n            overflow: hidden !important;\n            -o-text-overflow: ellipsis !important;\n            text-overflow: ellipsis !important;\n        }\n        .vinyl-all-grid > .card .card__age {\n            font-size: 0.9em !important;\n            margin-top: 0.3em !important;\n            color: rgba(255,255,255,0.45) !important;\n            white-space: nowrap !important;\n            overflow: hidden !important;\n            -o-text-overflow: ellipsis !important;\n            text-overflow: ellipsis !important;\n        }\n\n        .items-line--type-vinyl .card__view {\n            padding-bottom: 100% !important;\n        }\n        .items-line--type-vinyl .card__img {\n            -webkit-border-radius: 6px;\n            border-radius: 6px;\n            -o-object-fit: cover;\n            object-fit: cover;\n        }\n\n        .vinyl-start .full-start-new__poster{padding-bottom:100% !important;}\n\n        /* Search result cards \u2014 square aspect ratio.\n           Lampa renders them inside .main-search (not .vinyl-main),\n           so we scope via the class injected by onRender. */\n        .main-search .vinyl-search-line .card__view{padding-bottom:100%;}\n        .main-search .vinyl-search-line .card__img{-webkit-border-radius:6px;border-radius:6px;-o-object-fit:cover;object-fit:cover;}\n\n        /* Tracks styling with thumb image */\n        .vinyl-detail{padding:20px;}.vinyl-detail__header{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:baseline;-webkit-align-items:baseline;-ms-flex-align:baseline; align-items:baseline; gap:12px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1);}.vinyl-detail__title{font-size:26px; font-weight:700; color:#fff;}.vinyl-detail__count{font-size:14px; color:rgba(255,255,255,0.5);}.vinyl-detail__list{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column; flex-direction:column; gap:2px;}\n        \n        .vinyl-track{display:grid;grid-template-columns:48px 28px 1fr auto 40px;align-items:center;gap:12px;padding:8px 16px;border-radius:8px;transition:background 0.15s;outline:none;cursor:pointer;}\n        .vinyl-track:hover,.vinyl-track:focus,.vinyl-track.active{background:rgba(255,255,255,0.08);}\n        .vinyl-track__thumb{width:48px;height:48px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);}\n        .vinyl-track__thumb img{width:100%;height:100%;object-fit:cover;}\n        .vinyl-track__num{width:28px;text-align:center;font-size:13px;color:rgba(255,255,255,0.35);flex-shrink:0;}\n        .vinyl-track__info{min-width:0;display:flex;flex-direction:column;gap:3px;}\n        .vinyl-track__title{font-size:15px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n        .vinyl-track__sub{font-size:12px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n        .vinyl-track__duration{font-size:12px;color:rgba(255,255,255,0.3);white-space:nowrap;flex-shrink:0;}\n\n        .vinyl-artist__image{width:200px; height:200px;-webkit-border-radius:50%; border-radius:50%; overflow:hidden; margin:0 auto 20px; border:3px solid rgba(255,255,255,0.15);}.vinyl-artist__image img{width:100%; height:100%;-o-object-fit:cover; object-fit:cover;}.vinyl-artist__bio{font-size:13px; color:rgba(255,255,255,0.7); line-height:1.6; margin-bottom:24px; padding:0 4px; max-height:120px; overflow:hidden;}.vinyl-artist__section-title{font-size:18px; font-weight:600; color:#fff; margin:24px 0 12px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.08);}.vinyl-artist__radio{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center; align-items:center; gap:12px; padding:14px 20px; margin-top:28px;-webkit-border-radius:10px; border-radius:10px; background:rgba(255,255,255,0.06); cursor:pointer;-webkit-transition:background 0.2s;-o-transition:background 0.2s; transition:background 0.2s; border:1px solid rgba(255,255,255,0.1);}.vinyl-artist__radio:hover,.vinyl-artist__radio:focus,.vinyl-artist__radio.active{background:rgba(255,255,255,0.14);}.vinyl-artist__radio-icon{width:36px; height:36px;-webkit-border-radius:50%; border-radius:50%; background:rgba(76,175,80,0.25); display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center; align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center; justify-content:center; font-size:16px; color:#4CAF50;-webkit-flex-shrink:0;-ms-flex-negative:0; flex-shrink:0;}.vinyl-artist__radio-text{font-size:15px; color:#fff; font-weight:500;}\n\n        /* More card inside vinyl component lines \u2014 matches ContentRows style */\n        .vinyl-line .card-more {\n            flex-shrink: 0;\n            width: 12em;\n            cursor: pointer;\n        }\n        .vinyl-line .card-more .card-more__box {\n            width: 100%;\n            aspect-ratio: 1;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            border: 2px solid rgba(255,255,255,0.15);\n            border-radius: 8px;\n            background: rgba(255,255,255,0.05);\n            transition: all 0.15s;\n            box-sizing: border-box;\n        }\n        .vinyl-line .card-more:hover .card-more__box,\n        .vinyl-line .card-more:focus .card-more__box,\n        .vinyl-line .card-more.focus .card-more__box {\n            background: rgba(255,255,255,0.12);\n            border-color: rgba(255,255,255,0.4);\n        }\n        .vinyl-line .card-more .card-more__title {\n            font-size: 1em;\n            color: rgba(255,255,255,0.6);\n            font-weight: 400;\n            text-align: center;\n        }\n        .vinyl-line .card-more:hover .card-more__title,\n        .vinyl-line .card-more:focus .card-more__title,\n        .vinyl-line .card-more.focus .card-more__title {\n            color: #fff;\n        }\n\n        /* Butterchurn visualizer overlay canvas */\n        .vinyl-visualizer {\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            z-index: 1;\n            pointer-events: none;\n            overflow: hidden;\n        }\n        .vinyl-visualizer canvas {\n            width: 100%;\n            height: 100%;\n            display: block;\n        }\n\n        /* Vertical track list */\n        .vinyl-track-list {\n            padding: 0 1em;\n        }\n        .vinyl-track-list__title {\n            font-size: 1.2em;\n            font-weight: 600;\n            color: #fff;\n            margin-bottom: 0.8em;\n            padding: 0 0.5em;\n        }\n        .vinyl-track-list__body {\n            display: -webkit-box;\n            display: -webkit-flex;\n            display: -ms-flexbox;\n            display: flex;\n            -webkit-box-orient: vertical;\n            -webkit-box-direction: normal;\n            -webkit-flex-direction: column;\n            -ms-flex-direction: column;\n            flex-direction: column;\n            gap: 2px;\n        }\n        .vinyl-track-row {\n            display: -webkit-box;\n            display: -webkit-flex;\n            display: -ms-flexbox;\n            display: flex;\n            -webkit-box-align: center;\n            -webkit-align-items: center;\n            -ms-flex-align: center;\n            align-items: center;\n            gap: 1em;\n            padding: 0.7em 0.8em;\n            -webkit-border-radius: 8px;\n            border-radius: 8px;\n            -webkit-transition: background 0.15s;\n            -o-transition: background 0.15s;\n            transition: background 0.15s;\n            cursor: pointer;\n        }\n        .vinyl-track-row:hover,\n        .vinyl-track-row:focus,\n        .vinyl-track-row.active {\n            background: rgba(255,255,255,0.08);\n        }\n        .vinyl-track-row--current {\n            background: rgba(255,255,255,0.06);\n        }\n        .vinyl-track-row--current .vinyl-track-row__name {\n            color: #4CAF50;\n        }\n        .vinyl-track-row__num {\n            width: 2em;\n            text-align: right;\n            color: rgba(255,255,255,0.4);\n            font-size: 14px;\n            -webkit-flex-shrink: 0;\n            -ms-flex-negative: 0;\n            flex-shrink: 0;\n        }\n        .vinyl-track-row__num-play {\n            display: none;\n        }\n        .vinyl-track-row:hover .vinyl-track-row__num-text,\n        .vinyl-track-row:focus .vinyl-track-row__num-text,\n        .vinyl-track-row.active .vinyl-track-row__num-text {\n            display: none;\n        }\n        .vinyl-track-row:hover .vinyl-track-row__num-play,\n        .vinyl-track-row:focus .vinyl-track-row__num-play,\n        .vinyl-track-row.active .vinyl-track-row__num-play {\n            display: inline;\n        }\n        .vinyl-track-row__info {\n            -webkit-box-flex: 1;\n            -webkit-flex: 1;\n            -ms-flex: 1;\n            flex: 1;\n            min-width: 0;\n        }\n        .vinyl-track-row__name {\n            font-size: 15px;\n            font-weight: 500;\n            color: #fff;\n            white-space: nowrap;\n            overflow: hidden;\n            -o-text-overflow: ellipsis;\n            text-overflow: ellipsis;\n        }\n        .vinyl-track-row__meta {\n            font-size: 12px;\n            color: rgba(255,255,255,0.45);\n            white-space: nowrap;\n            overflow: hidden;\n            -o-text-overflow: ellipsis;\n            text-overflow: ellipsis;\n            margin-top: 2px;\n        }\n        .vinyl-track-row__time {\n            font-size: 13px;\n            color: rgba(255,255,255,0.35);\n            -webkit-flex-shrink: 0;\n            -ms-flex-negative: 0;\n            flex-shrink: 0;\n        }\n        </style>\n    ");
+    Lampa.Template.add('vinyl_style', "\n        <style>\n        @charset 'UTF-8';\n        /* Space out the lines and cards to prevent sticking and blank gaps */\n        .vinyl-line {\n            padding-bottom: 0.8em !important;\n        }\n        .vinyl-line .scroll__body {\n            display: flex;\n        }\n        .vinyl-line .card {\n            width: 12em;\n            margin-right: 1.2em !important;\n        }\n        .vinyl-line .card + .card {\n            margin-left: 0 !important;\n        }\n\n        /* Make all vinyl-specific cards and detail page posters square */\n        .card--vinyl .card__view{padding-bottom:100% !important;}\n        .card--vinyl .card__img{-webkit-border-radius:6px;border-radius:6px;-o-object-fit:cover;object-fit:cover;}\n        .card--vinyl .card__title{font-size:1.15em;margin-top:0.6em;max-height:2.6em;line-height:1.2;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;}\n        .card--vinyl .card__age{font-size:0.9em;margin-top:0.3em;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;}\n        \n        /* === Vinyl \"Show All\" paginated grid (6 columns) === */\n        .vinyl-all-grid {\n            display: grid !important;\n            grid-template-columns: repeat(6, 1fr) !important;\n            gap: 24px 20px !important;\n            padding: 20px 40px 80px !important;\n            width: 100% !important;\n            box-sizing: border-box !important;\n        }\n        /* Force ALL direct-card-children to equal grid-column width */\n        .vinyl-all-grid > .card {\n            width: auto !important;\n            min-width: 0 !important;\n            max-width: 100% !important;\n            margin: 0 !important;\n            flex-shrink: 0 !important;\n        }\n        /* Square aspect-ratio for the card view port */\n        .vinyl-all-grid > .card .card__view {\n            position: relative !important;\n            padding-bottom: 100% !important;\n            margin-bottom: 0 !important;\n        }\n        /* Image fills the square completely */\n        .vinyl-all-grid > .card .card__img {\n            position: absolute !important;\n            top: 0 !important;\n            left: 0 !important;\n            width: 100% !important;\n            height: 100% !important;\n            -webkit-border-radius: 6px !important;\n            border-radius: 6px !important;\n            -o-object-fit: cover !important;\n            object-fit: cover !important;\n        }\n        /* Typography with overflow protection */\n        .vinyl-all-grid > .card .card__title {\n            font-size: 1.15em !important;\n            margin-top: 0.6em !important;\n            max-height: 2.6em !important;\n            line-height: 1.2 !important;\n            overflow: hidden !important;\n            -o-text-overflow: ellipsis !important;\n            text-overflow: ellipsis !important;\n        }\n        .vinyl-all-grid > .card .card__age {\n            font-size: 0.9em !important;\n            margin-top: 0.3em !important;\n            color: rgba(255,255,255,0.45) !important;\n            white-space: nowrap !important;\n            overflow: hidden !important;\n            -o-text-overflow: ellipsis !important;\n            text-overflow: ellipsis !important;\n        }\n\n        .items-line--type-vinyl .card__view {\n            padding-bottom: 100% !important;\n        }\n        .items-line--type-vinyl .card__img {\n            -webkit-border-radius: 6px;\n            border-radius: 6px;\n            -o-object-fit: cover;\n            object-fit: cover;\n        }\n\n        .vinyl-start .full-start-new__poster{padding-bottom:100% !important;}\n\n        /* Search result cards \u2014 square aspect ratio.\n           Lampa renders them inside .main-search (not .vinyl-main),\n           so we scope via the class injected by onRender. */\n        .main-search .vinyl-search-line .card__view{padding-bottom:100%;}\n        .main-search .vinyl-search-line .card__img{-webkit-border-radius:6px;border-radius:6px;-o-object-fit:cover;object-fit:cover;}\n\n        /* Tracks styling with thumb image */\n        .vinyl-detail{padding:20px;}.vinyl-detail__header{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:baseline;-webkit-align-items:baseline;-ms-flex-align:baseline; align-items:baseline; gap:12px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1);}.vinyl-detail__title{font-size:26px; font-weight:700; color:#fff;}.vinyl-detail__count{font-size:14px; color:rgba(255,255,255,0.5);}.vinyl-detail__list{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column; flex-direction:column; gap:2px;}\n        \n        .vinyl-track{display:grid;grid-template-columns:48px 28px 1fr auto 40px;align-items:center;gap:12px;padding:8px 16px;border-radius:8px;transition:background 0.15s;outline:none;cursor:pointer;}\n        .vinyl-track:hover,.vinyl-track:focus,.vinyl-track.active{background:rgba(255,255,255,0.08);}\n        .vinyl-track__thumb{width:48px;height:48px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);}\n        .vinyl-track__thumb img{width:100%;height:100%;object-fit:cover;}\n        .vinyl-track__num{width:28px;text-align:center;font-size:13px;color:rgba(255,255,255,0.35);flex-shrink:0;}\n        .vinyl-track__info{min-width:0;display:flex;flex-direction:column;gap:3px;}\n        .vinyl-track__title{font-size:15px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n        .vinyl-track__sub{font-size:12px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n        .vinyl-track__duration{font-size:12px;color:rgba(255,255,255,0.3);white-space:nowrap;flex-shrink:0;}\n\n        .vinyl-artist__image{width:200px; height:200px;-webkit-border-radius:50%; border-radius:50%; overflow:hidden; margin:0 auto 20px; border:3px solid rgba(255,255,255,0.15);}.vinyl-artist__image img{width:100%; height:100%;-o-object-fit:cover; object-fit:cover;}.vinyl-artist__bio{font-size:13px; color:rgba(255,255,255,0.7); line-height:1.6; margin-bottom:24px; padding:0 4px; max-height:120px; overflow:hidden;}.vinyl-artist__section-title{font-size:18px; font-weight:600; color:#fff; margin:24px 0 12px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.08);}.vinyl-artist__radio{display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center; align-items:center; gap:12px; padding:14px 20px; margin-top:28px;-webkit-border-radius:10px; border-radius:10px; background:rgba(255,255,255,0.06); cursor:pointer;-webkit-transition:background 0.2s;-o-transition:background 0.2s; transition:background 0.2s; border:1px solid rgba(255,255,255,0.1);}.vinyl-artist__radio:hover,.vinyl-artist__radio:focus,.vinyl-artist__radio.active{background:rgba(255,255,255,0.14);}.vinyl-artist__radio-icon{width:36px; height:36px;-webkit-border-radius:50%; border-radius:50%; background:rgba(76,175,80,0.25); display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center; align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center; justify-content:center; font-size:16px; color:#4CAF50;-webkit-flex-shrink:0;-ms-flex-negative:0; flex-shrink:0;}.vinyl-artist__radio-text{font-size:15px; color:#fff; font-weight:500;}\n\n        /* More card inside vinyl component lines \u2014 matches ContentRows style */\n        .vinyl-line .card-more {\n            flex-shrink: 0;\n            width: 12em;\n            cursor: pointer;\n        }\n        .vinyl-line .card-more .card-more__box {\n            width: 100%;\n            aspect-ratio: 1;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            border: 2px solid rgba(255,255,255,0.15);\n            border-radius: 8px;\n            background: rgba(255,255,255,0.05);\n            transition: all 0.15s;\n            box-sizing: border-box;\n        }\n        .vinyl-line .card-more:hover .card-more__box,\n        .vinyl-line .card-more:focus .card-more__box,\n        .vinyl-line .card-more.focus .card-more__box {\n            background: rgba(255,255,255,0.12);\n            border-color: rgba(255,255,255,0.4);\n        }\n        .vinyl-line .card-more .card-more__title {\n            font-size: 1em;\n            color: rgba(255,255,255,0.6);\n            font-weight: 400;\n            text-align: center;\n        }\n        .vinyl-line .card-more:hover .card-more__title,\n        .vinyl-line .card-more:focus .card-more__title,\n        .vinyl-line .card-more.focus .card-more__title {\n            color: #fff;\n        }\n\n        /* Butterchurn visualizer overlay canvas */\n        .vinyl-visualizer {\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            z-index: 1;\n            pointer-events: none;\n            overflow: hidden;\n        }\n        .vinyl-visualizer canvas {\n            width: 100%;\n            height: 100%;\n            display: block;\n        }\n\n        /* Vertical track list */\n        .vinyl-track-list {\n            padding: 0 1em;\n        }\n        .vinyl-track-list__title {\n            font-size: 1.2em;\n            font-weight: 600;\n            color: #fff;\n            margin-bottom: 0.8em;\n            padding: 0 0.5em;\n        }\n        .vinyl-track-list__body {\n            display: -webkit-box;\n            display: -webkit-flex;\n            display: -ms-flexbox;\n            display: flex;\n            -webkit-box-orient: vertical;\n            -webkit-box-direction: normal;\n            -webkit-flex-direction: column;\n            -ms-flex-direction: column;\n            flex-direction: column;\n            gap: 2px;\n        }\n        .vinyl-track-row {\n            display: -webkit-box;\n            display: -webkit-flex;\n            display: -ms-flexbox;\n            display: flex;\n            -webkit-box-align: center;\n            -webkit-align-items: center;\n            -ms-flex-align: center;\n            align-items: center;\n            gap: 1em;\n            padding: 0.7em 0.8em;\n            -webkit-border-radius: 8px;\n            border-radius: 8px;\n            -webkit-transition: background 0.15s;\n            -o-transition: background 0.15s;\n            transition: background 0.15s;\n            cursor: pointer;\n        }\n        .vinyl-track-row:hover,\n        .vinyl-track-row.focus,\n        .vinyl-track-row.active {\n            background: rgba(255,255,255,0.15);\n            border-left: 3px solid #1db954;\n            padding-left: calc(0.8em - 3px);\n        }\n        .vinyl-track-row--current {\n            background: rgba(255,255,255,0.06);\n        }\n        .vinyl-track-row--current.focus {\n            background: rgba(255,255,255,0.15);\n        }\n        .vinyl-track-row--current .vinyl-track-row__name {\n            color: #4CAF50;\n        }\n        .vinyl-track-row__num {\n            width: 2em;\n            text-align: right;\n            color: rgba(255,255,255,0.4);\n            font-size: 14px;\n            -webkit-flex-shrink: 0;\n            -ms-flex-negative: 0;\n            flex-shrink: 0;\n        }\n        .vinyl-track-row__num-play {\n            display: none;\n        }\n        .vinyl-track-row:hover .vinyl-track-row__num-text,\n        .vinyl-track-row.focus .vinyl-track-row__num-text,\n        .vinyl-track-row.active .vinyl-track-row__num-text {\n            display: none;\n        }\n        .vinyl-track-row:hover .vinyl-track-row__num-play,\n        .vinyl-track-row.focus .vinyl-track-row__num-play,\n        .vinyl-track-row.active .vinyl-track-row__num-play {\n            display: inline;\n        }\n        .vinyl-track-row__info {\n            -webkit-box-flex: 1;\n            -webkit-flex: 1;\n            -ms-flex: 1;\n            flex: 1;\n            min-width: 0;\n        }\n        .vinyl-track-row__name {\n            font-size: 15px;\n            font-weight: 500;\n            color: #fff;\n            white-space: nowrap;\n            overflow: hidden;\n            -o-text-overflow: ellipsis;\n            text-overflow: ellipsis;\n        }\n        .vinyl-track-row__meta {\n            font-size: 12px;\n            color: rgba(255,255,255,0.45);\n            white-space: nowrap;\n            overflow: hidden;\n            -o-text-overflow: ellipsis;\n            text-overflow: ellipsis;\n            margin-top: 2px;\n        }\n        .vinyl-track-row__time {\n            font-size: 13px;\n            color: rgba(255,255,255,0.35);\n            -webkit-flex-shrink: 0;\n            -ms-flex-negative: 0;\n            flex-shrink: 0;\n        }\n        </style>\n    ");
     if (window.plugin_vinyl_css_injected) return;
     window.plugin_vinyl_css_injected = true;
     $('body').append(Lampa.Template.get('vinyl_style', {}, true));
@@ -4279,6 +5370,24 @@
         uk: 'Тип плеєра для музики',
         en: 'Music player type',
         be: 'Тып плэера для музыкі'
+      },
+      vinyl_my_playlists: {
+        ru: 'Мои плейлисты',
+        uk: 'Мої плейлисти',
+        en: 'My Playlists',
+        be: 'Мае плэйлісты'
+      },
+      vinyl_add_to_playlist: {
+        ru: 'Добавить в плейлист',
+        uk: 'Додати до плейлиста',
+        en: 'Add to playlist',
+        be: 'Дадаць у плэйліст'
+      },
+      vinyl_create_playlist: {
+        ru: 'Создать плейлист',
+        uk: 'Створити плейлист',
+        en: 'Create playlist',
+        be: 'Стварыць плэйліст'
       }
     });
 
@@ -4537,19 +5646,111 @@
       });
     }
 
+    // 6c. Custom playlists row on home screen
+    if (Lampa.ContentRows && Lampa.ContentRows.add) {
+      Lampa.ContentRows.add({
+        name: 'vinyl_custom_playlists',
+        title: Lampa.Lang.translate('vinyl_my_playlists') || 'My Playlists',
+        index: 1,
+        screen: ['main'],
+        call: function call(params, screen) {
+          return function (call) {
+            var playlists = VinylPlaylistManager.getAll();
+            if (!playlists || !playlists.length) {
+              call(null);
+              return;
+            }
+            var items = playlists.map(function (pl) {
+              var firstTrack = pl.trackCount > 0 ? VinylPlaylistManager.getTracks(pl.uid)[0] : null;
+              var firstImage = firstTrack ? firstTrack.image || '' : '';
+              return {
+                id: pl.uid,
+                title: pl.name,
+                subtitle: pl.trackCount + ' tracks',
+                type: 'vinyl_custom_playlist',
+                media: 'vinyl_custom_playlist',
+                vinyl: true,
+                vinyl_playlist_uid: pl.uid,
+                image: firstImage
+              };
+            });
+            Lampa.Utils.extendItemsParams(items, {
+              createInstance: function createInstance(item) {
+                return createVinylCard(item);
+              }
+            });
+            call({
+              title: Lampa.Lang.translate('vinyl_my_playlists') || 'My Playlists',
+              results: items,
+              params: {
+                type: 'vinyl'
+              }
+            });
+          };
+        }
+      });
+    }
+
     // Guard against double-patching Router on re-init
     if (window.__vinyl_router_patched) return;
     window.__vinyl_router_patched = true;
     var original_router_call = Lampa.Router.call;
     Lampa.Router.call = function (component, object) {
       if (component === 'full' && object && object.vinyl) {
-        // Click on home screen card -> play immediately
+        // Click on home screen card -> open details (long-press for context menu with Play)
         if (object.type === 'playlist') {
-          playPlaylist(Api.get(), object.id, false);
+          Lampa.Activity.push({
+            url: '',
+            title: object.title || '',
+            component: 'vinyl_playlist',
+            id: object.id,
+            page: 1,
+            movie: {
+              id: object.id,
+              title: object.title,
+              image: object.image || object.img || ''
+            }
+          });
         } else if (object.type === 'album') {
-          playAlbum(Api.get(), object.id, false);
+          Lampa.Activity.push({
+            url: '',
+            title: object.title || '',
+            component: 'vinyl_album',
+            id: object.id,
+            page: 1,
+            movie: {
+              id: object.id,
+              title: object.title,
+              image: object.image || object.img || ''
+            }
+          });
         } else if (object.type === 'radio') {
-          playRadio(Api.get(), object.name || object.title || '', object.id, object.radioType || 'genre', false);
+          Lampa.Activity.push({
+            url: '',
+            title: object.title || '',
+            component: 'vinyl_radio',
+            page: 1,
+            movie: {
+              id: object.id,
+              title: object.name || object.title,
+              image: object.image || object.img || '',
+              name: object.name || object.title,
+              type: object.radioType || 'genre'
+            }
+          });
+        } else if (object.type === 'vinyl_custom_playlist') {
+          Lampa.Activity.push({
+            url: '',
+            title: object.title || '',
+            component: 'vinyl_my_playlist',
+            id: object.id || object.vinyl_playlist_uid || '',
+            page: 1,
+            movie: {
+              id: object.id || object.vinyl_playlist_uid || '',
+              title: object.title || '',
+              image: object.image || object.img || ''
+            }
+          });
         } else if (object.type === 'artist') {
           Lampa.Activity.push({
             url: '',
@@ -4600,6 +5801,7 @@
     Lampa.Component.add('vinyl_radio', RadioComponent);
     Lampa.Component.add('vinyl_genre', GenreComponent);
     Lampa.Component.add('vinyl_all', AllComponent);
+    Lampa.Component.add('vinyl_my_playlist', MyPlaylistComponent);
 
     // 8. Menu button
     function add() {

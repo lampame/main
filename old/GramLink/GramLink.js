@@ -7626,33 +7626,6 @@ var plugin = (function () {
 
       self.start = function () {
         if (Lampa.Activity.active() && Lampa.Activity.active().activity !== self.activity) return;
-
-        // ═══ Режим імпорту — спрощений інтерфейс ═══
-        if (window.__gramlink_import_mode) {
-          Lampa.Controller.add('content', {
-            toggle: function toggle() {
-              Lampa.Controller.collectionSet(scroll.render());
-              var focus = last && $(last).closest('body').length ? last : false;
-              Lampa.Controller.collectionFocus(focus, scroll.render());
-            },
-            up: function up() {
-              if (Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
-            },
-            down: function down() {
-              Navigator.move('down');
-            },
-            left: function left() {
-              Lampa.Controller.toggle('menu');
-            },
-            right: function right() {},
-            back: function back() {
-              self.back();
-            }
-          });
-          Lampa.Controller.toggle('content');
-          renderImportOnlyView();
-          return;
-        }
         Lampa.Controller.add('content', {
           toggle: function toggle() {
             Lampa.Controller.collectionSet(scroll.render());
@@ -7667,10 +7640,10 @@ var plugin = (function () {
           },
           left: function left() {
             var $cur = $(last);
-            if ($cur.hasClass('gramlink-tab') && tabIdx > 0) {
+            if (!window.__gramlink_import_mode && $cur.hasClass('gramlink-tab') && tabIdx > 0) {
               tabIdx--;
               focusTab(TABS[tabIdx]);
-            } else if ($cur.hasClass('gramlink-tab') && tabIdx === 0) {
+            } else if (!window.__gramlink_import_mode && $cur.hasClass('gramlink-tab') && tabIdx === 0) {
               Lampa.Controller.toggle('menu');
             } else if (Navigator.canmove('left')) {
               Navigator.move('left');
@@ -7680,7 +7653,7 @@ var plugin = (function () {
           },
           right: function right() {
             var $cur = $(last);
-            if ($cur.hasClass('gramlink-tab') && tabIdx < TABS.length - 1) {
+            if (!window.__gramlink_import_mode && $cur.hasClass('gramlink-tab') && tabIdx < TABS.length - 1) {
               tabIdx++;
               focusTab(TABS[tabIdx]);
             } else if (Navigator.canmove('right')) {
@@ -8655,20 +8628,24 @@ var plugin = (function () {
           _initializing = false;
           var ch = Lampa.Storage.get(STORAGE_CHANNEL_ID, ''),
             sl = Lampa.Storage.get(STORAGE_SYNC_LOG_TOPIC, '');
-          if (ch && sl) client.startHeartbeat(ch, sl);
-          self._deltaHandler = function (data) {
-            Profiles.applyDelta(data);
-          };
-          client.on('profile_delta', self._deltaHandler);
-          renderProfiles();
-          if (refreshTimer) clearInterval(refreshTimer);
-          refreshTimer = setInterval(function () {
-            if (activeTab === 'profiles') renderProfiles();
-          }, 15000);
+          if (!window.__gramlink_import_mode) {
+            if (ch && sl) client.startHeartbeat(ch, sl);
+            self._deltaHandler = function (data) {
+              Profiles.applyDelta(data);
+            };
+            client.on('profile_delta', self._deltaHandler);
+            renderProfiles();
+            if (refreshTimer) clearInterval(refreshTimer);
+            refreshTimer = setInterval(function () {
+              if (activeTab === 'profiles') renderProfiles();
+            }, 15000);
+          } else {
+            renderImportOnlyView();
+          }
         }).catch(function (err) {
           if (self.__destroyed) return;
           _initializing = false;
-          renderProfiles(); // Shows "No profiles" or loaded data based on what Storage has
+          if (window.__gramlink_import_mode) renderImportOnlyView();else renderProfiles(); // Shows "No profiles" or loaded data based on what Storage has
           console.warn('GramLink', 'Hub init error:', err);
         });
       }
@@ -8764,84 +8741,64 @@ var plugin = (function () {
       // ═══════════════════════════════════════════════════════
       //  IMPORT-ONLY VIEW (режим імпорту)
       // ═══════════════════════════════════════════════════════
+      // Використовує ті ж паттерни що renderProfiles/renderDevices:
+      // scroll.body, bodyPrep, createItem, hover:focus через this, focusFirst.
 
       function renderImportOnlyView() {
         var body = scroll.body(true);
         body.innerHTML = '';
-        body.style.padding = '1.5em';
+        bodyPrep(body);
         var client = GatewayClient.getInstance();
         var isConnected = client.isConnected();
         var hasCreds = client.hasCredentials();
         var bt = Lampa.Storage.get(STORAGE_BACKUP_TOPIC, '');
-        var pt = Lampa.Storage.get(STORAGE_PROFILES_TOPIC, '');
-        var channelReady = !!(bt || pt);
-        var html = '';
 
-        // ── Заголовок ──
-        html += '<div style="margin-bottom:1.5em">';
-        html += '    <div style="font-size:1.3em;font-weight:600;margin-bottom:0.3em">' + (Lampa.Lang.translate('gramlink_title') || 'GramLink') + '</div>';
-        html += '    <div style="opacity:0.5;font-size:0.9em">' + (Lampa.Lang.translate('gramlink_import_mode_blocked_body') || 'Import-only mode') + '</div>';
-        html += '</div>';
+        // ── Header ──
+        var headerEl = createItem('gs-import-header', '', Lampa.Lang.translate('gramlink_title') || 'GramLink', Lampa.Lang.translate('gramlink_import_mode_blocked_body') || 'Import-only mode', null, null);
+        headerEl.style.gridColumn = '1 / -1';
+        headerEl.style.background = 'none';
+        body.appendChild(headerEl);
 
-        // ── Статус підключення ──
-        html += '<div class="gramlink-item selector" id="gl-import-status" style="display:flex;align-items:center;gap:0.8em;padding:1em;background:rgba(255,255,255,0.04);border-radius:0.6em;margin-bottom:1em">';
-        html += '    <div style="width:0.8em;height:0.8em;border-radius:50%;background:' + (isConnected ? '#4caf50' : hasCreds ? '#DD7337' : '#888') + ';flex-shrink:0"></div>';
-        html += '    <div style="flex:1">';
-        html += '        <div style="font-weight:500">' + (isConnected ? Lampa.Lang.translate('gramlink_status_connected') || 'Connected' : hasCreds ? Lampa.Lang.translate('gramlink_status_disconnected') || 'Disconnected' : Lampa.Lang.translate('gramlink_status_auth_needed') || 'Auth required') + '</div>';
-        html += '        <div style="opacity:0.4;font-size:0.85em">' + (hasCreds ? getDeviceName() : '-') + '</div>';
-        html += '    </div>';
-        html += '</div>';
+        // ── Connection status (manual DOM, як renderDevices) ──
+        var dotColor = isConnected ? '#4caf50' : hasCreds ? '#DD7337' : '#888';
+        var statusText = isConnected ? Lampa.Lang.translate('gramlink_status_connected') || 'Connected' : hasCreds ? Lampa.Lang.translate('gramlink_status_disconnected') || 'Disconnected' : Lampa.Lang.translate('gramlink_status_auth_needed') || 'Auth required';
+        var statusEl = document.createElement('div');
+        statusEl.className = 'gramlink-item selector gs-import-status';
+        statusEl.style.gridColumn = '1 / -1';
+        statusEl.innerHTML = '<div style="border-radius:50%;width:1.2em;height:1.2em;font-size:0.9em;margin-right:0.8em;background:' + dotColor + ';flex-shrink:0"></div>' + '<div class="gs-content">' + '<div class="gs-title">' + statusText + '</div>' + '<div class="gs-sub">' + escHtml(hasCreds ? getDeviceName() : '-') + '</div>' + '</div>';
+        body.appendChild(statusEl);
 
-        // ── Кнопка авторизації / підключення ──
-        html += '<div class="simple-button selector" id="gl-import-auth-btn" style="display:block;text-align:center;padding:0.8em;background:rgba(255,255,255,0.06);border-radius:0.6em;margin-bottom:0.8em;font-weight:500">';
-        if (!hasCreds) {
-          html += Lampa.Lang.translate('gramlink_settings_section_auth') || 'Authorization';
-        } else if (!isConnected) {
-          html += Lampa.Lang.translate('gramlink_connect') || 'Connect';
-        } else {
-          html += (Lampa.Lang.translate('gramlink_status_connected') || 'Connected') + ' ✓';
-        }
-        html += '</div>';
+        // ── Auth / Connect button ──
+        var authLabel = !hasCreds ? Lampa.Lang.translate('gramlink_settings_section_auth') || 'Authorization' : !isConnected ? Lampa.Lang.translate('gramlink_connect') || 'Connect' : (Lampa.Lang.translate('gramlink_status_connected') || 'Connected') + ' ✓';
+        var authEl = createItem('gs-import-auth-btn', '', authLabel, '', null, null);
+        authEl.style.gridColumn = '1 / -1';
+        body.appendChild(authEl);
 
-        // ── Кнопка ініціалізації каналу (якщо ще не створено) ──
-        if (isConnected && !channelReady) {
-          html += '<div class="simple-button selector" id="gl-import-init-btn" style="display:block;text-align:center;padding:0.8em;background:rgba(255,255,255,0.06);border-radius:0.6em;margin-bottom:0.8em;font-weight:500">';
-          html += '    🔧 ' + (Lampa.Lang.translate('gramlink_sync_channel_creating') || 'Initialize sync channel');
-          html += '</div>';
+        // ── Init channel button (only if no backup topic yet) ──
+        if (isConnected && !bt) {
+          var initEl = createItem('gs-import-init-btn', '🔧', Lampa.Lang.translate('gramlink_sync_channel_creating') || 'Initialize sync channel', '', null, null);
+          initEl.style.gridColumn = '1 / -1';
+          body.appendChild(initEl);
         }
 
-        // ── Кнопка імпорту бекапа ──
-        html += '<div class="simple-button selector" id="gl-import-backup-btn" style="display:block;text-align:center;padding:0.8em;background:rgba(255,255,255,0.06);border-radius:0.6em;margin-bottom:0.8em;font-weight:500">';
-        html += '    📦 ' + (Lampa.Lang.translate('gramlink_backup_import') || 'Import Backup');
-        html += '</div>';
+        // ── Import Backup ──
+        var backupEl = createItem('gs-import-backup-btn', '📦', Lampa.Lang.translate('gramlink_backup_import') || 'Import Backup', '', null, null);
+        backupEl.style.gridColumn = '1 / -1';
+        body.appendChild(backupEl);
 
-        // ── Кнопка імпорту з Cub ──
-        html += '<div class="simple-button selector" id="gl-import-cub-btn" style="display:block;text-align:center;padding:0.8em;background:rgba(255,255,255,0.06);border-radius:0.6em;margin-bottom:0.8em;font-weight:500">';
-        html += '    📋 ' + (Lampa.Lang.translate('gramlink_import_cub') || 'Import from Cub');
-        html += '</div>';
-        body.innerHTML = html;
+        // ── Import from Cub ──
+        var cubEl = createItem('gs-import-cub-btn', '📋', Lampa.Lang.translate('gramlink_import_cub') || 'Import from Cub', '', null, null);
+        cubEl.style.gridColumn = '1 / -1';
+        body.appendChild(cubEl);
 
-        // ── Автоініціалізація каналу при завантаженні ──
-        if (isConnected && !channelReady) {
-          ensureImportChannel().then(function () {
-            Lampa.Noty.show(Lampa.Lang.translate('gramlink_sync_channel_ready') || 'Sync channel ready');
-            renderImportOnlyView();
-          }).catch(function (err) {
-            console.warn('GramLink', 'Auto init channel error:', err);
-            // Не показуємо помилку — залишаємо кнопку для ручної ініціалізації
-          });
-        }
-
-        // ── Прив'язка подій ──
-        $(body).find('#gl-import-status').on('hover:focus', function (el) {
-          last = el;
-          scroll.update($(el), true);
+        // ── Bind events (native pattern: this = DOM element) ──
+        $(body).find('.gs-import-status').on('hover:focus', function () {
+          last = this;
+          scroll.update($(this), true);
         });
-
-        // Кнопка авторизації
-        $(body).find('#gl-import-auth-btn').on('hover:focus', function (el) {
-          last = el;
-          scroll.update($(el), true);
+        $(body).find('.gs-import-auth-btn').on('hover:focus', function () {
+          last = this;
+          scroll.update($(this), true);
         }).on('hover:enter', function () {
           if (!hasCreds) {
             Lampa.Settings.create('gramlink', {
@@ -8855,48 +8812,48 @@ var plugin = (function () {
             }).catch(function () {});
           }
         });
-
-        // Кнопка ініціалізації каналу (створює channel + topics)
-        $(body).find('#gl-import-init-btn').on('hover:focus', function (el) {
-          last = el;
-          scroll.update($(el), true);
+        $(body).find('.gs-import-init-btn').on('hover:focus', function () {
+          last = this;
+          scroll.update($(this), true);
         }).on('hover:enter', function () {
           Lampa.Noty.show(Lampa.Lang.translate('gramlink_sync_channel_creating') || 'Setting up sync channel...');
-          ensureImportChannel().then(function () {
+          // init() → ensureSyncChannel() already created the channel,
+          // but if we got here without bt, re-invoke ensureSyncChannel
+          var client = GatewayClient.getInstance();
+          client.connect().then(function () {
+            return ensureSyncChannel();
+          }).then(function () {
             Lampa.Noty.show(Lampa.Lang.translate('gramlink_sync_channel_ready') || 'Sync channel ready');
-            // Re-render to show import buttons
             renderImportOnlyView();
           }).catch(function (err) {
             Lampa.Noty.show(Lampa.Lang.translate('gramlink_sync_channel_error') || 'Channel setup failed');
-            console.warn('GramLink', 'Import channel init error:', err);
+            console.warn('GramLink', 'Manual channel init error:', err);
           });
         });
-
-        // Кнопка імпорту бекапа
-        $(body).find('#gl-import-backup-btn').on('hover:focus', function (el) {
-          last = el;
-          scroll.update($(el), true);
+        $(body).find('.gs-import-backup-btn').on('hover:focus', function () {
+          last = this;
+          scroll.update($(this), true);
         }).on('hover:enter', function () {
-          if (!bt) {
+          var backupTopic = Lampa.Storage.get(STORAGE_BACKUP_TOPIC, '');
+          if (!backupTopic) {
             Lampa.Noty.show(Lampa.Lang.translate('gramlink_backup_topic_not_ready') || 'Backup topic not ready');
             return;
           }
           importBackup();
         });
-
-        // Кнопка імпорту з Cub
-        $(body).find('#gl-import-cub-btn').on('hover:focus', function (el) {
-          last = el;
-          scroll.update($(el), true);
+        $(body).find('.gs-import-cub-btn').on('hover:focus', function () {
+          last = this;
+          scroll.update($(this), true);
         }).on('hover:enter', function () {
-          if (!pt) {
+          var profilesTopic = Lampa.Storage.get(STORAGE_PROFILES_TOPIC, '');
+          if (!profilesTopic) {
             Lampa.Noty.show('Sync channel not ready');
             return;
           }
-          startMigration(pt);
+          startMigration(profilesTopic);
         });
 
-        // Фокус на перший елемент
+        // ── Focus first element (native pattern) ──
         var firstFocusable = $(body).find('.selector').first();
         if (firstFocusable.length) {
           last = firstFocusable[0];
@@ -8904,61 +8861,6 @@ var plugin = (function () {
           Lampa.Controller.collectionFocus(firstFocusable[0], scroll.render());
           scroll.immediate(firstFocusable[0], true);
         }
-      }
-
-      // ─── Ініціалізація каналу для режиму імпорту ────────
-      // Створює channel + topics (тільки backup та profiles) якщо вони ще не існують.
-
-      function ensureImportChannel() {
-        var client = GatewayClient.getInstance();
-        if (!client.isConnected()) return Promise.reject(new Error('Not connected'));
-        currentChannelId = Lampa.Storage.get(STORAGE_CHANNEL_ID, null);
-        if (currentChannelId) return ensureImportTopics();
-        return client.findChannel(CHANNEL_TITLE).then(function (id) {
-          if (id) {
-            currentChannelId = id;
-            Lampa.Storage.set(STORAGE_CHANNEL_ID, id);
-            return ensureImportTopics();
-          }
-          return client.createChannel(CHANNEL_TITLE).then(function (peerId) {
-            if (!peerId) throw new Error('Create channel failed');
-            currentChannelId = peerId;
-            Lampa.Storage.set(STORAGE_CHANNEL_ID, peerId);
-            return ensureImportTopics();
-          });
-        });
-      }
-      function ensureImportTopics() {
-        var client = GatewayClient.getInstance();
-        var ps = [];
-        function ensure(name, storeKey, setter) {
-          var s = Lampa.Storage.get(storeKey, '');
-          if (s) {
-            setter(s);
-            return Promise.resolve();
-          }
-          return client.findTopic(currentChannelId, name).then(function (id) {
-            if (id) {
-              setter(id);
-              Lampa.Storage.set(storeKey, id);
-              return;
-            }
-            return client.createTopic(currentChannelId, name).then(function (tid) {
-              if (tid) {
-                setter(tid);
-                Lampa.Storage.set(storeKey, tid);
-              }
-            });
-          });
-        }
-
-        // В режимі імпорту створюємо лише потрібні topics: backup та profiles
-        ps.push(ensure('backup', STORAGE_BACKUP_TOPIC, function (id) {
-        }));
-        ps.push(ensure('profiles', STORAGE_PROFILES_TOPIC, function (id) {
-          currentProfilesTopicId = id;
-        }));
-        return Promise.all(ps);
       }
     }
 
@@ -8969,8 +8871,8 @@ var plugin = (function () {
     //   window.__gramlink_import_only = true          — примусово ввімкнути режим імпорту
     //   window.__gramlink_disable_date_check = true   — вимкнути перевірку дати
     //   window.__gramlink_test_date = '2026-08-04'    — імітувати конкретну дату (ISO)
-    //   window.__gramlink_reset_notification = true   — скинути лічильник щоденної нотифікації
-    //   window.__gramlink_clear_notified = true        — скинути позначку "вже показано"
+    // Для скидання денної нотифікації в консолі:
+    //   Lampa.Storage.set('gramlink_import_last_notified', '') & location.reload()
 
     var GRAMLINK_IMPORT_DEADLINE = new Date(2026, 7, 4); // 4 серпня 2026
 
@@ -8996,26 +8898,24 @@ var plugin = (function () {
 
       // Якщо вже дедлайн — не показуємо нотифікацію
       if (now >= GRAMLINK_IMPORT_DEADLINE) return;
-
-      // Скидання позначки для тестування
-      if (window.__gramlink_clear_notified) {
-        Lampa.Storage.set('gramlink_import_last_notified', '');
-        window.__gramlink_clear_notified = false;
-      }
       var today = now.toISOString().split('T')[0];
       var lastNotified = Lampa.Storage.get('gramlink_import_last_notified', '');
       if (lastNotified === today) return;
-      Lampa.Modal.open({
-        title: Lampa.Lang.translate('gramlink_import_mode_title'),
-        html: $('<div style="padding:1em">' + Lampa.Lang.translate('gramlink_import_mode_body') + '</div>'),
-        buttons: [{
-          name: Lampa.Lang.translate('gramlink_import_mode_ok') || 'OK',
-          onSelect: function onSelect() {
-            Lampa.Modal.close();
-          }
-        }]
-      });
-      Lampa.Storage.set('gramlink_import_last_notified', today);
+
+      // Відкладаємо показ модалки — під час ініціалізації UI ще не готовий
+      setTimeout(function () {
+        Lampa.Modal.open({
+          title: Lampa.Lang.translate('gramlink_import_mode_title'),
+          html: $('<div style="padding:1em">' + Lampa.Lang.translate('gramlink_import_mode_body') + '</div>'),
+          buttons: [{
+            name: Lampa.Lang.translate('gramlink_import_mode_ok') || 'OK',
+            onSelect: function onSelect() {
+              Lampa.Modal.close();
+            }
+          }]
+        });
+        Lampa.Storage.set('gramlink_import_last_notified', today);
+      }, 1000);
     }
     function startPlugin() {
       window.plugin_gramlink_ready = true;

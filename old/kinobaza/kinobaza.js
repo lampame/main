@@ -6762,7 +6762,23 @@
     try {
       if (!Lampa.Favorite || !Lampa.Favorite.all) return;
       activePatches$1.push(safePatch(Lampa.Favorite, 'all', function (origAll, context, args) {
-        var result = origAll.apply(context, args) || {};
+        // Build result directly from Favorite.full() to avoid patch chain
+        // circular dependency with custom-favs.js + getter/setter plugins
+        var full = Lampa.Favorite.full();
+        var result = {};
+        var category = ['like', 'wath', 'book', 'history', 'look', 'viewed', 'scheduled', 'continued', 'thrown'];
+        category.forEach(function (a) {
+          var ids = full[a] || [];
+          result[a] = [];
+          for (var i = 0; i < ids.length; i++) {
+            for (var j = 0; j < full.card.length; j++) {
+              if (full.card[j].id == ids[i]) {
+                result[a].push(full.card[j]);
+                break;
+              }
+            }
+          }
+        });
         try {
           var persons = getAll();
           if (persons && persons.length) {
@@ -6771,7 +6787,7 @@
             result[TYPE] = [];
           }
         } catch (e) {
-          // мовчки
+          // silently ignore
         }
         return result;
       }));
@@ -6793,7 +6809,20 @@
         if (params && params.type === TYPE) {
           return getAll();
         }
-        return origGet.apply(context, args);
+        // Bypass the entire patch chain — read directly from Favorite.full()
+        // This avoids circular dependency with custom-favs.js + getter/setter plugins
+        var full = Lampa.Favorite.full();
+        var ids = full[params.type] || [];
+        var result = [];
+        for (var i = 0; i < ids.length; i++) {
+          for (var j = 0; j < full.card.length; j++) {
+            if (full.card[j].id == ids[i]) {
+              result.push(full.card[j]);
+              break;
+            }
+          }
+        }
+        return result;
       }));
     } catch (e) {
       console.error('Kinobaza', 'patchGet error', e);
@@ -6923,9 +6952,13 @@
     } catch (e) {
       // мовчки
     }
-    patchAll();
-    patchGet();
-    patchCheck();
+
+    // Apply monkey-patches only when user is logged into Kinobaza
+    if (storage.hasToken()) {
+      patchAll();
+      patchGet();
+      patchCheck();
+    }
     registerContentRows();
   }
   var favorite = {
@@ -7377,6 +7410,8 @@
    * @returns {boolean} - true якщо CUB синхронізація активна
    */
   function isCubActive() {
+    // Guard: no Kinobaza session — no conflict possible
+    if (!storage.hasToken()) return false;
     try {
       var cubUse = window.lampa_settings && window.lampa_settings.account_use;
       var cubSync = Lampa.Account && Lampa.Account.Permit && Lampa.Account.Permit.sync;
@@ -10011,8 +10046,10 @@
   function startPlugin() {
     window.plugin_kinobaza_ready = true;
 
-    // Декорування API обраного
-    overrideFavoriteApi();
+    // Декорування API обраного — тільки якщо користувач авторизований
+    if (storage.hasToken()) {
+      overrideFavoriteApi();
+    }
 
     // 1. Реєстрація source провайдера
     if (Lampa.Api) {
