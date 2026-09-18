@@ -865,7 +865,7 @@
           var _cardData$object = cardData.object,
             method = _cardData$object.method,
             id = _cardData$object.id;
-          var apiKey = "4ef0d7355d9ffb5151e987764708ce96";
+          var apiKey = Lampa.Storage && Lampa.Storage.get('tmdb_api_key') || '';
           var apiUrlTMDB = 'https://api.themoviedb.org/3/';
           var apiUrlProxy = 'apitmdb.' + (Lampa.Storage && Lampa.Storage.get('cub_domain') ? Lampa.Storage.get('cub_domain') : 'cub.red') + '/3/';
           var request = "".concat(method, "/").concat(id, "?api_key=").concat(apiKey, "&language=en");
