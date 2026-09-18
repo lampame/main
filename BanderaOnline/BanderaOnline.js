@@ -1008,7 +1008,7 @@
         return /(^|\/\/)([^\/]*\.)?creavio\.online(\/|$)/i.test(url || '');
       }
       function wrapStreamProxy(url) {
-        var base = 'https://proxy.m7-club.com/?url=';
+        var base = 'https://api.framextv.tech/api/proxy?url=';
         if (url.indexOf(base) === 0) return url;
         return base + url;
       }
@@ -3064,7 +3064,7 @@
     }
     var manifest = {
       type: 'video',
-      version: '2.9.1',
+      version: '2.9.2',
       name: '[Free] Bandera Online',
       //description: 'Плагин для просмотра онлайн сериалов и фильмов',
       component: 'bandera_online',
