@@ -2498,7 +2498,7 @@
     };
   }
 
-  var PLUGIN_STORAGE_KEYS = ['BO_FILMIX_TOKEN', 'BO_FILMIX_DEVICE_ID', 'BO_FILMIX_MAX_QUALITY', 'BO_SOURCES', 'BO_SOURCES_SORT', 'BO_SOURCES_HIDE', 'bandera_online_cw_autoinstall_done', 'bandera_online_last_balanser', 'bandera_online_balanser', 'bandera_online_watched_last', 'bandera_online_view'];
+  var PLUGIN_STORAGE_KEYS = ['BO_FILMIX_TOKEN', 'BO_FILMIX_DEVICE_ID', 'BO_FILMIX_MAX_QUALITY', 'BO_SOURCES_SORT', 'BO_SOURCES_HIDE', 'bandera_online_cw_autoinstall_done', 'bandera_online_last_balanser', 'bandera_online_balanser', 'bandera_online_watched_last', 'bandera_online_view'];
   var FILMIX_POLL_INTERVAL = 10000;
   var FILMIX_MAX_QUALITY_KEY = 'BO_FILMIX_MAX_QUALITY';
   var AUTH_KEYS = getAuthKeys();
@@ -2819,8 +2819,6 @@
     PLUGIN_STORAGE_KEYS.forEach(function (key) {
       Lampa.Storage.set(key, '');
     });
-    sourcesStore.available_sources = [];
-    sourcesStore.titles = {};
     Lampa.Settings.update();
     Lampa.Noty.show(Lampa.Lang.translate('bandera_online_sources_reset_done'));
   }
@@ -2828,42 +2826,46 @@
     var wrapper = $('<div class="bandera-online-sources"></div>');
     var list = null;
     var actions = null;
+    var api_client = new APIClient();
     function buildActions() {
       var container = $('<div class="bandera-online-sources__actions"></div>');
-      var syncBtn = $('<div class="bandera-online-sources__btn selector" data-action="sync" title="Синхронізувати"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></div>');
       var saveBtn = $('<div class="bandera-online-sources__btn selector" data-action="save" title="Зберегти"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></div>');
       var resetBtn = $('<div class="bandera-online-sources__btn selector" data-action="reset" title="Скинути"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C8.5 2 6 4.5 6 7.5c0 1.5.5 2.8 1.3 3.8L6 14l2.5 1.5c1 .8 2.2 1.2 3.5 1.2s2.5-.4 3.5-1.2L18 14l-1.3-2.7c.8-1 1.3-2.3 1.3-3.8C18 4.5 15.5 2 12 2z"/><circle cx="9.5" cy="8" r="1.2" fill="currentColor" stroke="none"/><circle cx="14.5" cy="8" r="1.2" fill="currentColor" stroke="none"/><path d="M10 11h4v6c0 .6-.4 1-1 1h-2c-.6 0-1-.4-1-1v-6z"/></svg></div>');
-      container.append(syncBtn).append(saveBtn).append(resetBtn);
+      container.append(saveBtn).append(resetBtn);
       return container;
     }
-    function render(update_modal) {
+    function render() {
       list = buildSourcesList();
       if (!actions) actions = buildActions();
       wrapper.empty().append(actions).append(list);
-      if (update_modal && Lampa.Modal && Lampa.Modal.update) {
-        Lampa.Modal.update(wrapper);
-
-        // Restore focus to first button after update
-        setTimeout(function () {
-          var firstBtn = wrapper.find('[data-action="sync"]')[0];
-          if (firstBtn) {
-            Lampa.Controller.collectionFocus(firstBtn, wrapper[0]);
-          }
-        }, 50);
-      }
     }
-    function sync() {
-      var network = new Lampa.Reguest();
-      network.silent(api_base + '/sources', function (json) {
+
+    // Refresh the cached sources list from the server, then render the modal once.
+    // A failed or malformed response falls back silently to the cached list.
+    // ponytail: a dead network stalls this until the default request timeout; pass a shorter timeout if that is too long.
+    function loadSources() {
+      Lampa.Loading.start();
+      api_client.getSources(function (json) {
         if (json && json.ok && Array.isArray(json.sources)) {
           sourcesStore.saveAvailable(json.sources);
-          render(true);
-          Lampa.Noty.show(Lampa.Lang.translate('bandera_online_sources_sync_success'));
-        } else {
-          Lampa.Noty.show(Lampa.Lang.translate('bandera_online_sources_sync_error'));
         }
+        openModal();
       }, function () {
-        Lampa.Noty.show(Lampa.Lang.translate('bandera_online_sources_sync_error'));
+        openModal();
+      });
+    }
+    function openModal() {
+      Lampa.Loading.stop();
+      render();
+      Lampa.Modal.open({
+        title: Lampa.Lang.translate('bandera_online_settings_sources'),
+        html: wrapper,
+        size: 'medium',
+        scroll_to_center: true,
+        select: wrapper.find('.menu-edit-list__item .selector').first()[0],
+        onBack: function onBack() {
+          closeAndSave();
+        }
       });
     }
     function closeAndSave() {
@@ -2871,23 +2873,13 @@
       Lampa.Modal.close();
       Lampa.Controller.toggle('settings_component');
     }
-    render();
-    wrapper.on('click hover:enter', '[data-action="sync"]', sync);
     wrapper.on('click hover:enter', '[data-action="save"]', closeAndSave);
     wrapper.on('click hover:enter', '[data-action="reset"]', function () {
       resetPluginStorage();
-      render(true);
+      render();
+      Lampa.Modal.update(wrapper);
     });
-    Lampa.Modal.open({
-      title: Lampa.Lang.translate('bandera_online_settings_sources'),
-      html: wrapper,
-      size: 'medium',
-      scroll_to_center: true,
-      select: wrapper.find('[data-action="sync"]')[0],
-      onBack: function onBack() {
-        closeAndSave();
-      }
-    });
+    loadSources();
   }
   function initSettings() {
     var SettingsApi = Lampa.SettingsApi || Lampa.Settings;
@@ -3235,18 +3227,6 @@
         ua: 'Джерела',
         en: 'Sources'
       },
-      bandera_online_sources_sync: {
-        ru: 'Синхронізувати джерела',
-        uk: 'Синхронізувати джерела',
-        ua: 'Синхронізувати джерела',
-        en: 'Sync sources'
-      },
-      bandera_online_sources_save: {
-        ru: 'Зберегти та закрити',
-        uk: 'Зберегти та закрити',
-        ua: 'Зберегти та закрити',
-        en: 'Save and close'
-      },
       bandera_online_search_all: {
         ru: 'Поиск по всем источникам',
         uk: 'Пошук по всіх джерелах',
@@ -3270,18 +3250,6 @@
         uk: 'Мертвий',
         ua: 'Мертвий',
         en: 'Died'
-      },
-      bandera_online_sources_sync_success: {
-        ru: 'Джерела синхронізовано',
-        uk: 'Джерела синхронізовано',
-        ua: 'Джерела синхронізовано',
-        en: 'Sources synced'
-      },
-      bandera_online_sources_sync_error: {
-        ru: 'Не вдалося синхронізувати джерела',
-        uk: 'Не вдалося синхронізувати джерела',
-        ua: 'Не вдалося синхронізувати джерела',
-        en: 'Failed to sync sources'
       },
       bandera_online_sources_reset: {
         ru: 'Скинути налаштування',
