@@ -989,6 +989,8 @@
         return base + encodeURIComponent(url);
       }
       function shouldUseStreamProxy(url) {
+        // uaflix віддає стріми плеєра zetvideo — вони працюють напряму, обгортка не потрібна
+        if (sourceKey === 'uaflix' && isZetvideoUrl(url)) return false;
         var player = Lampa.Storage.get('player');
         if (player && player !== 'inner') return false;
         return isAshdiUrl(url) || isZetvideoUrl(url) || isSniplyoUrl(url) || isCreavioUrl(url);
@@ -3062,7 +3064,7 @@
     }
     var manifest = {
       type: 'video',
-      version: '2.9',
+      version: '2.9.1',
       name: '[Free] Bandera Online',
       //description: 'Плагин для просмотра онлайн сериалов и фильмов',
       component: 'bandera_online',
