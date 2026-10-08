@@ -96,6 +96,12 @@
     VOICE_NOT_FOUND: true
   };
 
+  function isInnerPlayer() {
+    var player = Lampa.Storage.field ? Lampa.Storage.field('player') : Lampa.Storage.get('player');
+    if (player) return player === 'inner';
+    if (Lampa.Platform && Lampa.Platform.is('android')) return false;
+    return true;
+  }
   function createV2(sourceKey) {
     return function v2(component, _object) {
       var api_client = component.api_client;
@@ -645,8 +651,7 @@
               }
 
               // Determine player type
-              var playerSetting = Lampa.Storage.get('player');
-              var isExternalPlayer = playerSetting && playerSetting !== 'inner';
+              var isExternalPlayer = !isInnerPlayer();
               var playlist = [];
               items.forEach(function (elem) {
                 var cell = {
@@ -980,8 +985,7 @@
       }
       function shouldUseSirkoProxy() {
         if (sourceKey !== 'sirko') return false;
-        var player = Lampa.Storage.get('player');
-        return !player || player === 'inner';
+        return isInnerPlayer();
       }
       function wrapSirkoProxy(url) {
         var base = 'https://stream.ernax.pro/proxy-hls?url=';
@@ -991,8 +995,7 @@
       function shouldUseStreamProxy(url) {
         // uaflix віддає стріми плеєра zetvideo — вони працюють напряму, обгортка не потрібна
         if (sourceKey === 'uaflix' && isZetvideoUrl(url)) return false;
-        var player = Lampa.Storage.get('player');
-        if (player && player !== 'inner') return false;
+        if (!isInnerPlayer()) return false;
         return isAshdiUrl(url) || isZetvideoUrl(url) || isSniplyoUrl(url) || isCreavioUrl(url);
       }
       function isAshdiUrl(url) {
