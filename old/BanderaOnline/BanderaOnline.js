@@ -104,6 +104,9 @@
     if (Lampa.Platform && Lampa.Platform.is('android')) return false;
     return true;
   }
+  function isProxyEnabled() {
+    return Lampa.Storage.get('bandera_online_proxy_inner', false) === true;
+  }
   function createV2(sourceKey) {
     return function v2(component, _object) {
       var api_client = component.api_client;
@@ -974,8 +977,9 @@
       }
       function normalizeStreamUrl(url) {
         if (!url) return url;
-        if (shouldUseSirkoProxy()) return wrapSirkoProxy(url);
-        if (!shouldUseStreamProxy(url)) return url;
+        if (!isInnerPlayer()) return url;
+        if (!isProxyEnabled()) return url;
+        if (sourceKey === 'sirko') return wrapSirkoProxy(url);
         return wrapStreamProxy(url);
       }
       function applyProxyToQualitys(qualitys) {
@@ -985,35 +989,13 @@
         });
         return result;
       }
-      function shouldUseSirkoProxy() {
-        if (sourceKey !== 'sirko') return false;
-        return isInnerPlayer();
-      }
       function wrapSirkoProxy(url) {
         var base = 'https://stream.ernax.pro/proxy-hls?url=';
         if (url.indexOf(base) === 0) return url;
         return base + encodeURIComponent(url);
       }
-      function shouldUseStreamProxy(url) {
-        // uaflix віддає стріми плеєра zetvideo — вони працюють напряму, обгортка не потрібна
-        if (sourceKey === 'uaflix' && isZetvideoUrl(url)) return false;
-        if (!isInnerPlayer()) return false;
-        return isAshdiUrl(url) || isZetvideoUrl(url) || isSniplyoUrl(url) || isCreavioUrl(url);
-      }
-      function isAshdiUrl(url) {
-        return /(^|\/\/)([^\/]*\.)?ashdi\.vip(\/|$)/i.test(url || '');
-      }
-      function isZetvideoUrl(url) {
-        return /(^|\/\/)([^\/]*\.)?zetvideo\.[^\/]+(\/|$)/i.test(url || '');
-      }
-      function isSniplyoUrl(url) {
-        return /(^|\/\/)([^\/]*\.)?sniplyo\.online(\/|$)/i.test(url || '');
-      }
-      function isCreavioUrl(url) {
-        return /(^|\/\/)([^\/]*\.)?creavio\.online(\/|$)/i.test(url || '');
-      }
       function wrapStreamProxy(url) {
-        var base = 'https://api.framextv.tech/api/proxy?url=';
+        var base = 'https://api.movenerds.space/api/proxy/master.m3u8?url=';
         if (url.indexOf(base) === 0) return url;
         return base + url;
       }
@@ -1694,15 +1676,6 @@
         return null;
       }
       return new sources[balanser](this, object);
-    };
-    this.proxy = function (name) {
-      var prox = Lampa.Storage.get('bandera_online_proxy_all');
-      var need = Lampa.Storage.get('bandera_online_proxy_' + name);
-      if (need) prox = need;
-      if (prox && prox.slice(-1) !== '/') {
-        prox += '/';
-      }
-      return prox;
     };
 
     /**
@@ -2503,7 +2476,7 @@
     };
   }
 
-  var PLUGIN_STORAGE_KEYS = ['BO_FILMIX_TOKEN', 'BO_FILMIX_DEVICE_ID', 'BO_FILMIX_MAX_QUALITY', 'BO_SOURCES_SORT', 'BO_SOURCES_HIDE', 'bandera_online_cw_autoinstall_done', 'bandera_online_last_balanser', 'bandera_online_balanser', 'bandera_online_watched_last', 'bandera_online_view'];
+  var PLUGIN_STORAGE_KEYS = ['BO_FILMIX_TOKEN', 'BO_FILMIX_DEVICE_ID', 'BO_FILMIX_MAX_QUALITY', 'BO_SOURCES_SORT', 'BO_SOURCES_HIDE', 'bandera_online_proxy_inner', 'bandera_online_cw_autoinstall_done', 'bandera_online_last_balanser', 'bandera_online_balanser', 'bandera_online_watched_last', 'bandera_online_view'];
   var FILMIX_POLL_INTERVAL = 10000;
   var FILMIX_MAX_QUALITY_KEY = 'BO_FILMIX_MAX_QUALITY';
   var AUTH_KEYS = getAuthKeys();
@@ -2929,6 +2902,18 @@
     SettingsApi.addParam({
       component: 'bandera_online',
       param: {
+        name: 'bandera_online_proxy_inner',
+        type: 'trigger',
+        default: false
+      },
+      field: {
+        name: Lampa.Lang.translate('bandera_online_proxy_inner_title'),
+        description: Lampa.Lang.translate('bandera_online_proxy_inner_descr')
+      }
+    });
+    SettingsApi.addParam({
+      component: 'bandera_online',
+      param: {
         type: 'title'
       },
       field: {
@@ -3061,7 +3046,7 @@
     }
     var manifest = {
       type: 'video',
-      version: '2.9.2',
+      version: '2.9.5',
       name: '[Free] Bandera Online',
       //description: 'Плагин для просмотра онлайн сериалов и фильмов',
       component: 'bandera_online',
@@ -3142,30 +3127,6 @@
         en: 'no results',
         zh: '没有结果'
       },
-      title_proxy: {
-        ru: 'Прокси',
-        uk: 'Проксі',
-        en: 'Proxy',
-        zh: '代理人'
-      },
-      online_proxy_title: {
-        ru: 'Основной прокси',
-        uk: 'Основний проксі',
-        en: 'Main proxy',
-        zh: '主要代理'
-      },
-      online_proxy_descr: {
-        ru: 'Будет использоваться для всех балансеров',
-        uk: 'Використовуватиметься для всіх балансерів',
-        en: 'Will be used for all balancers',
-        zh: '将用于所有平衡器'
-      },
-      online_proxy_placeholder: {
-        ru: 'Например: http://proxy.com',
-        uk: 'Наприклад: http://proxy.com',
-        en: 'For example: http://proxy.com',
-        zh: '例如：http://proxy.com'
-      },
       online_voice_subscribe: {
         ru: 'Подписаться на перевод',
         uk: 'Підписатися на переклад',
@@ -3231,6 +3192,20 @@
         uk: 'Джерела',
         ua: 'Джерела',
         en: 'Sources'
+      },
+      bandera_online_proxy_inner_title: {
+        ru: 'Прокси для встроенного плеера',
+        uk: 'Проксі для вбудованого плеєра',
+        ua: 'Проксі для вбудованого плеєра',
+        en: 'Proxy for built-in player',
+        zh: '内置播放器代理'
+      },
+      bandera_online_proxy_inner_descr: {
+        ru: 'Обгортати посилання стрімів через проксі. Застосовується лише для вбудованого плеєра.',
+        uk: 'Обгортати посилання стрімів через проксі. Застосовується лише для вбудованого плеєра.',
+        ua: 'Обгортати посилання стрімів через проксі. Застосовується лише для вбудованого плеєра.',
+        en: 'Wrap stream links through the proxy. Applies to the built-in player only.',
+        zh: '通过代理包装流媒体链接。仅适用于内置播放器。'
       },
       bandera_online_search_all: {
         ru: 'Поиск по всем источникам',
