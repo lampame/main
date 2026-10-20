@@ -104,9 +104,6 @@
     if (Lampa.Platform && Lampa.Platform.is('android')) return false;
     return true;
   }
-  function isProxyEnabled() {
-    return Lampa.Storage.get('bandera_online_proxy_inner', false) === true;
-  }
   function createV2(sourceKey) {
     return function v2(component, _object) {
       var api_client = component.api_client;
@@ -648,8 +645,8 @@
             getStream(item.ref, function (streams) {
               var prepared = prepareStreams(streams);
               var first = prepared.first;
-              var qualitys = applyProxyToQualitys(prepared.qualitys);
-              var play_url = first ? normalizeStreamUrl(first.url) : '';
+              var qualitys = prepared.qualitys;
+              var play_url = first ? first.url : '';
               if (!first || !play_url) {
                 component.pushError(Lampa.Lang.translate('online_nolink'));
                 return;
@@ -683,8 +680,8 @@
                     getStream(elem.ref, function (next_streams) {
                       var prepared_next = prepareStreams(next_streams);
                       var next_first = prepared_next.first;
-                      cell.url = next_first ? normalizeStreamUrl(next_first.url) : '';
-                      cell.quality = applyProxyToQualitys(prepared_next.qualitys);
+                      cell.url = next_first ? next_first.url : '';
+                      cell.quality = prepared_next.qualitys;
                       cell.subtitles = mergeSubtitles(next_first && next_first.subtitles, elem.subtitles);
                       elem.mark();
                       call();
@@ -735,8 +732,8 @@
                     getStream(elem.ref, function (next_streams) {
                       var prepared_next = prepareStreams(next_streams);
                       var next_first = prepared_next.first;
-                      cell.url = next_first ? normalizeStreamUrl(next_first.url) : '';
-                      cell.quality = next_first ? applyProxyToQualitys(prepared_next.qualitys) : {};
+                      cell.url = next_first ? next_first.url : '';
+                      cell.quality = next_first ? prepared_next.qualitys : {};
                       cell.subtitles = mergeSubtitles(next_first && next_first.subtitles, elem.subtitles);
                       delete cell._prefetch;
                       completed++;
@@ -760,8 +757,8 @@
             getStream(item.ref, function (streams) {
               var prepared = prepareStreams(streams);
               var first = prepared.first;
-              var qualitys = applyProxyToQualitys(prepared.qualitys);
-              var play_url = first ? normalizeStreamUrl(first.url) : '';
+              var qualitys = prepared.qualitys;
+              var play_url = first ? first.url : '';
               if (!first || !play_url) {
                 component.pushError(Lampa.Lang.translate('online_nolink'));
                 return;
@@ -787,8 +784,8 @@
           onEnter: function onEnter(movie) {
             getMovieStream(movie, function (prepared) {
               var first = prepared.first;
-              var qualitys = applyProxyToQualitys(prepared.qualitys);
-              var play_url = first ? normalizeStreamUrl(first.url) : '';
+              var qualitys = prepared.qualitys;
+              var play_url = first ? first.url : '';
               if (!first || !play_url) {
                 component.pushError(Lampa.Lang.translate('online_nolink'));
                 return;
@@ -808,8 +805,8 @@
           onContextMenu: function onContextMenu(movie, html, data, call) {
             getMovieStream(movie, function (prepared) {
               var first = prepared.first;
-              var qualitys = applyProxyToQualitys(prepared.qualitys);
-              var play_url = first ? normalizeStreamUrl(first.url) : '';
+              var qualitys = prepared.qualitys;
+              var play_url = first ? first.url : '';
               if (!first || !play_url) {
                 component.pushError(Lampa.Lang.translate('online_nolink'));
                 return;
@@ -962,7 +959,7 @@
                 variant.subtitles = normalizeSubtitles(variant.subtitles);
               }
               var label = variant.title || variant.quality || 'stream-' + (index + 1) + '-' + (variant_index + 1);
-              var url = normalizeStreamUrl(variant && variant.url);
+              var url = variant && variant.url;
               if (url) qualitys[label] = url;
               if (!first && url) first = Object.assign({}, variant, {
                 url: url
@@ -974,30 +971,6 @@
           first: first,
           qualitys: qualitys
         };
-      }
-      function normalizeStreamUrl(url) {
-        if (!url) return url;
-        if (!isInnerPlayer()) return url;
-        if (!isProxyEnabled()) return url;
-        if (sourceKey === 'sirko') return wrapSirkoProxy(url);
-        return wrapStreamProxy(url);
-      }
-      function applyProxyToQualitys(qualitys) {
-        var result = {};
-        Object.keys(qualitys || {}).forEach(function (key) {
-          result[key] = normalizeStreamUrl(qualitys[key]);
-        });
-        return result;
-      }
-      function wrapSirkoProxy(url) {
-        var base = 'https://stream.ernax.pro/proxy-hls?url=';
-        if (url.indexOf(base) === 0) return url;
-        return base + encodeURIComponent(url);
-      }
-      function wrapStreamProxy(url) {
-        var base = 'https://api.movenerds.space/api/proxy/master.m3u8?url=';
-        if (url.indexOf(base) === 0) return url;
-        return base + url;
       }
       function getStream(ref, success, fail) {
         var cache_key = Lampa.Utils.hash(JSON.stringify(ref));
@@ -2476,7 +2449,7 @@
     };
   }
 
-  var PLUGIN_STORAGE_KEYS = ['BO_FILMIX_TOKEN', 'BO_FILMIX_DEVICE_ID', 'BO_FILMIX_MAX_QUALITY', 'BO_SOURCES_SORT', 'BO_SOURCES_HIDE', 'bandera_online_proxy_inner', 'bandera_online_cw_autoinstall_done', 'bandera_online_last_balanser', 'bandera_online_balanser', 'bandera_online_watched_last', 'bandera_online_view'];
+  var PLUGIN_STORAGE_KEYS = ['BO_FILMIX_TOKEN', 'BO_FILMIX_DEVICE_ID', 'BO_FILMIX_MAX_QUALITY', 'BO_SOURCES_SORT', 'BO_SOURCES_HIDE', 'bandera_online_cw_autoinstall_done', 'bandera_online_last_balanser', 'bandera_online_balanser', 'bandera_online_watched_last', 'bandera_online_view'];
   var FILMIX_POLL_INTERVAL = 10000;
   var FILMIX_MAX_QUALITY_KEY = 'BO_FILMIX_MAX_QUALITY';
   var AUTH_KEYS = getAuthKeys();
@@ -2902,18 +2875,6 @@
     SettingsApi.addParam({
       component: 'bandera_online',
       param: {
-        name: 'bandera_online_proxy_inner',
-        type: 'trigger',
-        default: false
-      },
-      field: {
-        name: Lampa.Lang.translate('bandera_online_proxy_inner_title'),
-        description: Lampa.Lang.translate('bandera_online_proxy_inner_descr')
-      }
-    });
-    SettingsApi.addParam({
-      component: 'bandera_online',
-      param: {
         type: 'title'
       },
       field: {
@@ -3046,7 +3007,7 @@
     }
     var manifest = {
       type: 'video',
-      version: '2.9.5',
+      version: '2.9.6',
       name: '[Free] Bandera Online',
       //description: 'Плагин для просмотра онлайн сериалов и фильмов',
       component: 'bandera_online',
@@ -3192,20 +3153,6 @@
         uk: 'Джерела',
         ua: 'Джерела',
         en: 'Sources'
-      },
-      bandera_online_proxy_inner_title: {
-        ru: 'Прокси для встроенного плеера',
-        uk: 'Проксі для вбудованого плеєра',
-        ua: 'Проксі для вбудованого плеєра',
-        en: 'Proxy for built-in player',
-        zh: '内置播放器代理'
-      },
-      bandera_online_proxy_inner_descr: {
-        ru: 'Обгортати посилання стрімів через проксі. Застосовується лише для вбудованого плеєра.',
-        uk: 'Обгортати посилання стрімів через проксі. Застосовується лише для вбудованого плеєра.',
-        ua: 'Обгортати посилання стрімів через проксі. Застосовується лише для вбудованого плеєра.',
-        en: 'Wrap stream links through the proxy. Applies to the built-in player only.',
-        zh: '通过代理包装流媒体链接。仅适用于内置播放器。'
       },
       bandera_online_search_all: {
         ru: 'Поиск по всем источникам',
