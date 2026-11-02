@@ -2941,6 +2941,146 @@
     });
   }
 
+  function normalizePluginUrl$1(url) {
+    return (url || '').toString().trim().replace(/[?#].*$/, '').replace(/\/+$/, '').replace(/^https?:\/\//i, '').toLowerCase();
+  }
+  function isBanderaPlugin(item) {
+    if (!item) return false;
+    var url = typeof item === 'string' ? item : item.url || '';
+    var name = _typeof(item) === 'object' && item.name ? item.name : '';
+    var lowerUrl = (url + '').toLowerCase();
+    var lowerName = (name + '').toLowerCase();
+    return lowerUrl.indexOf('bandera') !== -1 || lowerUrl.indexOf('banderaonline') !== -1 || lowerName.indexOf('bandera') !== -1 || lowerName.indexOf('banderaonline') !== -1;
+  }
+  function deactivateBanderaOnline() {
+    var plugins = Lampa.Storage.get('plugins', []);
+    if (typeof plugins === 'string') {
+      try {
+        plugins = JSON.parse(plugins);
+      } catch (e) {
+        plugins = [];
+      }
+    }
+    if (!Array.isArray(plugins)) plugins = [];
+    var modified = false;
+    plugins = plugins.map(function (p) {
+      if (isBanderaPlugin(p)) {
+        modified = true;
+        if (typeof p === 'string') {
+          return {
+            url: p,
+            status: 0,
+            name: 'BanderaOnline'
+          };
+        }
+        return Object.assign({}, p, {
+          status: 0
+        });
+      }
+      return p;
+    });
+    if (modified) {
+      Lampa.Storage.set('plugins', plugins);
+    }
+  }
+  function installPlugin(targetName, targetUrl, closeModal) {
+    deactivateBanderaOnline();
+    var plugins = Lampa.Storage.get('plugins', []);
+    if (typeof plugins === 'string') {
+      try {
+        plugins = JSON.parse(plugins);
+      } catch (e) {
+        plugins = [];
+      }
+    }
+    if (!Array.isArray(plugins)) plugins = [];
+    var normTarget = normalizePluginUrl$1(targetUrl);
+    var normName = targetName.toLowerCase();
+    var foundIndex = plugins.findIndex(function (p) {
+      var u = typeof p === 'string' ? p : p && p.url ? p.url : '';
+      var n = p && p.name ? p.name : '';
+      return normalizePluginUrl$1(u) === normTarget || n && n.toLowerCase() === normName;
+    });
+    if (foundIndex !== -1) {
+      var existing = plugins[foundIndex];
+      var currentStatus = _typeof(existing) === 'object' && existing !== null && 'status' in existing ? existing.status : 1;
+      if (currentStatus === 0) {
+        if (typeof existing === 'string') {
+          plugins[foundIndex] = {
+            url: existing,
+            name: targetName,
+            status: 1
+          };
+        } else {
+          plugins[foundIndex] = Object.assign({}, existing, {
+            status: 1
+          });
+        }
+        Lampa.Storage.set('plugins', plugins);
+        Lampa.Noty.show("\u041F\u043B\u0430\u0433\u0456\u043D ".concat(targetName, " \u0430\u043A\u0442\u0438\u0432\u043E\u0432\u0430\u043D\u043E"));
+      } else {
+        Lampa.Noty.show("\u041F\u043B\u0430\u0433\u0456\u043D ".concat(targetName, " \u0432\u0436\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E"));
+      }
+    } else {
+      if (window.Lampa && Lampa.Plugins && typeof Lampa.Plugins.add === 'function') {
+        Lampa.Plugins.add({
+          url: targetUrl,
+          name: targetName,
+          status: 1
+        });
+      } else {
+        plugins.push({
+          url: targetUrl,
+          name: targetName,
+          status: 1
+        });
+        Lampa.Storage.set('plugins', plugins);
+      }
+      Lampa.Noty.show("\u041F\u043B\u0430\u0433\u0456\u043D ".concat(targetName, " \u0443\u0441\u043F\u0456\u0448\u043D\u043E \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E"));
+    }
+    closeModal();
+  }
+  function openCloseModal() {
+    var poster = config.qr_poster ;
+    var html = $('<div class="banderaonline-close-modal">' + '<style id="banderaonline-close-style">' + '.banderaonline-close-modal{text-align:center;padding:0.5em 0}' + '.banderaonline-close-modal__img{max-width:8em;max-height:8em;border-radius:0.8em;margin-bottom:1.2em;display:inline-block}' + '.banderaonline-close-modal__title{font-size:1.6em;font-weight:700;color:#fff;margin-bottom:0.8em}' + '.banderaonline-close-modal__text{font-size:1.15em;line-height:1.5;color:rgba(255,255,255,0.85);margin-bottom:1em}' + '.banderaonline-close-modal__subtext{font-size:1.05em;line-height:1.4;color:#ffc107;margin-bottom:0.5em}' + '.banderaonline-close-modal ~ .modal__footer{display:flex;flex-wrap:wrap;justify-content:center;gap:0.8em;padding-top:1.5em}' + '.banderaonline-close-modal ~ .modal__footer .modal__button{margin:0 !important;padding:0.8em 1.2em;font-size:1.1em}' + '@media (max-width: 600px){.banderaonline-close-modal ~ .modal__footer{flex-direction:column}}' + '</style>' + '<div class="banderaonline-close-modal__content">' + "<img src=\"".concat(poster, "\" class=\"banderaonline-close-modal__img\" alt=\"BanderaOnline\" onerror=\"this.style.display='none'\"/>") + '<div class="banderaonline-close-modal__title">Плагін BanderaOnline закривається</div>' + '<div class="banderaonline-close-modal__text">Плагін <b>BanderaOnline</b> припиняє свою роботу та підтримку через останні зміни джерел.<br/>Дякуємо всім користувачам, які були з нами!</div>' + '<div class="banderaonline-close-modal__subtext">Рекомендуємо встановити перевірені альтернативні українські плагіни: <b>UAKino</b> та <b>UAFilm</b>. Але нагадуємо вони проходять тестування, тому про проблеми пишіть у спільноті авторам.</div>' + '</div>' + '</div>');
+    if ($('#banderaonline-close-style').length) {
+      html.find('#banderaonline-close-style').remove();
+    }
+    var enabledController = Lampa.Controller.enabled() ? Lampa.Controller.enabled().name : '';
+    var closeModal = function closeModal() {
+      Lampa.Modal.close();
+      if (enabledController) {
+        Lampa.Controller.toggle(enabledController);
+      }
+    };
+    Lampa.Modal.open({
+      title: '',
+      html: html,
+      size: 'medium',
+      buttons: [{
+        name: 'Встановити UAKino',
+        onSelect: function onSelect() {
+          installPlugin('UAKino', 'https://uakino.ofreshofresh.workers.dev/uakino.js', closeModal);
+        }
+      }, {
+        name: 'Встановити UAFilm',
+        onSelect: function onSelect() {
+          installPlugin('UAFilm', 'https://films.aartzz.pp.ua/l', closeModal);
+        }
+      }, {
+        name: 'Закрити',
+        onSelect: function onSelect() {
+          deactivateBanderaOnline();
+          closeModal();
+        }
+      }],
+      onBack: function onBack() {
+        deactivateBanderaOnline();
+        closeModal();
+      }
+    });
+  }
+
   var communityWatchesPlugin = {
     url: config.community_watches_url,
     name: config.community_watches_name,
@@ -3018,18 +3158,7 @@
         };
       },
       onContextLauch: function onContextLauch(object) {
-        resetTemplates();
-        Lampa.Component.add('bandera_online', component);
-        Lampa.Activity.push({
-          url: '',
-          title: Lampa.Lang.translate('title_online'),
-          component: 'bandera_online',
-          search: object.title,
-          search_one: object.title,
-          search_two: object.original_title,
-          movie: object,
-          page: 1
-        });
+        openCloseModal();
       }
     };
     Lampa.Manifest.plugins = manifest;
@@ -3349,18 +3478,7 @@
         if (!render || render.find('.view--bandera-online').length) return;
         var btn = $(Lampa.Lang.translate(button));
         btn.on('hover:enter', function () {
-          resetTemplates();
-          Lampa.Component.add('bandera_online', component);
-          Lampa.Activity.push({
-            url: '',
-            title: "Спільнота - t.me/mmssixxx",
-            component: 'bandera_online',
-            search: e.data.movie.title,
-            search_one: e.data.movie.title,
-            search_two: e.data.movie.original_title,
-            movie: e.data.movie,
-            page: 1
-          });
+          openCloseModal();
         });
         render.find('.view--torrent').after(btn);
       }
