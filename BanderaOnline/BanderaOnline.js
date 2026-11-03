@@ -3040,7 +3040,7 @@
   }
   function openCloseModal() {
     var poster = config.qr_poster ;
-    var html = $('<div class="banderaonline-close-modal">' + '<style id="banderaonline-close-style">' + '.banderaonline-close-modal{text-align:center;padding:0.5em 0}' + '.banderaonline-close-modal__img{max-width:8em;max-height:8em;border-radius:0.8em;margin-bottom:1.2em;display:inline-block}' + '.banderaonline-close-modal__title{font-size:1.6em;font-weight:700;color:#fff;margin-bottom:0.8em}' + '.banderaonline-close-modal__text{font-size:1.15em;line-height:1.5;color:rgba(255,255,255,0.85);margin-bottom:1em}' + '.banderaonline-close-modal__subtext{font-size:1.05em;line-height:1.4;color:#ffc107;margin-bottom:0.5em}' + '.banderaonline-close-modal ~ .modal__footer{display:flex;flex-wrap:wrap;justify-content:center;gap:0.8em;padding-top:1.5em}' + '.banderaonline-close-modal ~ .modal__footer .modal__button{margin:0 !important;padding:0.8em 1.2em;font-size:1.1em}' + '@media (max-width: 600px){.banderaonline-close-modal ~ .modal__footer{flex-direction:column}}' + '</style>' + '<div class="banderaonline-close-modal__content">' + "<img src=\"".concat(poster, "\" class=\"banderaonline-close-modal__img\" alt=\"BanderaOnline\" onerror=\"this.style.display='none'\"/>") + '<div class="banderaonline-close-modal__title">Плагін BanderaOnline закривається</div>' + '<div class="banderaonline-close-modal__text">Плагін <b>BanderaOnline</b> припиняє свою роботу та підтримку через останні зміни джерел.<br/>Дякуємо всім користувачам, які були з нами!</div>' + '<div class="banderaonline-close-modal__subtext">Рекомендуємо встановити перевірені альтернативні українські плагіни: <b>UAKino</b> та <b>UAFilm</b>. Але нагадуємо вони проходять тестування, тому про проблеми пишіть у спільноті авторам.</div>' + '</div>' + '</div>');
+    var html = $('<div class="banderaonline-close-modal">' + '<style id="banderaonline-close-style">' + '.banderaonline-close-modal{text-align:center;padding:0.5em 0}' + '.banderaonline-close-modal__img{max-width:8em;max-height:8em;border-radius:0.8em;margin-bottom:1.2em;display:inline-block}' + '.banderaonline-close-modal__title{font-size:1.6em;font-weight:700;color:#fff;margin-bottom:0.8em}' + '.banderaonline-close-modal__text{font-size:1.15em;line-height:1.5;color:rgba(255,255,255,0.85);margin-bottom:1em}' + '.banderaonline-close-modal__subtext{font-size:1.05em;line-height:1.4;color:#ffc107;margin-bottom:0.5em}' + '.banderaonline-close-modal ~ .modal__footer{display:flex;flex-wrap:wrap;justify-content:center;gap:0.8em;padding-top:1.5em}' + '.banderaonline-close-modal ~ .modal__footer .modal__button{margin:0 !important;padding:0.8em 1.2em;font-size:1.1em}' + '@media (max-width: 600px){.banderaonline-close-modal ~ .modal__footer{flex-direction:column}}' + '</style>' + '<div class="banderaonline-close-modal__content">' + "<img src=\"".concat(poster, "\" class=\"banderaonline-close-modal__img\" alt=\"BanderaOnline\" onerror=\"this.style.display='none'\"/>") + '<div class="banderaonline-close-modal__title">Плагін BanderaOnline закривається</div>' + '<div class="banderaonline-close-modal__text">Плагін <b>BanderaOnline</b> припиняє свою роботу та підтримку через останні зміни джерел.<br/>Дякуємо всім користувачам, які були з нами!</div>' + '<div class="banderaonline-close-modal__subtext">Рекомендуємо встановити перевірені альтернативні українські плагіни: <b>UAKino</b> та <b>UAFilms</b>. Але нагадуємо вони проходять тестування, тому про проблеми пишіть у спільноті авторам.</div>' + '</div>' + '</div>');
     if ($('#banderaonline-close-style').length) {
       html.find('#banderaonline-close-style').remove();
     }
@@ -3061,9 +3061,9 @@
           installPlugin('UAKino', 'https://uakino.ofreshofresh.workers.dev/uakino.js', closeModal);
         }
       }, {
-        name: 'Встановити UAFilm',
+        name: 'Встановити UAFilms',
         onSelect: function onSelect() {
-          installPlugin('UAFilm', 'https://films.aartzz.pp.ua/l', closeModal);
+          installPlugin('UAFilms', 'https://films.aartzz.pp.ua/l', closeModal);
         }
       }, {
         name: 'Закрити',
