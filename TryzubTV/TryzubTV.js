@@ -3622,7 +3622,7 @@ var plugin = (function () {
       button.on('hover:enter', function () {
         Lampa.Activity.push({
           url: '',
-          title: Lampa.Lang.translate('tryzubtv_title') + " | Спільнота t.me/mmssixxx",
+          title: Lampa.Lang.translate('tryzubtv_title') + " | Спільнота t.me/misiixxs",
           component: 'tryzubtv_hub',
           page: 1,
           params: {
